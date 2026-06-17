@@ -129,7 +129,27 @@ export default function RegisterScreen() {
         },
       );
 
-      Toast.show({ type: "success", text1: "Welcome to UniCompanion!" });
+      Toast.show({
+        type: "success",
+        text1: "Welcome to UniCompanion!",
+        text2: "Please log in with your new account.",
+      });
+
+      setFullName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setImageUri(null);
+      setImageBase64(null);
+      setStudentId("");
+      setDepartment("");
+      setSemester("");
+      setSection("");
+      setBatch("");
+
+      setTimeout(() => {
+        router.replace("/(auth)/login");
+      }, 1500);
     } catch (error: any) {
       const backendError = error.response?.data?.error;
       const errorMessage = backendError || error.message;

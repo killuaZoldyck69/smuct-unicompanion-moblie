@@ -17,6 +17,7 @@ import { typography } from "../../src/theme/typography";
 import { spacing, rounded } from "../../src/theme/layout";
 import Toast from "react-native-toast-message";
 import { authClient } from "../../src/services/auth-client";
+import * as SecureStore from "expo-secure-store";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -38,6 +39,7 @@ export default function LoginScreen() {
     }
 
     try {
+      // 1. Hit Better Auth
       const { data, error } = await authClient.signIn.email({
         email,
         password,
@@ -47,7 +49,18 @@ export default function LoginScreen() {
         throw new Error(error.message || "Invalid credentials.");
       }
 
+      // 2. EXPLICITLY save the token to SecureStore for mobile (The missing link!)
+      if (data && Platform.OS !== "web" && (data as any).token) {
+        await SecureStore.setItemAsync(
+          "better-auth.session_token",
+          (data as any).token,
+        );
+      }
+
       Toast.show({ type: "success", text1: "Welcome back!" });
+
+      // 3. Route to the main app dashboard
+      router.replace("/(tabs)/profile");
     } catch (error: any) {
       console.error("Login Error:", error.message);
       Toast.show({

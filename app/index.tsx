@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from "react";
+// app/index.tsx
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, Image, Animated } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useRootNavigationState } from "expo-router";
 import { colors } from "../src/theme/colors";
 import { typography } from "../src/theme/typography";
 import { spacing } from "../src/theme/layout";
 
 export default function SplashScreen() {
   const router = useRouter();
-  const [progress] = useState(new Animated.Value(0));
+
+  const rootNavigationState = useRootNavigationState();
+
+  const [isTimerFinished, setIsTimerFinished] = useState(false);
+
+  const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(progress, {
@@ -17,11 +23,17 @@ export default function SplashScreen() {
     }).start();
 
     const timer = setTimeout(() => {
-      router.replace("/(auth)/login");
+      setIsTimerFinished(true);
     }, 2500);
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (isTimerFinished && rootNavigationState?.key) {
+      router.replace("/(auth)/login");
+    }
+  }, [isTimerFinished, rootNavigationState?.key]);
 
   const progressWidth = progress.interpolate({
     inputRange: [0, 1],
