@@ -92,6 +92,13 @@ const MENU_ITEMS = [
     route: "/bus-schedule",
   },
   {
+    id: "campus_forum",
+    title: "Campus Forum",
+    icon: "message-circle", // A nice chat bubble icon
+    roles: ["STUDENT", "TEACHER", "ADMIN"],
+    route: "/forum",
+  },
+  {
     id: "campus_events",
     title: "Campus Events",
     icon: "calendar",

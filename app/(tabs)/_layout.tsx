@@ -98,12 +98,12 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* 4. COMMUNITY (Student & Teacher) / ADD TEACHER (Admin) */}
+      {/* 4. FORUM (Student & Teacher) / ADD TEACHER (Admin) */}
       <Tabs.Screen
-        name="community"
+        name="forum"
         options={{
           title: "Forum",
-          href: userRole === "ADMIN" ? null : "/(tabs)/community",
+          href: userRole === "ADMIN" ? null : "/(tabs)/forum",
           tabBarIcon: ({ color }) => (
             <Feather name="message-square" size={24} color={color} />
           ),
@@ -137,7 +137,13 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="admin_calendar"
         options={{
-          href: null, // This forcefully hides it from the bottom tab bar!
+          href: null, // Forcefully hidden from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          href: null, // Safeguard: Hides the old community file if it still exists
         }}
       />
     </Tabs>
