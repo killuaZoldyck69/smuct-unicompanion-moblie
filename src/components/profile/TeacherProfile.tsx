@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Linking,
   Modal,
   FlatList,
 } from "react-native";
@@ -28,20 +29,20 @@ import { typography } from "../../theme/typography";
 import { spacing, rounded, shadows } from "../../theme/layout";
 import Toast from "react-native-toast-message";
 
-// 1. Supabase Initialization
+// --- Supabase Initialization ---
 const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
-// 2. API Call for Image Update
 const updateProfileImageAPI = async (imageUrl: string) => {
   const response = await api.patch("/teachers/profile/image", { imageUrl });
   return response.data;
 };
 
-// 3. Data Mappers
+// --- Blood Group Mappers ---
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
 const BLOOD_GROUP_TO_DB: Record<string, string> = {
   "A+": "A_POSITIVE",
   "A-": "A_NEGATIVE",
@@ -52,6 +53,7 @@ const BLOOD_GROUP_TO_DB: Record<string, string> = {
   "O+": "O_POSITIVE",
   "O-": "O_NEGATIVE",
 };
+
 const BLOOD_GROUP_TO_UI: Record<string, string> = {
   A_POSITIVE: "A+",
   A_NEGATIVE: "A-",
@@ -67,22 +69,33 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
+  // --- UI States ---
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isBloodGroupModalVisible, setBloodGroupModalVisible] = useState(false);
 
+  // --- Complex Input States ---
+  const [expertiseInput, setExpertiseInput] = useState("");
+  const [qualDegreeInput, setQualDegreeInput] = useState("");
+  const [qualInstInput, setQualInstInput] = useState("");
+
+  // --- Form State ---
   const [formData, setFormData] = useState({
     name: "",
     phoneNumber: "",
-    bloodGroup: "",
+    bloodGroup: "", // Stores UI version ("A+")
     designation: "",
     department: "",
+    faculty: "",
     officeRoom: "",
     consultationHours: "",
-    specialization: "",
+    expertiseFields: [] as string[],
+    academicQualifications: {} as Record<string, string>,
+    linkedInUrl: "",
+    personalWebsiteUrl: "",
   });
 
-  // Fetch Teacher Data
+  // --- Data Fetching ---
   const { data: profile, isLoading } = useQuery({
     queryKey: ["teacherProfile"],
     queryFn: async () => {
@@ -96,7 +109,7 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
     retry: false,
   });
 
-  // Sync state with fetched data
+  // Populate form on load
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -107,14 +120,18 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
           : "",
         designation: profile.designation || "",
         department: profile.department || "",
+        faculty: profile.faculty || "",
         officeRoom: profile.officeRoom || "",
         consultationHours: profile.consultationHours || "",
-        specialization: profile.specialization || "",
+        expertiseFields: profile.expertiseFields || [],
+        academicQualifications: profile.academicQualifications || {},
+        linkedInUrl: profile.linkedInUrl || "",
+        personalWebsiteUrl: profile.personalWebsiteUrl || "",
       });
     }
-  }, [profile]);
+  }, [profile, isEditing]);
 
-  // Patch Mutation
+  // --- Mutations ---
   const mutation = useMutation({
     mutationFn: async (payload: any) =>
       await api.patch("/teachers/profile", payload),
@@ -127,26 +144,93 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
       Toast.show({ type: "error", text1: "Update Failed", text2: err.message }),
   });
 
-  // --- ACTIONS ---
-
+  // --- Handlers ---
   const handleSave = () => {
-    // 1. Build payload without bloodGroup to avoid Zod validation errors on empty fields
-    const payload: any = {
-      name: formData.name,
-      phoneNumber: formData.phoneNumber,
-      designation: formData.designation,
-      department: formData.department,
-      officeRoom: formData.officeRoom,
-      consultationHours: formData.consultationHours,
-      specialization: formData.specialization,
-    };
+    const payload: any = {};
 
-    // 2. Only attach bloodGroup if it has a valid selected value
-    if (formData.bloodGroup) {
-      payload.bloodGroup = BLOOD_GROUP_TO_DB[formData.bloodGroup];
+    // Strict Diffing Logic: Only attach modified fields
+    (Object.keys(formData) as Array<keyof typeof formData>).forEach((key) => {
+      if (key === "bloodGroup") {
+        // Map back to DB enum format and diff
+        const mappedDBValue = formData.bloodGroup
+          ? BLOOD_GROUP_TO_DB[formData.bloodGroup]
+          : undefined;
+        if (
+          mappedDBValue !== profile?.bloodGroup &&
+          mappedDBValue !== undefined
+        ) {
+          payload.bloodGroup = mappedDBValue;
+        }
+      } else if (typeof formData[key] === "object") {
+        // Diff objects/arrays
+        if (
+          JSON.stringify(formData[key]) !==
+          JSON.stringify(
+            profile[key] || (Array.isArray(formData[key]) ? [] : {}),
+          )
+        ) {
+          payload[key] = formData[key];
+        }
+      } else {
+        // Diff simple strings
+        if (formData[key] !== (profile[key] || "")) {
+          payload[key] = formData[key];
+        }
+      }
+    });
+
+    if (Object.keys(payload).length === 0) {
+      setIsEditing(false);
+      return; // No changes made
     }
 
     mutation.mutate(payload);
+  };
+
+  // Complex Field Handlers
+  const addExpertise = () => {
+    if (
+      !expertiseInput.trim() ||
+      formData.expertiseFields.includes(expertiseInput.trim())
+    )
+      return;
+    setFormData({
+      ...formData,
+      expertiseFields: [...formData.expertiseFields, expertiseInput.trim()],
+    });
+    setExpertiseInput("");
+  };
+
+  const removeExpertise = (field: string) => {
+    setFormData({
+      ...formData,
+      expertiseFields: formData.expertiseFields.filter((f) => f !== field),
+    });
+  };
+
+  const addQualification = () => {
+    if (!qualDegreeInput.trim() || !qualInstInput.trim()) return;
+    setFormData({
+      ...formData,
+      academicQualifications: {
+        ...formData.academicQualifications,
+        [qualDegreeInput.trim()]: qualInstInput.trim(),
+      },
+    });
+    setQualDegreeInput("");
+    setQualInstInput("");
+  };
+
+  const removeQualification = (degree: string) => {
+    const newQuals = { ...formData.academicQualifications };
+    delete newQuals[degree];
+    setFormData({ ...formData, academicQualifications: newQuals });
+  };
+
+  const openLink = async (url: string) => {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) await Linking.openURL(url);
+    else Toast.show({ type: "error", text1: "Cannot open URL" });
   };
 
   const handleUpdatePicture = async () => {
@@ -157,7 +241,6 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
       quality: 0.8,
       base64: true,
     });
-
     if (!result.canceled && result.assets[0].base64) {
       try {
         setIsUploading(true);
@@ -166,22 +249,17 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
           .replace(/\s+/g, "")
           .toLowerCase();
         const fileName = `teacher-${Date.now()}-${safeName}.${fileExt}`;
-
         const { error: uploadError } = await supabase.storage
           .from("avatars")
           .upload(fileName, decode(result.assets[0].base64), {
             contentType: result.assets[0].mimeType || "image/jpeg",
             upsert: true,
           });
-
         if (uploadError) throw new Error(uploadError.message);
-
         const { data: publicUrlData } = supabase.storage
           .from("avatars")
           .getPublicUrl(fileName);
-
         await updateProfileImageAPI(publicUrlData.publicUrl);
-
         queryClient.invalidateQueries({ queryKey: ["teacherProfile"] });
         Toast.show({ type: "success", text1: "Profile Picture Updated!" });
       } catch (error: any) {
@@ -203,7 +281,6 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
         await SecureStore.deleteItemAsync("better-auth.session_token");
       router.replace("/(auth)/login");
     };
-
     if (Platform.OS === "web") {
       if (window.confirm("Log out?")) performLogout();
     } else {
@@ -214,15 +291,13 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
     }
   };
 
-  // --- RENDER HELPERS ---
-
-  if (isLoading) {
+  // --- Render Helpers ---
+  if (isLoading)
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.primaryContainer} />
       </View>
     );
-  }
 
   const renderInfoRow = (label: string, value: string, icon: any) => (
     <View style={styles.infoRow}>
@@ -243,7 +318,7 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
     options?: any,
   ) => (
     <View style={styles.inputGroup}>
-      <Text style={styles.inputLabel}>{label}</Text>
+      <Text style={styles.infoLabel}>{label}</Text>
       <View style={styles.inputWrapper}>
         <Feather
           name={icon}
@@ -253,7 +328,7 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
         />
         <TextInput
           style={styles.input}
-          value={formData[key]}
+          value={formData[key] as string}
           onChangeText={(text) => setFormData({ ...formData, [key]: text })}
           placeholderTextColor={colors.outlineVariant}
           {...options}
@@ -264,17 +339,12 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* HEADER & AVATAR */}
-        <View style={styles.headerBackground}>
-          <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1000&auto=format&fit=crop",
-            }}
-            style={styles.bannerImage}
-          />
-          <View style={styles.bannerOverlay} />
-        </View>
+        <View style={styles.headerBackground} />
 
         <View style={styles.avatarSection}>
           <TouchableOpacity
@@ -293,8 +363,6 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
                 />
               </View>
             )}
-
-            {/* Camera Overlay Badge */}
             <View style={styles.cameraBadge}>
               {isUploading ? (
                 <ActivityIndicator size="small" color={colors.onPrimary} />
@@ -307,22 +375,45 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
             {profile?.name || sessionUser?.name}
           </Text>
           <Text style={styles.roleText}>
-            {profile?.designation || "FACULTY"}
+            {profile?.designation} • {profile?.department}
           </Text>
+
+          {/* Social Links (View Mode Only) */}
+          {!isEditing &&
+            (profile?.linkedInUrl || profile?.personalWebsiteUrl) && (
+              <View style={styles.socialRow}>
+                {profile.linkedInUrl && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => openLink(profile.linkedInUrl)}
+                  >
+                    <Feather
+                      name="linkedin"
+                      size={20}
+                      color={colors.primaryContainer}
+                    />
+                  </TouchableOpacity>
+                )}
+                {profile.personalWebsiteUrl && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => openLink(profile.personalWebsiteUrl)}
+                  >
+                    <Feather
+                      name="globe"
+                      size={20}
+                      color={colors.primaryContainer}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
         </View>
 
-        {/* 1. FACULTY ID CARD */}
-        <View style={styles.card}>
-          <Text style={styles.cardHeader}>FACULTY IDENTIFICATION</Text>
-          {renderInfoRow("Department", profile?.department, "briefcase")}
-          <View style={styles.divider} />
-          {renderInfoRow("Institutional Email", profile?.email, "mail")}
-        </View>
-
-        {/* 2. PROFESSIONAL DETAILS CARD */}
+        {/* 1. IDENTIFICATION CARD */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardHeader}>PROFESSIONAL DETAILS</Text>
+            <Text style={styles.cardHeader}>IDENTIFICATION</Text>
             <TouchableOpacity
               onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
             >
@@ -331,21 +422,36 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {renderInfoRow("Teacher ID", profile?.teacherId, "hash")}
+          <View style={styles.divider} />
+          {renderInfoRow("Institutional Email", profile?.email, "mail")}
+          <View style={styles.divider} />
+          {isEditing
+            ? renderInputRow("Full Name", "name", "user")
+            : renderInfoRow("Full Name", profile?.name, "user")}
+        </View>
+
+        {/* 2. ACADEMIC & OFFICE DETAILS */}
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>ACADEMIC & OFFICE</Text>
           {isEditing ? (
-            <View style={styles.editForm}>
+            <>
+              {renderInputRow("Faculty", "faculty", "layers")}
+              {renderInputRow("Department", "department", "book")}
               {renderInputRow("Designation", "designation", "award")}
-              {renderInputRow("Specialization", "specialization", "star")}
+              {renderInputRow("Office Room", "officeRoom", "map-pin")}
               {renderInputRow(
                 "Consultation Hours",
                 "consultationHours",
                 "clock",
               )}
-            </View>
+            </>
           ) : (
             <>
-              {renderInfoRow("Designation", profile?.designation, "award")}
+              {renderInfoRow("Faculty", profile?.faculty, "layers")}
               <View style={styles.divider} />
-              {renderInfoRow("Specialization", profile?.specialization, "star")}
+              {renderInfoRow("Office Room", profile?.officeRoom, "map-pin")}
               <View style={styles.divider} />
               {renderInfoRow(
                 "Consultation Hours",
@@ -356,28 +462,138 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
           )}
         </View>
 
-        {/* 3. PERSONAL INFO CARD */}
+        {/* 3. EXPERTISE & QUALIFICATIONS (COMPLEX DATA) */}
         <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardHeader}>PERSONAL INFO</Text>
-            <TouchableOpacity
-              onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
-            >
-              <Text style={styles.editActionText}>
-                {mutation.isPending ? "Saving..." : isEditing ? "Save" : "Edit"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.cardHeader}>PROFESSIONAL EXPERTISE</Text>
 
           {isEditing ? (
-            <View style={styles.editForm}>
-              {renderInputRow("Full Name", "name", "user")}
-              {renderInputRow("Phone Number", "phoneNumber", "phone")}
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Blood Group</Text>
+            <View style={styles.complexInputContainer}>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  value={expertiseInput}
+                  onChangeText={setExpertiseInput}
+                  placeholder="e.g. Data Science"
+                  placeholderTextColor={colors.outlineVariant}
+                />
                 <TouchableOpacity
-                  style={styles.inputWrapper}
+                  onPress={addExpertise}
+                  style={styles.addButton}
+                >
+                  <Feather name="plus" size={20} color={colors.onPrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
+
+          <View style={styles.chipContainer}>
+            {formData.expertiseFields.length > 0 ? (
+              formData.expertiseFields.map((field, idx) => (
+                <View key={idx} style={styles.chip}>
+                  <Text style={styles.chipText}>{field}</Text>
+                  {isEditing && (
+                    <TouchableOpacity
+                      onPress={() => removeExpertise(field)}
+                      style={{ marginLeft: 6 }}
+                    >
+                      <Feather
+                        name="x"
+                        size={14}
+                        color={colors.onSurfaceVariant}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.infoLabel}>No expertise fields added.</Text>
+            )}
+          </View>
+
+          <View style={[styles.divider, { marginTop: spacing.stackLg }]} />
+          <Text style={[styles.cardHeader, { marginTop: spacing.stackLg }]}>
+            ACADEMIC QUALIFICATIONS
+          </Text>
+
+          {isEditing && (
+            <View style={styles.complexInputContainer}>
+              <View
+                style={[styles.inputWrapper, { marginBottom: spacing.stackSm }]}
+              >
+                <TextInput
+                  style={styles.input}
+                  value={qualDegreeInput}
+                  onChangeText={setQualDegreeInput}
+                  placeholder="Degree (e.g. M.Sc)"
+                  placeholderTextColor={colors.outlineVariant}
+                />
+              </View>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  value={qualInstInput}
+                  onChangeText={setQualInstInput}
+                  placeholder="Institution"
+                  placeholderTextColor={colors.outlineVariant}
+                />
+                <TouchableOpacity
+                  onPress={addQualification}
+                  style={styles.addButton}
+                >
+                  <Feather name="plus" size={20} color={colors.onPrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          <View style={{ marginTop: spacing.stackSm }}>
+            {Object.entries(formData.academicQualifications).length > 0 ? (
+              Object.entries(formData.academicQualifications).map(
+                ([degree, inst], idx) => (
+                  <View key={idx} style={styles.qualRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.qualDegreeText}>{degree}</Text>
+                      <Text style={styles.infoLabel}>{inst}</Text>
+                    </View>
+                    {isEditing && (
+                      <TouchableOpacity
+                        onPress={() => removeQualification(degree)}
+                      >
+                        <Feather
+                          name="trash-2"
+                          size={18}
+                          color={colors.error}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ),
+              )
+            ) : (
+              <Text style={styles.infoLabel}>No qualifications added.</Text>
+            )}
+          </View>
+        </View>
+
+        {/* 4. PERSONAL & SOCIAL INFO */}
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>PERSONAL & WEB LINKS</Text>
+          {isEditing ? (
+            <>
+              {renderInputRow("Phone Number", "phoneNumber", "phone", {
+                keyboardType: "phone-pad",
+              })}
+
+              {/* Dynamic Blood Group Dropdown */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.infoLabel}>Blood Group</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.inputWrapper,
+                    isBloodGroupModalVisible && {
+                      borderColor: colors.primaryContainer,
+                    },
+                  ]}
                   onPress={() => setBloodGroupModalVisible(true)}
                 >
                   <Feather
@@ -403,21 +619,25 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
                 </TouchableOpacity>
               </View>
 
-              {renderInputRow("Office Room", "officeRoom", "map-pin")}
-            </View>
+              {renderInputRow("LinkedIn URL", "linkedInUrl", "linkedin", {
+                autoCapitalize: "none",
+              })}
+              {renderInputRow("Website URL", "personalWebsiteUrl", "globe", {
+                autoCapitalize: "none",
+              })}
+            </>
           ) : (
             <>
               {renderInfoRow("Phone Number", profile?.phoneNumber, "phone")}
               <View style={styles.divider} />
+              {/* Maps DB Enum back to UI on initial fetch load automatically */}
               {renderInfoRow(
                 "Blood Group",
                 profile?.bloodGroup
-                  ? BLOOD_GROUP_TO_UI[profile?.bloodGroup]
+                  ? BLOOD_GROUP_TO_UI[profile.bloodGroup]
                   : "",
                 "droplet",
               )}
-              <View style={styles.divider} />
-              {renderInfoRow("Office Room", profile?.officeRoom, "map-pin")}
             </>
           )}
 
@@ -431,7 +651,6 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
           )}
         </View>
 
-        {/* LOGOUT */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Feather name="log-out" size={20} color={colors.error} />
           <Text style={styles.logoutText}>Log Out</Text>
@@ -458,6 +677,7 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
             <FlatList
               data={BLOOD_GROUPS}
               keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.modalItem}
@@ -498,28 +718,9 @@ const styles = StyleSheet.create({
     width: "100%",
     position: "absolute",
     top: 0,
-    overflow: "hidden",
+    backgroundColor: colors.primaryContainer,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-    backgroundColor: colors.primaryContainer,
-  },
-  bannerImage: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100%",
-    height: "100%",
-  },
-  bannerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.primaryContainer,
-    opacity: 0.85,
   },
   avatarSection: {
     alignItems: "center",
@@ -538,7 +739,7 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: rounded.full,
-    backgroundColor: colors.surfaceContainer,
+    backgroundColor: colors.surfaceContainerLowest,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 4,
@@ -558,13 +759,31 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceContainerLowest,
     ...shadows.level1,
   },
-  nameText: { ...typography.headlineMd, color: colors.onSurface },
+  nameText: {
+    ...typography.headlineMd,
+    color: colors.onSurface,
+    marginTop: spacing.stackMd,
+  },
   roleText: {
     ...typography.labelMd,
     color: colors.outline,
     textTransform: "uppercase",
     letterSpacing: 1,
     marginTop: 2,
+  },
+  socialRow: {
+    flexDirection: "row",
+    gap: spacing.stackMd,
+    marginTop: spacing.stackMd,
+  },
+  socialButton: {
+    width: 40,
+    height: 40,
+    borderRadius: rounded.full,
+    backgroundColor: colors.surfaceContainerLowest,
+    justifyContent: "center",
+    alignItems: "center",
+    ...shadows.level1,
   },
   card: {
     backgroundColor: colors.surfaceContainerLowest,
@@ -584,6 +803,7 @@ const styles = StyleSheet.create({
     ...typography.labelSm,
     color: colors.outline,
     letterSpacing: 1.5,
+    marginBottom: spacing.stackLg,
   },
   infoRow: {
     flexDirection: "row",
@@ -617,16 +837,16 @@ const styles = StyleSheet.create({
     color: colors.primaryContainer,
     fontWeight: "700",
   },
-  editForm: { marginTop: -spacing.stackMd },
   inputGroup: { marginBottom: spacing.stackMd },
-  inputLabel: { ...typography.labelSm, color: colors.onSurfaceVariant },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
+    borderWidth: 1,
     borderColor: colors.outlineVariant,
     height: 48,
+    borderRadius: rounded.md,
+    paddingHorizontal: spacing.stackSm,
     marginTop: spacing.stackSm,
   },
   inputIcon: { marginRight: spacing.stackMd },
@@ -641,10 +861,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.stackMd,
     padding: spacing.stackSm,
   },
-  cancelButtonText: {
-    ...typography.labelMd,
-    color: colors.outline,
-  },
+  cancelButtonText: { ...typography.labelMd, color: colors.outline },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -664,6 +881,45 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginLeft: spacing.stackSm,
   },
+
+  // Complex Input Styles
+  complexInputContainer: { marginBottom: spacing.stackMd },
+  addButton: {
+    backgroundColor: colors.primaryContainer,
+    width: 36,
+    height: 36,
+    borderRadius: rounded.sm,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: spacing.stackSm,
+  },
+  chipContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: rounded.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chipText: { ...typography.labelMd, color: colors.onSurface },
+  qualRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    padding: spacing.stackMd,
+    borderRadius: rounded.md,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHigh,
+  },
+  qualDegreeText: {
+    ...typography.bodyMd,
+    fontWeight: "600",
+    color: colors.onSurface,
+  },
+
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 3, 58, 0.4)",
@@ -685,13 +941,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceContainerHighest,
   },
-  modalTitle: {
-    ...typography.titleLg,
-    color: colors.primaryContainer,
-  },
-  closeButton: {
-    padding: spacing.stackSm,
-  },
+  modalTitle: { ...typography.titleLg, color: colors.primaryContainer },
+  closeButton: { padding: spacing.stackSm },
   modalItem: {
     flexDirection: "row",
     justifyContent: "space-between",

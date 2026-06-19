@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, Href } from "expo-router";
 import { authClient } from "../../src/services/auth-client";
 import { colors } from "../../src/theme/colors";
 import { typography } from "../../src/theme/typography";
@@ -54,7 +54,7 @@ const MENU_ITEMS = [
     title: "Academic Calendar",
     icon: "calendar",
     roles: ["STUDENT", "TEACHER"],
-    route: "/calendar",
+    route: "/academic_calendar",
   },
   {
     id: "events",
@@ -126,7 +126,7 @@ const MENU_ITEMS = [
     title: "Upload Calendar",
     icon: "file-plus",
     roles: ["ADMIN"],
-    route: "/admin/calendar",
+    route: "/(tabs)/admin_calendar",
   },
 ];
 
@@ -162,7 +162,8 @@ export default function MenuScreen() {
             <TouchableOpacity
               key={item.id}
               style={styles.gridItem}
-              onPress={() => console.log(`Navigating to: ${item.route}`)}
+              // THE FIX: Actually use expo-router to navigate to the defined route
+              onPress={() => router.push(item.route as Href)}
             >
               <View style={styles.iconContainer}>
                 <Feather

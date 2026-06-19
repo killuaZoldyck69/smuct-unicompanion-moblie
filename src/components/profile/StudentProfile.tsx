@@ -12,6 +12,7 @@ import {
   Alert,
   Modal,
   FlatList,
+  Linking,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -38,7 +39,7 @@ const supabase = createClient(
 const fetchProfile = async () => {
   try {
     const response = await api.get("/students/profile");
-    return response.data?.profile ?? null;
+    return response.data?.data ?? response.data?.profile ?? null;
   } catch (error) {
     return null;
   }
@@ -46,7 +47,7 @@ const fetchProfile = async () => {
 
 const updateProfile = async (data: any) => {
   const response = await api.patch("/students/profile", data);
-  return response.data.profile;
+  return response.data?.profile ?? response.data?.data;
 };
 
 const updateProfileImageAPI = async (imageUrl: string) => {
@@ -88,14 +89,19 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isBloodGroupModalVisible, setBloodGroupModalVisible] = useState(false);
 
-  // Editable Form State
+  // Complex Input State
+  const [skillInput, setSkillInput] = useState("");
+
+  // Editable Form State (Only fields that can be changed)
   const [formData, setFormData] = useState({
     name: "",
     phoneNumber: "",
     bloodGroup: "",
     currentSemester: "",
-    batch: "",
     section: "",
+    skills: [] as string[],
+    linkedInUrl: "",
+    personalWebsiteUrl: "",
   });
 
   // Fetch Data using TanStack Query
@@ -121,11 +127,13 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
         currentSemester: profile.currentSemester
           ? String(profile.currentSemester)
           : "",
-        batch: profile.batch || "",
         section: profile.section || "",
+        skills: profile.skills || [],
+        linkedInUrl: profile.linkedInUrl || "",
+        personalWebsiteUrl: profile.personalWebsiteUrl || "",
       });
     }
-  }, [profile]);
+  }, [profile, isEditing]);
 
   // General Update Mutation
   const mutation = useMutation({
@@ -135,11 +143,11 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
       setIsEditing(false);
       Toast.show({ type: "success", text1: "Profile Updated Successfully!" });
     },
-    onError: () => {
+    onError: (err: any) => {
       Toast.show({
         type: "error",
         text1: "Update Failed",
-        text2: "Please try again.",
+        text2: err.message || "Please try again.",
       });
     },
   });
@@ -147,16 +155,71 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
   // --- ACTIONS ---
 
   const handleSave = () => {
-    const payload = {
-      ...formData,
-      currentSemester: parseInt(
-        formData.currentSemester.replace(/\D/g, "") || "1",
-      ),
-      bloodGroup: formData.bloodGroup
-        ? BLOOD_GROUP_TO_DB[formData.bloodGroup]
-        : null,
-    };
+    const payload: any = {};
+
+    // Diffing Logic
+    if (formData.name !== profile?.name) payload.name = formData.name;
+    if (formData.phoneNumber !== profile?.phoneNumber)
+      payload.phoneNumber = formData.phoneNumber;
+    if (formData.section !== profile?.section)
+      payload.section = formData.section;
+
+    const parsedSemester = parseInt(
+      formData.currentSemester.replace(/\D/g, "") || "1",
+    );
+    if (parsedSemester !== profile?.currentSemester)
+      payload.currentSemester = parsedSemester;
+
+    const mappedBloodGroup = formData.bloodGroup
+      ? BLOOD_GROUP_TO_DB[formData.bloodGroup]
+      : undefined;
+    if (
+      mappedBloodGroup !== profile?.bloodGroup &&
+      mappedBloodGroup !== undefined
+    ) {
+      payload.bloodGroup = mappedBloodGroup;
+    }
+
+    // Complex Arrays and Strings
+    if (
+      JSON.stringify(formData.skills) !== JSON.stringify(profile?.skills || [])
+    ) {
+      payload.skills = formData.skills;
+    }
+    if (formData.linkedInUrl !== (profile?.linkedInUrl || ""))
+      payload.linkedInUrl = formData.linkedInUrl;
+    if (formData.personalWebsiteUrl !== (profile?.personalWebsiteUrl || ""))
+      payload.personalWebsiteUrl = formData.personalWebsiteUrl;
+
+    if (Object.keys(payload).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+
     mutation.mutate(payload);
+  };
+
+  const addSkill = () => {
+    if (!skillInput.trim() || formData.skills.includes(skillInput.trim()))
+      return;
+    setFormData({
+      ...formData,
+      skills: [...formData.skills, skillInput.trim()],
+    });
+    setSkillInput("");
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    setFormData({
+      ...formData,
+      skills: formData.skills.filter((s) => s !== skillToRemove),
+    });
+  };
+
+  const openLink = async (url: string) => {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) await Linking.openURL(url);
+    else Toast.show({ type: "error", text1: "Cannot open URL" });
   };
 
   const handleUpdatePicture = async () => {
@@ -174,7 +237,7 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
         const fileExt = result.assets[0].mimeType?.split("/").pop() || "jpg";
         const safeName =
           profile?.name?.replace(/\s+/g, "").toLowerCase() || "user";
-        const fileName = `${Date.now()}-${safeName}.${fileExt}`;
+        const fileName = `student-${Date.now()}-${safeName}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from("avatars")
@@ -209,9 +272,8 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
     const performLogout = async () => {
       try {
         await authClient.signOut();
-        if (Platform.OS !== "web") {
+        if (Platform.OS !== "web")
           await SecureStore.deleteItemAsync("better-auth.session_token");
-        }
         Toast.show({ type: "success", text1: "Logged out successfully" });
         router.replace("/(auth)/login");
       } catch (error) {
@@ -220,8 +282,7 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
     };
 
     if (Platform.OS === "web") {
-      const confirmed = window.confirm("Are you sure you want to log out?");
-      if (confirmed) performLogout();
+      if (window.confirm("Are you sure you want to log out?")) performLogout();
     } else {
       Alert.alert("Log Out", "Are you sure you want to log out?", [
         { text: "Cancel", style: "cancel" },
@@ -281,7 +342,7 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
         />
         <TextInput
           style={styles.input}
-          value={formData[key]}
+          value={formData[key] as string}
           onChangeText={(text) => setFormData({ ...formData, [key]: text })}
           placeholderTextColor={colors.outlineVariant}
           {...options}
@@ -334,22 +395,43 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
           </TouchableOpacity>
           <Text style={styles.nameText}>{profile.name}</Text>
           <Text style={styles.roleText}>{sessionUser?.role || "STUDENT"}</Text>
+
+          {/* Social Links (View Mode Only) */}
+          {!isEditing &&
+            (profile?.linkedInUrl || profile?.personalWebsiteUrl) && (
+              <View style={styles.socialRow}>
+                {profile.linkedInUrl && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => openLink(profile.linkedInUrl)}
+                  >
+                    <Feather
+                      name="linkedin"
+                      size={20}
+                      color={colors.primaryContainer}
+                    />
+                  </TouchableOpacity>
+                )}
+                {profile.personalWebsiteUrl && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => openLink(profile.personalWebsiteUrl)}
+                  >
+                    <Feather
+                      name="globe"
+                      size={20}
+                      color={colors.primaryContainer}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
         </View>
 
-        {/* 1. IDENTIFICATION CARD */}
-        <View style={styles.card}>
-          <Text style={styles.cardHeader}>IDENTIFICATION</Text>
-          {renderInfoRow("University ID", profile.studentId, "credit-card")}
-          <View style={styles.divider} />
-          {renderInfoRow("Department", profile.department, "briefcase")}
-          <View style={styles.divider} />
-          {renderInfoRow("Institutional Email", profile.email, "mail")}
-        </View>
-
-        {/* 2. ACADEMIC STATUS CARD (GRID) */}
+        {/* 1. IDENTIFICATION CARD (Immutable academic data shown here) */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardHeader}>ACADEMIC STATUS</Text>
+            <Text style={styles.cardHeader}>IDENTIFICATION & ACADEMICS</Text>
             <TouchableOpacity
               onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
             >
@@ -360,14 +442,41 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
           </View>
 
           {isEditing ? (
+            <>
+              {renderInputRow("Full Name", "name", "user")}
+              <View style={styles.divider} />
+              {/* Note: Academic data is strictly read-only here as per registration rules */}
+              {renderInfoRow("University ID", profile.studentId, "credit-card")}
+              <View style={styles.divider} />
+              {renderInfoRow("Program", profile.program, "book-open")}
+            </>
+          ) : (
+            <>
+              {renderInfoRow("University ID", profile.studentId, "credit-card")}
+              <View style={styles.divider} />
+              {renderInfoRow("Program", profile.program, "book-open")}
+              <View style={styles.divider} />
+              {renderInfoRow("Faculty", profile.faculty, "layers")}
+              <View style={styles.divider} />
+              {renderInfoRow("Department", profile.department, "book")}
+              <View style={styles.divider} />
+              {renderInfoRow("Institutional Email", profile.email, "mail")}
+            </>
+          )}
+        </View>
+
+        {/* 2. ACADEMIC STATUS CARD */}
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>ACADEMIC STATUS</Text>
+          {isEditing ? (
             <View style={styles.editForm}>
-              {renderInputRow("Batch", "batch", "award")}
               {renderInputRow(
                 "Current Semester",
                 "currentSemester",
                 "calendar",
                 { keyboardType: "numeric" },
               )}
+              {renderInputRow("Section", "section", "users")}
             </View>
           ) : (
             <>
@@ -379,7 +488,7 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
                     color={colors.primaryContainer}
                   />
                   <Text style={styles.gridLabel}>Batch</Text>
-                  <Text style={styles.gridValue}>{profile.batch}</Text>
+                  <Text style={styles.gridValue}>{profile.batch || "N/A"}</Text>
                 </View>
                 <View style={styles.gridItem}>
                   <Feather
@@ -389,7 +498,19 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
                   />
                   <Text style={styles.gridLabel}>Semester</Text>
                   <Text style={styles.gridValue}>
-                    {profile.currentSemester}
+                    {profile.currentSemester || "N/A"}
+                  </Text>
+                </View>
+                {/* Section moved to Academic Status Grid! */}
+                <View style={styles.gridItem}>
+                  <Feather
+                    name="users"
+                    size={24}
+                    color={colors.primaryContainer}
+                  />
+                  <Text style={styles.gridLabel}>Section</Text>
+                  <Text style={styles.gridValue}>
+                    {profile.section || "N/A"}
                   </Text>
                 </View>
               </View>
@@ -415,10 +536,57 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
           )}
         </View>
 
-        {/* 3. PERSONAL DETAILS CARD */}
+        {/* 3. SKILLS CARD */}
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>PROFESSIONAL SKILLS</Text>
+
+          {isEditing ? (
+            <View style={styles.complexInputContainer}>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  value={skillInput}
+                  onChangeText={setSkillInput}
+                  placeholder="e.g. React Native, Python"
+                  placeholderTextColor={colors.outlineVariant}
+                />
+                <TouchableOpacity onPress={addSkill} style={styles.addButton}>
+                  <Feather name="plus" size={20} color={colors.onPrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
+
+          <View style={styles.chipContainer}>
+            {formData.skills.length > 0 ? (
+              formData.skills.map((skill, idx) => (
+                <View key={idx} style={styles.chip}>
+                  <Text style={styles.chipText}>{skill}</Text>
+                  {isEditing && (
+                    <TouchableOpacity
+                      onPress={() => removeSkill(skill)}
+                      style={{ marginLeft: 6 }}
+                    >
+                      <Feather
+                        name="x"
+                        size={14}
+                        color={colors.onSurfaceVariant}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.infoLabel}>No skills added.</Text>
+            )}
+          </View>
+        </View>
+
+        {/* 4. PERSONAL & WEB LINKS CARD */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardHeader}>PERSONAL DETAILS</Text>
+            <Text style={styles.cardHeader}>PERSONAL & WEB LINKS</Text>
+            {/* Redundant Save button for better UX on long forms */}
             <TouchableOpacity
               onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
             >
@@ -430,7 +598,6 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
 
           {isEditing ? (
             <View style={styles.editForm}>
-              {renderInputRow("Full Name", "name", "user")}
               {renderInputRow("Phone Number", "phoneNumber", "phone", {
                 keyboardType: "phone-pad",
               })}
@@ -438,7 +605,12 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Blood Group</Text>
                 <TouchableOpacity
-                  style={styles.inputWrapper}
+                  style={[
+                    styles.inputWrapper,
+                    isBloodGroupModalVisible && {
+                      borderColor: colors.primaryContainer,
+                    },
+                  ]}
                   onPress={() => setBloodGroupModalVisible(true)}
                 >
                   <Feather
@@ -464,7 +636,12 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
                 </TouchableOpacity>
               </View>
 
-              {renderInputRow("Section", "section", "users")}
+              {renderInputRow("LinkedIn URL", "linkedInUrl", "linkedin", {
+                autoCapitalize: "none",
+              })}
+              {renderInputRow("Website URL", "personalWebsiteUrl", "globe", {
+                autoCapitalize: "none",
+              })}
             </View>
           ) : (
             <>
@@ -475,8 +652,6 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
                 profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] : "",
                 "droplet",
               )}
-              <View style={styles.divider} />
-              {renderInfoRow("Section", profile.section, "users")}
             </>
           )}
 
@@ -517,6 +692,7 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
             <FlatList
               data={BLOOD_GROUPS}
               keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.modalItem}
@@ -557,10 +733,9 @@ const styles = StyleSheet.create({
     width: "100%",
     position: "absolute",
     top: 0,
-    overflow: "hidden",
+    backgroundColor: colors.primaryContainer,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-    backgroundColor: colors.primaryContainer,
   },
   bannerImage: {
     position: "absolute",
@@ -597,7 +772,7 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: rounded.full,
-    backgroundColor: colors.surfaceContainer,
+    backgroundColor: colors.surfaceContainerLowest,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 4,
@@ -625,6 +800,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginTop: 2,
   },
+  socialRow: {
+    flexDirection: "row",
+    gap: spacing.stackMd,
+    marginTop: spacing.stackMd,
+  },
+  socialButton: {
+    width: 40,
+    height: 40,
+    borderRadius: rounded.full,
+    backgroundColor: colors.surfaceContainerLowest,
+    justifyContent: "center",
+    alignItems: "center",
+    ...shadows.level1,
+  },
   card: {
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: rounded.xl,
@@ -639,11 +828,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: spacing.stackLg,
   },
+
+  // FIX 1: Added spacing.stackLg margin here to ensure padding below solitary headers!
   cardHeader: {
     ...typography.labelSm,
     color: colors.outline,
     letterSpacing: 1.5,
+    marginBottom: spacing.stackLg,
   },
+
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -719,7 +912,10 @@ const styles = StyleSheet.create({
     color: colors.primaryContainer,
     fontWeight: "700",
   },
-  editForm: { marginTop: -spacing.stackMd },
+
+  // FIX 2: Removed the negative margin (-spacing.stackMd) that was causing text overlap!
+  editForm: { marginTop: spacing.stackSm },
+
   inputGroup: { marginBottom: spacing.stackMd },
   inputLabel: { ...typography.labelSm, color: colors.onSurfaceVariant },
   inputWrapper: {
@@ -730,6 +926,8 @@ const styles = StyleSheet.create({
     borderColor: colors.outlineVariant,
     height: 48,
     marginTop: spacing.stackSm,
+    borderRadius: rounded.md,
+    paddingHorizontal: spacing.stackSm,
   },
   inputIcon: { marginRight: spacing.stackMd },
   input: {
@@ -805,4 +1003,26 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginBottom: spacing.stackMd,
   },
+
+  // Complex Input Styles
+  complexInputContainer: { marginBottom: spacing.stackMd },
+  addButton: {
+    backgroundColor: colors.primaryContainer,
+    width: 36,
+    height: 36,
+    borderRadius: rounded.sm,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: spacing.stackSm,
+  },
+  chipContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: rounded.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chipText: { ...typography.labelMd, color: colors.onSurface },
 });

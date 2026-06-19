@@ -1,0 +1,330 @@
+{
+    "title": "ACADEMIC CALENDAR - WINTER SEMESTER 2026",
+    "semester": "Winter 2026",
+    "isGlobal": false,
+    "targetFaculties": [
+        "Faculty of Design & Technology",
+        "Faculty of Engineering & Technology",
+        "Faculty of Fine & Performing Arts",
+        "Faculty of Humanities & Social Sciences",
+        "Faculty of Management & General Studies"
+    ],
+    "targetDepartments": [],
+    "events": [
+        {
+            "title": "Classes will start",
+            "description": "Classes will start from 17.02.2026 (Tuesday)",
+            "startDate": "2026-02-17T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        },
+        {
+            "title": "Sem. Registration Week",
+            "description": "Week 01 - Tue, Wed, Thu, Fri, Sun, Mon & Tue,",
+            "startDate": "2026-02-17T00:00:00Z",
+            "endDate": "2026-02-24T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Int. Mother Language day",
+            "description": "Saturday",
+            "startDate": "2026-02-21T00:00:00Z",
+            "endDate": null,
+            "isHoliday": true
+        },
+        {
+            "title": "Sem. Registration Week",
+            "description": "Week 02 - Wed, Thu, Fri, Sat, Sun, Mon & Tue",
+            "startDate": "2026-02-25T00:00:00Z",
+            "endDate": "2026-03-03T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 03 - Wed, Thu, Fri, Sat, Sun, Mon & Tue",
+            "startDate": "2026-03-04T00:00:00Z",
+            "endDate": "2026-03-10T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Last Date for Semester Registration, Semester Drop, and Retake Registration",
+            "description": "Last Date for Semester Registration, Semester Drop, and Retake Registration",
+            "startDate": "2026-03-06T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 04 - Wed, Thu, Fri, Sat, Sun & Mon",
+            "startDate": "2026-03-11T00:00:00Z",
+            "endDate": "2026-03-16T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Shab-E-Qadr",
+            "description": "Tuesday",
+            "startDate": "2026-03-17T00:00:00Z",
+            "endDate": null,
+            "isHoliday": true
+        },
+        {
+            "title": "Jumatul Bida, Eid-ul-Fitr,",
+            "description": "Wednesday to Wednesday",
+            "startDate": "2026-03-18T00:00:00Z",
+            "endDate": "2026-03-25T00:00:00Z",
+            "isHoliday": true
+        },
+        {
+            "title": "Independence day",
+            "description": "Thursday",
+            "startDate": "2026-03-26T00:00:00Z",
+            "endDate": null,
+            "isHoliday": true
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 04 - Friday",
+            "startDate": "2026-03-27T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 05 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-03-28T00:00:00Z",
+            "endDate": "2026-04-03T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 06 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-04-04T00:00:00Z",
+            "endDate": "2026-04-10T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 07 - Sat, Sun, Mon, Wed, Thu & Fri",
+            "startDate": "2026-04-11T00:00:00Z",
+            "endDate": "2026-04-17T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Bengali New Year Day",
+            "description": "Tuesday",
+            "startDate": "2026-04-14T00:00:00Z",
+            "endDate": null,
+            "isHoliday": true
+        },
+        {
+            "title": "Question Moderation",
+            "description": "Week 08 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-04-18T00:00:00Z",
+            "endDate": "2026-04-24T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Makeup class of Saturday, Tuesday & Submission or Presentation etc.",
+            "description": "Makeup Class Week - Makeup class of Saturday, Tuesday & Submission or Presentation etc.",
+            "startDate": "2026-04-25T00:00:00Z",
+            "endDate": "2026-04-27T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Preparation leave for exam",
+            "description": "Preparation leave for exam",
+            "startDate": "2026-04-28T00:00:00Z",
+            "endDate": "2026-04-29T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Last Date of Payment of Tuition Fees",
+            "description": "Last Date of Payment of Tuition Fees",
+            "startDate": "2026-04-26T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        },
+        {
+            "title": "Mid-term Examination - Winter 2026",
+            "description": "Offline Mode",
+            "startDate": "2026-04-30T00:00:00Z",
+            "endDate": "2026-05-15T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "May Day",
+            "description": "Friday",
+            "startDate": "2026-05-01T00:00:00Z",
+            "endDate": null,
+            "isHoliday": true
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 09 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-05-16T00:00:00Z",
+            "endDate": "2026-05-22T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 10 - Sat, Sun,",
+            "startDate": "2026-05-23T00:00:00Z",
+            "endDate": "2026-05-24T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Midterm Examination Result Publication",
+            "description": "Midterm Examination Result Publication",
+            "startDate": "2026-05-23T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        },
+        {
+            "title": "Eid-ul-Azha",
+            "description": "Monday to Monday",
+            "startDate": "2026-05-25T00:00:00Z",
+            "endDate": "2026-06-01T00:00:00Z",
+            "isHoliday": true
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 10 - Tue, Wed, Thu & Fri",
+            "startDate": "2026-06-02T00:00:00Z",
+            "endDate": "2026-06-05T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 11 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-06-06T00:00:00Z",
+            "endDate": "2026-06-12T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 12 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-06-13T00:00:00Z",
+            "endDate": "2026-06-19T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 13 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-06-20T00:00:00Z",
+            "endDate": "2026-06-26T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 14 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-06-27T00:00:00Z",
+            "endDate": "2026-07-03T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 15 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-07-04T00:00:00Z",
+            "endDate": "2026-07-10T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Regular Class",
+            "description": "Week 16 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-07-11T00:00:00Z",
+            "endDate": "2026-07-17T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Question Moderation",
+            "description": "Week 17 - Sat, Sun, Mon, Tue, Wed, Thu & Fri",
+            "startDate": "2026-07-18T00:00:00Z",
+            "endDate": "2026-07-24T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Makeup Classes",
+            "description": "Makeup Class Week - Makeup classes of Monday & Submission or Presentation etc.",
+            "startDate": "2026-07-25T00:00:00Z",
+            "endDate": "2026-07-26T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Preparation leave for exam",
+            "description": "Preparation leave for exam",
+            "startDate": "2026-07-27T00:00:00Z",
+            "endDate": "2026-07-29T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Last Date of Payment of Tuition Fees",
+            "description": "Last Date of Payment of Tuition Fees",
+            "startDate": "2026-07-29T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        },
+        {
+            "title": "Final Examination",
+            "description": "Offline Mode",
+            "startDate": "2026-07-30T00:00:00Z",
+            "endDate": "2026-08-14T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "July Mass Uprising Day",
+            "description": "Wednesday",
+            "startDate": "2026-08-05T00:00:00Z",
+            "endDate": null,
+            "isHoliday": true
+        },
+        {
+            "title": "Overlapped Examination",
+            "description": "Overlapped Examination",
+            "startDate": "2026-08-15T00:00:00Z",
+            "endDate": "2026-08-16T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Input of Exam Marks",
+            "description": "Input of Exam Marks",
+            "startDate": "2026-08-15T00:00:00Z",
+            "endDate": "2026-08-17T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Last Date of Teachers Evaluation by the",
+            "description": "Last Date of Teachers Evaluation by the",
+            "startDate": "2026-08-17T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        },
+        {
+            "title": "Check Tabulation of Marksheet",
+            "description": "Check Tabulation of Marksheet",
+            "startDate": "2026-08-17T00:00:00Z",
+            "endDate": "2026-08-18T00:00:00Z",
+            "isHoliday": false
+        },
+        {
+            "title": "Final Term Examination Result Publication",
+            "description": "Final Term Examination Result Publication",
+            "startDate": "2026-08-19T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        },
+        {
+            "title": "Semester break",
+            "description": "Wed, Thu & Friday",
+            "startDate": "2026-08-19T00:00:00Z",
+            "endDate": "2026-08-21T00:00:00Z",
+            "isHoliday": true
+        },
+        {
+            "title": "Class Commencement of Summer Sem. 2026",
+            "description": "Tentative Date",
+            "startDate": "2026-08-22T00:00:00Z",
+            "endDate": null,
+            "isHoliday": false
+        }
+    ]
+}

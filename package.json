@@ -17,6 +17,7 @@
     "better-auth": "^1.6.19",
     "expo": "~56.0.12",
     "expo-constants": "^56.0.18",
+    "expo-document-picker": "~56.0.4",
     "expo-image-picker": "~56.0.18",
     "expo-linking": "^56.0.14",
     "expo-network": "^56.0.5",

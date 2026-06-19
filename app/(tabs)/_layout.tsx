@@ -4,41 +4,27 @@ import { Tabs } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../src/services/api";
 import { authClient } from "../../src/services/auth-client";
 import { colors } from "../../src/theme/colors";
 import { typography } from "../../src/theme/typography";
 import { shadows } from "../../src/theme/layout";
 
-const fetchProfile = async () => {
-  try {
-    const response = await api.get("/students/profile");
-    return response.data?.profile ?? null;
-  } catch (error) {
-    return null;
-  }
-};
-
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
 
-  const { data: session, isPending: isAuthPending } = authClient.useSession();
-  const userRole = (session?.user as any)?.role || "STUDENT";
+  const { data: session, isPending } = authClient.useSession();
 
-  const { data: profile, isLoading: isProfileLoading } = useQuery({
-    queryKey: ["studentProfile"],
-    queryFn: fetchProfile,
-    retry: false, // Don't retry if it fails (Admin/Teacher won't have a student profile)
-  });
-
-  if (isAuthPending || isProfileLoading) {
+  // Wait until the session and user object are completely populated
+  if (isPending || !session?.user) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primaryContainer} />
       </View>
     );
   }
+
+  // Safely extract the exact role without using a "STUDENT" fallback
+  const userRole = (session.user as any).role;
 
   return (
     <Tabs
@@ -142,6 +128,16 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => (
             <Feather name="user" size={24} color={color} />
           ),
+        }}
+      />
+
+      {/* ========================================== */}
+      {/* 6. HIDDEN SCREENS (Accessible only via router.push) */}
+      {/* ========================================== */}
+      <Tabs.Screen
+        name="admin_calendar"
+        options={{
+          href: null, // This forcefully hides it from the bottom tab bar!
         }}
       />
     </Tabs>

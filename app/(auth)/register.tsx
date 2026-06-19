@@ -28,22 +28,31 @@ import { createClient } from "@supabase/supabase-js";
 export default function RegisterScreen() {
   const router = useRouter();
 
+  // Basic Details
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Image State
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMimeType, setImageMimeType] = useState<string>("image/jpeg");
 
+  // Academic Details
   const [studentId, setStudentId] = useState("");
+  const [program, setProgram] = useState("");
+  const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
   const [semester, setSemester] = useState("");
   const [section, setSection] = useState("");
   const [batch, setBatch] = useState("");
 
+  // UI States
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
-  const [isDepartmentModalVisible, setDepartmentModalVisible] = useState(false);
+  const [isProgramModalVisible, setProgramModalVisible] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const supabase = createClient(
     process.env.EXPO_PUBLIC_SUPABASE_URL!,
@@ -69,6 +78,15 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (password !== confirmPassword) {
       Toast.show({ type: "error", text1: "Passwords do not match." });
+      return;
+    }
+
+    if (!studentId || !program || !batch) {
+      Toast.show({
+        type: "error",
+        text1: "Missing Academic Data",
+        text2: "Student ID, Program, and Batch are required.",
+      });
       return;
     }
 
@@ -98,6 +116,7 @@ export default function RegisterScreen() {
         finalImageUrl = publicUrlData.publicUrl;
       }
 
+      // 1. Create Core BetterAuth User
       const { data: authData, error: authError } =
         await authClient.signUp.email({
           email,
@@ -112,11 +131,14 @@ export default function RegisterScreen() {
 
       const sessionToken = (authData as any).token;
 
+      // 2. Complete Profile Setup with strict schema fields
       await api.post(
         "/students/onboard",
         {
           studentId,
+          faculty,
           department,
+          program,
           batch,
           currentSemester: parseInt(semester.replace(/\D/g, "") || "1"),
           section,
@@ -135,18 +157,6 @@ export default function RegisterScreen() {
         text2: "Please log in with your new account.",
       });
 
-      setFullName("");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      setImageUri(null);
-      setImageBase64(null);
-      setStudentId("");
-      setDepartment("");
-      setSemester("");
-      setSection("");
-      setBatch("");
-
       setTimeout(() => {
         router.replace("/(auth)/login");
       }, 1500);
@@ -163,6 +173,7 @@ export default function RegisterScreen() {
     }
   };
 
+  // Enhanced input renderer supporting custom trailing elements (like eye icons)
   const renderInput = (
     label: string,
     iconName: any,
@@ -171,6 +182,7 @@ export default function RegisterScreen() {
     setValue: (val: string) => void,
     id: string,
     options?: any,
+    trailingElement?: React.ReactNode,
   ) => {
     const isFocused = focusedInput === id;
     return (
@@ -193,6 +205,7 @@ export default function RegisterScreen() {
             onBlur={() => setFocusedInput(null)}
             {...options}
           />
+          {trailingElement}
         </View>
       </View>
     );
@@ -265,6 +278,22 @@ export default function RegisterScreen() {
             "email",
             { keyboardType: "email-address", autoCapitalize: "none" },
           )}
+
+          {/* Warning Alert for Immutable Fields */}
+          <View style={styles.warningBanner}>
+            <Feather
+              name="alert-triangle"
+              size={20}
+              color={colors.error}
+              style={{ marginTop: 2 }}
+            />
+            <Text style={styles.warningText}>
+              Student ID, Academic Program, and Batch{" "}
+              <Text style={{ fontWeight: "700" }}>cannot be updated</Text> after
+              registration. Please ensure they are accurate.
+            </Text>
+          </View>
+
           {renderInput(
             "Student ID",
             "credit-card",
@@ -274,15 +303,15 @@ export default function RegisterScreen() {
             "studentId",
           )}
 
-          {/* Custom Department / Program Selector */}
+          {/* Custom Program Selector (Auto-Fills Faculty & Department) */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Program / Department</Text>
+            <Text style={styles.inputLabel}>Academic Program</Text>
             <TouchableOpacity
               style={[
                 styles.inputWrapper,
-                isDepartmentModalVisible && styles.inputFocused,
+                isProgramModalVisible && styles.inputFocused,
               ]}
-              onPress={() => setDepartmentModalVisible(true)}
+              onPress={() => setProgramModalVisible(true)}
             >
               <Feather
                 name="book"
@@ -293,11 +322,11 @@ export default function RegisterScreen() {
               <Text
                 style={[
                   styles.selectorText,
-                  !department && { color: colors.outlineVariant },
+                  !program && { color: colors.outlineVariant },
                 ]}
                 numberOfLines={1}
               >
-                {department || "Select your program"}
+                {program || "Select your program"}
               </Text>
               <Feather name="chevron-down" size={20} color={colors.outline} />
             </TouchableOpacity>
@@ -329,7 +358,7 @@ export default function RegisterScreen() {
 
           {renderInput("Batch", "award", "e.g. 2024", batch, setBatch, "batch")}
 
-          {/* Passwords */}
+          {/* Passwords with Eye Icon Toggles */}
           {renderInput(
             "Password",
             "lock",
@@ -337,8 +366,19 @@ export default function RegisterScreen() {
             password,
             setPassword,
             "pass",
-            { secureTextEntry: true },
+            { secureTextEntry: !showPassword },
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={{ padding: 4 }}
+            >
+              <Feather
+                name={showPassword ? "eye" : "eye-off"}
+                size={20}
+                color={colors.outline}
+              />
+            </TouchableOpacity>,
           )}
+
           {renderInput(
             "Confirm Password",
             "refresh-cw",
@@ -346,16 +386,18 @@ export default function RegisterScreen() {
             confirmPassword,
             setConfirmPassword,
             "passConfirm",
-            { secureTextEntry: true },
+            { secureTextEntry: !showConfirmPassword },
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={{ padding: 4 }}
+            >
+              <Feather
+                name={showConfirmPassword ? "eye" : "eye-off"}
+                size={20}
+                color={colors.outline}
+              />
+            </TouchableOpacity>,
           )}
-
-          {/* Info Text */}
-          <View style={styles.infoRow}>
-            <Feather name="info" size={16} color={colors.outline} />
-            <Text style={styles.infoText}>
-              Only verified university emails are permitted.
-            </Text>
-          </View>
 
           <TouchableOpacity
             style={styles.submitButton}
@@ -375,17 +417,17 @@ export default function RegisterScreen() {
 
       {/* Program Selection Modal */}
       <Modal
-        visible={isDepartmentModalVisible}
+        visible={isProgramModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setDepartmentModalVisible(false)}
+        onRequestClose={() => setProgramModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Program</Text>
               <TouchableOpacity
-                onPress={() => setDepartmentModalVisible(false)}
+                onPress={() => setProgramModalVisible(false)}
                 style={styles.closeButton}
               >
                 <Feather name="x" size={24} color={colors.onSurface} />
@@ -401,8 +443,10 @@ export default function RegisterScreen() {
                 <TouchableOpacity
                   style={styles.programItem}
                   onPress={() => {
-                    setDepartment(item.name);
-                    setDepartmentModalVisible(false);
+                    setProgram(item.name);
+                    setFaculty(item.faculty); // Auto-filled in background
+                    setDepartment(item.department); // Auto-filled in background
+                    setProgramModalVisible(false);
                   }}
                 >
                   <Text style={styles.programName}>{item.name}</Text>
@@ -451,6 +495,22 @@ const styles = StyleSheet.create({
   formContainer: {
     paddingHorizontal: spacing.marginMobile,
     paddingTop: spacing.sectionBreak,
+  },
+  warningBanner: {
+    flexDirection: "row",
+    backgroundColor: colors.errorContainer,
+    padding: spacing.stackMd,
+    borderRadius: rounded.lg,
+    marginBottom: spacing.stackLg,
+    borderWidth: 1,
+    borderColor: "rgba(186, 26, 26, 0.2)", // Faint error color outline
+  },
+  warningText: {
+    flex: 1,
+    ...typography.labelSm,
+    color: colors.error,
+    marginLeft: spacing.stackSm,
+    lineHeight: 18,
   },
   photoSection: {
     alignItems: "center",
@@ -538,16 +598,6 @@ const styles = StyleSheet.create({
     ...typography.bodyMd,
     color: colors.onSurface,
   },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.stackLg,
-  },
-  infoText: {
-    ...typography.labelSm,
-    color: colors.outline,
-    marginLeft: spacing.stackSm,
-  },
   submitButton: {
     backgroundColor: colors.primaryContainer,
     borderRadius: rounded.lg,
@@ -555,6 +605,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.stackLg,
+    marginTop: spacing.stackSm,
   },
   submitButtonText: {
     ...typography.bodyLg,
