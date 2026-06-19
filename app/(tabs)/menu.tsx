@@ -91,7 +91,13 @@ const MENU_ITEMS = [
     roles: ["STUDENT", "TEACHER", "ADMIN"],
     route: "/bus-schedule",
   },
-
+  {
+    id: "campus_events",
+    title: "Campus Events",
+    icon: "calendar",
+    roles: ["STUDENT", "TEACHER", "ADMIN"],
+    route: "/events",
+  },
   // --- Admin Specific ---
   {
     id: "manage_forum",
