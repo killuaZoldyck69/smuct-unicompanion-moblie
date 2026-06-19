@@ -108,19 +108,20 @@ const MENU_ITEMS = [
     route: "/admin-bus-manage",
   },
   {
-    id: "manage_blood",
-    title: "Manage Blood Posts",
-    icon: "droplet",
-    roles: ["ADMIN"],
-    route: "/admin/blood",
-  },
-  {
     id: "upload_notice",
     title: "Upload Notice",
     icon: "upload-cloud",
     roles: ["ADMIN"],
     route: "/admin/notices",
   },
+  {
+    id: "manage_blood",
+    title: "Manage Blood Posts",
+    icon: "droplet",
+    roles: ["ADMIN"],
+    route: "/admin/blood",
+  },
+
   {
     id: "upload_event",
     title: "Event Schedule",
