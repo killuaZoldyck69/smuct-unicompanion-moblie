@@ -1,0 +1,191 @@
+[
+    {
+        "route": "Campus to Azimpur (New Market)",
+        "busNumber": "N/A",
+        "departureTime": "07:00 AM",
+        "stops": [
+            "Azimpur (New Market)",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Campus to Azimpur (New Market)",
+        "busNumber": "N/A",
+        "departureTime": "05:40 PM",
+        "stops": [
+            "Campus",
+            "Azimpur (New Market)"
+        ]
+    },
+    {
+        "route": "Campus to Savar",
+        "busNumber": "N/A",
+        "departureTime": "07:00 AM",
+        "stops": [
+            "Savar",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Campus to Savar",
+        "busNumber": "N/A",
+        "departureTime": "05:40 PM",
+        "stops": [
+            "Campus",
+            "Savar"
+        ]
+    },
+    {
+        "route": "Campus to Gazipur",
+        "busNumber": "N/A",
+        "departureTime": "07:00 AM",
+        "stops": [
+            "Gazipur",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Campus to Gazipur",
+        "busNumber": "N/A",
+        "departureTime": "07:10 AM",
+        "stops": [
+            "Gazipur",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Campus to Gazipur",
+        "busNumber": "N/A",
+        "departureTime": "10:00 AM",
+        "stops": [
+            "Gazipur",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Campus to Gazipur",
+        "busNumber": "N/A",
+        "departureTime": "01:45 PM",
+        "stops": [
+            "Campus",
+            "Gazipur"
+        ]
+    },
+    {
+        "route": "Campus to Gazipur",
+        "busNumber": "N/A",
+        "departureTime": "04:40 PM",
+        "stops": [
+            "Campus",
+            "Gazipur"
+        ]
+    },
+    {
+        "route": "Campus to Gazipur",
+        "busNumber": "N/A",
+        "departureTime": "05:40 PM",
+        "stops": [
+            "Campus",
+            "Gazipur"
+        ]
+    },
+    {
+        "route": "Mirpur-10 Shuttle",
+        "busNumber": "N/A",
+        "departureTime": "08:00 AM",
+        "stops": [
+            "Indoor Stadium",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Mirpur-10 Shuttle",
+        "busNumber": "N/A",
+        "departureTime": "09:00 AM",
+        "stops": [
+            "Indoor Stadium",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Mirpur-10 Shuttle",
+        "busNumber": "N/A",
+        "departureTime": "11:30 AM",
+        "stops": [
+            "Indoor Stadium",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Mirpur-10 Shuttle",
+        "busNumber": "N/A",
+        "departureTime": "02:15 PM",
+        "stops": [
+            "Indoor Stadium",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Campus to Mirpur",
+        "busNumber": "N/A",
+        "departureTime": "11:30 AM",
+        "stops": [
+            "Campus",
+            "Mirpur"
+        ]
+    },
+    {
+        "route": "Campus to Mirpur",
+        "busNumber": "N/A",
+        "departureTime": "01:45 PM",
+        "stops": [
+            "Campus",
+            "Mirpur"
+        ]
+    },
+    {
+        "route": "Campus to Mirpur",
+        "busNumber": "N/A",
+        "departureTime": "04:45 PM",
+        "stops": [
+            "Campus",
+            "Mirpur"
+        ]
+    },
+    {
+        "route": "Campus to Mirpur",
+        "busNumber": "N/A",
+        "departureTime": "05:45 PM",
+        "stops": [
+            "Campus",
+            "Mirpur"
+        ]
+    },
+    {
+        "route": "Campus to Rampura",
+        "busNumber": "N/A",
+        "departureTime": "07:00 AM",
+        "stops": [
+            "Rampura",
+            "Campus"
+        ]
+    },
+    {
+        "route": "Campus to Rampura",
+        "busNumber": "N/A",
+        "departureTime": "05:40 PM",
+        "stops": [
+            "Campus",
+            "Rampura"
+        ]
+    },
+    {
+        "route": "Campus to Uttara Azampur Road",
+        "busNumber": "N/A",
+        "departureTime": "All Day",
+        "stops": [
+            "Campus",
+            "Uttara Azampur Road"
+        ]
+    }
+]

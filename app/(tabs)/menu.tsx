@@ -101,6 +101,13 @@ const MENU_ITEMS = [
     route: "/admin/forum",
   },
   {
+    id: "manage_buses",
+    title: "Manage Buses",
+    icon: "map", // Using the map icon (or "truck" if you prefer)
+    roles: ["ADMIN"],
+    route: "/admin-bus-manage",
+  },
+  {
     id: "manage_blood",
     title: "Manage Blood Posts",
     icon: "droplet",
