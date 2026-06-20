@@ -13,6 +13,7 @@ import {
   Alert,
   Modal,
   SafeAreaView,
+  ScrollView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -24,9 +25,9 @@ import api from "../../src/services/api";
 import { authClient } from "../../src/services/auth-client";
 import { colors } from "../../src/theme/colors";
 import { typography } from "../../src/theme/typography";
-import { spacing, rounded } from "../../src/theme/layout";
+import { spacing, rounded, shadows } from "../../src/theme/layout";
 
-// --- 12-Hour Timestamp Helper ---
+// --- Helpers ---
 export const format12HourTime = (dateString: string) => {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -42,6 +43,19 @@ export const format12HourTime = (dateString: string) => {
     .toUpperCase();
 };
 
+const getUserSubtitle = (user: any) => {
+  if (!user) return "";
+  if (user.studentProfile) {
+    const { department, currentSemester, section } = user.studentProfile;
+    return `${department || "No Dept"} • Sem ${currentSemester || "N/A"} • Sec ${section || "N/A"}`;
+  }
+  if (user.teacherProfile) {
+    const { department, designation } = user.teacherProfile;
+    return `${designation || "Faculty"} • ${department || "No Dept"}`;
+  }
+  return "University Member";
+};
+
 export default function ThreadScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -53,6 +67,9 @@ export default function ThreadScreen() {
   const [replyText, setReplyText] = useState("");
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", description: "" });
+
+  // State for the Responder Profile Modal
+  const [selectedProfile, setSelectedProfile] = useState<any>(null);
 
   const { data: thread, isLoading } = useQuery({
     queryKey: ["forumThread", id],
@@ -145,24 +162,32 @@ export default function ThreadScreen() {
       <Text style={styles.threadTitle}>{thread.title}</Text>
 
       <View style={styles.authorRow}>
-        {thread.author?.image ? (
-          <Image
-            source={{ uri: thread.author.image }}
-            style={styles.avatarImage}
-          />
-        ) : (
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarText}>
-              {thread.author?.name?.charAt(0).toUpperCase() || "?"}
-            </Text>
-          </View>
-        )}
+        <TouchableOpacity onPress={() => setSelectedProfile(thread.author)}>
+          {thread.author?.image ? (
+            <Image
+              source={{ uri: thread.author.image }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarText}>
+                {thread.author?.name?.charAt(0).toUpperCase() || "?"}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
           <Text style={styles.authorName}>
             {thread.author?.name}{" "}
             <Text style={styles.authorRoleBadge}>(Author)</Text>
           </Text>
+
+          {/* NEW: Author Subtitle Info */}
+          <Text style={styles.authorSubtitle} numberOfLines={1}>
+            {getUserSubtitle(thread.author)}
+          </Text>
+
           <View style={styles.metaRow}>
             <Feather
               name="clock"
@@ -233,18 +258,21 @@ export default function ThreadScreen() {
 
   const renderReply = ({ item }: { item: any }) => (
     <View style={styles.replyCard}>
-      {item.responder?.image ? (
-        <Image
-          source={{ uri: item.responder.image }}
-          style={styles.replyAvatarImage}
-        />
-      ) : (
-        <View style={styles.replyAvatarFallback}>
-          <Text style={styles.replyAvatarText}>
-            {item.responder?.name?.charAt(0).toUpperCase() || "?"}
-          </Text>
-        </View>
-      )}
+      <TouchableOpacity onPress={() => setSelectedProfile(item.responder)}>
+        {item.responder?.image ? (
+          <Image
+            source={{ uri: item.responder.image }}
+            style={styles.replyAvatarImage}
+          />
+        ) : (
+          <View style={styles.replyAvatarFallback}>
+            <Text style={styles.replyAvatarText}>
+              {item.responder?.name?.charAt(0).toUpperCase() || "?"}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
       <View style={styles.replyContentBlock}>
         <View style={styles.replyHeader}>
           <Text style={styles.replyAuthorName}>
@@ -263,10 +291,11 @@ export default function ThreadScreen() {
   );
 
   return (
+    // FIX: Stronger Android Keyboard Support
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      behavior={Platform.OS === "ios" ? "padding" : "padding"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 80}
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -332,7 +361,7 @@ export default function ThreadScreen() {
         </View>
       )}
 
-      {/* Edit Modal */}
+      {/* --- EDIT POST MODAL --- */}
       <Modal
         visible={isEditModalVisible}
         animationType="slide"
@@ -380,6 +409,53 @@ export default function ThreadScreen() {
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
+      </Modal>
+
+      {/* --- USER PROFILE INFO MODAL --- */}
+      <Modal
+        visible={!!selectedProfile}
+        animationType="fade"
+        transparent={true}
+      >
+        <View style={styles.profileModalOverlay}>
+          <View style={styles.profileModalCard}>
+            <TouchableOpacity
+              style={styles.profileCloseBtn}
+              onPress={() => setSelectedProfile(null)}
+            >
+              <Feather name="x" size={20} color={colors.onSurface} />
+            </TouchableOpacity>
+
+            {selectedProfile?.image ? (
+              <Image
+                source={{ uri: selectedProfile.image }}
+                style={styles.profileModalAvatarImage}
+              />
+            ) : (
+              <View style={styles.profileModalAvatarFallback}>
+                <Text style={styles.profileModalAvatarText}>
+                  {selectedProfile?.name?.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.profileModalName}>{selectedProfile?.name}</Text>
+            <Text style={styles.profileModalRole}>
+              {selectedProfile?.role || "Member"}
+            </Text>
+
+            <View style={styles.profileInfoBox}>
+              <Text style={styles.profileInfoText}>
+                {getUserSubtitle(selectedProfile)}
+              </Text>
+              {selectedProfile?.studentProfile?.batch && (
+                <Text style={styles.profileInfoTextSub}>
+                  Batch: {selectedProfile.studentProfile.batch}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -447,6 +523,7 @@ const styles = StyleSheet.create({
     color: colors.onPrimary,
     fontWeight: "700",
   },
+
   authorName: {
     ...typography.bodyLg,
     fontSize: 16,
@@ -454,8 +531,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   authorRoleBadge: { fontSize: 12, fontWeight: "500", color: colors.primary },
-  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-  timeText: { ...typography.labelSm, color: colors.outline },
+  authorSubtitle: {
+    ...typography.labelSm,
+    color: colors.secondary,
+    marginBottom: 2,
+  },
+
+  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  timeText: { ...typography.labelSm, color: colors.outline, fontSize: 11 },
 
   resolveBtn: {
     flexDirection: "row",
@@ -659,5 +742,84 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.onSurface,
     lineHeight: 24,
+  },
+
+  // Info Modal Styles
+  profileModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.marginMobile,
+  },
+  profileModalCard: {
+    width: "100%",
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: rounded.xl,
+    padding: spacing.stackLg,
+    alignItems: "center",
+    ...shadows.level1,
+  },
+  profileCloseBtn: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    padding: 8,
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: rounded.full,
+  },
+  profileModalAvatarFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primaryContainer,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.stackLg,
+    marginTop: spacing.stackLg,
+  },
+  profileModalAvatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: spacing.stackLg,
+    marginTop: spacing.stackLg,
+    borderWidth: 2,
+    borderColor: colors.surfaceContainerLowest,
+  },
+  profileModalAvatarText: {
+    fontSize: 32,
+    color: colors.onPrimary,
+    fontWeight: "700",
+  },
+  profileModalName: {
+    ...typography.headlineMd,
+    color: colors.onSurface,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  profileModalRole: {
+    ...typography.labelMd,
+    color: colors.primary,
+    fontWeight: "600",
+    marginBottom: spacing.stackLg,
+  },
+  profileInfoBox: {
+    width: "100%",
+    backgroundColor: colors.surfaceContainerHigh,
+    padding: spacing.stackLg,
+    borderRadius: rounded.lg,
+    alignItems: "center",
+  },
+  profileInfoText: {
+    ...typography.bodyMd,
+    color: colors.onSurface,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  profileInfoTextSub: {
+    ...typography.labelSm,
+    color: colors.outline,
+    marginTop: 4,
   },
 });

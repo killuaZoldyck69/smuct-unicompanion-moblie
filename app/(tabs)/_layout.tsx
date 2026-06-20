@@ -141,6 +141,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="blood"
+        options={{
+          href: null, // Forcefully hides it from the bottom tab bar!
+        }}
+      />
+      <Tabs.Screen
         name="community"
         options={{
           href: null, // Safeguard: Hides the old community file if it still exists
