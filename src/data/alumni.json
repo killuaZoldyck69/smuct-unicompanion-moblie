@@ -1,0 +1,91 @@
+[
+    {
+        "name": "Md. Tousif Hasan",
+        "email": "tousif.cse@example.com",
+        "batch": "18th Batch",
+        "graduationYear": 2021,
+        "department": "CSE",
+        "degree": "B.Sc in Computer Science & Engineering",
+        "currentCompany": "Google",
+        "currentPosition": "Software Engineer",
+        "skills": [
+            "JavaScript",
+            "React",
+            "Node.js",
+            "System Design"
+        ],
+        "linkedInUrl": "https://linkedin.com/in/tousif-hasan",
+        "personalWebsiteUrl": "https://tousif.dev"
+    },
+    {
+        "name": "Sadia Rahman",
+        "email": "sadia.bba@example.com",
+        "batch": "15th Batch",
+        "graduationYear": 2018,
+        "department": "BBA",
+        "degree": "Bachelor of Business Administration",
+        "currentCompany": "Grameenphone",
+        "currentPosition": "Product Marketing Manager",
+        "skills": [
+            "Market Research",
+            "Digital Marketing",
+            "Agile",
+            "SEO"
+        ],
+        "linkedInUrl": "https://linkedin.com/in/sadiarahman",
+        "personalWebsiteUrl": ""
+    },
+    {
+        "name": "Kamrul Islam",
+        "email": "kamrul.eee@example.com",
+        "batch": "16th Batch",
+        "graduationYear": 2019,
+        "department": "EEE",
+        "degree": "B.Sc in Electrical & Electronic Engineering",
+        "currentCompany": "Walton BD",
+        "currentPosition": "Senior Hardware Engineer",
+        "skills": [
+            "Circuit Design",
+            "IoT",
+            "C++",
+            "Embedded Systems"
+        ],
+        "linkedInUrl": "https://linkedin.com/in/kamrul-islam-eee",
+        "personalWebsiteUrl": ""
+    },
+    {
+        "name": "Nusrat Jahan",
+        "email": "nusrat.ce@example.com",
+        "batch": "20th Batch",
+        "graduationYear": 2023,
+        "department": "Civil Engineering",
+        "degree": "B.Sc in Civil Engineering",
+        "currentCompany": "Public Works Department (PWD)",
+        "currentPosition": "Assistant Engineer",
+        "skills": [
+            "AutoCAD",
+            "Structural Analysis",
+            "Project Management"
+        ],
+        "linkedInUrl": "https://linkedin.com/in/nusrat-ce",
+        "personalWebsiteUrl": ""
+    },
+    {
+        "name": "Fahim Ahmed",
+        "email": "fahim.data@example.com",
+        "batch": "19th Batch",
+        "graduationYear": 2022,
+        "department": "CSE",
+        "degree": "B.Sc in Computer Science & Engineering",
+        "currentCompany": "Pathao",
+        "currentPosition": "Data Scientist",
+        "skills": [
+            "Python",
+            "Machine Learning",
+            "SQL",
+            "Tableau"
+        ],
+        "linkedInUrl": "https://linkedin.com/in/fahim-data",
+        "personalWebsiteUrl": "https://fahim-analytics.com"
+    }
+]

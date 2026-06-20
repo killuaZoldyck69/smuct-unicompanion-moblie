@@ -31,13 +31,6 @@ const MENU_ITEMS = [
     roles: ["STUDENT"],
     route: "/exams",
   },
-  {
-    id: "view_teachers",
-    title: "Teachers Directory",
-    icon: "users",
-    roles: ["STUDENT"],
-    route: "/directory",
-  },
 
   // --- Teacher Specific ---
   {
@@ -62,6 +55,13 @@ const MENU_ITEMS = [
     icon: "map-pin",
     roles: ["STUDENT", "TEACHER"],
     route: "/events",
+  },
+  {
+    id: "teacher_directory",
+    title: "Faculty Directory",
+    icon: "book-open",
+    roles: ["STUDENT", "TEACHER", "ADMIN"],
+    route: "/directory",
   },
   {
     id: "notices",
@@ -104,6 +104,51 @@ const MENU_ITEMS = [
     icon: "calendar",
     roles: ["STUDENT", "TEACHER", "ADMIN"],
     route: "/events",
+  },
+
+  {
+    id: "complaints",
+    title: "Help & Complaints",
+    icon: "alert-octagon",
+    roles: ["STUDENT", "TEACHER"],
+    route: "/complaints",
+  },
+  {
+    id: "alumni",
+    title: "Alumni Network",
+    icon: "award",
+    roles: ["STUDENT", "TEACHER", "ADMIN"],
+    route: "/alumni",
+  },
+  {
+    id: "field_booking",
+    title: "Book Field",
+    icon: "target",
+    roles: ["STUDENT", "TEACHER"],
+    route: "/field-booking",
+  },
+
+  // --- ADMIN MANAGEMENT FEATURES ---
+  {
+    id: "admin_complaints",
+    title: "Manage Complaints",
+    icon: "inbox",
+    roles: ["ADMIN"],
+    route: "/admin/complaints",
+  },
+  {
+    id: "admin_alumni",
+    title: "Manage Alumni",
+    icon: "database",
+    roles: ["ADMIN"],
+    route: "/admin/alumni",
+  },
+  {
+    id: "admin_field_booking",
+    title: "Field Requests",
+    icon: "calendar",
+    roles: ["ADMIN"],
+    route: "/admin/field-booking",
   },
   // --- Admin Specific ---
   {
@@ -149,6 +194,13 @@ const MENU_ITEMS = [
     roles: ["ADMIN"],
     route: "/(tabs)/admin_calendar",
   },
+  // {
+  //   id: "admin_complaints",
+  //   title: "Manage Complaints",
+  //   icon: "inbox",
+  //   roles: ["ADMIN"],
+  //   route: "/admin/complaints",
+  // },
 ];
 
 export default function MenuScreen() {
