@@ -22,7 +22,7 @@ import api from "../../src/services/api";
 import { colors } from "../../src/theme/colors";
 import { typography } from "../../src/theme/typography";
 import { spacing, rounded, shadows } from "../../src/theme/layout";
-
+import * as FileSystem from "expo-file-system";
 export const formatDate = (dateString: string) => {
   if (!dateString) return "";
   return new Date(dateString).toLocaleDateString("en-GB", {
@@ -127,7 +127,6 @@ export default function AdminComplaintsScreen() {
     }
 
     try {
-      // Build HTML string for the PDF
       const htmlContent = `
         <html>
           <head>
@@ -182,26 +181,45 @@ export default function AdminComplaintsScreen() {
         </html>
       `;
 
-      // Generate PDF File
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-
-      // Share or Save PDF
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          UTI: ".pdf",
-          mimeType: "application/pdf",
-        });
+      if (Platform.OS === "web") {
+        await Print.printAsync({ html: htmlContent });
       } else {
-        Toast.show({
-          type: "info",
-          text1: "Sharing not available on this device",
+        // 1. Generate the file in the restricted Print folder
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+
+        // 2. Define a "safe" public path
+        // @ts-ignore - Bypassing strict TS definition quirk
+        const baseDir =
+          FileSystem.documentDirectory || FileSystem.cacheDirectory;
+        const safeUri = `${baseDir}Campus_Complaints_Report.pdf`;
+
+        // 3. Move the file from the restricted folder to the safe folder
+        await FileSystem.moveAsync({
+          from: uri,
+          to: safeUri,
         });
+
+        // 4. Share the safe file!
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(safeUri, {
+            UTI: ".pdf",
+            mimeType: "application/pdf",
+            dialogTitle: "Save Complaints Report",
+          });
+        } else {
+          Toast.show({
+            type: "info",
+            text1: "Sharing not available on this device",
+          });
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("PDF Generation Error:", error);
       Toast.show({
         type: "error",
         text1: "Export failed",
-        text2: "Could not generate PDF",
+        text2: error.message || "Could not generate PDF",
       });
     }
   };
