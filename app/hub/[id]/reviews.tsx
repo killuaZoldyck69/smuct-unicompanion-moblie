@@ -8,12 +8,13 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
+  Image,
   Switch,
+  ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,15 +30,11 @@ export default function HubReviewsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  // Modals
-  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
+  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
 
-  // Forms
-  const [settingsForm, setSettingsForm] = useState({
-    isReviewOpen: false,
-    reviewQuestions: [""],
-  });
+  // Forms State
   const [reviewForm, setReviewForm] = useState({
     rating: 0,
     comment: "",
@@ -45,36 +42,34 @@ export default function HubReviewsScreen() {
     answers: {} as Record<number, string>,
   });
 
-  // --- Fetch Data ---
-  const { data: hubDetails, isLoading: isLoadingHub } = useQuery({
-    queryKey: ["hub", id],
-    queryFn: async () => {
-      const res = await api.get(`/hubs/${id}`);
-      return res.data?.data;
-    },
+  const [settingsForm, setSettingsForm] = useState({
+    isReviewOpen: false,
+    reviewQuestions: [""],
   });
 
-  const { data: reviews, isLoading: isLoadingReviews } = useQuery({
-    queryKey: ["hubReviews", id],
-    queryFn: async () => {
-      const res = await api.get(`/hubs/${id}/reviews`);
-      return res.data?.data || [];
-    },
-  });
-
-  // --- Identify User Role ---
+  // --- Data Fetching ---
   const { data: myHubs } = useQuery({
     queryKey: ["myHubs"],
-    queryFn: async () => {
-      const response = await api.get("/hubs/my");
-      return response.data?.data || [];
-    },
+    queryFn: async () => (await api.get("/hubs/my")).data?.data || [],
+  });
+
+  const { data: hubDetails } = useQuery({
+    queryKey: ["hub", id],
+    queryFn: async () => (await api.get(`/hubs/${id}`)).data?.data || {},
+  });
+
+  const { data: reviewsData, isLoading } = useQuery({
+    queryKey: ["hubReviews", id],
+    queryFn: async () =>
+      (await api.get(`/hubs/${id}/reviews`)).data?.data || {},
   });
 
   const myHubMembership = myHubs?.find(
     (m: any) => m.hubId === id || m.hub?.id === id,
   );
   const myRole = myHubMembership?.role;
+
+  const canReview = ["STUDENT", "CR", "TA"].includes(myRole);
   const canManage = ["TEACHER", "CR", "TA"].includes(myRole);
 
   // Sync settings form when hub details load
@@ -100,11 +95,7 @@ export default function HubReviewsScreen() {
       setIsSettingsModalVisible(false);
     },
     onError: (err: any) =>
-      Toast.show({
-        type: "error",
-        text1: "Update Failed",
-        text2: err.response?.data?.message || err.message,
-      }),
+      Toast.show({ type: "error", text1: "Update Failed", text2: err.message }),
   });
 
   const submitReviewMutation = useMutation({
@@ -116,17 +107,26 @@ export default function HubReviewsScreen() {
       setIsReviewModalVisible(false);
       setReviewForm({ rating: 0, comment: "", isAnonymous: true, answers: {} });
     },
-    onError: (err: any) =>
+    onError: (err: any) => {
+      const errorMsg = err.response?.data?.message || err.message;
       Toast.show({
         type: "error",
         text1: "Submission Failed",
-        text2: err.response?.data?.message || err.message,
-      }),
+        text2: errorMsg,
+      });
+
+      // Gracefully close the modal if they hit the 409 Duplicate Review restriction
+      if (
+        err.response?.status === 409 ||
+        errorMsg.includes("already submitted")
+      ) {
+        setIsReviewModalVisible(false);
+      }
+    },
   });
 
   // --- Handlers ---
   const handleSaveSettings = () => {
-    // Filter out empty questions
     const cleanQuestions = settingsForm.reviewQuestions
       .map((q) => q.trim())
       .filter((q) => q.length > 0);
@@ -136,28 +136,16 @@ export default function HubReviewsScreen() {
     });
   };
 
-  const handleSubmitReview = () => {
-    if (reviewForm.rating === 0)
-      return Toast.show({
-        type: "error",
-        text1: "Rating is required",
-        text2: "Please select a star rating.",
-      });
-    submitReviewMutation.mutate(reviewForm);
-  };
-
   const addQuestionField = () =>
     setSettingsForm((prev) => ({
       ...prev,
       reviewQuestions: [...prev.reviewQuestions, ""],
     }));
-
   const updateQuestionField = (index: number, text: string) => {
     const updated = [...settingsForm.reviewQuestions];
     updated[index] = text;
     setSettingsForm((prev) => ({ ...prev, reviewQuestions: updated }));
   };
-
   const removeQuestionField = (index: number) => {
     const updated = settingsForm.reviewQuestions.filter((_, i) => i !== index);
     setSettingsForm((prev) => ({
@@ -167,100 +155,142 @@ export default function HubReviewsScreen() {
   };
 
   // --- Render Components ---
-  const StarRating = ({
-    rating,
-    setRating,
-    interactive = false,
-  }: {
-    rating: number;
-    setRating?: (val: number) => void;
-    interactive?: boolean;
-  }) => (
-    <View style={styles.starRow}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <TouchableOpacity
-          key={star}
-          disabled={!interactive}
-          onPress={() => setRating && setRating(star)}
-        >
-          <Feather
-            name="star"
-            size={interactive ? 32 : 16}
-            color={star <= rating ? "#FFD700" : colors.surfaceContainerHighest}
-            style={[
-              interactive && { marginRight: 8 },
-              !interactive && { marginRight: 2 },
-            ]}
-          />
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-
-  const renderReviewCard = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.userInfoRow}>
-          <View
-            style={[
-              styles.avatarFallbackSmall,
-              item.isAnonymous && {
-                backgroundColor: colors.surfaceContainerHighest,
-              },
-            ]}
+  const StarRatingInput = () => {
+    return (
+      <View style={styles.starRow}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <TouchableOpacity
+            key={star}
+            onPress={() => setReviewForm({ ...reviewForm, rating: star })}
           >
             <Feather
-              name={item.isAnonymous ? "user-x" : "user"}
-              size={16}
-              color={item.isAnonymous ? colors.outline : colors.onPrimary}
+              name="star"
+              size={36}
+              color={
+                star <= reviewForm.rating
+                  ? "#FFB300"
+                  : colors.surfaceContainerHighest
+              }
+              style={{ marginRight: 8 }}
+              fill={star <= reviewForm.rating ? "#FFB300" : "transparent"}
             />
-          </View>
-          <View>
-            <Text
-              style={[
-                styles.userName,
-                item.isAnonymous && { color: colors.outline },
-              ]}
-            >
-              {item.isAnonymous ? "Anonymous Student" : item.student?.name}
-            </Text>
-            <Text style={styles.dateText}>
-              {new Date(item.createdAt).toLocaleDateString()}
-            </Text>
-          </View>
-        </View>
-        <StarRating rating={item.rating} />
-      </View>
-
-      {item.comment ? (
-        <Text style={styles.contentBody}>{item.comment}</Text>
-      ) : null}
-
-      {/* Render answers to custom questions if they exist */}
-      {item.answers && Object.keys(item.answers).length > 0 && (
-        <View style={styles.answersBox}>
-          {Object.entries(item.answers).map(([questionIndex, answer]: any) => (
-            <View key={questionIndex} style={styles.answerItem}>
-              <Text style={styles.questionText}>
-                Q: {hubDetails?.reviewQuestions?.[questionIndex] || "Question"}
-              </Text>
-              <Text style={styles.answerText}>{answer}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-
-  if (isLoadingHub || isLoadingReviews)
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primaryContainer} />
+          </TouchableOpacity>
+        ))}
       </View>
     );
+  };
+
+  const renderReviewCard = ({ item }: { item: any }) => {
+    const isExpanded = expandedId === item.id;
+    const isAnon = item.isAnonymous;
+
+    const reviewerName = isAnon
+      ? "Anonymous Student"
+      : item.student?.name || "Student";
+    const avatarUrl = isAnon ? null : item.student?.image;
+    const studentEmail = item.student?.email;
+    const studentIdStr = item.student?.studentProfile?.studentId;
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, isExpanded && styles.cardExpanded]}
+        activeOpacity={0.9}
+        onPress={() => setExpandedId(isExpanded ? null : item.id)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.userInfo}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Feather
+                  name={isAnon ? "user-x" : "user"}
+                  size={18}
+                  color={colors.secondary}
+                />
+              </View>
+            )}
+            <View style={styles.userTextCol}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {reviewerName}
+              </Text>
+              <Text style={styles.dateText}>
+                {new Date(item.createdAt).toLocaleDateString([], {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.starsWrapper}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Feather
+                key={star}
+                name="star"
+                size={14}
+                color={
+                  star <= item.rating
+                    ? "#FFB300"
+                    : colors.surfaceContainerHighest
+                }
+                fill={star <= item.rating ? "#FFB300" : "transparent"}
+              />
+            ))}
+            <Feather
+              name={isExpanded ? "chevron-up" : "chevron-down"}
+              size={18}
+              color={colors.outline}
+              style={{ marginLeft: 12 }}
+            />
+          </View>
+        </View>
+
+        {isExpanded && (
+          <View style={styles.expandedContent}>
+            {/* Display Contact Info if not Anonymous */}
+            {!isAnon && (studentIdStr || studentEmail) && (
+              <View style={styles.reviewerContactBox}>
+                {studentIdStr && (
+                  <Text style={styles.contactText}>ID: {studentIdStr}</Text>
+                )}
+                {studentEmail && (
+                  <Text style={styles.contactText}>{studentEmail}</Text>
+                )}
+              </View>
+            )}
+
+            {/* General Comment */}
+            {item.comment ? (
+              <Text style={styles.commentBody}>{item.comment}</Text>
+            ) : null}
+
+            {/* Custom Q&A Answers */}
+            {item.answers && Object.keys(item.answers).length > 0 && (
+              <View style={styles.answersBox}>
+                {Object.entries(item.answers).map(
+                  ([questionIndex, answer]: any) => (
+                    <View key={questionIndex} style={styles.answerItem}>
+                      <Text style={styles.questionText}>
+                        Q:{" "}
+                        {hubDetails?.reviewQuestions?.[questionIndex] ||
+                          "Question"}
+                      </Text>
+                      <Text style={styles.answerText}>{answer}</Text>
+                    </View>
+                  ),
+                )}
+              </View>
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -270,8 +300,9 @@ export default function HubReviewsScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Course Reviews</Text>
-          <Text style={styles.headerSubtitle}>Student feedback & ratings</Text>
         </View>
+
+        {/* Settings Gear for Teachers/TAs/CRs */}
         {canManage && (
           <TouchableOpacity
             onPress={() => setIsSettingsModalVisible(true)}
@@ -283,6 +314,21 @@ export default function HubReviewsScreen() {
             )}
           </TouchableOpacity>
         )}
+      </View>
+
+      <View style={styles.metricsBox}>
+        <View style={styles.averageBox}>
+          <Text style={styles.averageNumber}>
+            {reviewsData?.averageRating || "N/A"}
+          </Text>
+          <Text style={styles.averageLabel}>Average Rating</Text>
+        </View>
+        <View style={styles.totalBox}>
+          <Text style={styles.totalNumber}>
+            {reviewsData?.totalReviews || 0}
+          </Text>
+          <Text style={styles.averageLabel}>Total Reviews</Text>
+        </View>
       </View>
 
       {/* Notice Banners */}
@@ -300,42 +346,28 @@ export default function HubReviewsScreen() {
         </View>
       )}
 
-      {/* Write Review Button for Students */}
-      {hubDetails?.isReviewOpen && !canManage && (
-        <View style={{ padding: spacing.marginMobile }}>
-          <TouchableOpacity
-            style={styles.submitReviewBtn}
-            onPress={() => setIsReviewModalVisible(true)}
-          >
-            <Feather
-              name="edit-2"
-              size={18}
-              color="#FFF"
-              style={{ marginRight: 8 }}
-            />
-            <Text style={styles.submitReviewText}>Write a Review</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* List */}
-      {reviews.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Feather
-            name="message-square"
-            size={48}
-            color={colors.surfaceContainerHighest}
-            style={{ marginBottom: 16 }}
-          />
-          <Text style={styles.emptyTitle}>No Reviews Yet</Text>
-        </View>
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: 40 }} />
       ) : (
         <FlatList
-          data={reviews}
+          data={reviewsData?.reviews || []}
           keyExtractor={(item) => item.id}
           renderItem={renderReviewCard}
           contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No reviews yet. Be the first!</Text>
+          }
         />
+      )}
+
+      {/* FAB - Only visible to students/CRs/TAs if reviews are open */}
+      {canReview && hubDetails?.isReviewOpen && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => setIsReviewModalVisible(true)}
+        >
+          <Feather name="edit-3" size={24} color="#FFF" />
+        </TouchableOpacity>
       )}
 
       {/* --- ADMIN SETTINGS MODAL --- */}
@@ -361,17 +393,27 @@ export default function HubReviewsScreen() {
                 disabled={updateSettingsMutation.isPending}
               >
                 {updateSettingsMutation.isPending ? (
-                  <ActivityIndicator size="small" />
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.primaryContainer}
+                  />
                 ) : (
                   <Text style={styles.postTextBtn}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>
-            <ScrollView contentContainerStyle={styles.modalContent}>
-              <View style={styles.switchRow}>
+
+            <ScrollView
+              contentContainerStyle={{
+                padding: spacing.marginMobile,
+                paddingBottom: 80,
+              }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.switchContainer}>
                 <View style={{ flex: 1, paddingRight: 16 }}>
                   <Text style={styles.switchLabel}>Accept Reviews</Text>
-                  <Text style={styles.switchDesc}>
+                  <Text style={styles.switchSubLabel}>
                     Allow students to submit feedback for this course.
                   </Text>
                 </View>
@@ -381,7 +423,7 @@ export default function HubReviewsScreen() {
                     setSettingsForm({ ...settingsForm, isReviewOpen: val })
                   }
                   trackColor={{
-                    false: colors.outline,
+                    false: colors.surfaceContainerHighest,
                     true: colors.primaryContainer,
                   }}
                   thumbColor="#FFF"
@@ -430,7 +472,7 @@ export default function HubReviewsScreen() {
         </SafeAreaView>
       </Modal>
 
-      {/* --- SUBMIT REVIEW MODAL (Students) --- */}
+      {/* --- SUBMIT REVIEW MODAL --- */}
       <Modal
         visible={isReviewModalVisible}
         animationType="slide"
@@ -447,50 +489,41 @@ export default function HubReviewsScreen() {
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Write Review</Text>
               <TouchableOpacity
-                onPress={handleSubmitReview}
-                disabled={submitReviewMutation.isPending}
+                onPress={() => submitReviewMutation.mutate(reviewForm)}
+                disabled={!reviewForm.rating || submitReviewMutation.isPending}
               >
                 {submitReviewMutation.isPending ? (
-                  <ActivityIndicator size="small" />
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.primaryContainer}
+                  />
                 ) : (
-                  <Text style={styles.postTextBtn}>Submit</Text>
+                  <Text
+                    style={[
+                      styles.postTextBtn,
+                      !reviewForm.rating && { opacity: 0.5 },
+                    ]}
+                  >
+                    Submit
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
-            <ScrollView contentContainerStyle={styles.modalContent}>
-              <View style={styles.ratingBox}>
-                <Text style={styles.ratingLabel}>Overall Course Rating</Text>
-                <StarRating
-                  rating={reviewForm.rating}
-                  setRating={(val) =>
-                    setReviewForm({ ...reviewForm, rating: val })
-                  }
-                  interactive
-                />
-              </View>
 
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Submit Anonymously</Text>
-                <Switch
-                  value={reviewForm.isAnonymous}
-                  onValueChange={(val) =>
-                    setReviewForm({ ...reviewForm, isAnonymous: val })
-                  }
-                  trackColor={{
-                    false: colors.outline,
-                    true: colors.primaryContainer,
-                  }}
-                />
-              </View>
-              <Text style={styles.helperText}>
-                If enabled, your name will be hidden from everyone, including
-                the instructor.
-              </Text>
+            <ScrollView
+              contentContainerStyle={{
+                padding: spacing.marginMobile,
+                paddingBottom: 80,
+              }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.label}>Tap to Rate</Text>
+              <StarRatingInput />
 
-              {/* Dynamic Questions Rendering */}
+              {/* Dynamic Custom Questions */}
               {hubDetails?.reviewQuestions &&
                 hubDetails.reviewQuestions.length > 0 && (
-                  <View style={{ marginTop: spacing.stackLg }}>
+                  <View style={{ marginBottom: spacing.stackLg }}>
                     <Text style={styles.sectionHeader}>
                       Instructor Questions
                     </Text>
@@ -498,7 +531,7 @@ export default function HubReviewsScreen() {
                       <View key={i} style={{ marginBottom: spacing.stackMd }}>
                         <Text style={styles.label}>{q}</Text>
                         <TextInput
-                          style={styles.input}
+                          style={[styles.input, { marginBottom: 0 }]}
                           placeholder="Your answer..."
                           value={reviewForm.answers[i] || ""}
                           onChangeText={(text) =>
@@ -513,21 +546,42 @@ export default function HubReviewsScreen() {
                   </View>
                 )}
 
-              <Text style={styles.sectionHeader}>Additional Comments</Text>
+              <Text style={styles.label}>General Feedback</Text>
               <TextInput
                 style={styles.textArea}
                 placeholder="Share your overall experience with this course..."
                 value={reviewForm.comment}
-                onChangeText={(text) =>
-                  setReviewForm({ ...reviewForm, comment: text })
+                onChangeText={(t) =>
+                  setReviewForm({ ...reviewForm, comment: t })
                 }
                 multiline
               />
+
+              {/* Anonymous Toggle */}
+              <View style={styles.switchContainer}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.switchLabel}>Submit Anonymously</Text>
+                  <Text style={styles.switchSubLabel}>
+                    Your name and photo will be hidden
+                  </Text>
+                </View>
+                <Switch
+                  value={reviewForm.isAnonymous}
+                  onValueChange={(val) =>
+                    setReviewForm({ ...reviewForm, isAnonymous: val })
+                  }
+                  trackColor={{
+                    false: colors.surfaceContainerHighest,
+                    true: colors.primaryContainer,
+                  }}
+                  thumbColor={reviewForm.isAnonymous ? "#FFF" : colors.outline}
+                />
+              </View>
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -536,14 +590,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 60,
-    paddingBottom: spacing.stackLg,
-    paddingHorizontal: spacing.marginMobile,
+    padding: spacing.marginMobile,
     backgroundColor: colors.surfaceContainerLowest,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceContainerHighest,
   },
-  backButton: { marginRight: spacing.stackMd, padding: spacing.stackSm },
-  headerTitle: { ...typography.headlineMd, color: colors.onSurface },
-  headerSubtitle: { ...typography.bodyMd, color: colors.outline, marginTop: 2 },
+  backButton: { marginRight: 16 },
+  headerTitle: {
+    ...typography.titleLg,
+    fontWeight: "700",
+    color: colors.onSurface,
+  },
+
   settingsBtn: {
     padding: 8,
     backgroundColor: colors.surfaceContainerHigh,
@@ -577,20 +635,40 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  submitReviewBtn: {
+  metricsBox: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primaryContainer,
-    paddingVertical: 14,
-    borderRadius: rounded.md,
+    padding: spacing.marginMobile,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceContainerHighest,
   },
-  submitReviewText: { ...typography.labelMd, color: "#FFF", fontWeight: "700" },
-
-  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyTitle: { ...typography.titleLg, color: colors.outline },
+  averageBox: {
+    flex: 1,
+    alignItems: "center",
+    borderRightWidth: 1,
+    borderRightColor: colors.surfaceContainerHighest,
+  },
+  totalBox: { flex: 1, alignItems: "center" },
+  averageNumber: {
+    ...typography.headlineMd,
+    fontWeight: "800",
+    color: colors.primary,
+  },
+  totalNumber: {
+    ...typography.headlineMd,
+    fontWeight: "800",
+    color: colors.onSurface,
+  },
+  averageLabel: { ...typography.labelSm, color: colors.outline, marginTop: 4 },
 
   listContent: { padding: spacing.marginMobile, paddingBottom: 100 },
+  emptyText: {
+    ...typography.bodyMd,
+    color: colors.outline,
+    textAlign: "center",
+    marginTop: 40,
+  },
+
   card: {
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: rounded.xl,
@@ -600,41 +678,61 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceContainerHighest,
     ...shadows.level1,
   },
+  cardExpanded: { borderColor: colors.primaryContainer },
+
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.stackMd,
   },
-  userInfoRow: { flexDirection: "row", alignItems: "center" },
-  avatarFallbackSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryContainer,
+  userInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
+  userTextCol: { flex: 1, paddingRight: 8 },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    backgroundColor: colors.surfaceContainerHigh,
+  },
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.secondaryContainer,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.stackSm,
+    marginRight: 12,
   },
   userName: {
     ...typography.labelMd,
     color: colors.onSurface,
-    fontWeight: "700",
+    fontWeight: "800",
+    fontSize: 15,
   },
-  dateText: { ...typography.labelSm, color: colors.outline, fontSize: 10 },
-  starRow: { flexDirection: "row" },
-  contentBody: {
+  dateText: {
+    ...typography.labelSm,
+    color: colors.outline,
+    fontSize: 11,
+    marginTop: 2,
+  },
+
+  starsWrapper: { flexDirection: "row", alignItems: "center" },
+
+  expandedContent: { marginTop: spacing.stackLg, paddingTop: spacing.stackSm },
+  reviewerContactBox: { marginBottom: spacing.stackMd },
+  contactText: {
+    ...typography.labelSm,
+    color: colors.primary,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  commentBody: {
     ...typography.bodyMd,
     color: colors.onSurfaceVariant,
     lineHeight: 22,
   },
 
-  answersBox: {
-    marginTop: spacing.stackLg,
-    paddingTop: spacing.stackSm,
-    borderTopWidth: 1,
-    borderTopColor: colors.surfaceContainerHighest,
-  },
+  answersBox: { marginTop: spacing.stackLg },
   answerItem: {
     marginTop: spacing.stackSm,
     backgroundColor: colors.surfaceContainerHigh,
@@ -644,10 +742,27 @@ const styles = StyleSheet.create({
   questionText: {
     ...typography.labelSm,
     color: colors.primary,
-    fontWeight: "700",
+    fontWeight: "800",
     marginBottom: 4,
   },
-  answerText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
+  answerText: {
+    ...typography.bodyMd,
+    color: colors.onSurfaceVariant,
+    lineHeight: 20,
+  },
+
+  fab: {
+    position: "absolute",
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primaryContainer,
+    justifyContent: "center",
+    alignItems: "center",
+    ...shadows.level1,
+  },
 
   // Modals
   modalContainer: { flex: 1, backgroundColor: colors.surfaceContainerLowest },
@@ -658,37 +773,68 @@ const styles = StyleSheet.create({
     padding: spacing.marginMobile,
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceContainerHighest,
+    backgroundColor: colors.surfaceContainerLowest,
   },
   cancelText: { ...typography.bodyLg, fontSize: 16, color: colors.outline },
   modalTitle: {
     ...typography.bodyLg,
     fontSize: 16,
     color: colors.onSurface,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   postTextBtn: {
     ...typography.bodyLg,
     fontSize: 16,
     color: colors.primaryContainer,
-    fontWeight: "700",
+    fontWeight: "800",
   },
-  modalContent: { padding: spacing.marginMobile, paddingBottom: 80 },
 
-  switchRow: {
+  label: {
+    ...typography.labelSm,
+    color: colors.onSurfaceVariant,
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  starRow: { flexDirection: "row", marginBottom: spacing.stackLg },
+  input: {
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: rounded.md,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    ...typography.bodyMd,
+    color: colors.onSurface,
+    marginBottom: spacing.stackLg,
+  },
+  textArea: {
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: rounded.md,
+    padding: 16,
+    height: 120,
+    ...typography.bodyMd,
+    color: colors.onSurface,
+    textAlignVertical: "top",
+    marginBottom: spacing.stackLg,
+  },
+
+  switchContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: spacing.stackLg,
+    padding: 16,
     backgroundColor: colors.surfaceContainerHigh,
-    padding: spacing.stackLg,
-    borderRadius: rounded.lg,
+    borderRadius: rounded.md,
   },
   switchLabel: {
-    ...typography.bodyLg,
+    ...typography.labelMd,
     color: colors.onSurface,
     fontWeight: "700",
-    marginBottom: 4,
   },
-  switchDesc: { ...typography.bodyMd, color: colors.onSurfaceVariant },
+  switchSubLabel: {
+    ...typography.labelSm,
+    color: colors.outline,
+    marginTop: 2,
+  },
 
   sectionHeader: {
     ...typography.labelMd,
@@ -702,30 +848,6 @@ const styles = StyleSheet.create({
     ...typography.labelSm,
     color: colors.outline,
     marginBottom: spacing.stackLg,
-  },
-  label: {
-    ...typography.labelSm,
-    color: colors.onSurfaceVariant,
-    marginBottom: 6,
-  },
-
-  input: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.md,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    marginBottom: spacing.stackMd,
-  },
-  textArea: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.md,
-    padding: 16,
-    minHeight: 120,
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    textAlignVertical: "top",
   },
 
   questionInputRow: {
@@ -745,22 +867,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     paddingVertical: 8,
+    marginTop: 8,
   },
   addQuestionText: {
     ...typography.labelMd,
     color: colors.primary,
     fontWeight: "700",
-  },
-
-  ratingBox: {
-    alignItems: "center",
-    paddingVertical: spacing.stackLg,
-    marginBottom: spacing.stackMd,
-  },
-  ratingLabel: {
-    ...typography.titleLg,
-    color: colors.onSurface,
-    fontWeight: "800",
-    marginBottom: spacing.stackLg,
   },
 });

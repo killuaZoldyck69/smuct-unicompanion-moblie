@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  TextInput,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  Linking,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -24,24 +19,69 @@ import { colors } from "../../src/theme/colors";
 import { typography } from "../../src/theme/typography";
 import { spacing, rounded, shadows } from "../../src/theme/layout";
 
+// Components
 import HubHeader from "../../src/components/hub/HubHeader";
-import CreateAnnouncementModal from "../../src/components/hub/CreateAnnouncementModal";
+import AnnouncementCard from "../../src/components/hub/cards/AnnouncementCard";
+import ResourceCard from "../../src/components/hub/cards/ResourceCard";
+import DiscussionCard from "../../src/components/hub/cards/DiscussionCard";
+import MemberRow from "../../src/components/hub/cards/MemberRow";
+
+// Modals
+import CreateAnnouncementModal from "../../src/components/hub/modals/CreateAnnouncementModal";
 import UploadResourceModal from "../../src/components/hub/UploadResourceModal";
-import AnnouncementCommentsModal from "../../src/components/hub/AnnouncementCommentsModal";
-import EditHubModal from "../../src/components/hub/EditHubModal";
+import AnnouncementCommentsModal from "../../src/components/hub/modals/AnnouncementCommentsModal";
+import AskQuestionModal from "../../src/components/hub/modals/AskQuestionModal";
+import DiscussionRepliesModal from "../../src/components/hub/modals/DiscussionRepliesModal";
+import ManageMemberModal from "../../src/components/hub/modals/ManageMemberModal";
+import EditHubModal from "../../src/components/hub/modals/EditHubModal";
+import HubOptionsModal from "../../src/components/hub/modals/HubOptionsModal";
+import CreateCourseworkModal from "../../src/components/hub/modals/CreateCourseworkModal";
 
-export const formatDate = (dateString: string) => {
-  if (!dateString) return "";
-  return new Date(dateString).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+type SubTab =
+  | "ANNOUNCEMENTS"
+  | "COURSEWORK"
+  | "QA"
+  | "MATERIALS"
+  | "MEMBERS"
+  | "REVIEWS";
+
+const ALL_TABS: { id: SubTab; label: string }[] = [
+  { id: "ANNOUNCEMENTS", label: "Announcements" },
+  { id: "COURSEWORK", label: "Coursework" },
+  { id: "QA", label: "Q&A" },
+  { id: "MATERIALS", label: "Materials" },
+  { id: "MEMBERS", label: "Members" },
+  { id: "REVIEWS", label: "Reviews" },
+];
+
+// --- Live Countdown Hook for Coursework ---
+const useCountdown = (deadline: string) => {
+  const [timeLeft, setTimeLeft] = useState("");
+  const [isOverdue, setIsOverdue] = useState(false);
+
+  useEffect(() => {
+    if (!deadline) return;
+    const calculateTime = () => {
+      const diff = new Date(deadline).getTime() - new Date().getTime();
+      if (diff <= 0) {
+        setIsOverdue(true);
+        setTimeLeft("Deadline Passed");
+        return;
+      }
+      setIsOverdue(false);
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      setTimeLeft(`${d}d ${h}h ${m}m remaining`);
+    };
+
+    calculateTime();
+    const timer = setInterval(calculateTime, 60000);
+    return () => clearInterval(timer);
+  }, [deadline]);
+
+  return { timeLeft, isOverdue };
 };
-
-type SubTab = "ANNOUNCEMENTS" | "QA" | "RESOURCES" | "MEMBERS";
 
 export default function CourseHubScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -50,17 +90,19 @@ export default function CourseHubScreen() {
 
   const [activeTab, setActiveTab] = useState<SubTab>("ANNOUNCEMENTS");
 
-  // Modals
+  // Modal States
   const [isAnnounceModalVisible, setIsAnnounceModalVisible] = useState(false);
   const [isQuestionModalVisible, setIsQuestionModalVisible] = useState(false);
   const [isMemberModalVisible, setIsMemberModalVisible] = useState(false);
   const [isResourceModalVisible, setIsResourceModalVisible] = useState(false);
-  const [activeAnnouncement, setActiveAnnouncement] = useState<any>(null);
   const [isEditHubModalVisible, setIsEditHubModalVisible] = useState(false);
+  const [isHubOptionsVisible, setIsHubOptionsVisible] = useState(false);
+  const [isCourseworkModalVisible, setIsCourseworkModalVisible] =
+    useState(false);
 
-  // Forms
-  const [questionForm, setQuestionForm] = useState({ title: "", content: "" });
+  const [activeAnnouncement, setActiveAnnouncement] = useState<any>(null);
   const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [activeDiscussion, setActiveDiscussion] = useState<any>(null);
 
   // --- Data Fetching ---
   const { data: hubDetails, isLoading: isLoadingHub } = useQuery({
@@ -74,12 +116,6 @@ export default function CourseHubScreen() {
       (await api.get(`/hubs/${id}/announcements`)).data?.data || [],
   });
 
-  // 🔥 THE FIX: Get the live, updated announcement from the fresh data array!
-  const currentActiveAnnouncement = activeAnnouncement
-    ? announcements?.find((a: any) => a.id === activeAnnouncement.id) ||
-      activeAnnouncement
-    : null;
-
   const { data: discussions, isLoading: isLoadingDiscussions } = useQuery({
     queryKey: ["hubDiscussions", id],
     queryFn: async () =>
@@ -92,18 +128,48 @@ export default function CourseHubScreen() {
       (await api.get(`/hubs/${id}/resources`)).data?.data || [],
   });
 
-  // --- Permissions & Identity ---
+  const { data: assessments, isLoading: isLoadingAssessments } = useQuery({
+    queryKey: ["hubAssessments", id],
+    queryFn: async () =>
+      (await api.get(`/hubs/${id}/assessments`)).data?.data || [],
+  });
+
   const { data: myHubs } = useQuery({
     queryKey: ["myHubs"],
     queryFn: async () => (await api.get("/hubs/my")).data?.data || [],
   });
+
+  // --- Derived State ---
+  const currentActiveAnnouncement = activeAnnouncement
+    ? announcements?.find((a: any) => a.id === activeAnnouncement.id) ||
+      activeAnnouncement
+    : null;
+
+  const currentActiveDiscussion = activeDiscussion
+    ? discussions?.find((d: any) => d.id === activeDiscussion.id) ||
+      activeDiscussion
+    : null;
 
   const myHubMembership = myHubs?.find(
     (m: any) => m.hubId === id || m.hub?.id === id,
   );
   const myRole = myHubMembership?.role;
   const myUserId = myHubMembership?.userId;
-  const canManage = myRole === "TEACHER" || myRole === "CR" || myRole === "TA";
+  const canManage = ["TEACHER", "CR", "TA"].includes(myRole);
+
+  const sortedMembers = [...(hubDetails?.members || [])].sort(
+    (a: any, b: any) => {
+      if (a.role === "TEACHER" && b.role !== "TEACHER") return -1;
+      if (b.role === "TEACHER" && a.role !== "TEACHER") return 1;
+      return 0;
+    },
+  );
+
+  // 👈 Only show Reviews if the setting is enabled or if the user is a Manager
+  const visibleTabs = ALL_TABS.filter((tab) => {
+    if (tab.id === "REVIEWS") return hubDetails?.isReviewOpen || canManage;
+    return true;
+  });
 
   // --- Mutations ---
   const postAnnouncementMutation = useMutation({
@@ -129,7 +195,29 @@ export default function CourseHubScreen() {
       queryClient.invalidateQueries({ queryKey: ["hubDiscussions", id] });
       Toast.show({ type: "success", text1: "Question Posted" });
       setIsQuestionModalVisible(false);
-      setQuestionForm({ title: "", content: "" });
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Failed to post",
+        text2: err.message,
+      }),
+  });
+
+  const postReplyMutation = useMutation({
+    mutationFn: async ({
+      discussionId,
+      content,
+    }: {
+      discussionId: string;
+      content: string;
+    }) =>
+      await api.post(`/hubs/${id}/discussions/${discussionId}/reply`, {
+        content,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hubDiscussions", id] });
+      Toast.show({ type: "success", text1: "Reply Posted!" });
     },
     onError: (err: any) =>
       Toast.show({
@@ -158,6 +246,19 @@ export default function CourseHubScreen() {
         text1: "Failed to update role",
         text2: err.message,
       }),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (memberId: string) =>
+      await api.delete(`/hubs/${id}/members/${memberId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hub", id] });
+      Toast.show({ type: "success", text1: "Action completed." });
+      setIsMemberModalVisible(false);
+      if (selectedMember?.user?.id === myUserId) router.replace("/(tabs)/hubs");
+    },
+    onError: (err: any) =>
+      Toast.show({ type: "error", text1: "Failed", text2: err.message }),
   });
 
   const postResourceMutation = useMutation({
@@ -194,6 +295,7 @@ export default function CourseHubScreen() {
         text2: err.message,
       }),
   });
+
   const updateHubMutation = useMutation({
     mutationFn: async (payload: any) => await api.patch(`/hubs/${id}`, payload),
     onSuccess: () => {
@@ -205,163 +307,174 @@ export default function CourseHubScreen() {
       Toast.show({ type: "error", text1: "Update Failed", text2: err.message }),
   });
 
-  // --- Render Sub-Components ---
-  const renderAnnouncementCard = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeaderRow}>
-        <View style={styles.userInfoRow}>
-          <View style={styles.avatarFallbackSmall}>
-            <Text style={styles.avatarTextSmall}>
-              {item.creator?.name?.charAt(0) || "U"}
-            </Text>
+  const deleteHubMutation = useMutation({
+    mutationFn: async () => await api.delete(`/hubs/${id}`),
+    onSuccess: () => {
+      Toast.show({ type: "success", text1: "Hub Deleted" });
+      router.replace("/(tabs)/hubs");
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Deletion Failed",
+        text2: err.message,
+      }),
+  });
+
+  const archiveHubMutation = useMutation({
+    mutationFn: async () =>
+      await api.patch(`/hubs/${id}/archive`, { isArchived: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hub", id] });
+      Toast.show({ type: "success", text1: "Hub Archived" });
+      setIsHubOptionsVisible(false);
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Archive Failed",
+        text2: err.message,
+      }),
+  });
+
+  const createAssessmentMutation = useMutation({
+    mutationFn: async (payload: any) =>
+      await api.post(`/hubs/${id}/assessments`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hubAssessments", id] });
+      Toast.show({ type: "success", text1: "Coursework Created" });
+      setIsCourseworkModalVisible(false);
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Creation Failed",
+        text2: err.message,
+      }),
+  });
+
+  // --- Inline Coursework Card ---
+  const AssessmentCard = ({ item }: { item: any }) => {
+    const { timeLeft, isOverdue } = useCountdown(item.deadline);
+    const mySub = item.submissions?.find((s: any) => s.studentId === myUserId);
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.8}
+        onPress={() =>
+          router.push({
+            pathname: `/hub/${id}/assessments`,
+            params: { assessmentId: item.id },
+          })
+        }
+      >
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.typeBadge}>
+            <Text style={styles.typeText}>{item.type}</Text>
           </View>
-          <View>
-            <Text style={styles.userName}>{item.creator?.name}</Text>
-            <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
-          </View>
-        </View>
-      </View>
-      <Text style={styles.contentBody}>{item.content}</Text>
-
-      {item.attachedLinkUrl && (
-        <TouchableOpacity
-          style={styles.attachmentPill}
-          onPress={() => Linking.openURL(item.attachedLinkUrl)}
-        >
-          <Feather
-            name="link"
-            size={16}
-            color={colors.primary}
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.attachmentText} numberOfLines={1}>
-            {item.attachedLinkTitle || item.attachedLinkUrl}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      <View style={styles.cardFooter}>
-        <TouchableOpacity
-          style={styles.footerAction}
-          onPress={() => setActiveAnnouncement(item)}
-        >
-          <Feather
-            name="message-circle"
-            size={16}
-            color={colors.outline}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.metaText}>
-            {item.comments?.length || 0} Class comments
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderResourceCard = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => Linking.openURL(item.driveUrl)}
-    >
-      <View style={styles.cardHeaderRow}>
-        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
           <View
             style={[
-              styles.avatarFallbackSmall,
-              {
-                backgroundColor: item.isStudentNote
-                  ? colors.secondaryContainer
-                  : colors.primaryContainer,
-              },
+              styles.timerBadge,
+              isOverdue && { backgroundColor: colors.errorContainer },
             ]}
           >
             <Feather
-              name={item.isStudentNote ? "book-open" : "file-text"}
-              size={16}
-              color={item.isStudentNote ? colors.secondary : colors.onPrimary}
+              name="clock"
+              size={12}
+              color={isOverdue ? colors.error : colors.primary}
+              style={{ marginRight: 4 }}
             />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.discussionTitle} numberOfLines={1}>
-              {item.title}
-            </Text>
-            <Text style={styles.dateText}>
-              By {item.uploader?.name} • {formatDate(item.createdAt)}
+            <Text
+              style={[styles.timerText, isOverdue && { color: colors.error }]}
+            >
+              {timeLeft}
             </Text>
           </View>
         </View>
-        <Feather name="external-link" size={18} color={colors.outline} />
-      </View>
-    </TouchableOpacity>
-  );
 
-  const renderDiscussionCard = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.card} activeOpacity={0.8}>
-      <View style={styles.cardHeaderRow}>
-        <Text style={styles.userName}>{item.author?.name} asked:</Text>
-        <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
-      </View>
-      <Text style={styles.discussionTitle}>{item.title}</Text>
-      <Text style={styles.contentBody} numberOfLines={2}>
-        {item.content}
-      </Text>
-      <View style={styles.cardFooter}>
-        <Feather
-          name="message-circle"
-          size={16}
-          color={colors.outline}
-          style={{ marginRight: 6 }}
-        />
-        <Text style={styles.metaText}>{item.replies?.length || 0} Replies</Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <Text style={styles.discussionTitle}>{item.title}</Text>
+        {item.description ? (
+          <Text style={styles.contentBody} numberOfLines={2}>
+            {item.description}
+          </Text>
+        ) : null}
 
-  if (isLoadingHub)
+        <View style={styles.cardFooter}>
+          <Text style={styles.metaText}>Total Marks: {item.totalMarks}</Text>
+          {canManage ? (
+            <Text style={styles.metaText}>
+              {item.submissions?.length || 0} Submissions
+            </Text>
+          ) : mySub ? (
+            <Text
+              style={[
+                styles.metaText,
+                { color: colors.primary, fontWeight: "700" },
+              ]}
+            >
+              Submitted
+            </Text>
+          ) : (
+            <Text
+              style={[
+                styles.metaText,
+                isOverdue && { color: colors.error, fontWeight: "700" },
+              ]}
+            >
+              {isOverdue ? "Overdue" : "Pending"}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // --- Render ---
+  if (isLoadingHub) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.primaryContainer} />
       </View>
     );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <HubHeader
         hubDetails={hubDetails}
-        canManage={canManage}
-        onEditPress={() => setIsEditHubModalVisible(true)}
+        onOptionsPress={() => setIsHubOptionsVisible(true)}
       />
 
-      <View style={styles.tabsContainer}>
-        {["ANNOUNCEMENTS", "QA", "RESOURCES", "MEMBERS"].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[
-              styles.tabButton,
-              activeTab === tab && styles.tabButtonActive,
-            ]}
-            onPress={() => setActiveTab(tab as SubTab)}
-          >
-            <Text
+      <View style={styles.tabsWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContainer}
+        >
+          {visibleTabs.map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
               style={[
-                styles.tabText,
-                activeTab === tab && styles.tabTextActive,
+                styles.tabButton,
+                activeTab === tab.id && styles.tabButtonActive,
               ]}
+              onPress={() => setActiveTab(tab.id as SubTab)}
             >
-              {tab === "QA"
-                ? "Q&A"
-                : tab === "ANNOUNCEMENTS"
-                  ? "Announcements"
-                  : tab === "RESOURCES"
-                    ? "Materials"
-                    : "Members"}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab.id && styles.tabTextActive,
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
-      {/* TAB CONTENT */}
+      {/* CONTENT LISTS */}
       {activeTab === "ANNOUNCEMENTS" && (
         <>
           {isLoadingAnnouncements ? (
@@ -370,7 +483,12 @@ export default function CourseHubScreen() {
             <FlatList
               data={announcements}
               keyExtractor={(item) => item.id}
-              renderItem={renderAnnouncementCard}
+              renderItem={({ item }) => (
+                <AnnouncementCard
+                  item={item}
+                  onCommentPress={setActiveAnnouncement}
+                />
+              )}
               contentContainerStyle={styles.listContent}
               ListEmptyComponent={
                 <Text style={styles.emptyText}>No announcements yet.</Text>
@@ -388,29 +506,31 @@ export default function CourseHubScreen() {
         </>
       )}
 
-      {activeTab === "RESOURCES" && (
+      {activeTab === "COURSEWORK" && (
         <>
-          {isLoadingResources ? (
+          {isLoadingAssessments ? (
             <ActivityIndicator style={{ marginTop: 40 }} />
           ) : (
             <FlatList
-              data={resources}
+              data={assessments}
               keyExtractor={(item) => item.id}
-              renderItem={renderResourceCard}
+              renderItem={({ item }) => <AssessmentCard item={item} />}
               contentContainerStyle={styles.listContent}
               ListEmptyComponent={
                 <Text style={styles.emptyText}>
-                  No materials or notes uploaded yet.
+                  No coursework assigned yet.
                 </Text>
               }
             />
           )}
-          <TouchableOpacity
-            style={styles.fab}
-            onPress={() => setIsResourceModalVisible(true)}
-          >
-            <Feather name="plus" size={24} color="#FFF" />
-          </TouchableOpacity>
+          {canManage && (
+            <TouchableOpacity
+              style={styles.fab}
+              onPress={() => setIsCourseworkModalVisible(true)}
+            >
+              <Feather name="plus" size={24} color="#FFF" />
+            </TouchableOpacity>
+          )}
         </>
       )}
 
@@ -422,7 +542,12 @@ export default function CourseHubScreen() {
             <FlatList
               data={discussions}
               keyExtractor={(item) => item.id}
-              renderItem={renderDiscussionCard}
+              renderItem={({ item }) => (
+                <DiscussionCard
+                  item={item}
+                  onPress={() => setActiveDiscussion(item)}
+                />
+              )}
               contentContainerStyle={styles.listContent}
               ListEmptyComponent={
                 <Text style={styles.emptyText}>No questions asked yet.</Text>
@@ -438,63 +563,85 @@ export default function CourseHubScreen() {
         </>
       )}
 
+      {activeTab === "MATERIALS" && (
+        <>
+          {isLoadingResources ? (
+            <ActivityIndicator style={{ marginTop: 40 }} />
+          ) : (
+            <FlatList
+              data={resources}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => <ResourceCard item={item} />}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>No materials uploaded yet.</Text>
+              }
+            />
+          )}
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => setIsResourceModalVisible(true)}
+          >
+            <Feather name="plus" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </>
+      )}
+
       {activeTab === "MEMBERS" && (
         <FlatList
-          data={hubDetails?.members || []}
+          data={sortedMembers}
           keyExtractor={(item: any) => item.id}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }: { item: any }) => (
-            <TouchableOpacity
-              style={styles.memberRow}
-              activeOpacity={canManage ? 0.7 : 1}
-              onPress={() => {
-                if (!canManage) return;
-                if (item.user?.id === myUserId)
-                  return Toast.show({
-                    type: "info",
-                    text1: "Cannot Edit Self",
-                  });
-                setSelectedMember(item);
+          renderItem={({ item }) => (
+            <MemberRow
+              item={item}
+              onPress={(selectedItem) => {
+                setSelectedMember(selectedItem);
                 setIsMemberModalVisible(true);
               }}
-            >
-              <View style={styles.userInfoRow}>
-                {item.user?.image ? (
-                  <Image
-                    source={{ uri: item.user.image }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarText}>
-                      {item.user?.name?.charAt(0)}
-                    </Text>
-                  </View>
-                )}
-                <View>
-                  <Text style={styles.memberListName}>{item.user?.name}</Text>
-                </View>
-              </View>
-              <View
-                style={[
-                  styles.roleBadge,
-                  item.role === "TEACHER" && {
-                    backgroundColor: colors.primaryContainer + "20",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.roleText,
-                    item.role === "TEACHER" && { color: colors.primary },
-                  ]}
-                >
-                  {item.role}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            />
           )}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No members found.</Text>
+          }
         />
+      )}
+
+      {activeTab === "REVIEWS" && (
+        <View style={styles.centerContainer}>
+          <Feather
+            name="star"
+            size={48}
+            color={colors.surfaceContainerHighest}
+            style={{ marginBottom: 16 }}
+          />
+          <Text style={styles.emptyTitle}>Course Reviews</Text>
+          <Text style={styles.emptyText}>
+            {hubDetails?.isReviewOpen
+              ? "Reviews are currently open for this course."
+              : "Reviews are closed by the administration."}
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.fab,
+              {
+                position: "relative",
+                bottom: 0,
+                right: 0,
+                marginTop: 24,
+                width: "auto",
+                paddingHorizontal: 24,
+                height: 48,
+                borderRadius: 24,
+              },
+            ]}
+            onPress={() => router.push(`/hub/${id}/reviews`)}
+          >
+            <Text style={{ color: "#FFF", fontWeight: "700" }}>
+              Enter Reviews Portal
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* --- MODALS --- */}
@@ -513,7 +660,6 @@ export default function CourseHubScreen() {
         canManage={canManage}
       />
 
-      {/* 🔥 THE FIX IS PASSED HERE AS THE 'announcement' PROP */}
       <AnnouncementCommentsModal
         isVisible={!!activeAnnouncement}
         onClose={() => setActiveAnnouncement(null)}
@@ -527,144 +673,75 @@ export default function CourseHubScreen() {
         isPending={postCommentMutation.isPending}
       />
 
-      <Modal
-        visible={isQuestionModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1 }}
-          >
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                onPress={() => setIsQuestionModalVisible(false)}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Ask the Class</Text>
-              <TouchableOpacity
-                onPress={() => postQuestionMutation.mutate(questionForm)}
-                disabled={postQuestionMutation.isPending}
-              >
-                {postQuestionMutation.isPending ? (
-                  <ActivityIndicator size="small" />
-                ) : (
-                  <Text style={styles.postTextBtn}>Post</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-            <View style={styles.modalContent}>
-              <TextInput
-                style={styles.input}
-                value={questionForm.title}
-                onChangeText={(text) =>
-                  setQuestionForm({ ...questionForm, title: text })
-                }
-                placeholder="Question Subject..."
-                autoFocus
-              />
-              <TextInput
-                style={[styles.textArea, { marginTop: spacing.stackLg }]}
-                value={questionForm.content}
-                onChangeText={(text) =>
-                  setQuestionForm({ ...questionForm, content: text })
-                }
-                placeholder="Elaborate your question here..."
-                multiline
-              />
-            </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </Modal>
+      <AskQuestionModal
+        isVisible={isQuestionModalVisible}
+        onClose={() => setIsQuestionModalVisible(false)}
+        onSubmit={(payload) => postQuestionMutation.mutate(payload)}
+        isPending={postQuestionMutation.isPending}
+      />
 
-      <Modal visible={isMemberModalVisible} animationType="fade" transparent>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "center",
-            padding: 24,
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: colors.surfaceContainerLowest,
-              padding: 24,
-              borderRadius: rounded.xl,
-            }}
-          >
-            <Text
-              style={{
-                ...typography.titleLg,
-                fontWeight: "700",
-                marginBottom: 16,
-              }}
-            >
-              Manage: {selectedMember?.user?.name}
-            </Text>
-            <View style={{ gap: 12 }}>
-              {["STUDENT", "TA", "CR"].map((role) => (
-                <TouchableOpacity
-                  key={role}
-                  style={{
-                    padding: 16,
-                    borderRadius: rounded.md,
-                    borderWidth: 1,
-                    borderColor:
-                      selectedMember?.role === role
-                        ? colors.primaryContainer
-                        : colors.surfaceContainerHighest,
-                    backgroundColor:
-                      selectedMember?.role === role
-                        ? colors.primaryContainer + "10"
-                        : "transparent",
-                  }}
-                  onPress={() =>
-                    updateRoleMutation.mutate({
-                      memberId: selectedMember.id,
-                      role,
-                    })
-                  }
-                >
-                  <Text
-                    style={{
-                      ...typography.labelMd,
-                      color:
-                        selectedMember?.role === role
-                          ? colors.primary
-                          : colors.onSurface,
-                    }}
-                  >
-                    Make {role}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={{
-                marginTop: 24,
-                padding: 16,
-                alignItems: "center",
-                backgroundColor: colors.surfaceContainerHigh,
-                borderRadius: rounded.md,
-              }}
-              onPress={() => setIsMemberModalVisible(false)}
-            >
-              <Text style={{ ...typography.labelMd, fontWeight: "700" }}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <DiscussionRepliesModal
+        isVisible={!!activeDiscussion}
+        onClose={() => setActiveDiscussion(null)}
+        discussion={currentActiveDiscussion}
+        onSubmit={(content) =>
+          postReplyMutation.mutate({
+            discussionId: activeDiscussion.id,
+            content,
+          })
+        }
+        isPending={postReplyMutation.isPending}
+      />
+
       <EditHubModal
         isVisible={isEditHubModalVisible}
         onClose={() => setIsEditHubModalVisible(false)}
         onSubmit={(payload) => updateHubMutation.mutate(payload)}
         isPending={updateHubMutation.isPending}
         hubDetails={hubDetails}
+      />
+
+      <ManageMemberModal
+        isVisible={isMemberModalVisible}
+        onClose={() => setIsMemberModalVisible(false)}
+        selectedMember={selectedMember}
+        myRole={myRole}
+        myUserId={myUserId}
+        onUpdateRole={(role) =>
+          updateRoleMutation.mutate({ memberId: selectedMember.id, role })
+        }
+        onRemoveMember={() => removeMemberMutation.mutate(selectedMember.id)}
+        isPending={
+          updateRoleMutation.isPending || removeMemberMutation.isPending
+        }
+      />
+
+      <HubOptionsModal
+        isVisible={isHubOptionsVisible}
+        onClose={() => setIsHubOptionsVisible(false)}
+        canManage={canManage}
+        onViewMembers={() => {
+          setIsHubOptionsVisible(false);
+          setActiveTab("MEMBERS");
+        }}
+        onEditHub={() => {
+          setIsHubOptionsVisible(false);
+          setIsEditHubModalVisible(true);
+        }}
+        onArchiveHub={() => archiveHubMutation.mutate()}
+        onDeleteHub={() => deleteHubMutation.mutate()}
+        onLeaveHub={() => {
+          setIsHubOptionsVisible(false);
+          if (myHubMembership?.id)
+            removeMemberMutation.mutate(myHubMembership.id);
+        }}
+      />
+
+      <CreateCourseworkModal
+        isVisible={isCourseworkModalVisible}
+        onClose={() => setIsCourseworkModalVisible(false)}
+        onSubmit={(payload: any) => createAssessmentMutation.mutate(payload)}
+        isPending={createAssessmentMutation.isPending}
       />
     </SafeAreaView>
   );
@@ -673,28 +750,38 @@ export default function CourseHubScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  tabsContainer: {
-    flexDirection: "row",
+
+  tabsWrapper: {
     backgroundColor: colors.surfaceContainerLowest,
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceContainerHighest,
   },
+  tabsContainer: {
+    flexDirection: "row",
+    paddingHorizontal: spacing.marginMobile,
+  },
   tabButton: {
-    flex: 1,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: "center",
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },
   tabButtonActive: { borderBottomColor: colors.primaryContainer },
-  tabText: { ...typography.labelMd, color: colors.outline, fontSize: 11 },
+  tabText: { ...typography.labelMd, color: colors.outline, fontSize: 13 },
   tabTextActive: { color: colors.primaryContainer, fontWeight: "700" },
+
   listContent: { padding: spacing.marginMobile, paddingBottom: 100 },
+  emptyTitle: {
+    ...typography.titleLg,
+    color: colors.onSurface,
+    marginBottom: spacing.stackSm,
+  },
   emptyText: {
     ...typography.bodyMd,
     color: colors.outline,
     textAlign: "center",
-    marginTop: 40,
+    marginTop: 10,
   },
 
   card: {
@@ -710,124 +797,55 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.stackSm,
+    marginBottom: spacing.stackMd,
   },
-  userInfoRow: { flexDirection: "row", alignItems: "center" },
-  avatarFallbackSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primaryContainer,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.stackSm,
+  typeBadge: {
+    backgroundColor: colors.surfaceContainerHigh,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: rounded.sm,
   },
-  avatarTextSmall: {
-    ...typography.labelMd,
-    color: colors.onPrimary,
-    fontWeight: "700",
-  },
-  userName: {
-    ...typography.labelMd,
-    color: colors.onSurface,
-    fontWeight: "700",
-  },
-  dateText: { ...typography.labelSm, color: colors.outline, fontSize: 10 },
-  contentBody: {
-    ...typography.bodyMd,
+  typeText: {
+    ...typography.labelSm,
     color: colors.onSurfaceVariant,
-    lineHeight: 22,
-    marginTop: 4,
+    fontWeight: "700",
+  },
+  timerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.primaryContainer + "20",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: rounded.sm,
+  },
+  timerText: {
+    ...typography.labelSm,
+    color: colors.primary,
+    fontWeight: "700",
   },
   discussionTitle: {
     ...typography.titleLg,
     fontSize: 16,
     color: colors.onSurface,
     fontWeight: "800",
-    marginBottom: 2,
+    marginBottom: 4,
   },
-
-  attachmentPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceContainerHigh,
-    padding: 12,
-    borderRadius: rounded.md,
-    marginTop: spacing.stackMd,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
-  },
-  attachmentText: {
-    flex: 1,
+  contentBody: {
     ...typography.bodyMd,
-    color: colors.primary,
-    fontWeight: "600",
+    color: colors.onSurfaceVariant,
+    lineHeight: 22,
   },
 
   cardFooter: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: spacing.stackMd,
+    marginTop: spacing.stackLg,
     paddingTop: spacing.stackSm,
     borderTopWidth: 1,
     borderTopColor: colors.surfaceContainerHighest,
   },
-  footerAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 4,
-  },
   metaText: { ...typography.labelSm, color: colors.outline },
-
-  memberRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: colors.surfaceContainerLowest,
-    padding: spacing.stackMd,
-    borderRadius: rounded.md,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
-  },
-  avatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerHigh,
-  },
-  avatarFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.secondaryContainer,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.stackMd,
-  },
-  avatarText: {
-    ...typography.bodyLg,
-    color: colors.secondary,
-    fontWeight: "700",
-  },
-  memberListName: {
-    ...typography.bodyLg,
-    color: colors.onSurface,
-    fontWeight: "700",
-  },
-  roleBadge: {
-    backgroundColor: colors.surfaceContainerHigh,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: rounded.md,
-  },
-  roleText: {
-    ...typography.labelSm,
-    color: colors.onSurfaceVariant,
-    fontWeight: "800",
-    fontSize: 10,
-  },
 
   fab: {
     position: "absolute",
@@ -840,47 +858,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     ...shadows.level1,
-  },
-
-  modalContainer: { flex: 1, backgroundColor: colors.surfaceContainerLowest },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: spacing.marginMobile,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
-  },
-  cancelText: { ...typography.bodyLg, fontSize: 16, color: colors.outline },
-  modalTitle: {
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.onSurface,
-    fontWeight: "700",
-  },
-  postTextBtn: {
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.primaryContainer,
-    fontWeight: "700",
-  },
-  modalContent: { flex: 1, padding: spacing.marginMobile },
-  input: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.md,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    ...typography.bodyLg,
-    color: colors.onSurface,
-    fontWeight: "600",
-  },
-  textArea: {
-    flex: 1,
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.md,
-    padding: 16,
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    textAlignVertical: "top",
   },
 });

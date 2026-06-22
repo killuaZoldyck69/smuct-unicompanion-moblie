@@ -16,9 +16,9 @@ import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 
-import { colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
-import { spacing, rounded } from "../../theme/layout";
+import { colors } from "../../../theme/colors";
+import { typography } from "../../../theme/typography";
+import { spacing, rounded } from "../../../theme/layout";
 
 const DAYS = [
   "Sunday",
@@ -105,7 +105,7 @@ export default function EditHubModal({
         termOffer: hubDetails.termOffer || "",
       });
 
-      // Parse JSON schedules back to React Native UI State
+      // Parse JSON schedules
       if (Array.isArray(hubDetails.weeklyClassSchedule)) {
         setSchedules(
           hubDetails.weeklyClassSchedule.map((s: any, i: number) => ({
@@ -120,17 +120,36 @@ export default function EditHubModal({
         setSchedules([]);
       }
 
-      // Parse Exams
-      setMidtermDate(
-        hubDetails.midtermExamDate
-          ? new Date(hubDetails.midtermExamDate)
-          : null,
-      );
-      setMidtermRoom(hubDetails.midtermRoom || "");
-      setFinalDate(
-        hubDetails.finalExamDate ? new Date(hubDetails.finalExamDate) : null,
-      );
-      setFinalRoom(hubDetails.finalRoom || "");
+      // 🔥 FIX: Parse the new JSON termExams array back into local React State
+      if (Array.isArray(hubDetails.termExams)) {
+        // Midterm Parsing
+        const m = hubDetails.termExams.find((e: any) => e.type === "Midterm");
+        if (m && m.date) {
+          const md = new Date(m.date);
+          if (m.time) {
+            const mt = parseTime(m.time);
+            md.setHours(mt.getHours(), mt.getMinutes());
+          }
+          setMidtermDate(md);
+        } else {
+          setMidtermDate(null);
+        }
+        setMidtermRoom(m?.room || "");
+
+        // Final Parsing
+        const f = hubDetails.termExams.find((e: any) => e.type === "Final");
+        if (f && f.date) {
+          const fd = new Date(f.date);
+          if (f.time) {
+            const ft = parseTime(f.time);
+            fd.setHours(ft.getHours(), ft.getMinutes());
+          }
+          setFinalDate(fd);
+        } else {
+          setFinalDate(null);
+        }
+        setFinalRoom(f?.room || "");
+      }
     }
   }, [isVisible, hubDetails]);
 
@@ -217,13 +236,32 @@ export default function EditHubModal({
       room: s.room.trim() || "TBA",
     }));
 
+    // 🔥 FIX: Construct the `termExams` array perfectly formatted for your backend Schema
+    const formattedTermExams = [];
+
+    if (midtermDate || midtermRoom) {
+      formattedTermExams.push({
+        type: "Midterm",
+        date: midtermDate ? midtermDate.toISOString().split("T")[0] : undefined, // Formats as YYYY-MM-DD
+        time: midtermDate ? formatTime(midtermDate) : undefined, // Formats as HH:MM AM/PM
+        room: midtermRoom.trim() || undefined,
+      });
+    }
+
+    if (finalDate || finalRoom) {
+      formattedTermExams.push({
+        type: "Final",
+        date: finalDate ? finalDate.toISOString().split("T")[0] : undefined, // Formats as YYYY-MM-DD
+        time: finalDate ? formatTime(finalDate) : undefined, // Formats as HH:MM AM/PM
+        room: finalRoom.trim() || undefined,
+      });
+    }
+
     const payload = {
       ...form,
       weeklyClassSchedule: formattedSchedules,
-      midtermExamDate: midtermDate ? midtermDate.toISOString() : undefined,
-      midtermRoom: midtermRoom.trim() || undefined,
-      finalExamDate: finalDate ? finalDate.toISOString() : undefined,
-      finalRoom: finalRoom.trim() || undefined,
+      // Pass the array directly to match your Zod Schema!
+      termExams: formattedTermExams.length > 0 ? formattedTermExams : undefined,
     };
 
     onSubmit(payload);
@@ -597,7 +635,6 @@ const styles = StyleSheet.create({
   },
   rowInputs: { flexDirection: "row", justifyContent: "space-between" },
 
-  // Schedule Blocks
   scheduleBlock: {
     backgroundColor: colors.surfaceContainerLowest,
     padding: spacing.stackLg,

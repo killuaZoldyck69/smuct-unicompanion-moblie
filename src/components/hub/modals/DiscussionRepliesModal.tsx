@@ -14,22 +14,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
-import { spacing, rounded } from "../../theme/layout";
+import { colors } from "../../../theme/colors";
+import { typography } from "../../../theme/typography";
+import { spacing, rounded } from "../../../theme/layout";
 
 interface Props {
   isVisible: boolean;
   onClose: () => void;
-  announcement: any;
+  discussion: any;
   onSubmit: (content: string) => void;
   isPending: boolean;
 }
 
-export default function AnnouncementCommentsModal({
+export default function DiscussionRepliesModal({
   isVisible,
   onClose,
-  announcement,
+  discussion,
   onSubmit,
   isPending,
 }: Props) {
@@ -41,24 +41,22 @@ export default function AnnouncementCommentsModal({
     setContent("");
   };
 
-  const renderComment = ({ item }: { item: any }) => (
-    <View style={styles.commentRow}>
-      {/* 👈 FIX 1: Show Image if available, otherwise fallback */}
+  const renderReply = ({ item }: { item: any }) => (
+    <View style={styles.replyRow}>
       {item.author?.image ? (
         <Image source={{ uri: item.author.image }} style={styles.avatarImage} />
       ) : (
         <View style={styles.avatarFallback}>
           <Text style={styles.avatarText}>
-            {item.author?.name?.charAt(0) || "U"}
+            {item.author?.name?.charAt(0)?.toUpperCase() || "U"}
           </Text>
         </View>
       )}
 
-      <View style={styles.commentBubble}>
-        <View style={styles.commentHeader}>
-          <Text style={styles.commentAuthor}>{item.author?.name}</Text>
-          {/* 👈 FIX 2: Added Timestamps */}
-          <Text style={styles.commentTime}>
+      <View style={styles.replyBubble}>
+        <View style={styles.replyHeader}>
+          <Text style={styles.replyAuthor}>{item.author?.name}</Text>
+          <Text style={styles.replyTime}>
             {new Date(item.createdAt).toLocaleDateString([], {
               month: "short",
               day: "numeric",
@@ -70,34 +68,45 @@ export default function AnnouncementCommentsModal({
             })}
           </Text>
         </View>
-        <Text style={styles.commentContent}>{item.content}</Text>
+        <Text style={styles.replyContent}>{item.content}</Text>
       </View>
     </View>
   );
 
+  const renderOriginalQuestion = () => {
+    if (!discussion) return null;
+    return (
+      <View style={styles.questionContainer}>
+        <Text style={styles.questionTitle}>{discussion.title}</Text>
+        <Text style={styles.questionBody}>{discussion.content}</Text>
+        <View style={styles.divider} />
+      </View>
+    );
+  };
+
   return (
     <Modal visible={isVisible} animationType="slide" transparent>
-      {/* 👈 FIX 3: Adjusted KeyboardAvoidingView for Modals */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.modalOverlay}
       >
         <SafeAreaView style={styles.bottomSheet} edges={["bottom"]}>
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Class Comments</Text>
+            <Text style={styles.sheetTitle}>Q&A Replies</Text>
             <TouchableOpacity onPress={onClose}>
               <Feather name="x" size={24} color={colors.onSurface} />
             </TouchableOpacity>
           </View>
 
           <FlatList
-            data={announcement?.comments || []}
+            data={discussion?.replies || []}
             keyExtractor={(item) => item.id}
-            renderItem={renderComment}
+            renderItem={renderReply}
+            ListHeaderComponent={renderOriginalQuestion}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
-                No comments yet. Be the first!
+                No replies yet. Help your classmate out!
               </Text>
             }
           />
@@ -105,7 +114,7 @@ export default function AnnouncementCommentsModal({
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Add class comment..."
+              placeholder="Write a reply..."
               value={content}
               onChangeText={setContent}
               multiline
@@ -141,7 +150,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLowest,
     borderTopLeftRadius: rounded.xl,
     borderTopRightRadius: rounded.xl,
-    maxHeight: "85%",
+    maxHeight: "90%",
   },
   sheetHeader: {
     flexDirection: "row",
@@ -164,7 +173,25 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 
-  commentRow: { flexDirection: "row", marginBottom: spacing.stackMd },
+  questionContainer: { marginBottom: spacing.stackLg },
+  questionTitle: {
+    ...typography.titleLg,
+    color: colors.onSurface,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+  questionBody: {
+    ...typography.bodyMd,
+    color: colors.onSurfaceVariant,
+    lineHeight: 22,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.surfaceContainerHighest,
+    marginTop: spacing.stackLg,
+  },
+
+  replyRow: { flexDirection: "row", marginBottom: spacing.stackMd },
   avatarImage: {
     width: 32,
     height: 32,
@@ -187,26 +214,26 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  commentBubble: {
+  replyBubble: {
     flex: 1,
     backgroundColor: colors.surfaceContainerHigh,
     padding: 12,
     borderRadius: rounded.lg,
     borderTopLeftRadius: 4,
   },
-  commentHeader: {
+  replyHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4,
   },
-  commentAuthor: {
+  replyAuthor: {
     ...typography.labelSm,
     color: colors.onSurface,
     fontWeight: "700",
   },
-  commentTime: { ...typography.labelSm, color: colors.outline, fontSize: 10 },
-  commentContent: { ...typography.bodyMd, color: colors.onSurfaceVariant },
+  replyTime: { ...typography.labelSm, color: colors.outline, fontSize: 10 },
+  replyContent: { ...typography.bodyMd, color: colors.onSurfaceVariant },
 
   inputContainer: {
     flexDirection: "row",

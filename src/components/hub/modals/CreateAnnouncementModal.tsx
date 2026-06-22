@@ -12,9 +12,9 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
-import { spacing, rounded } from "../../theme/layout";
+import { colors } from "../../../theme/colors";
+import { typography } from "../../../theme/typography";
+import { spacing, rounded } from "../../../theme/layout";
 
 interface Props {
   isVisible: boolean;
