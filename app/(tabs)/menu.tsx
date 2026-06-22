@@ -18,30 +18,29 @@ import { spacing, rounded, shadows } from "../../src/theme/layout";
 const MENU_ITEMS = [
   // --- Student Specific ---
   {
-    id: "full_routine",
-    title: "Class Routine",
-    icon: "clock",
-    roles: ["STUDENT"],
-    route: "/routine",
-  },
-  {
     id: "exam_routines",
     title: "Exam Routines",
     icon: "file-text",
     roles: ["STUDENT"],
     route: "/exams",
   },
-
-  // --- Teacher Specific ---
   {
-    id: "my_routine",
-    title: "My Class Routine",
-    icon: "clock",
-    roles: ["TEACHER"],
-    route: "/my-routine",
+    id: "cgpa_calculator",
+    title: "CGPA Calculator",
+    icon: "pie-chart",
+    roles: ["STUDENT"],
+    route: "/cgpa-calculator",
   },
 
   // --- Shared: Student & Teacher ---
+  // 👇 FIX: Unified the Class Routine button for both Teachers and Students
+  {
+    id: "my_schedule",
+    title: "My Class Routine",
+    icon: "clock",
+    roles: ["STUDENT", "TEACHER"],
+    route: "/my-schedule",
+  },
   {
     id: "academic_calendar",
     title: "Academic Calendar",
@@ -94,7 +93,7 @@ const MENU_ITEMS = [
   {
     id: "campus_forum",
     title: "Campus Forum",
-    icon: "message-circle", // A nice chat bubble icon
+    icon: "message-circle",
     roles: ["STUDENT", "TEACHER", "ADMIN"],
     route: "/forum",
   },
@@ -105,7 +104,6 @@ const MENU_ITEMS = [
     roles: ["STUDENT", "TEACHER", "ADMIN"],
     route: "/events",
   },
-
   {
     id: "complaints",
     title: "Help & Complaints",
@@ -150,7 +148,6 @@ const MENU_ITEMS = [
     roles: ["ADMIN"],
     route: "/admin/field-booking",
   },
-  // --- Admin Specific ---
   {
     id: "manage_forum",
     title: "Manage Forum",
@@ -161,7 +158,7 @@ const MENU_ITEMS = [
   {
     id: "manage_buses",
     title: "Manage Buses",
-    icon: "map", // Using the map icon (or "truck" if you prefer)
+    icon: "map",
     roles: ["ADMIN"],
     route: "/admin-bus-manage",
   },
@@ -179,7 +176,6 @@ const MENU_ITEMS = [
     roles: ["ADMIN"],
     route: "/admin/blood",
   },
-
   {
     id: "upload_event",
     title: "Event Schedule",
@@ -194,13 +190,6 @@ const MENU_ITEMS = [
     roles: ["ADMIN"],
     route: "/(tabs)/admin_calendar",
   },
-  // {
-  //   id: "admin_complaints",
-  //   title: "Manage Complaints",
-  //   icon: "inbox",
-  //   roles: ["ADMIN"],
-  //   route: "/admin/complaints",
-  // },
 ];
 
 export default function MenuScreen() {
@@ -208,7 +197,6 @@ export default function MenuScreen() {
   const { data: session } = authClient.useSession();
   const userRole = (session?.user as any)?.role || "STUDENT";
 
-  // Filter the grid based on who is viewing it
   const accessibleMenuItems = MENU_ITEMS.filter((item) =>
     item.roles.includes(userRole),
   );
@@ -235,7 +223,6 @@ export default function MenuScreen() {
             <TouchableOpacity
               key={item.id}
               style={styles.gridItem}
-              // THE FIX: Actually use expo-router to navigate to the defined route
               onPress={() => router.push(item.route as Href)}
             >
               <View style={styles.iconContainer}>

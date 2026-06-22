@@ -16,11 +16,11 @@ import { colors } from "../src/theme/colors";
 import { typography } from "../src/theme/typography";
 import { spacing, rounded, shadows } from "../src/theme/layout";
 
-type TabType = "upcoming" | "past" | "rsvps";
+type TabType = "today" | "upcoming" | "past";
 
 export default function CampusEventsScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>("upcoming");
+  const [activeTab, setActiveTab] = useState<TabType>("today");
 
   // Fetch Events Data
   const {
@@ -36,18 +36,38 @@ export default function CampusEventsScreen() {
   });
 
   // --- Filtering Logic ---
-  const now = new Date();
   const filteredEvents = React.useMemo(() => {
     if (!events) return [];
 
-    if (activeTab === "upcoming") {
-      return events.filter((e: any) => new Date(e.eventDate) >= now);
-    } else if (activeTab === "past") {
-      return events.filter((e: any) => new Date(e.eventDate) < now);
-    } else {
-      // Placeholder for RSVPs - returning empty or you can wire this up later
-      return [];
-    }
+    const now = new Date();
+    // Get start of today (12:00:00 AM) and end of today (11:59:59 PM)
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
+    const todayEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23,
+      59,
+      59,
+      999,
+    ).getTime();
+
+    return events.filter((e: any) => {
+      const eventTime = new Date(e.eventDate).getTime();
+
+      if (activeTab === "today") {
+        return eventTime >= todayStart && eventTime <= todayEnd;
+      } else if (activeTab === "upcoming") {
+        return eventTime > todayEnd;
+      } else if (activeTab === "past") {
+        return eventTime < todayStart;
+      }
+      return false;
+    });
   }, [events, activeTab]);
 
   // --- Render Event Card ---
@@ -63,7 +83,7 @@ export default function CampusEventsScreen() {
     });
 
     // Check if the event is in the past (greyed out state)
-    const isPast = eventDate < now;
+    const isPast = activeTab === "past";
 
     return (
       <View style={[styles.card, isPast && styles.cardPast]}>
@@ -138,6 +158,23 @@ export default function CampusEventsScreen() {
         <TouchableOpacity
           style={[
             styles.tabButton,
+            activeTab === "today" && styles.tabButtonActive,
+          ]}
+          onPress={() => setActiveTab("today")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "today" && styles.tabTextActive,
+            ]}
+          >
+            Today
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tabButton,
             activeTab === "upcoming" && styles.tabButtonActive,
           ]}
           onPress={() => setActiveTab("upcoming")}
@@ -165,24 +202,7 @@ export default function CampusEventsScreen() {
               activeTab === "past" && styles.tabTextActive,
             ]}
           >
-            Past Events
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "rsvps" && styles.tabButtonActive,
-          ]}
-          onPress={() => setActiveTab("rsvps")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "rsvps" && styles.tabTextActive,
-            ]}
-          >
-            My RSVPs
+            Past
           </Text>
         </TouchableOpacity>
       </View>
@@ -202,12 +222,11 @@ export default function CampusEventsScreen() {
           />
           <Text style={styles.emptyTitle}>
             No{" "}
-            {activeTab === "upcoming"
-              ? "Upcoming"
-              : activeTab === "past"
-                ? "Past"
-                : "Saved"}{" "}
-            Events
+            {activeTab === "today"
+              ? "Events Today"
+              : activeTab === "upcoming"
+                ? "Upcoming Events"
+                : "Past Events"}
           </Text>
           <Text style={styles.emptyDesc}>
             Check back later for new campus activities.
@@ -227,7 +246,7 @@ export default function CampusEventsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" }, // Softer off-white background from image
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -252,13 +271,15 @@ const styles = StyleSheet.create({
     gap: spacing.stackSm,
   },
   tabButton: {
+    flex: 1,
+    alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: rounded.full,
-    backgroundColor: colors.surfaceContainerHigh, // Light gray for inactive
+    backgroundColor: colors.surfaceContainerHigh,
   },
   tabButtonActive: {
-    backgroundColor: "#1A1B4B", // Deep Navy Blue from the image
+    backgroundColor: "#1A1B4B",
   },
   tabText: {
     ...typography.labelMd,
@@ -313,18 +334,18 @@ const styles = StyleSheet.create({
 
   dateBlock: {
     width: 72,
-    backgroundColor: "#E8E9FF", // Soft lavender/blue from image
+    backgroundColor: "#E8E9FF",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 16,
   },
   dateBlockPast: {
-    backgroundColor: "#F0F0F0", // Greyed out for past events
+    backgroundColor: "#F0F0F0",
   },
   dateMonth: {
     ...typography.labelMd,
-    color: "#1A1B4B", // Deep Navy
+    color: "#1A1B4B",
     fontWeight: "800",
     marginBottom: 4,
     letterSpacing: 0.5,
@@ -335,7 +356,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   textPast: {
-    color: colors.outline, // Grey text for past events
+    color: colors.outline,
   },
 
   contentBlock: {
@@ -357,6 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     lineHeight: 18,
   },
+
   // Time & Location Pills
   pillsContainer: {
     flexDirection: "column",
@@ -366,7 +388,7 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F4F6", // Very light grey
+    backgroundColor: "#F3F4F6",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
