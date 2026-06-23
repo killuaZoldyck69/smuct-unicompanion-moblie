@@ -18,6 +18,7 @@ import { spacing, rounded } from "../../src/theme/layout";
 import Toast from "react-native-toast-message";
 import { authClient } from "../../src/services/auth-client";
 import * as SecureStore from "expo-secure-store";
+import api from "../../src/services/api";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,11 +31,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Toast.show({
-        type: "error",
-        text1: "Missing fields",
-        text2: "Please enter email and password.",
-      });
+      Toast.show({ type: "error", text1: "Missing fields" });
       return;
     }
 
@@ -45,22 +42,58 @@ export default function LoginScreen() {
         password,
       });
 
-      if (error) {
-        throw new Error(error.message || "Invalid credentials.");
+      if (error) throw new Error(error.message || "Invalid credentials.");
+
+      // Extract the token to use immediately
+      const freshToken =
+        data && Platform.OS !== "web" ? (data as any).token : null;
+
+      // 2. EXPLICITLY save the token to SecureStore
+      if (freshToken) {
+        await SecureStore.setItemAsync("better-auth.session_token", freshToken);
       }
 
-      // 2. EXPLICITLY save the token to SecureStore for mobile (The missing link!)
-      if (data && Platform.OS !== "web" && (data as any).token) {
-        await SecureStore.setItemAsync(
-          "better-auth.session_token",
-          (data as any).token,
-        );
+      // 3. --- ROLE & ONBOARDING CHECK ---
+      const sessionRes = await authClient.getSession();
+      const userRole = (sessionRes.data?.user as any)?.role || "STUDENT";
+
+      if (userRole === "TEACHER" || userRole === "ADMIN") {
+        Toast.show({ type: "success", text1: "Welcome back!" });
+        router.replace("/(tabs)");
+        return;
       }
 
-      Toast.show({ type: "success", text1: "Welcome back!" });
+      // If they are a STUDENT, explicitly pass the fresh token so the backend doesn't reject it
+      try {
+        const profileRes = await api.get("/students/profile", {
+          headers: freshToken ? { Authorization: `Bearer ${freshToken}` } : {},
+        });
 
-      // 3. Route to the main app dashboard
-      router.replace("/(tabs)/profile");
+        if (profileRes.data?.data) {
+          Toast.show({ type: "success", text1: "Welcome back!" });
+          router.replace("/(tabs)/profile");
+        } else {
+          router.replace("/(auth)/onboard");
+        }
+      } catch (profileError: any) {
+        // FIX: Strictly check if the error is a 404 (Profile doesn't exist).
+        // If it is 404, send them to onboarding.
+        if (profileError.response && profileError.response.status === 404) {
+          console.log(
+            "No student profile found (404), redirecting to onboarding.",
+          );
+          router.replace("/(auth)/onboard");
+        } else {
+          // If it's a 500, 401, or network error, DO NOT send them to onboarding!
+          // Log them in anyway, or show a standard error.
+          console.error(
+            "Profile check failed but it wasn't a 404:",
+            profileError.message,
+          );
+          Toast.show({ type: "success", text1: "Welcome back!" });
+          router.replace("/(tabs)/home");
+        }
+      }
     } catch (error: any) {
       console.error("Login Error:", error.message);
       Toast.show({
@@ -70,7 +103,6 @@ export default function LoginScreen() {
       });
     }
   };
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -162,7 +194,10 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.forgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => router.push("/(auth)/forgot-password")}
+          >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
