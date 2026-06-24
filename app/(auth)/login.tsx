@@ -10,14 +10,13 @@ import {
   ScrollView,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { colors } from "../../src/theme/colors";
-import { typography } from "../../src/theme/typography";
-import { spacing, rounded } from "../../src/theme/layout";
 import Toast from "react-native-toast-message";
-import { authClient } from "../../src/services/auth-client";
 import * as SecureStore from "expo-secure-store";
+
+import { authClient } from "../../src/services/auth-client";
 import api from "../../src/services/api";
 
 export default function LoginScreen() {
@@ -28,7 +27,9 @@ export default function LoginScreen() {
 
   const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- LOGIC REMAINS 100% UNTOUCHED ---
   const handleLogin = async () => {
     if (!email || !password) {
       Toast.show({ type: "error", text1: "Missing fields" });
@@ -36,6 +37,7 @@ export default function LoginScreen() {
     }
 
     try {
+      setIsSubmitting(true);
       // 1. Hit Better Auth
       const { data, error } = await authClient.signIn.email({
         email,
@@ -76,8 +78,7 @@ export default function LoginScreen() {
           router.replace("/(auth)/onboard");
         }
       } catch (profileError: any) {
-        // FIX: Strictly check if the error is a 404 (Profile doesn't exist).
-        // If it is 404, send them to onboarding.
+        // Strictly check if the error is a 404 (Profile doesn't exist).
         if (profileError.response && profileError.response.status === 404) {
           console.log(
             "No student profile found (404), redirecting to onboarding.",
@@ -85,7 +86,6 @@ export default function LoginScreen() {
           router.replace("/(auth)/onboard");
         } else {
           // If it's a 500, 401, or network error, DO NOT send them to onboarding!
-          // Log them in anyway, or show a standard error.
           console.error(
             "Profile check failed but it wasn't a 404:",
             profileError.message,
@@ -101,35 +101,50 @@ export default function LoginScreen() {
         text1: "Login Failed",
         text2: error.message,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.headerContainer}>
-          <Image
-            source={require("../../src/assets/logo.jpg")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>Welcome to{"\n"}UniCompanion</Text>
-          <Text style={styles.subtitle}>
-            Please log in to continue to your academic portal.
-          </Text>
-        </View>
 
-        <View style={styles.formContainer}>
-          {/* Email Input Group */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              University Email or Student ID
-            </Text>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Top Brand Bar */}
+          <View style={styles.topBar}>
+            {/* <Feather name="book-open" size={24} color="#131b2e" /> */}
+            {/* <Image
+              // Using your existing logo/illustration path
+              source={require("../../src/assets/logo.jpg")}
+              style={styles.topLogo}
+              resizeMode="contain"
+            /> */}
+            {/* <Text style={styles.topBarText}>SMUCT UniCompanion</Text> */}
+          </View>
+
+          {/* Illustration Area */}
+          <View style={styles.illustrationContainer}>
+            <Image
+              // Using your existing logo/illustration path
+              source={require("../../src/assets/login.png")}
+              style={styles.illustration}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Main Title */}
+          <Text style={styles.pageTitle}>Sign in to your{"\n"}account</Text>
+
+          {/* Soft Blue Bento Box for Form */}
+          <View style={styles.bentoFormContainer}>
+            {/* Email Input */}
             <View
               style={[
                 styles.inputWrapper,
@@ -137,28 +152,26 @@ export default function LoginScreen() {
               ]}
             >
               <Feather
-                name="user"
+                name="mail"
                 size={20}
-                color={colors.onSurfaceVariant}
+                color="#76777d"
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
-                placeholder="e.g. s1234567@uni.edu"
-                placeholderTextColor={colors.outline}
+                placeholder="Email Address"
+                placeholderTextColor="#76777d"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
                 onFocus={() => setIsEmailFocused(true)}
                 onBlur={() => setIsEmailFocused(false)}
+                editable={!isSubmitting}
               />
             </View>
-          </View>
 
-          {/* Password Input Group */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Password</Text>
+            {/* Password Input */}
             <View
               style={[
                 styles.inputWrapper,
@@ -168,18 +181,19 @@ export default function LoginScreen() {
               <Feather
                 name="lock"
                 size={20}
-                color={colors.onSurfaceVariant}
+                color="#76777d"
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your password"
-                placeholderTextColor={colors.outline}
+                placeholder="Password"
+                placeholderTextColor="#76777d"
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
                 onFocus={() => setIsPasswordFocused(true)}
                 onBlur={() => setIsPasswordFocused(false)}
+                editable={!isSubmitting}
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
@@ -188,144 +202,209 @@ export default function LoginScreen() {
                 <Feather
                   name={showPassword ? "eye-off" : "eye"}
                   size={20}
-                  color={colors.onSurfaceVariant}
+                  color="#76777d"
                 />
               </TouchableOpacity>
             </View>
+
+            {/* Forgot Password Link */}
+            <TouchableOpacity
+              style={styles.forgotPasswordBtn}
+              onPress={() => router.push("/(auth)/forgot-password")}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                isSubmitting && styles.loginButtonDisabled,
+              ]}
+              onPress={handleLogin}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.loginButtonText}>
+                {isSubmitting ? "Signing In..." : "Sign In"}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.forgotPassword}
-            onPress={() => router.push("/(auth)/forgot-password")}
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Login</Text>
-            <Feather
-              name="arrow-right"
-              size={20}
-              color={colors.onPrimary}
-              style={styles.btnIcon}
-            />
-          </TouchableOpacity>
-
+          {/* Footer */}
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
-              <Text style={styles.registerLink}>Register</Text>
+              <Text style={styles.registerLink}>Sign up</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
+// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f7f9fb", // surface-bright
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: spacing.marginMobile,
-    paddingVertical: spacing.sectionBreak,
-  },
-  headerContainer: {
-    marginBottom: spacing.sectionBreak,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
     alignItems: "center",
   },
-  logo: {
-    width: 80,
-    height: 80,
-    marginBottom: spacing.stackLg,
-  },
-  title: {
-    ...typography.headlineLgMobile,
-    color: colors.primaryContainer,
-    textAlign: "center",
-    marginBottom: spacing.stackSm,
-  },
-  subtitle: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
-    textAlign: "center",
-  },
-  formContainer: {
+
+  // Top Brand Bar
+  topBar: {
     width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    marginTop: 16,
+    marginBottom: 32,
   },
-  inputGroup: {
-    marginBottom: spacing.stackLg,
+  topBarText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#131b2e", // Deep Navy
+    marginLeft: 12,
+    letterSpacing: -0.5,
   },
-  inputLabel: {
-    ...typography.labelMd,
-    color: colors.onSurface,
-    marginBottom: spacing.stackSm,
+
+  // Illustration
+  illustrationContainer: {
+    width: 200,
+    height: 200,
+    backgroundColor: "#ffffff",
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 32,
+    // Soft Ambient Shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 24,
+    elevation: 2,
   },
+  illustration: {
+    width: 160,
+    height: 160,
+  },
+  topLogo: {
+    width: 40,
+    height: 40,
+  },
+
+  // Typography
+  pageTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#131b2e", // Deep Navy
+    textAlign: "center",
+    lineHeight: 38,
+    letterSpacing: -0.64,
+    marginBottom: 32,
+  },
+
+  // Bento Box Form
+  bentoFormContainer: {
+    width: "100%",
+    backgroundColor: "#d0e4ff", // secondary-fixed (Soft Blue)
+    borderRadius: 32,
+    padding: 24,
+    marginBottom: 32,
+  },
+
+  // Inputs
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    borderRadius: rounded.lg,
-    paddingHorizontal: spacing.gutter,
+    backgroundColor: "#ffffff", // Pure white pills
+    borderRadius: 9999,
+    paddingHorizontal: 20,
     height: 56,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "transparent", // Invisible border to prevent layout jump on focus
   },
   inputFocused: {
-    borderColor: colors.primaryContainer,
+    borderColor: "#131b2e", // Deep Navy stroke on focus
   },
   inputIcon: {
-    marginRight: spacing.stackMd,
+    marginRight: 12,
   },
   input: {
     flex: 1,
-    ...typography.bodyMd,
-    color: colors.onSurface,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#191c1e",
     height: "100%",
   },
   eyeIcon: {
-    padding: spacing.stackSm,
+    padding: 4,
   },
-  forgotPassword: {
+
+  // Forgot Password
+  forgotPasswordBtn: {
     alignSelf: "flex-end",
-    marginBottom: spacing.stackLg,
+    marginBottom: 24,
+    paddingHorizontal: 8,
   },
   forgotPasswordText: {
-    ...typography.labelMd,
-    color: colors.error,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#131b2e", // Deep Navy
   },
+
+  // Submit Button
   loginButton: {
-    backgroundColor: colors.primaryContainer,
-    borderRadius: rounded.lg,
+    backgroundColor: "#131b2e", // Deep Navy
+    borderRadius: 9999,
     height: 56,
-    flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.stackLg,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
-    ...typography.bodyLg,
-    color: colors.onPrimary,
-    fontWeight: "600",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#ffffff",
   },
-  btnIcon: {
-    marginLeft: spacing.stackSm,
-  },
+
+  // Footer
   footerContainer: {
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "center",
   },
   footerText: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#45464d",
   },
   registerLink: {
-    ...typography.bodyMd,
-    color: colors.primaryContainer,
-    fontWeight: "700",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#131b2e",
   },
 });
