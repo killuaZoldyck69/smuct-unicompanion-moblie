@@ -9,8 +9,9 @@ import {
   Platform,
   ScrollView,
   Image,
+  StatusBar, // 👈 1. Added StatusBar
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // 👈 2. Swapped to useSafeAreaInsets
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -21,6 +22,8 @@ import api from "../../src/services/api";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets(); // 👈 3. Initialize insets to measure the screen bounds
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -107,7 +110,23 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    // 👈 4. Replaced SafeAreaView with standard View + dynamic padding
+    <View
+      style={[
+        styles.safeArea,
+        {
+          paddingTop: insets.top,
+          paddingBottom: Math.max(insets.bottom, 16),
+        },
+      ]}
+    >
+      {/* 👈 5. Added transparent StatusBar */}
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
@@ -239,7 +258,7 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -281,17 +300,10 @@ const styles = StyleSheet.create({
   illustrationContainer: {
     width: 200,
     height: 200,
-    backgroundColor: "#ffffff",
-    borderRadius: 32,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 32,
-    // Soft Ambient Shadow
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 2,
   },
   illustration: {
     width: 160,

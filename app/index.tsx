@@ -1,27 +1,42 @@
-// app/index.tsx
-import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   Image,
   TouchableOpacity,
-  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {} from "expo-status-bar"; // 👈 1. Import StatusBar
 
 export default function SplashScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top,
+          paddingBottom: Math.max(insets.bottom + 16, 40),
+        },
+      ]}
+    >
+      {/* 👇 2. Add this to make the top bar transparent and icons dark 👇 */}
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+
       {/* Centered Content */}
       <View style={styles.centerContent}>
         {/* Soft Bento Image Container */}
         <View style={styles.imageBentoBox}>
           <Image
-            // Make sure your new book illustration is saved here!
-            source={require("../src/assets/logo.jpg")}
+            source={require("../src/assets/splash-screen.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -50,16 +65,15 @@ export default function SplashScreen() {
           <Text style={styles.secondaryButtonText}>Register</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 // --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
-// Hardcoded here to prevent crashing other screens that rely on the old theme files.
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f7f9fb", // surface-bright
+    backgroundColor: "#f7f9fb", // This will now stretch cleanly behind the transparent status bar!
     justifyContent: "space-between",
   },
   centerContent: {
@@ -83,25 +97,24 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: "800",
     letterSpacing: -0.64,
-    color: "#131b2e", // primary-container (Deep Navy)
+    color: "#131b2e",
     marginBottom: 12,
   },
   subtitle: {
     fontFamily: "Plus Jakarta Sans",
     fontSize: 18,
     fontWeight: "500",
-    color: "#45464d", // on-surface-variant
+    color: "#45464d",
     textAlign: "center",
   },
   bottomContainer: {
     width: "100%",
     paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 16, // Spacing between buttons
+    gap: 16,
   },
   primaryButton: {
-    backgroundColor: "#131b2e", // primary-container
-    borderRadius: 9999, // Pill shape
+    backgroundColor: "#131b2e",
+    borderRadius: 9999,
     paddingVertical: 18,
     alignItems: "center",
     justifyContent: "center",
@@ -115,11 +128,11 @@ const styles = StyleSheet.create({
     fontFamily: "Plus Jakarta Sans",
     fontSize: 16,
     fontWeight: "700",
-    color: "#ffffff", // on-primary
+    color: "#ffffff",
   },
   secondaryButton: {
-    backgroundColor: "#c1dcff", // secondary-container (Pastel Blue)
-    borderRadius: 9999, // Pill shape
+    backgroundColor: "#c1dcff",
+    borderRadius: 9999,
     paddingVertical: 18,
     alignItems: "center",
     justifyContent: "center",
@@ -128,6 +141,6 @@ const styles = StyleSheet.create({
     fontFamily: "Plus Jakarta Sans",
     fontSize: 16,
     fontWeight: "700",
-    color: "#131b2e", // Deep Navy text for contrast
+    color: "#131b2e",
   },
 });

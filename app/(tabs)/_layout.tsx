@@ -5,44 +5,54 @@ import { Feather } from "@expo/vector-icons";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authClient } from "../../src/services/auth-client";
-import { colors } from "../../src/theme/colors";
-import { typography } from "../../src/theme/typography";
-import { shadows } from "../../src/theme/layout";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-
   const { data: session, isPending } = authClient.useSession();
 
   // Wait until the session and user object are completely populated
   if (isPending || !session?.user) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primaryContainer} />
+        <ActivityIndicator size="large" color="#131b2e" />
       </View>
     );
   }
 
-  // Safely extract the exact role without using a "STUDENT" fallback
+  // Safely extract the exact role
   const userRole = (session.user as any).role;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primaryContainer,
-        tabBarInactiveTintColor: colors.outline,
-        tabBarStyle: {
-          backgroundColor: colors.surfaceContainerLowest,
-          borderTopWidth: 1,
-          borderTopColor: colors.surfaceContainerHighest,
-          height: 65 + insets.bottom,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
-          paddingTop: 10,
+        tabBarShowLabel: false, // Hide labels for the minimalist look
+        tabBarActiveTintColor: "#ffffff", // White icons when active
+        tabBarInactiveTintColor: "#76777d", // Grey icons when inactive
+
+        // 👇 NEW: Forces the icons to center perfectly, ignoring the hidden label space
+        tabBarItemStyle: {
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100%",
         },
-        tabBarLabelStyle: {
-          ...typography.labelSm,
-          marginTop: 4,
+
+        tabBarStyle: {
+          position: "absolute",
+          // Push up safely above the Android navigation bar
+          bottom: insets.bottom > 0 ? insets.bottom + 16 : 24,
+          marginHorizontal: 20,
+          height: 72,
+          backgroundColor: "#131b2e", // Deep Navy background
+          borderRadius: 36, // Perfect pill shape
+          borderTopWidth: 0, // Remove default top line
+          elevation: 10,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.15,
+          shadowRadius: 24,
+          paddingBottom: 0,
+          paddingTop: 16,
         },
       }}
     >
@@ -64,7 +74,7 @@ export default function TabsLayout() {
           title: "Hubs",
           href: userRole === "ADMIN" ? null : "/(tabs)/hubs",
           tabBarIcon: ({ color }) => (
-            <Feather name="layers" size={24} color={color} />
+            <Feather name="calendar" size={24} color={color} />
           ),
         }}
       />
@@ -79,20 +89,19 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* 3. MENU (All Roles) - FLOATING CENTER BUTTON */}
+      {/* 3. MENU (All Roles) - CENTER BUTTON */}
       <Tabs.Screen
         name="menu"
         options={{
           title: "Menu",
-          tabBarLabel: () => null,
           tabBarIcon: ({ focused }) => (
             <View
               style={[
-                styles.floatingButton,
-                focused && styles.floatingButtonActive,
+                styles.centerButton,
+                focused && styles.centerButtonActive,
               ]}
             >
-              <Feather name="grid" size={26} color={colors.onPrimary} />
+              <Feather name="plus" size={24} color="#131b2e" />
             </View>
           ),
         }}
@@ -105,7 +114,7 @@ export default function TabsLayout() {
           title: "Forum",
           href: userRole === "ADMIN" ? null : "/(tabs)/forum",
           tabBarIcon: ({ color }) => (
-            <Feather name="message-square" size={24} color={color} />
+            <Feather name="map" size={24} color={color} />
           ),
         }}
       />
@@ -134,46 +143,30 @@ export default function TabsLayout() {
       {/* ========================================== */}
       {/* 6. HIDDEN SCREENS (Accessible only via router.push) */}
       {/* ========================================== */}
-      <Tabs.Screen
-        name="admin_calendar"
-        options={{
-          href: null, // Forcefully hidden from tab bar
-        }}
-      />
-      <Tabs.Screen
-        name="blood"
-        options={{
-          href: null, // Forcefully hides it from the bottom tab bar!
-        }}
-      />
-      <Tabs.Screen
-        name="community"
-        options={{
-          href: null, // Safeguard: Hides the old community file if it still exists
-        }}
-      />
+      <Tabs.Screen name="admin_calendar" options={{ href: null }} />
+      <Tabs.Screen name="blood" options={{ href: null }} />
+      <Tabs.Screen name="community" options={{ href: null }} />
     </Tabs>
   );
 }
 
+// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: "#f7f9fb",
   },
-  floatingButton: {
-    top: -15,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primaryContainer,
+  centerButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#76777d", // Grey background from the mockup
     justifyContent: "center",
     alignItems: "center",
-    ...shadows.level1,
   },
-  floatingButtonActive: {
-    backgroundColor: colors.secondary,
+  centerButtonActive: {
+    backgroundColor: "#ffffff", // Turns pure white when active
   },
 });
