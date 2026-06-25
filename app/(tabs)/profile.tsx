@@ -1,4 +1,4 @@
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator, StyleSheet, StatusBar } from "react-native";
 import { authClient } from "../../src/services/auth-client";
 import { colors } from "../../src/theme/colors";
 
@@ -12,6 +12,11 @@ export default function ProfileTab() {
   if (isPending || !session?.user) {
     return (
       <View style={styles.loadingContainer}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="transparent"
+          translucent={true}
+        />
         <ActivityIndicator size="large" color={colors.primaryContainer} />
       </View>
     );

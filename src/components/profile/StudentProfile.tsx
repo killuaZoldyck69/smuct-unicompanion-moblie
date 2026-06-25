@@ -13,7 +13,9 @@ import {
   Modal,
   FlatList,
   Linking,
+  StatusBar,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -26,7 +28,7 @@ import api from "../../services/api";
 import { authClient } from "../../services/auth-client";
 import { colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
-import { spacing, rounded, shadows } from "../../theme/layout";
+import { shadows } from "../../theme/layout";
 import Toast from "react-native-toast-message";
 
 // 1. Supabase Client for Image Uploads
@@ -80,9 +82,18 @@ const BLOOD_GROUP_TO_UI: Record<string, string> = {
   O_NEGATIVE: "O-",
 };
 
+const getOrdinalSuffix = (num: number | string) => {
+  const n = typeof num === "string" ? parseInt(num) : num;
+  if (isNaN(n)) return num;
+  const s = ["ᵗʰ", "ˢᵗ", "ⁿᵈ", "ʳᵈ"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
 export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // UI States
   const [isEditing, setIsEditing] = useState(false);
@@ -92,7 +103,7 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
   // Complex Input State
   const [skillInput, setSkillInput] = useState("");
 
-  // Editable Form State (Only fields that can be changed)
+  // Editable Form State
   const [formData, setFormData] = useState({
     name: "",
     phoneNumber: "",
@@ -115,8 +126,8 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
     retry: false,
   });
 
-  // Populate form state when data loads
-  useEffect(() => {
+  // Hydrate form data
+  const populateFormData = () => {
     if (profile) {
       setFormData({
         name: profile.name || "",
@@ -133,9 +144,17 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
         personalWebsiteUrl: profile.personalWebsiteUrl || "",
       });
     }
+  };
+
+  useEffect(() => {
+    populateFormData();
   }, [profile, isEditing]);
 
-  // General Update Mutation
+  const handleCancel = () => {
+    populateFormData(); // Revert to original
+    setIsEditing(false); // Close edit mode
+  };
+
   const mutation = useMutation({
     mutationFn: updateProfile,
     onSuccess: () => {
@@ -152,12 +171,9 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
     },
   });
 
-  // --- ACTIONS ---
-
   const handleSave = () => {
     const payload: any = {};
 
-    // Diffing Logic
     if (formData.name !== profile?.name) payload.name = formData.name;
     if (formData.phoneNumber !== profile?.phoneNumber)
       payload.phoneNumber = formData.phoneNumber;
@@ -180,7 +196,6 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
       payload.bloodGroup = mappedBloodGroup;
     }
 
-    // Complex Arrays and Strings
     if (
       JSON.stringify(formData.skills) !== JSON.stringify(profile?.skills || [])
     ) {
@@ -291,12 +306,10 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
     }
   };
 
-  // --- RENDER HELPERS ---
-
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primaryContainer} />
+        <ActivityIndicator size="large" color="#131b2e" />
       </View>
     );
   }
@@ -304,6 +317,11 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
   if (isError || !profile) {
     return (
       <View style={styles.centerContainer}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="transparent"
+          translucent={true}
+        />
         <Text style={styles.errorText}>No student profile found.</Text>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Feather name="log-out" size={20} color={colors.error} />
@@ -312,18 +330,6 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
       </View>
     );
   }
-
-  const renderInfoRow = (label: string, value: string, icon: any) => (
-    <View style={styles.infoRow}>
-      <View style={styles.infoIconWrapper}>
-        <Feather name={icon} size={20} color={colors.onSurfaceVariant} />
-      </View>
-      <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value || "Not provided"}</Text>
-      </View>
-    </View>
-  );
 
   const renderInputRow = (
     label: string,
@@ -353,289 +359,305 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* TOP BANNER & AVATAR */}
-        <View style={styles.headerBackground}>
-          <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1000&auto=format&fit=crop",
-            }}
-            style={styles.bannerImage}
-          />
-          <View style={styles.bannerOverlay} />
-        </View>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
 
-        <View style={styles.avatarSection}>
-          <TouchableOpacity
-            onPress={handleUpdatePicture}
-            disabled={isUploading}
-            style={styles.avatarContainer}
-          >
-            {profile.image ? (
-              <Image source={{ uri: profile.image }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Feather
-                  name="user"
-                  size={40}
-                  color={colors.onSurfaceVariant}
-                />
-              </View>
-            )}
-            <View style={styles.cameraBadge}>
-              {isUploading ? (
-                <ActivityIndicator size="small" color={colors.onPrimary} />
-              ) : (
-                <Feather name="camera" size={14} color={colors.onPrimary} />
-              )}
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.nameText}>{profile.name}</Text>
-          <Text style={styles.roleText}>{sessionUser?.role || "STUDENT"}</Text>
+      {/* Top Header Row for Edit Action */}
+      <View style={[styles.topActions, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.screenTitle}>My Profile</Text>
 
-          {/* Social Links (View Mode Only) */}
-          {!isEditing &&
-            (profile?.linkedInUrl || profile?.personalWebsiteUrl) && (
-              <View style={styles.socialRow}>
-                {profile.linkedInUrl && (
-                  <TouchableOpacity
-                    style={styles.socialButton}
-                    onPress={() => openLink(profile.linkedInUrl)}
-                  >
-                    <Feather
-                      name="linkedin"
-                      size={20}
-                      color={colors.primaryContainer}
-                    />
-                  </TouchableOpacity>
-                )}
-                {profile.personalWebsiteUrl && (
-                  <TouchableOpacity
-                    style={styles.socialButton}
-                    onPress={() => openLink(profile.personalWebsiteUrl)}
-                  >
-                    <Feather
-                      name="globe"
-                      size={20}
-                      color={colors.primaryContainer}
-                    />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-        </View>
-
-        {/* 1. IDENTIFICATION CARD (Immutable academic data shown here) */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardHeader}>IDENTIFICATION & ACADEMICS</Text>
+        <View style={styles.actionButtonsRow}>
+          {isEditing && (
             <TouchableOpacity
-              onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
+              onPress={handleCancel}
+              style={[
+                styles.topEditBtn,
+                { marginRight: 8, borderColor: "#DC2626" },
+              ]}
             >
-              <Text style={styles.editActionText}>
-                {mutation.isPending ? "Saving..." : isEditing ? "Save" : "Edit"}
+              <Feather name="x" size={16} color="#DC2626" />
+              <Text style={[styles.topEditText, { color: "#DC2626" }]}>
+                Cancel
               </Text>
             </TouchableOpacity>
-          </View>
-
-          {isEditing ? (
-            <>
-              {renderInputRow("Full Name", "name", "user")}
-              <View style={styles.divider} />
-              {/* Note: Academic data is strictly read-only here as per registration rules */}
-              {renderInfoRow("University ID", profile.studentId, "credit-card")}
-              <View style={styles.divider} />
-              {renderInfoRow("Program", profile.program, "book-open")}
-            </>
-          ) : (
-            <>
-              {renderInfoRow("University ID", profile.studentId, "credit-card")}
-              <View style={styles.divider} />
-              {renderInfoRow("Program", profile.program, "book-open")}
-              <View style={styles.divider} />
-              {renderInfoRow("Faculty", profile.faculty, "layers")}
-              <View style={styles.divider} />
-              {renderInfoRow("Department", profile.department, "book")}
-              <View style={styles.divider} />
-              {renderInfoRow("Institutional Email", profile.email, "mail")}
-            </>
           )}
+
+          <TouchableOpacity
+            onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
+            style={styles.topEditBtn}
+          >
+            <Feather
+              name={isEditing ? "check" : "edit-2"}
+              size={16}
+              color={colors.onSurface}
+            />
+            <Text style={styles.topEditText}>
+              {mutation.isPending
+                ? "Saving"
+                : isEditing
+                  ? "Save"
+                  : "Edit Profile"}
+            </Text>
+          </TouchableOpacity>
         </View>
+      </View>
 
-        {/* 2. ACADEMIC STATUS CARD */}
-        <View style={styles.card}>
-          <Text style={styles.cardHeader}>ACADEMIC STATUS</Text>
-          {isEditing ? (
-            <View style={styles.editForm}>
-              {renderInputRow(
-                "Current Semester",
-                "currentSemester",
-                "calendar",
-                { keyboardType: "numeric" },
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 120 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* AVATAR & BASIC INFO CARD */}
+        <View style={[styles.bentoCard, styles.avatarCard]}>
+          <View style={styles.avatarRow}>
+            <TouchableOpacity
+              onPress={handleUpdatePicture}
+              disabled={isUploading}
+              style={styles.avatarContainer}
+            >
+              {profile.image ? (
+                <Image source={{ uri: profile.image }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Feather
+                    name="user"
+                    size={32}
+                    color={colors.onSurfaceVariant}
+                  />
+                </View>
               )}
-              {renderInputRow("Section", "section", "users")}
-            </View>
-          ) : (
-            <>
-              <View style={styles.gridContainer}>
-                <View style={styles.gridItem}>
-                  <Feather
-                    name="award"
-                    size={24}
-                    color={colors.primaryContainer}
-                  />
-                  <Text style={styles.gridLabel}>Batch</Text>
-                  <Text style={styles.gridValue}>{profile.batch || "N/A"}</Text>
-                </View>
-                <View style={styles.gridItem}>
-                  <Feather
-                    name="calendar"
-                    size={24}
-                    color={colors.primaryContainer}
-                  />
-                  <Text style={styles.gridLabel}>Semester</Text>
-                  <Text style={styles.gridValue}>
-                    {profile.currentSemester || "N/A"}
-                  </Text>
-                </View>
-                {/* Section moved to Academic Status Grid! */}
-                <View style={styles.gridItem}>
-                  <Feather
-                    name="users"
-                    size={24}
-                    color={colors.primaryContainer}
-                  />
-                  <Text style={styles.gridLabel}>Section</Text>
-                  <Text style={styles.gridValue}>
-                    {profile.section || "N/A"}
-                  </Text>
-                </View>
+              <View style={styles.cameraBadge}>
+                {isUploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Feather name="camera" size={12} color="#fff" />
+                )}
               </View>
+            </TouchableOpacity>
 
-              {(profile.isCR || profile.isTA) && (
-                <View style={styles.rolesSection}>
-                  <Text style={styles.rolesLabel}>Additional Roles</Text>
-                  <View style={styles.rolePill}>
-                    <Feather
-                      name="shield"
-                      size={14}
-                      color={colors.onSecondaryContainer}
-                    />
-                    <Text style={styles.rolePillText}>
-                      {profile.isCR
-                        ? "Class Representative (CR)"
-                        : "Teaching Assistant (TA)"}
+            <View style={styles.avatarTextContainer}>
+              <Text style={styles.nameText}>{profile.name}</Text>
+              <View style={styles.roleRow}>
+                <View style={styles.rolePill}>
+                  <Feather
+                    name="book-open"
+                    size={12}
+                    color={colors.primaryContainer}
+                  />
+                  <Text style={styles.rolePillText}>Student</Text>
+                </View>
+                {profile.isCR && (
+                  <View
+                    style={[styles.rolePill, { backgroundColor: "#E0E7FF" }]}
+                  >
+                    <Text style={[styles.rolePillText, { color: "#3730A3" }]}>
+                      CR
                     </Text>
                   </View>
-                </View>
-              )}
-            </>
-          )}
+                )}
+              </View>
+              <Text style={styles.subText}>ID: {profile.studentId}</Text>
+              <Text style={styles.subText}>{profile.email}</Text>
+            </View>
+          </View>
         </View>
 
-        {/* 3. SKILLS CARD */}
-        <View style={styles.card}>
-          <Text style={styles.cardHeader}>PROFESSIONAL SKILLS</Text>
+        {/* ACADEMICS CARD (Pink Tint) */}
+        <View style={[styles.bentoCard, styles.academicsCard]}>
+          <View style={styles.iconRow}>
+            <Feather name="layers" size={18} color="#9D174D" />
+            <Text style={styles.academicsTitle}>FACULTY</Text>
+          </View>
+          <Text style={styles.academicsValue}>{profile.faculty}</Text>
 
-          {isEditing ? (
+          <View style={styles.dividerPink} />
+
+          <View style={styles.iconRow}>
+            <Feather name="book" size={18} color="#9D174D" />
+            <Text style={styles.academicsTitle}>DEPARTMENT</Text>
+          </View>
+          <Text style={styles.academicsValue}>{profile.department}</Text>
+
+          <View style={styles.dividerPink} />
+
+          <View style={styles.iconRow}>
+            <Feather name="award" size={18} color="#9D174D" />
+            <Text style={styles.academicsTitle}>PROGRAM</Text>
+          </View>
+          <Text style={styles.academicsValue}>{profile.program}</Text>
+        </View>
+
+        {/* BENTO GRID ROW: SEMESTER, BATCH, SECTION */}
+        <View style={styles.bentoRow}>
+          <View style={[styles.bentoCard, styles.bentoItem, styles.yellowCard]}>
+            <Text style={styles.bentoSmallTitleCenter}>SEMESTER</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.bentoEditInput}
+                value={formData.currentSemester}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, currentSemester: text })
+                }
+                keyboardType="numeric"
+              />
+            ) : (
+              <Text style={styles.bentoLargeValue}>
+                {getOrdinalSuffix(profile.currentSemester || "1")}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.bentoCol}>
+            <View
+              style={[
+                styles.bentoCard,
+                styles.bentoItemSmall,
+                styles.yellowCard,
+              ]}
+            >
+              <Text style={styles.bentoSmallTitleCenter}>BATCH</Text>
+              <Text style={styles.bentoMediumValue}>
+                {getOrdinalSuffix(profile.batch || "26")}
+              </Text>
+            </View>
+
+            <View
+              style={[styles.bentoCard, styles.bentoItemSmall, styles.blueCard]}
+            >
+              <Text style={styles.bentoSmallTitleCenter}>SECTION</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.bentoEditInput}
+                  value={formData.section}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, section: text })
+                  }
+                />
+              ) : (
+                <Text style={styles.bentoMediumValue}>
+                  {profile.section || "A"}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* SKILLS CARD (Green Tint) */}
+        <View style={[styles.bentoCard, styles.skillsCard]}>
+          <Text style={styles.skillsTitle}>PROFESSIONAL SKILLS</Text>
+
+          {isEditing && (
             <View style={styles.complexInputContainer}>
-              <View style={styles.inputWrapper}>
+              <View style={[styles.inputWrapper, { backgroundColor: "#fff" }]}>
                 <TextInput
                   style={styles.input}
                   value={skillInput}
                   onChangeText={setSkillInput}
-                  placeholder="e.g. React Native, Python"
-                  placeholderTextColor={colors.outlineVariant}
+                  placeholder="Add skill..."
                 />
                 <TouchableOpacity onPress={addSkill} style={styles.addButton}>
-                  <Feather name="plus" size={20} color={colors.onPrimary} />
+                  <Feather name="plus" size={16} color="#fff" />
                 </TouchableOpacity>
               </View>
             </View>
-          ) : null}
+          )}
 
           <View style={styles.chipContainer}>
-            {formData.skills.length > 0 ? (
-              formData.skills.map((skill, idx) => (
-                <View key={idx} style={styles.chip}>
-                  <Text style={styles.chipText}>{skill}</Text>
-                  {isEditing && (
-                    <TouchableOpacity
-                      onPress={() => removeSkill(skill)}
-                      style={{ marginLeft: 6 }}
-                    >
-                      <Feather
-                        name="x"
-                        size={14}
-                        color={colors.onSurfaceVariant}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))
-            ) : (
-              <Text style={styles.infoLabel}>No skills added.</Text>
-            )}
+            {formData.skills.map((skill, idx) => (
+              <View key={idx} style={styles.chip}>
+                <Text style={styles.chipText}>{skill}</Text>
+                {isEditing && (
+                  <TouchableOpacity
+                    onPress={() => removeSkill(skill)}
+                    style={{ marginLeft: 6 }}
+                  >
+                    <Feather name="x" size={14} color="#065F46" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* 4. PERSONAL & WEB LINKS CARD */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardHeader}>PERSONAL & WEB LINKS</Text>
-            {/* Redundant Save button for better UX on long forms */}
-            <TouchableOpacity
-              onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
-            >
-              <Text style={styles.editActionText}>
-                {mutation.isPending ? "Saving..." : isEditing ? "Save" : "Edit"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {isEditing ? (
-            <View style={styles.editForm}>
-              {renderInputRow("Phone Number", "phoneNumber", "phone", {
-                keyboardType: "phone-pad",
-              })}
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Blood Group</Text>
+        {/* BOTTOM ROW: BLOOD GROUP & PHONE */}
+        <View style={styles.bentoRow}>
+          <View
+            style={[
+              styles.bentoCard,
+              styles.bentoItem,
+              { backgroundColor: "#fff" },
+            ]}
+          >
+            <View style={styles.centerContent}>
+              <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
+                <Feather name="droplet" size={20} color="#DC2626" />
+              </View>
+              <Text style={styles.bentoSmallTitleCenter}>BLOOD GROUP</Text>
+              {isEditing ? (
                 <TouchableOpacity
-                  style={[
-                    styles.inputWrapper,
-                    isBloodGroupModalVisible && {
-                      borderColor: colors.primaryContainer,
-                    },
-                  ]}
                   onPress={() => setBloodGroupModalVisible(true)}
+                  style={styles.editPillBtn}
                 >
-                  <Feather
-                    name="droplet"
-                    size={18}
-                    color={colors.outline}
-                    style={styles.inputIcon}
-                  />
-                  <Text
-                    style={[
-                      styles.input,
-                      { paddingTop: 14 },
-                      !formData.bloodGroup && { color: colors.outlineVariant },
-                    ]}
-                  >
-                    {formData.bloodGroup || "Select Blood Group"}
+                  <Text style={styles.editPillText}>
+                    {formData.bloodGroup || "Select"}
                   </Text>
                   <Feather
                     name="chevron-down"
-                    size={18}
-                    color={colors.outline}
+                    size={14}
+                    color="#DC2626"
+                    style={{ marginLeft: 4 }}
                   />
                 </TouchableOpacity>
-              </View>
+              ) : (
+                <Text style={[styles.bentoMediumValue, { color: "#DC2626" }]}>
+                  {profile.bloodGroup
+                    ? BLOOD_GROUP_TO_UI[profile.bloodGroup]
+                    : "N/A"}
+                </Text>
+              )}
+            </View>
+          </View>
 
+          <View
+            style={[
+              styles.bentoCard,
+              styles.bentoItem,
+              { backgroundColor: "#fff" },
+            ]}
+          >
+            <View style={styles.centerContent}>
+              <View style={[styles.iconCircle, { backgroundColor: "#E0E7FF" }]}>
+                <Feather name="phone" size={20} color="#4F46E5" />
+              </View>
+              <Text style={styles.bentoSmallTitleCenter}>PHONE</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.bentoEditInput}
+                  value={formData.phoneNumber}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, phoneNumber: text })
+                  }
+                  keyboardType="phone-pad"
+                  placeholder="Add Phone"
+                />
+              ) : (
+                <Text style={[styles.bentoMediumValue, { fontSize: 16 }]}>
+                  {profile.phoneNumber || "Add Phone"}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* SOCIAL LINKS CARD */}
+        <View style={styles.socialContainer}>
+          {isEditing ? (
+            <View style={[styles.bentoCard, { backgroundColor: "#fff" }]}>
               {renderInputRow("LinkedIn URL", "linkedInUrl", "linkedin", {
                 autoCapitalize: "none",
               })}
@@ -645,30 +667,60 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
             </View>
           ) : (
             <>
-              {renderInfoRow("Phone Number", profile.phoneNumber, "phone")}
-              <View style={styles.divider} />
-              {renderInfoRow(
-                "Blood Group",
-                profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] : "",
-                "droplet",
+              {profile?.linkedInUrl && (
+                <TouchableOpacity
+                  style={[styles.bentoCard, styles.linkCard]}
+                  onPress={() => openLink(profile.linkedInUrl)}
+                >
+                  <View style={styles.linkRow}>
+                    <View style={styles.premiumLinkedInIcon}>
+                      <Feather name="linkedin" size={20} color="#fff" />
+                    </View>
+                    <View style={styles.linkTextContainer}>
+                      <Text style={styles.linkTitle}>LINKEDIN PROFILE</Text>
+                      <Text style={styles.linkValue} numberOfLines={1}>
+                        {profile.linkedInUrl.replace("https://", "")}
+                      </Text>
+                    </View>
+                    <Feather
+                      name="arrow-right"
+                      size={20}
+                      color={colors.outline}
+                    />
+                  </View>
+                </TouchableOpacity>
+              )}
+
+              {profile?.personalWebsiteUrl && (
+                <TouchableOpacity
+                  style={[styles.bentoCard, styles.linkCard]}
+                  onPress={() => openLink(profile.personalWebsiteUrl)}
+                >
+                  <View style={styles.linkRow}>
+                    <View style={styles.holographicIcon}>
+                      <Feather name="globe" size={20} color="#fff" />
+                    </View>
+                    <View style={styles.linkTextContainer}>
+                      <Text style={styles.linkTitle}>PERSONAL WEBSITE</Text>
+                      <Text style={styles.linkValue} numberOfLines={1}>
+                        {profile.personalWebsiteUrl.replace("https://", "")}
+                      </Text>
+                    </View>
+                    <Feather
+                      name="arrow-right"
+                      size={20}
+                      color={colors.outline}
+                    />
+                  </View>
+                </TouchableOpacity>
               )}
             </>
           )}
-
-          {isEditing && (
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setIsEditing(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel Editing</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
-        {/* LOGOUT BUTTON */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Feather name="log-out" size={20} color={colors.error} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Feather name="log-out" size={18} color="#DC2626" />
+          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -692,7 +744,6 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
             <FlatList
               data={BLOOD_GROUPS}
               keyExtractor={(item) => item}
-              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.modalItem}
@@ -720,309 +771,419 @@ export default function StudentProfile({ sessionUser }: { sessionUser: any }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F6F8" },
+  container: { flex: 1, backgroundColor: "#f7f9fb" },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F4F6F8",
+    backgroundColor: "#f7f9fb",
   },
-  scrollContent: { paddingBottom: spacing.sectionBreak * 2 },
-  headerBackground: {
-    height: 140,
-    width: "100%",
-    position: "absolute",
-    top: 0,
-    backgroundColor: colors.primaryContainer,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
-  bannerImage: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100%",
-    height: "100%",
-  },
-  bannerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.primaryContainer,
-    opacity: 0.85,
-  },
-  avatarSection: {
+  scrollContent: { paddingHorizontal: 16 },
+
+  // Top Actions
+  topActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 80,
-    marginBottom: spacing.stackLg,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
-  avatarContainer: { position: "relative", marginBottom: spacing.stackSm },
-  avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: rounded.full,
-    borderWidth: 4,
-    borderColor: colors.surfaceContainerLowest,
+  screenTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#131b2e",
+    letterSpacing: -0.5,
   },
-  avatarPlaceholder: {
-    width: 110,
-    height: 110,
-    borderRadius: rounded.full,
-    backgroundColor: colors.surfaceContainerLowest,
+  actionButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  topEditBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  topEditText: {
+    marginLeft: 6,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  // Bento Box Core
+  bentoCard: {
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 12,
+    ...shadows.level1,
+  },
+  bentoRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
+  bentoCol: { flex: 1, gap: 12 },
+
+  bentoItem: {
+    flex: 1,
+    marginBottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 4,
-    borderColor: colors.surfaceContainerLowest,
+  },
+  bentoItemSmall: {
+    flex: 1,
+    marginBottom: 0,
+    padding: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Specific Card Colors (Pastel theme from image)
+  avatarCard: { backgroundColor: "#d0e4ff" },
+  academicsCard: { backgroundColor: "#FCE7F3" },
+  yellowCard: { backgroundColor: "#FEF08A" },
+  blueCard: { backgroundColor: "#E0F2FE" },
+  skillsCard: { backgroundColor: "#D1FAE5" },
+
+  // Avatar Section
+  avatarRow: { flexDirection: "row", alignItems: "center" },
+  avatarContainer: { position: "relative", marginRight: 16 },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cameraBadge: {
     position: "absolute",
-    bottom: 4,
-    right: 4,
-    backgroundColor: colors.primaryContainer,
-    width: 32,
-    height: 32,
-    borderRadius: rounded.full,
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#131b2e",
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: colors.surfaceContainerLowest,
-    ...shadows.level1,
+    borderColor: "#fff",
   },
-  nameText: { ...typography.headlineMd, color: colors.onSurface },
-  roleText: {
-    ...typography.labelMd,
-    color: colors.outline,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  avatarTextContainer: { flex: 1 },
+  nameText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#131b2e",
+    marginBottom: 4,
+  },
+  subText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#45464d",
     marginTop: 2,
   },
-  socialRow: {
-    flexDirection: "row",
-    gap: spacing.stackMd,
-    marginTop: spacing.stackMd,
-  },
-  socialButton: {
-    width: 40,
-    height: 40,
-    borderRadius: rounded.full,
-    backgroundColor: colors.surfaceContainerLowest,
-    justifyContent: "center",
-    alignItems: "center",
-    ...shadows.level1,
-  },
-  card: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    marginHorizontal: spacing.marginMobile,
-    marginBottom: spacing.stackLg,
-    padding: spacing.marginMobile,
-    ...shadows.level1,
-  },
-  cardHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.stackLg,
-  },
-
-  // FIX 1: Added spacing.stackLg margin here to ensure padding below solitary headers!
-  cardHeader: {
-    ...typography.labelSm,
-    color: colors.outline,
-    letterSpacing: 1.5,
-    marginBottom: spacing.stackLg,
-  },
-
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.stackSm,
-  },
-  infoIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: rounded.full,
-    backgroundColor: "#F0F4F8",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.stackMd,
-  },
-  infoTextContainer: { flex: 1 },
-  infoLabel: { ...typography.labelSm, color: colors.outline, marginBottom: 2 },
-  infoValue: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "500",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.surfaceContainerHigh,
-    marginVertical: spacing.stackSm,
-    marginLeft: 60,
-  },
-  gridContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing.stackMd,
-  },
-  gridItem: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-    borderRadius: rounded.lg,
-    padding: spacing.stackLg,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHigh,
-  },
-  gridLabel: {
-    ...typography.labelSm,
-    color: colors.outline,
-    marginTop: spacing.stackMd,
-    marginBottom: spacing.stackSm,
-  },
-  gridValue: { ...typography.titleLg, color: colors.onSurface },
-  rolesSection: { marginTop: spacing.stackLg },
-  rolesLabel: {
-    ...typography.labelMd,
-    color: colors.onSurfaceVariant,
-    marginBottom: spacing.stackSm,
-  },
+  roleRow: { flexDirection: "row", gap: 8, marginBottom: 6 },
   rolePill: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: colors.secondaryContainer,
-    paddingHorizontal: spacing.stackMd,
+    backgroundColor: "#fff",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  rolePillText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#131b2e",
+    marginLeft: 4,
+    fontWeight: "700",
+  },
+
+  // Academics Section
+  iconRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  academicsTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#9D174D",
+    marginLeft: 8,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  academicsValue: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#831843",
+    marginLeft: 26,
+  },
+  dividerPink: {
+    height: 1,
+    backgroundColor: "rgba(157, 23, 77, 0.1)",
+    marginVertical: 12,
+  },
+
+  // Grid Typography
+  bentoSmallTitleCenter: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  bentoLargeValue: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 48,
+    fontWeight: "800",
+    color: "#854D0E",
+    textAlign: "center",
+  },
+  bentoMediumValue: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#854D0E",
+  },
+
+  // FIX: Isolated Input for Grid (No flex:1 or height:100%)
+  bentoEditInput: {
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    borderRadius: 8,
     paddingVertical: 8,
-    borderRadius: rounded.md,
+    paddingHorizontal: 12,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#131b2e",
+    minWidth: 80,
+    textAlign: "center",
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.05)",
   },
-  rolePillText: {
-    ...typography.labelMd,
-    color: colors.onSecondaryContainer,
-    marginLeft: spacing.stackSm,
+
+  // NEW: Blood Group Pill
+  editPillBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginTop: 4,
   },
-  editActionText: {
-    ...typography.labelMd,
-    color: colors.primaryContainer,
+  editPillText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
     fontWeight: "700",
+    color: "#DC2626",
   },
 
-  // FIX 2: Removed the negative margin (-spacing.stackMd) that was causing text overlap!
-  editForm: { marginTop: spacing.stackSm },
-
-  inputGroup: { marginBottom: spacing.stackMd },
-  inputLabel: { ...typography.labelSm, color: colors.onSurfaceVariant },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderColor: colors.outlineVariant,
-    height: 48,
-    marginTop: spacing.stackSm,
-    borderRadius: rounded.md,
-    paddingHorizontal: spacing.stackSm,
-  },
-  inputIcon: { marginRight: spacing.stackMd },
-  input: {
-    flex: 1,
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    height: "100%",
-  },
-  cancelButton: {
-    alignItems: "center",
-    marginTop: spacing.stackMd,
-    padding: spacing.stackSm,
-  },
-  cancelButtonText: { ...typography.labelMd, color: colors.outline },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: spacing.marginMobile,
-    marginTop: spacing.stackSm,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: colors.errorContainer,
-    borderRadius: rounded.lg,
-    paddingVertical: spacing.marginMobile,
-    ...shadows.level1,
-  },
-  logoutText: {
-    ...typography.labelMd,
-    color: colors.error,
-    fontWeight: "700",
-    marginLeft: spacing.stackSm,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 3, 58, 0.4)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: "50%",
-    paddingTop: spacing.sectionBreak,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.marginMobile,
-    paddingBottom: spacing.stackMd,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
-  },
-  modalTitle: { ...typography.titleLg, color: colors.primaryContainer },
-  closeButton: { padding: spacing.stackSm },
-  modalItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.stackLg,
-    paddingHorizontal: spacing.marginMobile,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
-  },
-  modalItemText: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "500",
-  },
-  errorText: {
-    ...typography.bodyLg,
-    color: colors.error,
-    marginBottom: spacing.stackMd,
-  },
-
-  // Complex Input Styles
-  complexInputContainer: { marginBottom: spacing.stackMd },
-  addButton: {
-    backgroundColor: colors.primaryContainer,
-    width: 36,
-    height: 36,
-    borderRadius: rounded.sm,
+  centerContent: { alignItems: "center", justifyContent: "center" },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: spacing.stackSm,
+    marginBottom: 12,
+  },
+
+  // Skills
+  skillsTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#065F46",
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 12,
   },
   chipContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  chipText: { ...typography.labelMd, color: colors.onSurface },
+  chipText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    color: "#065F46",
+    fontWeight: "700",
+  },
+  complexInputContainer: { marginBottom: 12 },
+  addButton: {
+    backgroundColor: "#059669",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+
+  // Social Links
+  socialContainer: { marginTop: 8 },
+  linkCard: { backgroundColor: "#fff", paddingVertical: 16 },
+  linkRow: { flexDirection: "row", alignItems: "center" },
+
+  // Custom Link Icons
+  premiumLinkedInIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#0077b5",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#0077b5",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  holographicIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#21D4FD",
+    justifyContent: "center",
+    alignItems: "center",
+    borderTopColor: "#B721FF",
+    borderBottomColor: "#21D4FD",
+    borderLeftColor: "#FEE140",
+    borderRightColor: "#FA709A",
+    borderWidth: 2,
+    shadowColor: "#B721FF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+
+  linkTextContainer: { flex: 1, marginLeft: 16 },
+  linkTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  linkValue: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#0F172A",
+    marginTop: 2,
+    fontWeight: "500",
+  },
+
+  // Form Editing Inputs
+  inputGroup: { marginBottom: 16 },
+  inputLabel: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#45464d",
+    marginBottom: 4,
+    fontWeight: "700",
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    height: 48,
+    borderRadius: 9999,
+    paddingHorizontal: 16,
+  },
+  inputIcon: { marginRight: 8 },
+  input: {
+    flex: 1,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#191c1e",
+    fontWeight: "500",
+    height: "100%",
+  },
+
+  // Logout
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FEE2E2",
+    borderRadius: 9999,
+    paddingVertical: 16,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  logoutText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#DC2626",
+    fontWeight: "800",
+    marginLeft: 8,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(19, 27, 46, 0.4)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#f7f9fb",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    height: "50%",
+    paddingTop: 24,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  modalTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#131b2e",
+  },
+  closeButton: { padding: 4 },
+  modalItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e3e5",
+  },
+  modalItemText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#191c1e",
+    fontWeight: "700",
+  },
+  errorText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#DC2626",
+    marginBottom: 16,
+  },
 });
