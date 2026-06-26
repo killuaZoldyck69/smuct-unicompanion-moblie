@@ -3,25 +3,86 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-import { colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
-import { spacing, rounded, shadows } from "../../theme/layout";
-
 interface HubCardProps {
   item: any;
+  index: number;
 }
 
-export default function HubCard({ item }: HubCardProps) {
+// 🎨 Expanded Soft Campus Bento Color Themes (8 Colors)
+const CARD_THEMES = [
+  {
+    bg: "#d1fae5",
+    tagBg: "#ffffff",
+    caughtUpBg: "#a7f3d0",
+    caughtUpText: "#065f46",
+  }, // 0: Mint
+  {
+    bg: "#fce7f3",
+    tagBg: "#ffffff",
+    caughtUpBg: "#fbcfe8",
+    caughtUpText: "#831843",
+  }, // 1: Pink
+  {
+    bg: "#e0e7ff",
+    tagBg: "#ffffff",
+    caughtUpBg: "#c7d2fe",
+    caughtUpText: "#3730a3",
+  }, // 2: Indigo/Purple
+  {
+    bg: "#fef08a",
+    tagBg: "#ffffff",
+    caughtUpBg: "#fde047",
+    caughtUpText: "#854d0e",
+  }, // 3: Yellow
+  {
+    bg: "#e0f2fe",
+    tagBg: "#ffffff",
+    caughtUpBg: "#bae6fd",
+    caughtUpText: "#0369a1",
+  }, // 4: Sky Blue
+  {
+    bg: "#ffedd5",
+    tagBg: "#ffffff",
+    caughtUpBg: "#fed7aa",
+    caughtUpText: "#9a3412",
+  }, // 5: Peach
+  {
+    bg: "#f3e8ff",
+    tagBg: "#ffffff",
+    caughtUpBg: "#e9d5ff",
+    caughtUpText: "#581c87",
+  }, // 6: Lavender
+  {
+    bg: "#ffe4e6",
+    tagBg: "#ffffff",
+    caughtUpBg: "#fecdd3",
+    caughtUpText: "#9f1239",
+  }, // 7: Rose
+];
+
+// Helper for semester suffix (e.g., 3 -> 3rd)
+const getOrdinalSuffix = (num: number | string) => {
+  const n = typeof num === "string" ? parseInt(num) : num;
+  if (isNaN(n)) return num;
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
+export default function HubCard({ item, index }: HubCardProps) {
   const router = useRouter();
   const hub = item.hub;
   const role = item.role;
 
-  // Extract relational data (Fallback to empty/default if backend isn't updated yet)
+  // Determine dynamic colors based on index cycling through the 8 themes
+  const theme = CARD_THEMES[index % CARD_THEMES.length];
+
+  // Extract relational data
   const teacherName = hub.members?.[0]?.user?.name || "Assigning...";
   const memberCount = hub._count?.members || 1;
   const nextAssessment = hub.assessments?.[0] || null;
 
-  // Real-time Countdown Logic for the card
+  // Real-time Countdown Logic
   const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
@@ -36,10 +97,9 @@ export default function HubCard({ item }: HubCardProps) {
       }
       const d = Math.floor(diff / (1000 * 60 * 60 * 24));
       const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const m = Math.floor((diff / 1000 / 60) % 60);
 
-      if (d > 0) setTimeLeft(`${d}d ${h}h left`);
-      else setTimeLeft(`${h}h ${m}m left`);
+      if (d > 0) setTimeLeft(d === 1 ? "1 Day Left" : `${d} Days Left`);
+      else setTimeLeft(`${h}h Left`);
     };
 
     calculateTime();
@@ -49,206 +109,222 @@ export default function HubCard({ item }: HubCardProps) {
 
   return (
     <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.8}
+      style={[styles.card, { backgroundColor: theme.bg }]}
+      activeOpacity={0.9}
       onPress={() => router.push(`/hub/${hub.id}`)}
     >
-      {/* Top Row: Course Code & Role */}
+      {/* 1. TITLE ROW */}
       <View style={styles.cardHeader}>
-        <View style={styles.courseCodeBadge}>
-          <Text style={styles.courseCodeText}>{hub.courseCode}</Text>
-        </View>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{role}</Text>
-        </View>
+        <Text style={styles.courseName} numberOfLines={1}>
+          {hub.courseName}
+        </Text>
+        <TouchableOpacity style={styles.menuIcon}>
+          <Feather name="more-vertical" size={20} color="#131b2e" />
+        </TouchableOpacity>
       </View>
 
-      {/* Course Title */}
-      <Text style={styles.courseName} numberOfLines={2}>
-        {hub.courseName}
-      </Text>
-
-      {/* Meta Information Row */}
-      <View style={styles.metaRow}>
-        <View style={styles.metaItem}>
-          <Feather
-            name="user"
-            size={14}
-            color={colors.outline}
-            style={styles.metaIcon}
-          />
-          <Text style={styles.metaText} numberOfLines={1}>
-            {teacherName}
-          </Text>
+      {/* 2. TAGS ROW */}
+      <View style={styles.tagsRow}>
+        <View style={[styles.pillBadge, { backgroundColor: theme.tagBg }]}>
+          <Text style={styles.pillText}>{hub.courseCode}</Text>
         </View>
-        <View style={styles.metaItem}>
-          <Feather
-            name="users"
-            size={14}
-            color={colors.outline}
-            style={styles.metaIcon}
-          />
-          <Text style={styles.metaText}>{memberCount} Members</Text>
-        </View>
-      </View>
-      <View style={[styles.metaRow, { marginTop: 4 }]}>
-        <View style={styles.metaItem}>
-          <Feather
-            name="layers"
-            size={14}
-            color={colors.outline}
-            style={styles.metaIcon}
-          />
-          <Text style={styles.metaText}>Semester {hub.semesterNumber}th</Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Feather
-            name="map-pin"
-            size={14}
-            color={colors.outline}
-            style={styles.metaIcon}
-          />
-          <Text style={styles.metaText}>{hub.department}</Text>
-        </View>
+        {role !== "STUDENT" && (
+          <View style={[styles.pillBadge, { backgroundColor: theme.tagBg }]}>
+            <Text style={styles.pillText}>{role}</Text>
+          </View>
+        )}
       </View>
 
-      {/* Footer: Upcoming Assessment OR General Footer */}
-      {nextAssessment ? (
-        <View style={styles.upcomingBanner}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.upcomingLabel}>
-              Upcoming {nextAssessment.type.toLowerCase()}
-            </Text>
-            <Text style={styles.upcomingTitle} numberOfLines={1}>
-              {nextAssessment.title}
+      {/* 3. META GRID */}
+      <View style={styles.metaGrid}>
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <Feather
+              name="user"
+              size={16}
+              color="#45464d"
+              style={styles.metaIcon}
+            />
+            <Text style={styles.metaText} numberOfLines={1}>
+              {teacherName.includes("Dr.") || teacherName.includes("Prof.")
+                ? teacherName
+                : `Prof. ${teacherName.split(" ").pop()}`}
             </Text>
           </View>
-          <View style={styles.timerBadge}>
+          <View style={styles.metaItem}>
             <Feather
-              name="clock"
-              size={12}
-              color={colors.primary}
-              style={{ marginRight: 4 }}
+              name="users"
+              size={16}
+              color="#45464d"
+              style={styles.metaIcon}
             />
-            <Text style={styles.timerText}>{timeLeft}</Text>
+            <Text style={styles.metaText}>{memberCount} Students</Text>
+          </View>
+        </View>
+
+        <View style={[styles.metaRow, { marginTop: 12 }]}>
+          <View style={styles.metaItem}>
+            <Feather
+              name="calendar"
+              size={16}
+              color="#45464d"
+              style={styles.metaIcon}
+            />
+            <Text style={styles.metaText}>
+              {getOrdinalSuffix(hub.semesterNumber)} Semester
+            </Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Feather
+              name="briefcase"
+              size={16}
+              color="#45464d"
+              style={styles.metaIcon}
+            />
+            <Text style={styles.metaText}>{hub.department || "Dept"}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* 4. FOOTER PILL (Task vs Caught up) */}
+      {nextAssessment ? (
+        <View style={styles.taskPillActive}>
+          <Feather
+            name="clipboard"
+            size={16}
+            color="#DC2626"
+            style={styles.taskIcon}
+          />
+          <Text style={styles.taskTitle} numberOfLines={1}>
+            {nextAssessment.title}
+          </Text>
+          <View style={styles.taskBadge}>
+            <Text style={styles.taskBadgeText}>{timeLeft}</Text>
           </View>
         </View>
       ) : (
-        <View style={styles.cardFooter}>
-          <Text style={styles.footerText}>No upcoming deadlines</Text>
-          <Feather name="chevron-right" size={20} color={colors.outline} />
+        <View
+          style={[
+            styles.taskPillCaughtUp,
+            { backgroundColor: theme.caughtUpBg },
+          ]}
+        >
+          <Feather
+            name="check-circle"
+            size={16}
+            color={theme.caughtUpText}
+            style={styles.taskIcon}
+          />
+          <Text
+            style={[styles.taskTitleCaughtUp, { color: theme.caughtUpText }]}
+          >
+            All caught up
+          </Text>
         </View>
       )}
     </TouchableOpacity>
   );
 }
 
+// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    padding: spacing.stackLg,
-    marginBottom: spacing.stackMd,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
-    ...shadows.level1,
+    borderRadius: 32, // Exaggerated roundness
+    padding: 24,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    elevation: 1,
   },
+
+  // Header
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.stackMd,
-  },
-  courseCodeBadge: {
-    backgroundColor: colors.primaryContainer + "20",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: rounded.md,
-  },
-  courseCodeText: {
-    ...typography.labelMd,
-    color: colors.primary,
-    fontWeight: "800",
-  },
-  roleBadge: {
-    backgroundColor: colors.surfaceContainerHigh,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: rounded.full,
-  },
-  roleText: {
-    ...typography.labelSm,
-    color: colors.onSurfaceVariant,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    fontSize: 10,
+    marginBottom: 12,
   },
   courseName: {
-    ...typography.titleLg,
-    color: colors.onSurface,
-    fontWeight: "700",
-    marginBottom: spacing.stackSm,
+    flex: 1,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#131b2e",
+    paddingRight: 16,
+  },
+  menuIcon: { padding: 4 },
+
+  // Tags
+  tagsRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
+  pillBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 },
+  pillText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#131b2e",
+    textTransform: "uppercase",
   },
 
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 16 },
-  metaItem: { flexDirection: "row", alignItems: "center", flex: 1 },
-  metaIcon: { marginRight: 6 },
-  metaText: { ...typography.labelSm, color: colors.onSurfaceVariant },
-
-  upcomingBanner: {
+  // Meta Grid
+  metaGrid: { marginBottom: 20 },
+  metaRow: { flexDirection: "row", alignItems: "center" },
+  metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.stackLg,
-    padding: spacing.stackMd,
-    backgroundColor: colors.primaryContainer + "10",
-    borderRadius: rounded.md,
-    borderWidth: 1,
-    borderColor: colors.primaryContainer + "30",
-  },
-  upcomingLabel: {
-    ...typography.labelSm,
-    color: colors.primary,
-    fontWeight: "700",
-    textTransform: "capitalize",
-    fontSize: 10,
-    marginBottom: 2,
-  },
-  upcomingTitle: {
-    ...typography.labelMd,
-    color: colors.onSurface,
-    fontWeight: "600",
+    flex: 1,
     paddingRight: 8,
   },
-  timerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceContainerLowest,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: rounded.full,
-    borderWidth: 1,
-    borderColor: colors.primaryContainer + "30",
-  },
-  timerText: {
-    ...typography.labelSm,
-    color: colors.primary,
-    fontWeight: "700",
-    fontSize: 10,
+  metaIcon: { marginRight: 8 },
+  metaText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#131b2e",
   },
 
-  cardFooter: {
+  // Footer Pills
+  taskPillActive: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: spacing.stackLg,
-    paddingTop: spacing.stackSm,
-    borderTopWidth: 1,
-    borderTopColor: colors.surfaceContainerHighest,
+    backgroundColor: "#ffffff",
+    borderRadius: 9999,
+    paddingVertical: 8,
+    paddingLeft: 16,
+    paddingRight: 8,
   },
-  footerText: {
-    ...typography.labelSm,
-    color: colors.outline,
-    fontStyle: "italic",
+  taskIcon: { marginRight: 8 },
+  taskTitle: {
+    flex: 1,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#131b2e",
+  },
+  taskBadge: {
+    backgroundColor: "#DC2626", // Red badge
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+  },
+  taskBadgeText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+
+  taskPillCaughtUp: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 9999,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  taskTitleCaughtUp: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

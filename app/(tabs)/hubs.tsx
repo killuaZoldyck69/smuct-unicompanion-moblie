@@ -10,17 +10,16 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 
 import api from "../../src/services/api";
-import { colors } from "../../src/theme/colors";
-import { rounded, spacing } from "../../src/theme/layout";
-import { typography } from "../../src/theme/typography";
 import CreateHubModal from "../../src/components/hub/CreateHubModal";
 import HubCard from "../../src/components/hub/HubCard";
 import { authClient } from "../../src/services/auth-client";
@@ -30,6 +29,7 @@ type HubTab = "ACTIVE" | "ARCHIVED";
 export default function HubsDashboardScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   // States
   const [activeTab, setActiveTab] = useState<HubTab>("ACTIVE");
@@ -128,88 +128,93 @@ export default function HubsDashboardScreen() {
 
   // --- Render ---
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Course Hubs</Text>
-          <Text style={styles.headerSubtitle}>Your digital classrooms</Text>
-        </View>
-      </View>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
 
-      <View style={styles.topActions}>
-        <TouchableOpacity
-          style={[
-            styles.actionBtn,
-            { backgroundColor: colors.primaryContainer },
-          ]}
-          onPress={() => setIsJoinModalVisible(true)}
-        >
-          <Feather
-            name="log-in"
-            size={16}
-            color={colors.onPrimary}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.actionBtnTextWhite}>Join Hub</Text>
-        </TouchableOpacity>
-
-        {canCreateHub && (
-          <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              { backgroundColor: colors.secondaryContainer },
-            ]}
-            onPress={() => setIsCreateModalVisible(true)}
-          >
-            <Feather
-              name="plus-circle"
-              size={16}
-              color={colors.secondary}
-              style={{ marginRight: 6 }}
-            />
-            <Text
-              style={[styles.actionBtnTextWhite, { color: colors.secondary }]}
-            >
-              Create Hub
-            </Text>
-          </TouchableOpacity>
+      {/* 1. TOP NAV BAR */}
+      <View style={styles.navBar}>
+        <Feather name="book-open" size={24} color="#131b2e" />
+        <Text style={styles.navTitle}>Course Hub</Text>
+        {currentUser?.image ? (
+          <Image source={{ uri: currentUser.image }} style={styles.navAvatar} />
+        ) : (
+          <View style={styles.navAvatarPlaceholder}>
+            <Feather name="user" size={16} color="#76777d" />
+          </View>
         )}
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        {(["ACTIVE", "ARCHIVED"] as HubTab[]).map((tab) => (
+      {/* 2. MAIN HEADER & BUTTONS */}
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Course Hubs</Text>
+        <View style={styles.actionRow}>
           <TouchableOpacity
-            key={tab}
-            style={[
-              styles.tabButton,
-              activeTab === tab && styles.tabButtonActive,
-            ]}
-            onPress={() => setActiveTab(tab)}
+            style={styles.btnDark}
+            onPress={() => setIsJoinModalVisible(true)}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.tabTextActive,
-              ]}
-            >
-              {tab === "ACTIVE" ? "Active Classes" : "Archived"}
-            </Text>
+            <Feather
+              name="plus"
+              size={18}
+              color="#ffffff"
+              style={styles.btnIcon}
+            />
+            <Text style={styles.btnTextWhite}>Join Hub</Text>
           </TouchableOpacity>
-        ))}
+
+          {canCreateHub && (
+            <TouchableOpacity
+              style={styles.btnLight}
+              onPress={() => setIsCreateModalVisible(true)}
+            >
+              <Feather
+                name="edit-2"
+                size={16}
+                color="#131b2e"
+                style={styles.btnIcon}
+              />
+              <Text style={styles.btnTextDark}>Create Hub</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      {/* List Content */}
+      {/* 3. CUSTOM PILL TABS */}
+      <View style={styles.tabsWrapper}>
+        <View style={styles.tabsContainer}>
+          {(["ACTIVE", "ARCHIVED"] as HubTab[]).map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tabButton, isActive && styles.tabButtonActive]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text
+                  style={[styles.tabText, isActive && styles.tabTextActive]}
+                >
+                  {tab === "ACTIVE" ? "Active Classes" : "Archived"}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* 4. LIST CONTENT */}
       {isLoadingScreen ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primaryContainer} />
+          <ActivityIndicator size="large" color="#131b2e" />
         </View>
       ) : myHubs.length === 0 ? (
         <View style={styles.centerContainer}>
           <Feather
             name="layers"
             size={48}
-            color={colors.surfaceContainerHighest}
+            color="#c6c6cd"
             style={{ marginBottom: 16 }}
           />
           <Text style={styles.emptyTitle}>No Hubs Found</Text>
@@ -222,7 +227,7 @@ export default function HubsDashboardScreen() {
           <Feather
             name="archive"
             size={48}
-            color={colors.surfaceContainerHighest}
+            color="#c6c6cd"
             style={{ marginBottom: 16 }}
           />
           <Text style={styles.emptyTitle}>
@@ -240,8 +245,14 @@ export default function HubsDashboardScreen() {
         <FlatList
           data={displayedHubs}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <HubCard item={item} />}
-          contentContainerStyle={styles.listContent}
+          // Pass index to HubCard so it can cycle through pastel colors!
+          renderItem={({ item, index }) => (
+            <HubCard item={item} index={index} />
+          )}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 120 },
+          ]}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -255,26 +266,20 @@ export default function HubsDashboardScreen() {
           <View style={styles.bottomSheet}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Join a Course</Text>
-              <TouchableOpacity onPress={() => setIsJoinModalVisible(false)}>
-                <Feather name="x" size={24} color={colors.onSurface} />
+              <TouchableOpacity
+                onPress={() => setIsJoinModalVisible(false)}
+                style={styles.closeBtn}
+              >
+                <Feather name="x" size={24} color="#131b2e" />
               </TouchableOpacity>
             </View>
             <Text style={styles.label}>Enter 6-Character Join Code</Text>
             <TextInput
-              style={[
-                styles.input,
-                {
-                  textTransform: "uppercase",
-                  letterSpacing: 2,
-                  textAlign: "center",
-                  fontSize: 20,
-                  fontWeight: "700",
-                },
-              ]}
+              style={styles.inputCode}
               value={joinCode}
               onChangeText={setJoinCode}
               placeholder="e.g. X7B9Q2"
-              placeholderTextColor={colors.outlineVariant}
+              placeholderTextColor="#c6c6cd"
               maxLength={6}
               autoCapitalize="characters"
             />
@@ -308,119 +313,201 @@ export default function HubsDashboardScreen() {
         isLoadingTeachers={isLoadingTeachers}
         currentUser={currentUser}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
+// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    paddingBottom: spacing.stackSm,
-    paddingHorizontal: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest,
-  },
-  headerTitle: { ...typography.headlineMd, color: colors.onSurface },
-  headerSubtitle: { ...typography.bodyMd, color: colors.outline, marginTop: 2 },
-  topActions: {
+  container: { flex: 1, backgroundColor: "#f7f9fb" },
+
+  // Navigation Bar
+  navBar: {
     flexDirection: "row",
-    gap: spacing.stackMd,
-    paddingHorizontal: spacing.marginMobile,
-    paddingTop: spacing.stackSm,
-    paddingBottom: spacing.stackLg,
-    backgroundColor: colors.surfaceContainerLowest,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
-  actionBtn: {
-    flex: 1,
-    flexDirection: "row",
+  navTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#131b2e",
+  },
+  navAvatar: { width: 36, height: 36, borderRadius: 18 },
+  navAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#e0e3e5",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: rounded.md,
-  },
-  actionBtnTextWhite: {
-    ...typography.labelMd,
-    color: colors.onPrimary,
-    fontWeight: "700",
   },
 
-  // Tabs
+  // Header & Buttons
+  header: { paddingHorizontal: 20, marginTop: 12, marginBottom: 20 },
+  pageTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#131b2e",
+    letterSpacing: -0.64,
+    marginBottom: 16,
+  },
+  actionRow: { flexDirection: "row", gap: 12 },
+  btnDark: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#131b2e",
+    paddingVertical: 14,
+    borderRadius: 9999,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+  },
+  btnLight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#d0e4ff",
+    paddingVertical: 14,
+    borderRadius: 9999,
+  },
+  btnIcon: { marginRight: 8 },
+  btnTextWhite: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  btnTextDark: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#131b2e",
+  },
+
+  // Custom Tabs
+  tabsWrapper: { paddingHorizontal: 20, marginBottom: 16 },
   tabsContainer: {
     flexDirection: "row",
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    backgroundColor: "#f2f4f6",
+    borderRadius: 9999,
+    padding: 4,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 10,
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    borderRadius: 9999,
   },
-  tabButtonActive: { borderBottomColor: colors.primaryContainer },
-  tabText: { ...typography.labelMd, color: colors.outline },
-  tabTextActive: { color: colors.primaryContainer, fontWeight: "700" },
+  tabButtonActive: {
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  tabText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#45464d",
+  },
+  tabTextActive: { color: "#131b2e", fontWeight: "800" },
 
+  // Layouts
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.marginMobile,
+    padding: 20,
   },
   emptyTitle: {
-    ...typography.titleLg,
-    color: colors.onSurface,
-    marginBottom: spacing.stackSm,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#131b2e",
+    marginBottom: 8,
   },
   emptySubtitle: {
-    ...typography.bodyMd,
-    color: colors.outline,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    color: "#76777d",
     textAlign: "center",
   },
-  listContent: { padding: spacing.marginMobile, paddingBottom: 100 },
+  listContent: { paddingHorizontal: 20, paddingTop: 8 },
 
+  // Modals
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(19, 27, 46, 0.4)",
     justifyContent: "flex-end",
   },
   bottomSheet: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderTopLeftRadius: rounded.xl,
-    borderTopRightRadius: rounded.xl,
-    padding: spacing.marginMobile,
+    backgroundColor: "#f7f9fb",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
     paddingBottom: Platform.OS === "ios" ? 40 : 24,
   },
   sheetHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.stackLg,
+    marginBottom: 24,
   },
   sheetTitle: {
-    ...typography.titleLg,
-    color: colors.onSurface,
-    fontWeight: "700",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#131b2e",
   },
+  closeBtn: { padding: 4 },
   label: {
-    ...typography.labelSm,
-    color: colors.onSurfaceVariant,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#45464d",
     marginBottom: 8,
   },
-  input: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.md,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    ...typography.bodyLg,
-    color: colors.onSurface,
+  inputCode: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#131b2e",
+    textAlign: "center",
+    textTransform: "uppercase",
+    letterSpacing: 4,
+    borderWidth: 1,
+    borderColor: "#e0e3e5",
   },
   submitBlockBtn: {
-    backgroundColor: colors.primaryContainer,
-    paddingVertical: 16,
-    borderRadius: rounded.md,
+    backgroundColor: "#131b2e",
+    paddingVertical: 18,
+    borderRadius: 9999,
     alignItems: "center",
-    marginTop: spacing.stackLg,
+    marginTop: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  submitBlockText: { ...typography.labelMd, color: "#FFF", fontWeight: "700" },
+  submitBlockText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#ffffff",
+    fontWeight: "800",
+  },
 });

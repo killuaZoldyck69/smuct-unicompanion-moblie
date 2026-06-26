@@ -7,24 +7,23 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
 import api from "../../src/services/api";
 import { authClient } from "../../src/services/auth-client";
-import { colors } from "../../src/theme/colors";
-import { typography } from "../../src/theme/typography";
-import { spacing, rounded, shadows } from "../../src/theme/layout";
+import { shadows } from "../../src/theme/layout";
 
 // --- Helpers ---
 const getGreeting = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 18) return "Good Afternoon";
-  return "Good Evening";
+  if (hour < 12) return "Good Morning,";
+  if (hour < 18) return "Good Afternoon,";
+  return "Good Evening,";
 };
 
 // Translates WMO weather codes to UI-friendly icons and text
@@ -46,39 +45,46 @@ const formatHour = (dateStr: string) => {
   });
 };
 
+// Pastel UI configurations for Quick Actions
 const QUICK_ACTIONS = [
   {
     id: "schedule",
     title: "Routine",
     icon: "clock",
     route: "/my-schedule",
-    color: "#4CAF50",
+    bg: "#d0e4ff",
+    color: "#1e3a8a",
   },
   {
     id: "bus",
     title: "Bus",
     icon: "truck",
     route: "/bus-schedule",
-    color: "#2196F3",
+    bg: "#d1fae5",
+    color: "#065f46",
   },
   {
     id: "events",
     title: "Events",
     icon: "calendar",
     route: "/events",
-    color: "#9C27B0",
+    bg: "#f3e8ff",
+    color: "#6b21a8",
   },
   {
     id: "blood",
     title: "Blood",
     icon: "droplet",
     route: "/blood",
-    color: "#F44336",
+    bg: "#ffe4e6",
+    color: "#be123c",
   },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const { data: session } = authClient.useSession();
   const user = session?.user as any;
   const userRole = user?.role || "STUDENT";
@@ -94,7 +100,7 @@ export default function HomeScreen() {
     queryFn: async () => (await api.get("/notices")).data?.data || [],
   });
 
-  // Fetch Weather Data (Now ONLY Current & Hourly)
+  // Fetch Weather Data
   const { data: weather } = useQuery({
     queryKey: ["weather_compact"],
     queryFn: async () => {
@@ -103,7 +109,7 @@ export default function HomeScreen() {
       );
       return res.json();
     },
-    staleTime: 1000 * 60 * 15, // 15 mins cache
+    staleTime: 1000 * 60 * 15,
   });
 
   // --- Calculate Today's Classes ---
@@ -160,7 +166,6 @@ export default function HomeScreen() {
       }
     });
 
-    // Return next 12 hours
     return weather.hourly.time
       .slice(closestIndex, closestIndex + 12)
       .map((t: string, i: number) => ({
@@ -171,15 +176,24 @@ export default function HomeScreen() {
   }, [weather]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 120 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* --- HEADER GREETING --- */}
+        {/* --- 1. HEADER GREETING --- */}
         <View style={styles.header}>
           <View style={styles.headerTextCol}>
-            <Text style={styles.greetingText}>{getGreeting()},</Text>
+            <Text style={styles.greetingText}>{getGreeting()}</Text>
             <Text style={styles.nameText} numberOfLines={1}>
               {user?.name || "Welcome Back!"}
             </Text>
@@ -201,23 +215,25 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* --- COMPACT WEATHER WIDGET --- */}
+        {/* --- 2. WEATHER WIDGET --- */}
         {weather?.current && (
           <View style={styles.weatherWidget}>
             <View style={styles.weatherTopRow}>
-              {/* Left: Huge Temp & Icon */}
+              {/* Left: Huge Temp & White Icon Block */}
               <View style={styles.weatherTopLeft}>
-                <Feather
-                  name={
-                    getWeatherDetails(weather.current.weather_code).icon as any
-                  }
-                  size={48}
-                  color="#FFB300"
-                  style={{ marginRight: 12 }}
-                />
                 <Text style={styles.weatherHugeTemp}>
                   {Math.round(weather.current.temperature_2m)}°
                 </Text>
+                <View style={styles.weatherIconBlock}>
+                  <Feather
+                    name={
+                      getWeatherDetails(weather.current.weather_code)
+                        .icon as any
+                    }
+                    size={32}
+                    color="#0284c7" // Cloud blue color from mockup
+                  />
+                </View>
               </View>
 
               {/* Right: Text Conditions */}
@@ -237,9 +253,9 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Middle: Hourly Forecast (Horizontal) */}
             <View style={styles.weatherDivider} />
-            <Text style={styles.weatherSectionTitle}>Today's Timeline</Text>
+
+            {/* Middle: Hourly Forecast (Horizontal) */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -253,8 +269,8 @@ export default function HomeScreen() {
                   <Feather
                     name={getWeatherDetails(hour.code).icon as any}
                     size={20}
-                    color="#FFF"
-                    style={{ marginVertical: 8 }}
+                    color="#ffffff"
+                    style={{ marginVertical: 12 }}
                   />
                   <Text style={styles.weatherSmallTemp}>
                     {Math.round(hour.temp)}°
@@ -265,7 +281,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* --- QUICK ACTIONS --- */}
+        {/* --- 3. QUICK ACTIONS --- */}
         <View style={styles.quickActionsContainer}>
           {QUICK_ACTIONS.map((action) => (
             <TouchableOpacity
@@ -274,10 +290,7 @@ export default function HomeScreen() {
               onPress={() => router.push(action.route as any)}
             >
               <View
-                style={[
-                  styles.actionIconBox,
-                  { backgroundColor: action.color + "15" },
-                ]}
+                style={[styles.actionIconBox, { backgroundColor: action.bg }]}
               >
                 <Feather
                   name={action.icon as any}
@@ -285,12 +298,14 @@ export default function HomeScreen() {
                   color={action.color}
                 />
               </View>
-              <Text style={styles.actionText}>{action.title}</Text>
+              <Text style={[styles.actionText, { color: action.color }]}>
+                {action.title}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* --- TODAY'S CLASSES --- */}
+        {/* --- 4. TODAY'S CLASSES --- */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Today's Classes</Text>
           <TouchableOpacity onPress={() => router.push("/my-schedule")}>
@@ -299,16 +314,13 @@ export default function HomeScreen() {
         </View>
 
         {isLoadingHubs ? (
-          <ActivityIndicator
-            color={colors.primaryContainer}
-            style={{ marginVertical: 20 }}
-          />
+          <ActivityIndicator color="#131b2e" style={{ marginVertical: 20 }} />
         ) : todaysClasses.length === 0 ? (
           <View style={styles.emptyCard}>
             <Feather
               name="coffee"
               size={32}
-              color={colors.outline}
+              color="#c6c6cd"
               style={{ marginBottom: 8 }}
             />
             <Text style={styles.emptyCardText}>
@@ -325,18 +337,19 @@ export default function HomeScreen() {
             {todaysClasses.map((cls) => (
               <View key={cls.id} style={styles.classCard}>
                 <View style={styles.classTimeBadge}>
-                  <Text style={styles.classTimeText}>{cls.startTime}</Text>
+                  <Text style={styles.classTimeText}>
+                    {cls.startTime} - {cls.endTime}
+                  </Text>
                 </View>
-                <Text style={styles.courseCode}>{cls.courseCode}</Text>
                 <Text style={styles.courseName} numberOfLines={2}>
-                  {cls.courseName}
+                  {cls.courseCode}: {cls.courseName}
                 </Text>
                 <View style={styles.roomRow}>
                   <Feather
                     name="map-pin"
-                    size={12}
-                    color={colors.outline}
-                    style={{ marginRight: 4 }}
+                    size={14}
+                    color="#854d0e"
+                    style={{ marginRight: 6 }}
                   />
                   <Text style={styles.roomText}>{cls.room || "TBA"}</Text>
                 </View>
@@ -345,8 +358,8 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
-        {/* --- LATEST NOTICES --- */}
-        <View style={[styles.sectionHeaderRow, { marginTop: spacing.stackLg }]}>
+        {/* --- 5. LATEST NOTICES --- */}
+        <View style={[styles.sectionHeaderRow, { marginTop: 32 }]}>
           <Text style={styles.sectionTitle}>Recent Notices</Text>
           <TouchableOpacity onPress={() => router.push("/notices")}>
             <Text style={styles.seeAllText}>View All</Text>
@@ -354,117 +367,131 @@ export default function HomeScreen() {
         </View>
 
         {isLoadingNotices ? (
-          <ActivityIndicator
-            color={colors.primaryContainer}
-            style={{ marginVertical: 20 }}
-          />
+          <ActivityIndicator color="#131b2e" style={{ marginVertical: 20 }} />
         ) : !notices || notices.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyCardText}>No recent notices.</Text>
           </View>
         ) : (
-          <View style={styles.noticeList}>
-            {notices.slice(0, 3).map((notice: any) => (
-              <TouchableOpacity
-                key={notice.id}
-                style={styles.noticeRow}
-                onPress={() => router.push("/notices")}
-              >
-                <View style={styles.noticeIconBox}>
-                  <Feather name="bell" size={16} color={colors.primary} />
-                </View>
-                <View style={styles.noticeTextCol}>
-                  <Text style={styles.noticeTitle} numberOfLines={1}>
-                    {notice.title}
-                  </Text>
-                  <Text style={styles.noticeDate}>
-                    {new Date(notice.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </Text>
-                </View>
-                <Feather
-                  name="chevron-right"
-                  size={16}
-                  color={colors.outline}
-                />
-              </TouchableOpacity>
-            ))}
+          <View style={styles.noticeContainerCard}>
+            {notices.slice(0, 3).map((notice: any, index: number) => {
+              // Cycle through pastel icon backgrounds for notices
+              const iconColors = [
+                { bg: "#e0f2fe", icon: "#0284c7" },
+                { bg: "#d1fae5", icon: "#059669" },
+                { bg: "#fce7f3", icon: "#be123c" },
+              ];
+              const colorTheme = iconColors[index % iconColors.length];
+
+              return (
+                <TouchableOpacity
+                  key={notice.id}
+                  style={[
+                    styles.noticeRow,
+                    index !== Math.min(notices.length, 3) - 1 &&
+                      styles.noticeDivider,
+                  ]}
+                  onPress={() => router.push("/notices")}
+                >
+                  <View
+                    style={[
+                      styles.noticeIconBox,
+                      { backgroundColor: colorTheme.bg },
+                    ]}
+                  >
+                    <Feather name="bell" size={18} color={colorTheme.icon} />
+                  </View>
+                  <View style={styles.noticeTextCol}>
+                    <Text style={styles.noticeTitle} numberOfLines={1}>
+                      {notice.title}
+                    </Text>
+                    <Text style={styles.noticeDate}>
+                      Published on{" "}
+                      {new Date(notice.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
+// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingBottom: 100 },
+  container: { flex: 1, backgroundColor: "#f7f9fb" },
+  scrollContent: { paddingBottom: 120 },
 
   // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   headerTextCol: { flex: 1, paddingRight: 16 },
   greetingText: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
-    marginBottom: 2,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#76777d",
+    fontWeight: "600",
+    marginBottom: 4,
   },
   nameText: {
-    ...typography.headlineMd,
-    color: colors.onSurface,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 24,
+    color: "#131b2e",
     fontWeight: "800",
-    marginBottom: 6,
+    marginBottom: 8,
   },
 
   roleBadge: {
     alignSelf: "flex-start",
-    backgroundColor: colors.primaryContainer + "15",
-    paddingHorizontal: 10,
+    backgroundColor: "#d1fae5", // Mint background
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: rounded.sm,
+    borderRadius: 9999,
   },
   roleText: {
-    ...typography.labelSm,
-    color: colors.primaryContainer,
-    fontWeight: "800",
+    fontFamily: "Plus Jakarta Sans",
     fontSize: 10,
+    color: "#065f46",
+    fontWeight: "800",
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
 
-  avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.surfaceContainerHighest,
-  },
+  avatarImage: { width: 56, height: 56, borderRadius: 28 },
   avatarFallback: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primaryContainer,
+    backgroundColor: "#131b2e",
     justifyContent: "center",
     alignItems: "center",
   },
   avatarFallbackText: {
-    ...typography.titleLg,
-    color: colors.onPrimary,
-    fontWeight: "700",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 24,
+    color: "#ffffff",
+    fontWeight: "800",
   },
 
-  // --- WEATHER WIDGET (Compact Dark Theme) ---
+  // --- WEATHER WIDGET ---
   weatherWidget: {
-    backgroundColor: "#202124",
-    margin: spacing.marginMobile,
-    borderRadius: rounded.xl,
-    padding: spacing.stackLg,
+    backgroundColor: "#131b2e", // Deep Navy
+    marginHorizontal: 20,
+    borderRadius: 32, // Bento squircle
+    padding: 24,
     ...shadows.level1,
   },
   weatherTopRow: {
@@ -473,171 +500,193 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   weatherTopLeft: { flexDirection: "row", alignItems: "center" },
-  weatherHugeTemp: { fontSize: 48, fontWeight: "800", color: "#FFF" },
-  weatherTopRight: { alignItems: "flex-end" },
+  weatherHugeTemp: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 56,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginRight: 16,
+  },
+  weatherIconBlock: {
+    backgroundColor: "#ffffff",
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  weatherTopRight: { alignItems: "flex-end", flex: 1 },
   weatherConditionText: {
-    ...typography.bodyLg,
-    color: "#FFF",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#ffffff",
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   weatherSubText: {
-    ...typography.labelSm,
-    color: "#A0ABBA",
-    fontSize: 11,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#c6c6cd",
+    fontWeight: "500",
     marginBottom: 2,
   },
 
   weatherDivider: {
     height: 1,
-    backgroundColor: "#3C4043",
-    marginVertical: spacing.stackLg,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginVertical: 24,
   },
-  weatherSectionTitle: {
-    ...typography.labelSm,
-    color: "#A0ABBA",
-    marginBottom: spacing.stackMd,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  weatherScroll: { gap: 24, paddingRight: 16 },
+
+  weatherHourCol: { alignItems: "center", minWidth: 44 },
+  weatherSmallTime: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#c6c6cd",
+    fontWeight: "600",
   },
-  weatherScroll: { gap: 16, paddingRight: spacing.stackLg },
+  weatherSmallTemp: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#ffffff",
+    fontWeight: "700",
+  },
 
-  // Hourly Column
-  weatherHourCol: { alignItems: "center", width: 44 },
-  weatherSmallTime: { ...typography.labelSm, color: "#A0ABBA", fontSize: 10 },
-  weatherSmallTemp: { ...typography.labelMd, color: "#FFF", fontWeight: "700" },
-
-  // Quick Actions
+  // --- QUICK ACTIONS ---
   quickActionsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.marginMobile,
-    marginTop: spacing.stackSm,
+    paddingHorizontal: 20,
+    marginTop: 24,
   },
   actionBtn: { alignItems: "center", width: "22%" },
   actionIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 20,
+    width: 64,
+    height: 64,
+    borderRadius: 24, // Squircle
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
   },
   actionText: {
-    ...typography.labelSm,
-    color: colors.onSurface,
-    fontWeight: "600",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "700",
   },
 
-  // Sections
+  // --- SECTIONS ---
   sectionHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: spacing.marginMobile,
-    marginBottom: spacing.stackMd,
-    marginTop: spacing.stackLg,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    marginTop: 32,
   },
   sectionTitle: {
-    ...typography.titleLg,
-    color: colors.onSurface,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 20,
+    color: "#131b2e",
     fontWeight: "800",
   },
   seeAllText: {
-    ...typography.labelMd,
-    color: colors.primary,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    color: "#1e3a8a",
     fontWeight: "700",
   },
 
-  // Classes
-  horizontalList: {
-    paddingHorizontal: spacing.marginMobile,
-    gap: spacing.stackMd,
-  },
+  // --- TODAY'S CLASSES ---
+  horizontalList: { paddingHorizontal: 20, gap: 16 },
   classCard: {
-    width: 220,
-    backgroundColor: colors.surfaceContainerLowest,
-    padding: spacing.stackLg,
-    borderRadius: rounded.xl,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
+    width: 260,
+    backgroundColor: "#fef08a", // Bento Yellow
+    padding: 24,
+    borderRadius: 32,
     ...shadows.level1,
   },
   classTimeBadge: {
     alignSelf: "flex-start",
-    backgroundColor: colors.primaryContainer,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginBottom: 12,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+    marginBottom: 16,
   },
   classTimeText: {
-    ...typography.labelSm,
-    color: colors.onPrimary,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#131b2e",
     fontWeight: "800",
-  },
-  courseCode: {
-    ...typography.labelSm,
-    color: colors.primary,
-    fontWeight: "800",
-    marginBottom: 4,
   },
   courseName: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "700",
-    marginBottom: 12,
-    height: 40,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 18,
+    color: "#131b2e",
+    fontWeight: "800",
+    marginBottom: 16,
+    lineHeight: 24,
   },
   roomRow: { flexDirection: "row", alignItems: "center", marginTop: "auto" },
-  roomText: { ...typography.labelSm, color: colors.outline, fontWeight: "600" },
-
-  // Notices
-  noticeList: { paddingHorizontal: spacing.marginMobile },
-  noticeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceContainerLowest,
-    padding: 16,
-    borderRadius: rounded.lg,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
+  roomText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    color: "#854d0e",
+    fontWeight: "700",
   },
+
+  // --- NOTICES ---
+  noticeContainerCard: {
+    backgroundColor: "#ffffff",
+    marginHorizontal: 20,
+    borderRadius: 32,
+    padding: 12,
+    ...shadows.level1,
+  },
+  noticeRow: { flexDirection: "row", alignItems: "center", padding: 12 },
+  noticeDivider: { borderBottomWidth: 1, borderBottomColor: "#f2f4f6" },
   noticeIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryContainer + "15",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 16,
   },
   noticeTextCol: { flex: 1, paddingRight: 12 },
   noticeTitle: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "700",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#131b2e",
+    fontWeight: "800",
     marginBottom: 4,
   },
-  noticeDate: { ...typography.labelSm, color: colors.outline, fontSize: 11 },
+  noticeDate: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#76777d",
+    fontWeight: "500",
+  },
 
-  // Empties
+  // --- EMPTY STATES ---
   emptyCard: {
-    marginHorizontal: spacing.marginMobile,
-    padding: spacing.stackLg,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.lg,
+    marginHorizontal: 20,
+    padding: 32,
+    backgroundColor: "#ffffff",
+    borderRadius: 32,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
-    borderStyle: "dashed",
   },
   emptyCardText: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "600",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    color: "#131b2e",
+    fontWeight: "800",
     marginBottom: 4,
   },
-  emptyCardSub: { ...typography.labelSm, color: colors.outline },
+  emptyCardSub: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    color: "#76777d",
+    fontWeight: "500",
+  },
 });

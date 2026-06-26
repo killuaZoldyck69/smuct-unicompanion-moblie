@@ -8,12 +8,13 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Image,
   ScrollView,
+  StatusBar,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,44 +22,44 @@ import Toast from "react-native-toast-message";
 
 import api from "../../src/services/api";
 import { authClient } from "../../src/services/auth-client";
-import { colors } from "../../src/theme/colors";
-import { typography } from "../../src/theme/typography";
-import { spacing, rounded, shadows } from "../../src/theme/layout";
 
 type FilterType = "ALL" | "UNRESOLVED" | "RESOLVED" | "MY_POSTS";
 
-// --- 12-Hour Timestamp Helper ---
-export const format12HourTime = (dateString: string) => {
+// --- Relative Time Helper (e.g. "10 mins ago") ---
+const timeAgo = (dateString: string) => {
   if (!dateString) return "";
   const date = new Date(dateString);
-  return date
-    .toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })
-    .toUpperCase();
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return "Just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min${minutes !== 1 ? "s" : ""} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days !== 1 ? "s" : ""} ago`;
+
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 };
 
 export default function ForumFeedScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: session } = authClient.useSession();
-  const currentUserId = (session?.user as any)?.id;
+  const insets = useSafeAreaInsets();
 
+  // --- Current User ---
+  const { data: session } = authClient.useSession();
+  const currentUser = session?.user as any;
+  const currentUserId = currentUser?.id;
+
+  // --- States ---
   const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [isComposeVisible, setIsComposeVisible] = useState(false);
   const [newPost, setNewPost] = useState({ title: "", description: "" });
 
-  const {
-    data: posts,
-    isLoading,
-    isError,
-  } = useQuery({
+  // --- Data Fetching ---
+  const { data: posts, isLoading } = useQuery({
     queryKey: ["forumPosts"],
     queryFn: async () => {
       const response = await api.get("/forum");
@@ -85,16 +86,15 @@ export default function ForumFeedScreen() {
 
   const handlePost = () => {
     if (!newPost.title.trim() || !newPost.description.trim()) {
-      Toast.show({
+      return Toast.show({
         type: "error",
-        text1: "Missing Fields",
-        text2: "Title and description are required.",
+        text1: "Title and description are required.",
       });
-      return;
     }
     createPostMutation.mutate(newPost);
   };
 
+  // --- Filters ---
   const filteredPosts = useMemo(() => {
     if (!posts) return [];
     let filtered = posts;
@@ -117,14 +117,20 @@ export default function ForumFeedScreen() {
     return filtered;
   }, [posts, activeFilter, searchQuery, currentUserId]);
 
+  // --- Card Renderer ---
   const renderPostCard = ({ item }: { item: any }) => {
     const isResolved = item.isResolved;
     const replyCount = item._count?.responses || 0;
 
+    // Dynamic styles based on resolution status (White vs Yellow card)
+    const cardBg = isResolved ? "#fef08a" : "#ffffff";
+    const pillBg = isResolved ? "#ffffff" : "#d0e4ff";
+    const pillTextColor = isResolved ? "#131b2e" : "#1e3a8a";
+
     return (
       <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.8}
+        style={[styles.card, { backgroundColor: cardBg }]}
+        activeOpacity={0.9}
         onPress={() => router.push(`/forum/${item.id}`)}
       >
         <View style={styles.cardHeader}>
@@ -143,29 +149,24 @@ export default function ForumFeedScreen() {
             )}
             <View>
               <Text style={styles.authorName}>{item.author?.name}</Text>
-              <View style={styles.metaRow}>
-                <Feather
-                  name="clock"
-                  size={10}
-                  color={colors.outline}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.timeText}>
-                  {format12HourTime(item.createdAt)}
-                </Text>
-              </View>
+              <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
             </View>
           </View>
-          {isResolved && (
+
+          {isResolved ? (
             <View style={styles.resolvedBadge}>
               <Feather
                 name="check-circle"
                 size={12}
-                color="#2E7D32"
+                color="#065f46"
                 style={{ marginRight: 4 }}
               />
               <Text style={styles.resolvedText}>Resolved</Text>
             </View>
+          ) : (
+            <TouchableOpacity style={styles.moreOptionsBtn}>
+              <Feather name="more-horizontal" size={20} color="#76777d" />
+            </TouchableOpacity>
           )}
         </View>
 
@@ -177,68 +178,97 @@ export default function ForumFeedScreen() {
         </Text>
 
         <View style={styles.cardFooter}>
-          <View style={styles.footerItem}>
+          <View style={[styles.replyPill, { backgroundColor: pillBg }]}>
             <Feather
-              name="message-circle"
-              size={16}
-              color={colors.primary}
+              name="message-square"
+              size={14}
+              color={pillTextColor}
               style={{ marginRight: 6 }}
             />
-            <Text
-              style={[
-                styles.footerText,
-                { color: colors.primary, fontWeight: "600" },
-              ]}
-            >
+            <Text style={[styles.replyPillText, { color: pillTextColor }]}>
               {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
             </Text>
           </View>
-          <Feather name="chevron-right" size={18} color={colors.outline} />
+
+          <View
+            style={[
+              styles.arrowCircle,
+              isResolved && { backgroundColor: "#fde047" },
+            ]}
+          >
+            <Feather name="arrow-right" size={18} color="#131b2e" />
+          </View>
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Campus Forum</Text>
-        <View style={styles.searchContainer}>
-          <Feather
-            name="search"
-            size={20}
-            color={colors.outline}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search discussions..."
-            placeholderTextColor={colors.outlineVariant}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+
+      {/* 1. TOP NAV BAR */}
+      <View style={styles.navBar}>
+        {currentUser?.image ? (
+          <Image source={{ uri: currentUser.image }} style={styles.navAvatar} />
+        ) : (
+          <View style={styles.navAvatarFallback}>
+            <Feather name="user" size={16} color="#76777d" />
+          </View>
+        )}
+        <Text style={styles.navTitle}>UniCompanion</Text>
+        <TouchableOpacity>
+          <Feather name="bell" size={22} color="#131b2e" />
+        </TouchableOpacity>
       </View>
 
-      {/* Horizontally Scrollable Filters */}
-      <View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+      >
+        {/* 2. HEADER & SEARCH */}
+        <View style={styles.headerSection}>
+          <Text style={styles.pageTitle}>Campus Forum</Text>
+
+          <View style={styles.searchBar}>
+            <Feather
+              name="search"
+              size={20}
+              color="#76777d"
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search discussions..."
+              placeholderTextColor="#76777d"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        </View>
+
+        {/* 3. FILTER PILLS */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.tabsContainer}
-          contentContainerStyle={{ paddingRight: spacing.marginMobile }}
+          style={styles.tabsWrapper}
+          contentContainerStyle={styles.tabsContainer}
         >
           {[
             { key: "ALL", label: "All Posts" },
-            { key: "MY_POSTS", label: "My Posts" },
             { key: "UNRESOLVED", label: "Needs Help" },
             { key: "RESOLVED", label: "Resolved" },
+            { key: "MY_POSTS", label: "My Posts" },
           ].map((filter) => (
             <TouchableOpacity
               key={filter.key}
               style={[
-                styles.tabButton,
-                activeFilter === filter.key && styles.tabButtonActive,
+                styles.tabPill,
+                activeFilter === filter.key && styles.tabPillActive,
               ]}
               onPress={() => setActiveFilter(filter.key as FilterType)}
             >
@@ -253,292 +283,399 @@ export default function ForumFeedScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </View>
 
-      {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primaryContainer} />
-        </View>
-      ) : filteredPosts.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Feather
-            name="message-square"
-            size={48}
-            color={colors.surfaceContainerHighest}
-            style={{ marginBottom: 16 }}
+        {/* 4. LIST CONTENT */}
+        {isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#131b2e" />
+          </View>
+        ) : filteredPosts.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Feather
+              name="message-square"
+              size={48}
+              color="#c6c6cd"
+              style={{ marginBottom: 16 }}
+            />
+            <Text style={styles.emptyTitle}>No Discussions Found</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredPosts}
+            keyExtractor={(item) => item.id}
+            renderItem={renderPostCard}
+            contentContainerStyle={styles.listContent}
+            scrollEnabled={false} // Disable FlatList scrolling so outer ScrollView works
           />
-          <Text style={styles.emptyTitle}>No Discussions Found</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredPosts}
-          keyExtractor={(item) => item.id}
-          renderItem={renderPostCard}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+        )}
+      </ScrollView>
 
+      {/* 5. FLOATING ACTION BUTTON (Black Circle) */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: insets.bottom + 100 }]}
         onPress={() => setIsComposeVisible(true)}
       >
-        <Feather name="edit-2" size={24} color={colors.onPrimary} />
+        <Feather name="plus" size={28} color="#ffffff" />
       </TouchableOpacity>
 
+      {/* 6. CREATE POST MODAL (Bento Style) */}
       <Modal
         visible={isComposeVisible}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle="fullScreen"
       >
-        <SafeAreaView style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{ flex: 1 }}
           >
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setIsComposeVisible(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Ask a Question</Text>
               <TouchableOpacity
+                onPress={() => setIsComposeVisible(false)}
+                style={styles.iconBtn}
+              >
+                <Feather name="x" size={24} color="#131b2e" />
+              </TouchableOpacity>
+              <Text style={styles.modalHeaderTitle}>Ask a Question</Text>
+              <TouchableOpacity
+                style={[
+                  styles.postBtn,
+                  createPostMutation.isPending && { opacity: 0.7 },
+                ]}
                 onPress={handlePost}
                 disabled={createPostMutation.isPending}
               >
                 {createPostMutation.isPending ? (
-                  <ActivityIndicator size="small" />
+                  <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.postTextBtn}>Post</Text>
+                  <Text style={styles.postBtnText}>Post</Text>
                 )}
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalContent}>
-              <TextInput
-                style={styles.titleInput}
-                placeholder="What do you need help with?"
-                placeholderTextColor={colors.outlineVariant}
-                value={newPost.title}
-                onChangeText={(text) => setNewPost({ ...newPost, title: text })}
-                maxLength={100}
-              />
-              <TextInput
-                style={styles.descInput}
-                placeholder="Provide more details..."
-                placeholderTextColor={colors.outlineVariant}
-                value={newPost.description}
-                onChangeText={(text) =>
-                  setNewPost({ ...newPost, description: text })
-                }
-                multiline
-                textAlignVertical="top"
-              />
-            </View>
+            <ScrollView contentContainerStyle={styles.modalScrollContent}>
+              <View style={[styles.bentoCard, styles.whiteCard]}>
+                <Text style={styles.bentoLabel}>QUESTION TITLE</Text>
+                <TextInput
+                  style={styles.titleInput}
+                  placeholder="What do you need help with?"
+                  placeholderTextColor="#76777d"
+                  value={newPost.title}
+                  onChangeText={(text) =>
+                    setNewPost({ ...newPost, title: text })
+                  }
+                  maxLength={100}
+                />
+
+                <View style={styles.divider} />
+
+                <Text style={styles.bentoLabel}>DESCRIPTION</Text>
+                <TextInput
+                  style={styles.descInput}
+                  placeholder="Provide more details..."
+                  placeholderTextColor="#76777d"
+                  value={newPost.description}
+                  onChangeText={(text) =>
+                    setNewPost({ ...newPost, description: text })
+                  }
+                  multiline
+                  textAlignVertical="top"
+                />
+              </View>
+            </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
     </View>
   );
 }
 
+// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    paddingTop: 60,
-    paddingBottom: spacing.stackMd,
-    paddingHorizontal: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest,
-  },
-  headerTitle: {
-    ...typography.headlineMd,
-    color: colors.onSurface,
-    marginBottom: spacing.stackLg,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.lg,
-    paddingHorizontal: spacing.stackMd,
-    height: 48,
-  },
-  searchIcon: { marginRight: spacing.stackSm },
-  searchInput: {
-    flex: 1,
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    height: "100%",
-  },
-
-  tabsContainer: {
-    flexDirection: "row",
-    paddingHorizontal: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
-  },
-  tabButton: {
-    paddingVertical: spacing.stackMd,
-    paddingHorizontal: spacing.stackLg,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  tabButtonActive: { borderBottomColor: colors.primaryContainer },
-  tabText: { ...typography.labelMd, color: colors.outline },
-  tabTextActive: { color: colors.primaryContainer, fontWeight: "700" },
-
+  container: { flex: 1, backgroundColor: "#f0f4f8" }, // Soft background matching mockup gradient base
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.marginMobile,
-  },
-  emptyTitle: {
-    ...typography.bodyLg,
-    fontSize: 18,
-    color: colors.onSurface,
-    fontWeight: "600",
-    marginBottom: spacing.stackSm,
+    padding: 40,
+    marginTop: 40,
   },
 
-  listContent: { padding: spacing.marginMobile, paddingBottom: 120 }, // Extra padding for FAB
-  card: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    padding: spacing.stackLg,
-    marginBottom: spacing.stackMd,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
-    ...shadows.level1,
+  // Navigation Bar
+  navBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
+  navTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#131b2e",
+    letterSpacing: -0.5,
+  },
+  navAvatar: { width: 36, height: 36, borderRadius: 18 },
+  navAvatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#e0e3e5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Header & Search
+  headerSection: { paddingHorizontal: 20, marginTop: 24, marginBottom: 16 },
+  pageTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 36,
+    fontWeight: "800",
+    color: "#131b2e",
+    letterSpacing: -1,
+    marginBottom: 20,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 9999,
+    height: 56,
+    paddingHorizontal: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  searchIcon: { marginRight: 12 },
+  searchInput: {
+    flex: 1,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#131b2e",
+    height: "100%",
+  },
+
+  // Filter Tabs
+  tabsWrapper: { marginBottom: 24 },
+  tabsContainer: { paddingHorizontal: 20, gap: 12 },
+  tabPill: {
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 9999,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  tabPillActive: { backgroundColor: "#131b2e" },
+  tabText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#131b2e",
+  },
+  tabTextActive: { color: "#ffffff" },
+
+  // Post Cards
+  listContent: { paddingHorizontal: 20, gap: 16 },
+  card: {
+    borderRadius: 32,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    elevation: 1,
+  },
+
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: spacing.stackMd,
+    marginBottom: 16,
   },
   authorRow: { flexDirection: "row", alignItems: "center" },
   avatarFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryContainer,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#d0e4ff",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.stackSm,
+    marginRight: 12,
   },
   avatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: spacing.stackSm,
-    backgroundColor: colors.surfaceContainerHigh,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    backgroundColor: "#f2f4f6",
   },
   avatarText: {
-    ...typography.bodyLg,
+    fontFamily: "Plus Jakarta Sans",
     fontSize: 16,
-    color: colors.onPrimary,
-    fontWeight: "700",
+    color: "#1e3a8a",
+    fontWeight: "800",
   },
   authorName: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "700",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#131b2e",
+    marginBottom: 2,
   },
-  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  timeText: { ...typography.labelSm, fontSize: 10, color: colors.outline },
+  timeText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#76777d",
+  },
 
   resolvedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E8F5E9",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    backgroundColor: "#a7f3d0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
   },
-  resolvedText: { ...typography.labelSm, color: "#2E7D32", fontWeight: "700" },
+  resolvedText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    color: "#065f46",
+    fontWeight: "800",
+  },
+  moreOptionsBtn: { padding: 4 },
 
   postTitle: {
-    ...typography.bodyLg,
-    fontSize: 18,
-    color: colors.onSurface,
-    fontWeight: "700",
-    marginBottom: 6,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#131b2e",
+    marginBottom: 12,
+    lineHeight: 28,
   },
   postDesc: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
-    lineHeight: 22,
-    marginBottom: spacing.stackLg,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#45464d",
+    lineHeight: 24,
+    marginBottom: 24,
   },
 
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: spacing.stackSm,
-    borderTopWidth: 1,
-    borderTopColor: colors.surfaceContainerHighest,
   },
-  footerItem: {
+  replyPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.primaryContainer + "10",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9999,
   },
-  footerText: { ...typography.labelMd, color: colors.outline },
+  replyPillText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  arrowCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f2f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
+  emptyTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#131b2e",
+  },
+
+  // Floating Action Button
   fab: {
     position: "absolute",
-    bottom: 24,
     right: 24,
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.primaryContainer,
+    backgroundColor: "#131b2e",
     justifyContent: "center",
     alignItems: "center",
-    ...shadows.level1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 6,
   },
 
-  modalContainer: { flex: 1, backgroundColor: colors.surfaceContainerLowest },
+  // Modal (Compose)
+  modalContainer: { flex: 1, backgroundColor: "#f7f9fb" },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: spacing.marginMobile,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    borderBottomColor: "rgba(0,0,0,0.05)",
   },
-  cancelText: { ...typography.bodyLg, fontSize: 16, color: colors.outline },
-  modalTitle: {
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.onSurface,
-    fontWeight: "700",
+  iconBtn: { padding: 4 },
+  modalHeaderTitle: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#131b2e",
   },
-  postTextBtn: {
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.primaryContainer,
-    fontWeight: "700",
+  postBtn: {
+    backgroundColor: "#131b2e",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 9999,
   },
-  modalContent: { flex: 1, padding: spacing.marginMobile },
+  postBtnText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+
+  modalScrollContent: { padding: 20 },
+  bentoCard: { borderRadius: 32, padding: 24, marginBottom: 16 },
+  whiteCard: { backgroundColor: "#ffffff" },
+  bentoLabel: {
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#76777d",
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
   titleInput: {
-    ...typography.headlineMd,
-    color: colors.onSurface,
-    marginBottom: spacing.stackLg,
-    paddingVertical: spacing.stackSm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#131b2e",
+    marginBottom: 24,
   },
+  divider: { height: 1, backgroundColor: "rgba(0,0,0,0.05)", marginBottom: 24 },
   descInput: {
-    flex: 1,
-    ...typography.bodyLg,
+    fontFamily: "Plus Jakarta Sans",
     fontSize: 16,
-    color: colors.onSurface,
+    fontWeight: "500",
+    color: "#45464d",
     lineHeight: 24,
+    minHeight: 150,
   },
 });
