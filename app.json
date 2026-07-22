@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "scheme": "smuct-unicompanion",
     "orientation": "portrait",
-    "icon": "./src/assets/icon.png",
+    "icon": "./src/assets/icons8-university-60.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -13,15 +13,15 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./src/assets/android-icon-foreground.png",
-        "backgroundImage": "./src/assets/android-icon-background.png",
-        "monochromeImage": "./src/assets/android-icon-monochrome.png"
+        "foregroundImage": "./src/assets/icons8-university-60.png",
+        "backgroundImage": "./src/assets/icons8-university-60.png",
+        "monochromeImage": "./src/assets/icons8-university-60.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.killuazoldyck.smuctunicompanionmobile"
     },
     "web": {
-      "favicon": "./src/assets/favicon.png"
+      "favicon": "./src/assets/icons8-university-60.png"
     },
     "plugins": [
       "expo-router",
