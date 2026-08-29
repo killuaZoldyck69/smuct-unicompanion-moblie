@@ -7,15 +7,20 @@
     "orientation": "portrait",
     "icon": "./src/assets/icons8-university-60.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./src/assets/splash-screen.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f7f9fb"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./src/assets/icons8-university-60.png",
-        "backgroundImage": "./src/assets/icons8-university-60.png",
-        "monochromeImage": "./src/assets/icons8-university-60.png"
+        "foregroundImage": "./src/assets/android-icon-foreground.png",
+        "backgroundImage": "./src/assets/android-icon-background.png",
+        "monochromeImage": "./src/assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.killuazoldyck.smuctunicompanionmobile"
@@ -27,7 +32,15 @@
       "expo-router",
       "expo-sharing",
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos."
+        }
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},
