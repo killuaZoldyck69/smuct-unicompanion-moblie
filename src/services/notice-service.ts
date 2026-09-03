@@ -11,6 +11,8 @@ export interface NoticeItem {
   copyTo?: string[];
   fileUrl?: string | null;
   category?: string;
+  issueDate?: string | null;
+  priority?: string | null;
   createdAt: string;
   authorId?: string;
   author?: {

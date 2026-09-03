@@ -111,11 +111,19 @@ export default function HubAssessmentsScreen() {
     ? assessments.filter((a: any) => a.id === assessmentId)
     : assessments;
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(`/hub/${id}`);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={handleBack}
           style={styles.backButton}
           accessible={true}
           accessibilityRole="button"

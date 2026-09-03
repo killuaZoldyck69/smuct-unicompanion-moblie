@@ -24,14 +24,14 @@ interface Teacher {
 }
 
 interface Props {
-  teachers: Teacher[];
+  teachers?: Teacher[];
   selectedId: string;
   onSelect: (id: string) => void;
   isLoading: boolean;
 }
 
 export default function SearchableTeacherSelect({
-  teachers,
+  teachers = [],
   selectedId,
   onSelect,
   isLoading,
@@ -39,18 +39,22 @@ export default function SearchableTeacherSelect({
   const [isVisible, setIsVisible] = useState(false);
   const [search, setSearch] = useState("");
 
-  const selectedTeacher = teachers.find((t) => t.id === selectedId);
+  const safeTeachers = useMemo(
+    () => (Array.isArray(teachers) ? teachers : []),
+    [teachers],
+  );
+  const selectedTeacher = safeTeachers.find((t) => t.id === selectedId);
 
   const filteredTeachers = useMemo(() => {
-    if (!search) return teachers;
+    if (!search) return safeTeachers;
     const lowerQ = search.toLowerCase();
-    return teachers.filter(
+    return safeTeachers.filter(
       (t) =>
-        t.name.toLowerCase().includes(lowerQ) ||
+        t.name?.toLowerCase().includes(lowerQ) ||
         t.teacherProfile?.department?.toLowerCase().includes(lowerQ) ||
         t.teacherProfile?.designation?.toLowerCase().includes(lowerQ),
     );
-  }, [search, teachers]);
+  }, [search, safeTeachers]);
 
   const handleSelect = (id: string) => {
     onSelect(id);

@@ -1,7 +1,7 @@
 import React from "react";
 import { View, ActivityIndicator, StyleSheet, StatusBar } from "react-native";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { colors } from "@/theme/colors";
+import { PROFILE_COLORS } from "./constants";
 
 import StudentProfile from "./components/student-profile";
 import TeacherProfile from "./components/teacher-profile";
@@ -18,7 +18,7 @@ export function Profile() {
           backgroundColor="transparent"
           translucent={true}
         />
-        <ActivityIndicator size="large" color={colors.primaryContainer} />
+        <ActivityIndicator size="large" color={PROFILE_COLORS.deepNavy} />
       </View>
     );
   }
@@ -34,6 +34,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: PROFILE_COLORS.background,
   },
 });

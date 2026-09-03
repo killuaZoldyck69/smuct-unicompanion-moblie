@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,76 +8,42 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
-  Platform,
-  Alert,
-  Linking,
-  Modal,
-  FlatList,
   StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
-import * as SecureStore from "expo-secure-store";
-import { useRouter } from "expo-router";
-import { decode } from "base64-arraybuffer";
-import { supabase } from "@/services/supabase";
 
-import Toast from "react-native-toast-message";
-import { authClient } from "@/services/auth-client";
-import { colors } from "@/theme/colors";
-import { shadows } from "@/theme/layout";
 import { useTeacherProfile } from "@/features/profile/useTeacherProfile";
+import {
+  PROFILE_COLORS,
+  BLOOD_GROUP_TO_UI,
+  BLOOD_GROUP_TO_DB,
+  fontFamily,
+} from "../constants";
+import { BloodGroupModal } from "./shared/blood-group-modal";
+import { ProfileSocialCard } from "./shared/profile-social-card";
+import { ProfileLogoutButton } from "./shared/profile-logout-button";
+import { ProfileErrorState } from "./shared/profile-states";
 
-// --- Blood Group Mappers ---
-const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+interface TeacherProfileProps {
+  sessionUser: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
+  };
+}
 
-const BLOOD_GROUP_TO_DB: Record<string, string> = {
-  "A+": "A_POSITIVE",
-  "A-": "A_NEGATIVE",
-  "B+": "B_POSITIVE",
-  "B-": "B_NEGATIVE",
-  "AB+": "AB_POSITIVE",
-  "AB-": "AB_NEGATIVE",
-  "O+": "O_POSITIVE",
-  "O-": "O_NEGATIVE",
-};
-
-const BLOOD_GROUP_TO_UI: Record<string, string> = {
-  A_POSITIVE: "A+",
-  A_NEGATIVE: "A-",
-  B_POSITIVE: "B+",
-  B_NEGATIVE: "B-",
-  AB_POSITIVE: "AB+",
-  AB_NEGATIVE: "AB-",
-  O_POSITIVE: "O+",
-  O_NEGATIVE: "O-",
-};
-
-export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
-  const queryClient = useQueryClient();
-  const router = useRouter();
+export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
   const insets = useSafeAreaInsets();
-  const isMounted = useRef(true);
 
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
-  // --- UI States ---
   const [isEditing, setIsEditing] = useState(false);
   const [isBloodGroupModalVisible, setBloodGroupModalVisible] = useState(false);
 
-  // --- Complex Input States ---
   const [expertiseInput, setExpertiseInput] = useState("");
   const [qualDegreeInput, setQualDegreeInput] = useState("");
   const [qualInstInput, setQualInstInput] = useState("");
 
-  // --- Form State ---
   const [formData, setFormData] = useState({
     name: "",
     phoneNumber: "",
@@ -93,7 +59,6 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
     personalWebsiteUrl: "",
   });
 
-  // --- Feature Hook ---
   const {
     profile,
     isLoading,
@@ -105,66 +70,72 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
     isUploading,
   } = useTeacherProfile();
 
-  const populateFormData = () => {
+  const populateFormData = useCallback(() => {
     if (profile) {
       setFormData({
         name: profile.name || "",
         phoneNumber: profile.phoneNumber || "",
-        bloodGroup: profile.bloodGroup
-          ? BLOOD_GROUP_TO_UI[profile.bloodGroup]
-          : "",
+        bloodGroup: profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] || "" : "",
         designation: profile.designation || "",
         department: profile.department || "",
         faculty: profile.faculty || "",
-        officeRoom: (profile as any).officeRoom || profile.roomNumber || "",
-        consultationHours: (profile as any).consultationHours || "",
+        officeRoom: profile.roomNumber || (profile as any).officeRoom || "",
+        consultationHours: (profile as any).consultationHours || profile.officeHours || "",
         expertiseFields: (profile as any).expertiseFields || profile.researchInterests || [],
-        academicQualifications: (profile as any).academicQualifications || {},
+        academicQualifications:
+          typeof (profile as any).academicQualifications === "object" && (profile as any).academicQualifications !== null
+            ? ((profile as any).academicQualifications as Record<string, string>)
+            : {},
         linkedInUrl: profile.linkedInUrl || "",
         personalWebsiteUrl: profile.personalWebsiteUrl || "",
       });
     }
-  };
+  }, [profile]);
 
   useEffect(() => {
     populateFormData();
-  }, [profile, isEditing]);
+  }, [populateFormData, isEditing]);
 
   const handleCancel = () => {
     populateFormData();
     setIsEditing(false);
   };
 
-  // --- Handlers ---
   const handleSave = () => {
-    const payload: any = {};
+    const payload: Record<string, any> = {};
 
-    (Object.keys(formData) as Array<keyof typeof formData>).forEach((key) => {
-      if (key === "bloodGroup") {
-        const mappedDBValue = formData.bloodGroup
-          ? BLOOD_GROUP_TO_DB[formData.bloodGroup]
-          : undefined;
-        if (
-          mappedDBValue !== profile?.bloodGroup &&
-          mappedDBValue !== undefined
-        ) {
-          payload.bloodGroup = mappedDBValue;
-        }
-      } else if (typeof formData[key] === "object") {
-        if (
-          JSON.stringify(formData[key]) !==
-          JSON.stringify(
-            (profile as any)[key] || (Array.isArray(formData[key]) ? [] : {}),
-          )
-        ) {
-          payload[key] = formData[key];
-        }
-      } else {
-        if (formData[key] !== ((profile as any)[key] || "")) {
-          payload[key] = formData[key];
-        }
-      }
-    });
+    if (formData.name !== profile?.name) payload.name = formData.name;
+    if (formData.phoneNumber !== profile?.phoneNumber) payload.phoneNumber = formData.phoneNumber;
+    if (formData.designation !== profile?.designation) payload.designation = formData.designation;
+    if (formData.department !== profile?.department) payload.department = formData.department;
+    if (formData.faculty !== profile?.faculty) payload.faculty = formData.faculty;
+    if (formData.officeRoom !== (profile?.roomNumber || (profile as any)?.officeRoom)) {
+      payload.officeRoom = formData.officeRoom;
+    }
+    if (formData.consultationHours !== ((profile as any)?.consultationHours || profile?.officeHours)) {
+      payload.consultationHours = formData.consultationHours;
+    }
+
+    const mappedBloodGroup = formData.bloodGroup ? BLOOD_GROUP_TO_DB[formData.bloodGroup] : undefined;
+    if (mappedBloodGroup !== profile?.bloodGroup && mappedBloodGroup !== undefined) {
+      payload.bloodGroup = mappedBloodGroup;
+    }
+
+    if (JSON.stringify(formData.expertiseFields) !== JSON.stringify((profile as any)?.expertiseFields || profile?.researchInterests || [])) {
+      payload.expertiseFields = formData.expertiseFields;
+    }
+    if (
+      JSON.stringify(formData.academicQualifications) !==
+      JSON.stringify((profile as any)?.academicQualifications || {})
+    ) {
+      payload.academicQualifications = formData.academicQualifications;
+    }
+    if (formData.linkedInUrl !== (profile?.linkedInUrl || "")) {
+      payload.linkedInUrl = formData.linkedInUrl;
+    }
+    if (formData.personalWebsiteUrl !== (profile?.personalWebsiteUrl || "")) {
+      payload.personalWebsiteUrl = formData.personalWebsiteUrl;
+    }
 
     if (Object.keys(payload).length === 0) {
       setIsEditing(false);
@@ -178,156 +149,104 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
     });
   };
 
-  // Complex Field Handlers
   const addExpertise = () => {
-    if (
-      !expertiseInput.trim() ||
-      formData.expertiseFields.includes(expertiseInput.trim())
-    )
-      return;
-    setFormData({
-      ...formData,
-      expertiseFields: [...formData.expertiseFields, expertiseInput.trim()],
-    });
+    const trimmed = expertiseInput.trim();
+    if (!trimmed || formData.expertiseFields.includes(trimmed)) return;
+    setFormData((prev) => ({
+      ...prev,
+      expertiseFields: [...prev.expertiseFields, trimmed],
+    }));
     setExpertiseInput("");
   };
 
   const removeExpertise = (field: string) => {
-    setFormData({
-      ...formData,
-      expertiseFields: formData.expertiseFields.filter((f) => f !== field),
-    });
+    setFormData((prev) => ({
+      ...prev,
+      expertiseFields: prev.expertiseFields.filter((f) => f !== field),
+    }));
   };
 
   const addQualification = () => {
-    if (!qualDegreeInput.trim() || !qualInstInput.trim()) return;
-    setFormData({
-      ...formData,
+    const degree = qualDegreeInput.trim();
+    const inst = qualInstInput.trim();
+    if (!degree || !inst) return;
+    setFormData((prev) => ({
+      ...prev,
       academicQualifications: {
-        ...formData.academicQualifications,
-        [qualDegreeInput.trim()]: qualInstInput.trim(),
+        ...prev.academicQualifications,
+        [degree]: inst,
       },
-    });
+    }));
     setQualDegreeInput("");
     setQualInstInput("");
   };
 
   const removeQualification = (degree: string) => {
-    const newQuals = { ...formData.academicQualifications };
-    delete newQuals[degree];
-    setFormData({ ...formData, academicQualifications: newQuals });
-  };
-
-  const openLink = async (url?: string | null) => {
-    if (!url) return;
-    const supported = await Linking.canOpenURL(url);
-    if (supported) await Linking.openURL(url);
-    else Toast.show({ type: "error", text1: "Cannot open URL" });
+    const nextQuals = { ...formData.academicQualifications };
+    delete nextQuals[degree];
+    setFormData((prev) => ({
+      ...prev,
+      academicQualifications: nextQuals,
+    }));
   };
 
   const handleUpdatePicture = async () => {
-    const safeName = (profile?.name || sessionUser?.name || "teacher")
-      .replace(/\s+/g, "")
-      .toLowerCase();
+    const safeName = profile?.name?.replace(/\s+/g, "").toLowerCase() || "faculty";
     await pickAndUploadAvatar(safeName);
-  };
-
-  const handleLogout = async () => {
-    const performLogout = async () => {
-      await authClient.signOut();
-      if (Platform.OS !== "web") {
-        await SecureStore.deleteItemAsync("better-auth.session_token");
-        await SecureStore.deleteItemAsync("better-auth_cookie");
-        await SecureStore.deleteItemAsync("better-auth_session_data");
-      }
-      queryClient.setQueryData(["currentUser"], null);
-      queryClient.clear();
-      router.replace("/(auth)/login");
-    };
-    if (Platform.OS === "web") {
-      if (window.confirm("Log out?")) performLogout();
-    } else {
-      Alert.alert("Log Out", "Are you sure?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Log Out", style: "destructive", onPress: performLogout },
-      ]);
-    }
   };
 
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#131b2e" />
+        <ActivityIndicator size="large" color={PROFILE_COLORS.deepNavy} />
       </View>
     );
   }
 
   if (isError || !profile) {
     return (
-      <View style={styles.centerContainer}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor="transparent"
-          translucent={true}
-        />
-        <Text style={styles.errorText}>No teacher profile found.</Text>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Feather name="log-out" size={20} color="#DC2626" />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
+      <ProfileErrorState
+        title={!profile ? "No faculty profile found" : "Failed to load faculty profile"}
+        onRetry={refetch}
+      />
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent={true}
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
-      {/* Top Header Actions */}
-      <View style={[styles.topActions, { paddingTop: insets.top + 16 }]}>
-        <Text style={styles.screenTitle}>My Profile</Text>
+      <View style={[styles.topActions, { paddingTop: insets.top + 12 }]}>
+        <Text style={styles.screenTitle}>Faculty Profile</Text>
 
         <View style={styles.actionButtonsRow}>
           {isEditing && (
             <TouchableOpacity
               onPress={handleCancel}
-              style={[
-                styles.topEditBtn,
-                { marginRight: 8, borderColor: "#DC2626" },
-              ]}
+              style={[styles.topBtn, styles.cancelBtn]}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Cancel edit profile"
+              accessibilityLabel="Cancel editing"
             >
-              <Feather name="x" size={16} color="#DC2626" />
-              <Text style={[styles.topEditText, { color: "#DC2626" }]}>
-                Cancel
-              </Text>
+              <Feather name="x" size={16} color="#dc2626" />
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           )}
 
           <TouchableOpacity
             onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
-            style={styles.topEditBtn}
+            style={styles.topBtn}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={isEditing ? "Save profile changes" : "Edit Profile"}
+            accessibilityLabel={isEditing ? "Save changes" : "Edit profile"}
           >
             <Feather
               name={isEditing ? "check" : "edit-2"}
               size={16}
-              color="#131b2e"
+              color={PROFILE_COLORS.deepNavy}
             />
-            <Text style={styles.topEditText}>
-              {isUpdating
-                ? "Saving"
-                : isEditing
-                  ? "Save"
-                  : "Edit Profile"}
+            <Text style={styles.topBtnText}>
+              {isUpdating ? "Saving..." : isEditing ? "Save" : "Edit Profile"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -336,13 +255,13 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 120 },
+          { paddingBottom: insets.bottom > 0 ? insets.bottom + 104 : 116 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. AVATAR & BASIC INFO CARD (Light Blue) */}
-        <View style={[styles.bentoCard, styles.avatarCard]}>
-          <View style={styles.avatarSection}>
+        {/* Avatar & Basic Info */}
+        <View style={[styles.card, styles.heroCard]}>
+          <View style={styles.avatarRow}>
             <TouchableOpacity
               onPress={handleUpdatePicture}
               disabled={isUploading}
@@ -356,167 +275,92 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
                   source={{ uri: profile.image }}
                   style={styles.avatar}
                   accessible={true}
-                  accessibilityLabel="Teacher profile photo"
+                  accessibilityLabel={`${profile.name}'s profile picture`}
                 />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Feather name="user" size={40} color="#76777d" />
+                  <Feather name="user" size={32} color={PROFILE_COLORS.subtleText} />
                 </View>
               )}
               <View style={styles.cameraBadge}>
                 {isUploading ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Feather name="camera" size={14} color="#fff" />
+                  <Feather name="camera" size={12} color="#ffffff" />
                 )}
               </View>
             </TouchableOpacity>
 
-            {isEditing ? (
-              <TextInput
-                style={[
-                  styles.bentoEditInput,
-                  { marginTop: 12, minWidth: 200 },
-                ]}
-                value={formData.name}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, name: text })
-                }
-                placeholder="Full Name"
-                accessible={true}
-                accessibilityLabel="Full Name"
-              />
-            ) : (
-              <Text style={styles.nameText}>
-                {profile.name || sessionUser?.name}
-              </Text>
-            )}
-
-            <View style={styles.designationBadge}>
-              <Feather name="star" size={12} color="#854D0E" />
-              <Text style={styles.designationText}>
-                {profile.designation || "Faculty"}
-              </Text>
+            <View style={styles.avatarTextContainer}>
+              <Text style={styles.nameText}>{profile.name || sessionUser.name}</Text>
+              <View style={styles.roleBadge}>
+                <Feather name="award" size={12} color="#047857" />
+                <Text style={styles.roleBadgeText}>Faculty</Text>
+              </View>
+              <Text style={styles.subText}>{profile.designation || "Lecturer"}</Text>
+              <Text style={styles.subText}>{profile.email || sessionUser.email}</Text>
             </View>
-
-            <Text style={styles.departmentText}>
-              {profile.department || "University Department"}
-            </Text>
           </View>
         </View>
 
-        {/* 2. GRID ROW: TEACHER ID (Mint) & BLOOD GROUP (Rose) */}
-        <View style={styles.bentoRow}>
-          <View style={[styles.bentoCard, styles.bentoItem, styles.mintCard]}>
-            <View style={styles.gridIconRow}>
-              <Feather name="hash" size={16} color="#065F46" />
-              <Text style={styles.bentoSmallTitleMint}>TEACHER ID</Text>
-            </View>
-            <Text style={styles.bentoMediumValueMint}>{profile.teacherId}</Text>
-          </View>
-
-          <View style={[styles.bentoCard, styles.bentoItem, styles.roseCard]}>
-            <View style={styles.gridIconRow}>
-              <Feather name="droplet" size={16} color="#9D174D" />
-              <Text style={styles.bentoSmallTitleRose}>BLOOD GROUP</Text>
-            </View>
-            {isEditing ? (
-              <TouchableOpacity
-                onPress={() => setBloodGroupModalVisible(true)}
-                style={styles.editPillBtn}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Select blood group"
-              >
-                <Text style={styles.editPillText}>
-                  {formData.bloodGroup || "Select"}
-                </Text>
-                <Feather
-                  name="chevron-down"
-                  size={14}
-                  color="#DC2626"
-                  style={{ marginLeft: 4 }}
-                />
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.bentoMediumValueRose}>
-                {profile.bloodGroup
-                  ? BLOOD_GROUP_TO_UI[profile.bloodGroup]
-                  : "N/A"}
-              </Text>
-            )}
-          </View>
-        </View>
-
-        {/* 3. ACADEMIC & OFFICE (Yellow Card) */}
-        <View style={[styles.bentoCard, styles.yellowCard]}>
-          {isEditing && (
-            <View style={{ marginBottom: 16 }}>
-              <Text style={styles.bentoSmallTitleYellow}>
-                DESIGNATION & DEPT
-              </Text>
-              <TextInput
-                style={[styles.bentoEditInput, { marginBottom: 8 }]}
-                value={formData.designation}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, designation: text })
-                }
-                placeholder="Designation"
-                accessible={true}
-                accessibilityLabel="Designation"
-              />
-              <TextInput
-                style={styles.bentoEditInput}
-                value={formData.department}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, department: text })
-                }
-                placeholder="Department"
-                accessible={true}
-                accessibilityLabel="Department"
-              />
-            </View>
-          )}
+        {/* Faculty & Academic Details */}
+        <View style={[styles.card, styles.yellowCard]}>
+          <Text style={styles.yellowSectionTitle}>ACADEMIC POSITION</Text>
 
           <View style={styles.yellowInfoRow}>
             <View style={styles.yellowIconCircle}>
-              <Feather name="home" size={18} color="#854D0E" />
+              <Feather name="briefcase" size={16} color="#854d0e" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.yellowLabel}>Faculty</Text>
+              <Text style={styles.yellowLabel}>Designation</Text>
               {isEditing ? (
                 <TextInput
-                  style={styles.bentoEditInputLeft}
-                  value={formData.faculty}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, faculty: text })
-                  }
-                  placeholder="Faculty"
+                  style={styles.editInputLeft}
+                  value={formData.designation}
+                  onChangeText={(text) => setFormData({ ...formData, designation: text })}
+                  placeholder="e.g. Senior Lecturer"
                   accessible={true}
-                  accessibilityLabel="Faculty"
+                  accessibilityLabel="Designation"
                 />
               ) : (
-                <Text style={styles.yellowValue}>
-                  {profile.faculty || "Not provided"}
-                </Text>
+                <Text style={styles.yellowValue}>{profile.designation || "Not provided"}</Text>
               )}
             </View>
           </View>
 
           <View style={styles.yellowInfoRow}>
             <View style={styles.yellowIconCircle}>
-              <Feather name="map-pin" size={18} color="#854D0E" />
+              <Feather name="book" size={16} color="#854d0e" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.yellowLabel}>Location</Text>
+              <Text style={styles.yellowLabel}>Department</Text>
               {isEditing ? (
                 <TextInput
-                  style={styles.bentoEditInputLeft}
+                  style={styles.editInputLeft}
+                  value={formData.department}
+                  onChangeText={(text) => setFormData({ ...formData, department: text })}
+                  placeholder="e.g. Computer Science"
+                  accessible={true}
+                  accessibilityLabel="Department"
+                />
+              ) : (
+                <Text style={styles.yellowValue}>{profile.department || "Not provided"}</Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.yellowInfoRow}>
+            <View style={styles.yellowIconCircle}>
+              <Feather name="map-pin" size={16} color="#854d0e" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.yellowLabel}>Office Room</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.editInputLeft}
                   value={formData.officeRoom}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, officeRoom: text })
-                  }
-                  placeholder="Office Room"
+                  onChangeText={(text) => setFormData({ ...formData, officeRoom: text })}
+                  placeholder="e.g. Room 402, Building A"
                   accessible={true}
                   accessibilityLabel="Office Room"
                 />
@@ -532,58 +376,56 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
             </View>
           </View>
 
-          <View style={styles.consultationBox}>
+          <View style={[styles.yellowInfoRow, { marginBottom: 0 }]}>
             <View style={styles.yellowIconCircle}>
-              <Feather name="clock" size={18} color="#854D0E" />
+              <Feather name="clock" size={16} color="#854d0e" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.yellowLabel}>Consultation Hours</Text>
               {isEditing ? (
                 <TextInput
-                  style={styles.bentoEditInputLeft}
+                  style={styles.editInputLeft}
                   value={formData.consultationHours}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, consultationHours: text })
-                  }
-                  placeholder="e.g. Mon-Wed, 10:00 AM"
+                  onChangeText={(text) => setFormData({ ...formData, consultationHours: text })}
+                  placeholder="e.g. Sun-Tue 11:00 AM - 1:00 PM"
                   accessible={true}
                   accessibilityLabel="Consultation Hours"
                 />
               ) : (
                 <Text style={styles.yellowValue}>
-                  {(profile as any).consultationHours || (profile.officeHours ? "Office hours available" : "Not provided")}
+                  {(profile as any).consultationHours || profile.officeHours || "Not provided"}
                 </Text>
               )}
             </View>
           </View>
         </View>
 
-        {/* 4. EXPERTISE & QUALIFICATIONS (White Card) */}
-        <View style={[styles.bentoCard, styles.whiteCard]}>
-          {/* Expertise */}
+        {/* Expertise & Qualifications */}
+        <View style={styles.card}>
           <View style={styles.sectionHeaderRow}>
-            <Feather name="star" size={20} color="#131b2e" />
+            <Feather name="star" size={18} color={PROFILE_COLORS.deepNavy} />
             <Text style={styles.sectionTitle}>Professional Expertise</Text>
           </View>
 
           {isEditing && (
-            <View style={styles.complexInputRow}>
+            <View style={styles.inputWrapper}>
               <TextInput
-                style={styles.pillInput}
+                style={styles.input}
                 value={expertiseInput}
                 onChangeText={setExpertiseInput}
-                placeholder="Add expertise..."
+                placeholder="Add expertise field..."
+                placeholderTextColor={PROFILE_COLORS.subtleText}
                 accessible={true}
                 accessibilityLabel="Add expertise input"
               />
               <TouchableOpacity
                 onPress={addExpertise}
-                style={styles.addButton}
+                style={styles.addBtn}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Add expertise field"
+                accessibilityLabel="Add expertise"
               >
-                <Feather name="plus" size={18} color="#fff" />
+                <Feather name="plus" size={16} color="#ffffff" />
               </TouchableOpacity>
             </View>
           )}
@@ -599,53 +441,54 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
                       style={{ marginLeft: 6 }}
                       accessible={true}
                       accessibilityRole="button"
-                      accessibilityLabel={`Remove expertise ${field}`}
+                      accessibilityLabel={`Remove ${field}`}
                     >
-                      <Feather name="x" size={14} color="#131b2e" />
+                      <Feather name="x" size={14} color={PROFILE_COLORS.deepNavy} />
                     </TouchableOpacity>
                   )}
                 </View>
               ))
             ) : (
-              <Text style={styles.emptyText}>No expertise added.</Text>
+              <Text style={styles.emptyText}>No expertise added yet.</Text>
             )}
           </View>
 
-          <View style={styles.dividerLight} />
+          <View style={styles.divider} />
 
-          {/* Qualifications */}
           <View style={styles.sectionHeaderRow}>
-            <Feather name="award" size={20} color="#131b2e" />
+            <Feather name="award" size={18} color={PROFILE_COLORS.deepNavy} />
             <Text style={styles.sectionTitle}>Qualifications</Text>
           </View>
 
           {isEditing && (
-            <View style={styles.qualInputContainer}>
+            <View style={styles.qualInputBox}>
               <TextInput
-                style={[styles.pillInput, { marginBottom: 8 }]}
+                style={[styles.input, { marginBottom: 8 }]}
                 value={qualDegreeInput}
                 onChangeText={setQualDegreeInput}
                 placeholder="Degree (e.g. M.Sc in CS)"
+                placeholderTextColor={PROFILE_COLORS.subtleText}
                 accessible={true}
                 accessibilityLabel="Degree input"
               />
-              <View style={styles.complexInputRow}>
+              <View style={styles.inputWrapper}>
                 <TextInput
-                  style={styles.pillInput}
+                  style={styles.input}
                   value={qualInstInput}
                   onChangeText={setQualInstInput}
                   placeholder="Institution Name"
+                  placeholderTextColor={PROFILE_COLORS.subtleText}
                   accessible={true}
                   accessibilityLabel="Institution input"
                 />
                 <TouchableOpacity
                   onPress={addQualification}
-                  style={styles.addButton}
+                  style={styles.addBtn}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Add qualification"
                 >
-                  <Feather name="plus" size={18} color="#fff" />
+                  <Feather name="plus" size={16} color="#ffffff" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -653,625 +496,455 @@ export default function TeacherProfile({ sessionUser }: { sessionUser: any }) {
 
           <View style={{ marginTop: 8 }}>
             {Object.entries(formData.academicQualifications).length > 0 ? (
-              Object.entries(formData.academicQualifications).map(
-                ([degree, inst], idx) => (
-                  <View key={idx} style={styles.qualRow}>
-                    <View style={styles.bulletPoint} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.qualDegreeText}>{degree}</Text>
-                      <Text style={styles.qualInstText}>{inst}</Text>
-                    </View>
-                    {isEditing && (
-                      <TouchableOpacity
-                        onPress={() => removeQualification(degree)}
-                        accessible={true}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove qualification ${degree}`}
-                      >
-                        <Feather name="trash-2" size={18} color="#DC2626" />
-                      </TouchableOpacity>
-                    )}
+              Object.entries(formData.academicQualifications).map(([degree, inst], idx) => (
+                <View key={idx} style={styles.qualRow}>
+                  <View style={styles.bullet} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.qualDegree}>{degree}</Text>
+                    <Text style={styles.qualInst}>{inst}</Text>
                   </View>
-                ),
-              )
+                  {isEditing && (
+                    <TouchableOpacity
+                      onPress={() => removeQualification(degree)}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove qualification ${degree}`}
+                    >
+                      <Feather name="trash-2" size={16} color="#dc2626" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))
             ) : (
-              <Text style={styles.emptyText}>No qualifications added.</Text>
+              <Text style={styles.emptyText}>No qualifications added yet.</Text>
             )}
           </View>
         </View>
 
-        {/* 5. CONTACT & LINKS (White Card) */}
-        <View style={[styles.bentoCard, styles.whiteCard]}>
-          <View style={styles.contactRow}>
-            <View
-              style={[styles.contactIconCircle, { backgroundColor: "#e0e7ff" }]}
-            >
-              <Feather name="mail" size={18} color="#4f46e5" />
-            </View>
-            <Text style={styles.contactText}>
-              {profile.email || "No email"}
-            </Text>
-          </View>
-
-          <View style={styles.contactRow}>
-            <View
-              style={[styles.contactIconCircle, { backgroundColor: "#d1fae5" }]}
-            >
-              <Feather name="phone" size={18} color="#059669" />
-            </View>
-            {isEditing ? (
-              <TextInput
-                style={[styles.bentoEditInputLeft, { flex: 1 }]}
-                value={formData.phoneNumber}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, phoneNumber: text })
-                }
-                keyboardType="phone-pad"
-                placeholder="Phone Number"
-                accessible={true}
-                accessibilityLabel="Phone Number"
-              />
-            ) : (
-              <Text style={styles.contactText}>
-                {profile.phoneNumber || "Not provided"}
-              </Text>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={styles.contactRow}
-            disabled={isEditing || !profile.personalWebsiteUrl}
-            onPress={() => openLink(profile.personalWebsiteUrl)}
-            accessible={true}
-            accessibilityRole="link"
-            accessibilityLabel="Open personal website"
-          >
-            <View
-              style={[styles.contactIconCircle, { backgroundColor: "#e0f2fe" }]}
-            >
-              <Feather name="globe" size={18} color="#0284c7" />
-            </View>
-            {isEditing ? (
-              <TextInput
-                style={[styles.bentoEditInputLeft, { flex: 1 }]}
-                value={formData.personalWebsiteUrl}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, personalWebsiteUrl: text })
-                }
-                autoCapitalize="none"
-                placeholder="Website URL"
-                accessible={true}
-                accessibilityLabel="Website URL"
-              />
-            ) : (
-              <Text
-                style={[
-                  styles.contactText,
-                  profile.personalWebsiteUrl && styles.linkTextActive,
-                ]}
-              >
-                {profile.personalWebsiteUrl ? "Personal Website" : "No Website"}
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          {(isEditing || profile.linkedInUrl) && (
-            <TouchableOpacity
-              style={[
-                styles.contactRow,
-                { borderBottomWidth: 0, paddingBottom: 0 },
-              ]}
-              disabled={isEditing || !profile.linkedInUrl}
-              onPress={() => openLink(profile.linkedInUrl)}
-              accessible={true}
-              accessibilityRole="link"
-              accessibilityLabel="Open LinkedIn profile"
-            >
-              <View
-                style={[
-                  styles.contactIconCircle,
-                  { backgroundColor: "#0077b520" },
-                ]}
-              >
-                <Feather name="linkedin" size={18} color="#0077b5" />
+        {/* Contact Row (Phone & Blood Group) */}
+        <View style={styles.bentoRow}>
+          <View style={[styles.card, styles.bentoItem]}>
+            <View style={styles.centerContent}>
+              <View style={[styles.iconCircle, { backgroundColor: "#fee2e2" }]}>
+                <Feather name="droplet" size={18} color="#dc2626" />
               </View>
+              <Text style={styles.bentoSmallTitle}>BLOOD GROUP</Text>
               {isEditing ? (
-                <TextInput
-                  style={[styles.bentoEditInputLeft, { flex: 1 }]}
-                  value={formData.linkedInUrl}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, linkedInUrl: text })
-                  }
-                  autoCapitalize="none"
-                  placeholder="LinkedIn URL"
-                  accessible={true}
-                  accessibilityLabel="LinkedIn URL"
-                />
-              ) : (
-                <Text
-                  style={[
-                    styles.contactText,
-                    profile.linkedInUrl && styles.linkTextActive,
-                  ]}
-                >
-                  {profile.linkedInUrl ? "LinkedIn Profile" : "No LinkedIn"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Log out of account"
-        >
-          <Feather name="log-out" size={18} color="#DC2626" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* BLOOD GROUP MODAL */}
-      <Modal
-        visible={isBloodGroupModalVisible}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Blood Group</Text>
-              <TouchableOpacity
-                onPress={() => setBloodGroupModalVisible(false)}
-                style={styles.closeButton}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Close blood group selection"
-              >
-                <Feather name="x" size={24} color="#131b2e" />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={BLOOD_GROUPS}
-              keyExtractor={(item) => item}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
-              renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setFormData({ ...formData, bloodGroup: item });
-                    setBloodGroupModalVisible(false);
-                  }}
+                  onPress={() => setBloodGroupModalVisible(true)}
+                  style={styles.editPillBtn}
                   accessible={true}
                   accessibilityRole="button"
-                  accessibilityLabel={`Select blood group ${item}`}
+                  accessibilityLabel="Select blood group"
                 >
-                  <Text style={styles.modalItemText}>{item}</Text>
-                  {formData.bloodGroup === item && (
-                    <Feather name="check" size={20} color="#131b2e" />
-                  )}
+                  <Text style={styles.editPillText}>{formData.bloodGroup || "Select"}</Text>
+                  <Feather name="chevron-down" size={14} color="#dc2626" style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
+              ) : (
+                <Text style={[styles.bentoValue, { color: "#dc2626", fontSize: 20 }]}>
+                  {profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] || "N/A" : "N/A"}
+                </Text>
               )}
-            />
+            </View>
+          </View>
+
+          <View style={[styles.card, styles.bentoItem]}>
+            <View style={styles.centerContent}>
+              <View style={[styles.iconCircle, { backgroundColor: "#e0e7ff" }]}>
+                <Feather name="phone" size={18} color="#4f46e5" />
+              </View>
+              <Text style={styles.bentoSmallTitle}>PHONE</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.bentoInput}
+                  value={formData.phoneNumber}
+                  onChangeText={(text) => setFormData({ ...formData, phoneNumber: text })}
+                  keyboardType="phone-pad"
+                  placeholder="Add Phone"
+                  placeholderTextColor={PROFILE_COLORS.subtleText}
+                  accessible={true}
+                  accessibilityLabel="Phone Number input"
+                />
+              ) : (
+                <Text style={[styles.bentoValue, { fontSize: 15 }]}>
+                  {profile.phoneNumber || "Not provided"}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
-      </Modal>
+
+        {/* Portfolio & Social Profiles */}
+        <ProfileSocialCard
+          isEditing={isEditing}
+          linkedInUrl={formData.linkedInUrl}
+          personalWebsiteUrl={formData.personalWebsiteUrl}
+          onChangeLinkedIn={(url) => setFormData((prev) => ({ ...prev, linkedInUrl: url }))}
+          onChangeWebsite={(url) => setFormData((prev) => ({ ...prev, personalWebsiteUrl: url }))}
+        />
+
+        {/* Logout */}
+        <ProfileLogoutButton />
+      </ScrollView>
+
+      {/* Blood Group Modal */}
+      <BloodGroupModal
+        visible={isBloodGroupModalVisible}
+        selectedGroup={formData.bloodGroup}
+        onSelect={(group) => setFormData((prev) => ({ ...prev, bloodGroup: group }))}
+        onClose={() => setBloodGroupModalVisible(false)}
+      />
     </View>
   );
 }
 
-// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f7f9fb" },
+  container: {
+    flex: 1,
+    backgroundColor: PROFILE_COLORS.background,
+  },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f7f9fb",
+    backgroundColor: PROFILE_COLORS.background,
   },
-  scrollContent: { paddingHorizontal: 16 },
-
-  // Top Actions
   topActions: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 14,
   },
   screenTitle: {
-    fontSize: 28,
+    fontFamily,
+    fontSize: 26,
     fontWeight: "800",
-    color: "#131b2e",
-    letterSpacing: -0.5,
+    color: PROFILE_COLORS.deepNavy,
+    letterSpacing: -0.4,
   },
-  actionButtonsRow: { flexDirection: "row", alignItems: "center" },
-  topEditBtn: {
+  actionButtonsRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
-  topEditText: {
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#131b2e",
-  },
-
-  // Bento Box Core
-  bentoCard: {
-    borderRadius: 32,
-    padding: 24,
-    marginBottom: 12,
-    ...shadows.level1,
-  },
-  bentoRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
-  bentoItem: {
-    flex: 1,
-    marginBottom: 0,
-    justifyContent: "center",
-    alignItems: "flex-start",
-    padding: 20,
-  },
-
-  whiteCard: { backgroundColor: "#ffffff" },
-  avatarCard: {
-    backgroundColor: "#d0e4ff",
+  topBtn: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingTop: 32,
+    backgroundColor: PROFILE_COLORS.white,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: PROFILE_COLORS.pillRadius,
+    borderWidth: 1,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    ...PROFILE_COLORS.shadow,
   },
-  mintCard: { backgroundColor: "#c3f0d2" },
-  roseCard: { backgroundColor: "#ffdad6" },
-  yellowCard: { backgroundColor: "#fef08a" },
-
-  // Avatar Section
-  avatarSection: { alignItems: "center" },
-  avatarContainer: { position: "relative", marginBottom: 16 },
+  cancelBtn: {
+    marginRight: 8,
+    borderColor: "rgba(220, 38, 38, 0.2)",
+    backgroundColor: "#fef2f2",
+  },
+  cancelText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#dc2626",
+    marginLeft: 4,
+  },
+  topBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: PROFILE_COLORS.deepNavy,
+    marginLeft: 6,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  card: {
+    backgroundColor: PROFILE_COLORS.white,
+    borderRadius: PROFILE_COLORS.cardRadius,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    ...PROFILE_COLORS.shadow,
+  },
+  heroCard: {
+    padding: 18,
+  },
+  avatarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatarContainer: {
+    position: "relative",
+    marginRight: 16,
+  },
   avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 4,
-    borderColor: "#fff",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
   },
   avatarPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "#fff",
-    justifyContent: "center",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#f1f5f9",
     alignItems: "center",
-    borderWidth: 4,
-    borderColor: "#fff",
+    justifyContent: "center",
   },
   cameraBadge: {
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: "#131b2e",
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: PROFILE_COLORS.deepNavy,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: PROFILE_COLORS.white,
+  },
+  avatarTextContainer: {
+    flex: 1,
   },
   nameText: {
-    fontSize: 28,
+    fontFamily,
+    fontSize: 19,
     fontWeight: "800",
-    color: "#131b2e",
-    textAlign: "center",
+    color: PROFILE_COLORS.neutralText,
+    marginBottom: 4,
   },
-  designationBadge: {
+  roleBadge: {
+    alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f2e580",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    marginTop: 8,
+    backgroundColor: "#ecfdf5",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: PROFILE_COLORS.pillRadius,
+    gap: 4,
+    marginBottom: 6,
   },
-  designationText: {
+  roleBadgeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#047857",
+  },
+  subText: {
+    fontFamily,
     fontSize: 12,
-    fontWeight: "800",
-    color: "#854D0E",
-    marginLeft: 6,
+    color: PROFILE_COLORS.subtleText,
+    lineHeight: 16,
   },
-  departmentText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#45464d",
-    marginTop: 12,
-    textAlign: "center",
+  yellowCard: {
+    backgroundColor: "#fefce8",
+    borderColor: "#fde68a",
   },
-
-  // Grid Styles (Mint/Rose)
-  gridIconRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  bentoSmallTitleMint: {
-    fontSize: 12,
+  yellowSectionTitle: {
+    fontFamily,
+    fontSize: 11,
     fontWeight: "800",
-    color: "#065F46",
-    marginLeft: 6,
+    color: "#854d0e",
     letterSpacing: 1,
-  },
-  bentoMediumValueMint: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#064E3B",
-  },
-  bentoSmallTitleRose: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#9D174D",
-    marginLeft: 6,
-    letterSpacing: 1,
-  },
-  bentoMediumValueRose: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#831843",
-  },
-
-  // Yellow Card Styles
-  bentoSmallTitleYellow: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#854D0E",
-    letterSpacing: 1,
-    marginBottom: 8,
+    marginBottom: 14,
   },
   yellowInfoRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   yellowIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.4)",
-    justifyContent: "center",
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "rgba(253, 230, 138, 0.5)",
     alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   yellowLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#854D0E",
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#854d0e",
     marginBottom: 2,
   },
   yellowValue: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#191c1e",
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    color: PROFILE_COLORS.neutralText,
   },
-  consultationBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.4)",
-    borderRadius: 16,
-    padding: 12,
+  editInputLeft: {
+    fontFamily,
+    fontSize: 14,
+    color: PROFILE_COLORS.neutralText,
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+    paddingVertical: 2,
   },
-
-  // White Card Styles (Expertise & Quals)
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontFamily,
+    fontSize: 15,
     fontWeight: "800",
-    color: "#131b2e",
-    marginLeft: 8,
+    color: PROFILE_COLORS.deepNavy,
   },
-  dividerLight: { height: 1, backgroundColor: "#e0e3e5", marginVertical: 20 },
-  emptyText: {
-    fontSize: 14,
-    color: "#76777d",
-    fontStyle: "italic",
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: PROFILE_COLORS.pillRadius,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-
-  chipContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  input: {
+    flex: 1,
+    fontFamily,
+    fontSize: 13,
+    color: PROFILE_COLORS.neutralText,
+    padding: 0,
+  },
+  addBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: PROFILE_COLORS.deepNavy,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f2f4f6",
-    borderRadius: 9999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: PROFILE_COLORS.pillRadius,
   },
   chipText: {
-    fontSize: 14,
+    fontFamily,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#131b2e",
+    color: PROFILE_COLORS.deepNavy,
   },
-
-  qualRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 12 },
-  bulletPoint: {
+  emptyText: {
+    fontFamily,
+    fontSize: 13,
+    color: PROFILE_COLORS.subtleText,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.04)",
+    marginVertical: 16,
+  },
+  qualInputBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  qualRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  bullet: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#4f46e5",
-    marginTop: 8,
-    marginRight: 12,
+    backgroundColor: PROFILE_COLORS.deepNavy,
+    marginRight: 10,
   },
-  qualDegreeText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#131b2e",
-  },
-  qualInstText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#45464d",
-    marginTop: 2,
-  },
-
-  // Contact Links
-  contactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f2f4f6",
-  },
-  contactIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  contactText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#191c1e",
-    flex: 1,
-  },
-  linkTextActive: { color: "#0284c7" },
-
-  // Edit Mode Inputs
-  bentoEditInput: {
-    backgroundColor: "rgba(255, 255, 255, 0.6)",
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
+  qualDegree: {
+    fontFamily,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#131b2e",
-    textAlign: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    color: PROFILE_COLORS.neutralText,
   },
-  bentoEditInputLeft: {
-    backgroundColor: "rgba(255, 255, 255, 0.6)",
+  qualInst: {
+    fontFamily,
+    fontSize: 11,
+    color: PROFILE_COLORS.subtleText,
+  },
+  bentoRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  bentoItem: {
+    flex: 1,
+    marginBottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  bentoSmallTitle: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: PROFILE_COLORS.subtleText,
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  bentoValue: {
+    fontFamily,
+    fontSize: 24,
+    fontWeight: "800",
+    color: PROFILE_COLORS.deepNavy,
+  },
+  bentoInput: {
+    fontFamily,
+    fontSize: 15,
+    fontWeight: "700",
+    color: PROFILE_COLORS.deepNavy,
+    textAlign: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+    paddingVertical: 2,
+    minWidth: 80,
+  },
+  centerContent: {
+    alignItems: "center",
+  },
+  iconCircle: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#131b2e",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
   },
   editPillBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginTop: 4,
+    backgroundColor: "#fee2e2",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: PROFILE_COLORS.pillRadius,
   },
   editPillText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#DC2626",
-  },
-  complexInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  qualInputContainer: {
-    backgroundColor: "#f7f9fb",
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  pillInput: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 9999,
-    height: 44,
-    paddingHorizontal: 16,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  addButton: {
-    backgroundColor: "#131b2e",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-  },
-
-  // Logout
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FEE2E2",
-    borderRadius: 9999,
-    paddingVertical: 16,
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  logoutText: {
-    fontSize: 16,
-    color: "#DC2626",
-    fontWeight: "800",
-    marginLeft: 8,
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(19, 27, 46, 0.4)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#f7f9fb",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    height: "50%",
-    paddingTop: 24,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#131b2e",
-  },
-  closeButton: { padding: 4 },
-  modalItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e3e5",
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: "#191c1e",
+    fontFamily,
+    fontSize: 13,
     fontWeight: "700",
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#DC2626",
-    marginBottom: 16,
+    color: "#dc2626",
   },
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -42,8 +42,8 @@ interface Props {
   onClose: () => void;
   onSubmit: (payload: any) => void;
   isPending: boolean;
-  teachers: any[];
-  isLoadingTeachers: boolean;
+  teachers?: any[];
+  isLoadingTeachers?: boolean;
   currentUser: any;
 }
 
@@ -52,8 +52,8 @@ export default function CreateHubModal({
   onClose,
   onSubmit,
   isPending,
-  teachers,
-  isLoadingTeachers,
+  teachers = [],
+  isLoadingTeachers = false,
   currentUser,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -92,25 +92,25 @@ export default function CreateHubModal({
     null,
   );
 
-  const populateInitialData = () => {
+  const populateInitialData = useCallback(() => {
     if (isTeacher) {
-      setForm((prev) => ({ ...prev, teacherId: currentUser.id }));
+      setForm((prev) => ({ ...prev, teacherId: currentUser?.id || "" }));
     } else if (isCR) {
       setForm((prev) => ({
         ...prev,
-        department: currentUser.studentProfile?.department || "",
-        batch: currentUser.studentProfile?.batch || "",
+        department: currentUser?.studentProfile?.department || "",
+        batch: currentUser?.studentProfile?.batch || "",
         semesterNumber:
-          currentUser.studentProfile?.currentSemester?.toString() || "",
+          currentUser?.studentProfile?.currentSemester?.toString() || "",
       }));
     }
-  };
+  }, [isTeacher, isCR, currentUser]);
 
   useEffect(() => {
     if (isVisible) {
       populateInitialData();
     }
-  }, [isVisible, currentUser]);
+  }, [isVisible, populateInitialData]);
 
   // FIX 5: Reset Form Logic
   const handleResetForm = () => {

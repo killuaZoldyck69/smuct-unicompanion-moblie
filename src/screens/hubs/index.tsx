@@ -10,14 +10,11 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  Image,
   StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import Toast from "react-native-toast-message";
 
 import { useMyHubs, useAvailableTeachers, useJoinHub, useCreateHub } from "@/features/hubs/useHubs";
 import { getStudentProfile } from "@/services/student-service";
@@ -29,7 +26,6 @@ import { authClient } from "@/services/auth-client";
 type HubTab = "ACTIVE" | "ARCHIVED";
 
 export function Hubs() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   // States
@@ -99,20 +95,7 @@ export function Hubs() {
         translucent={true}
       />
 
-      {/* 1. TOP NAV BAR */}
-      <View style={styles.navBar}>
-        <Feather name="book-open" size={24} color="#131b2e" />
-        <Text style={styles.navTitle}>Course Hub</Text>
-        {currentUser?.image ? (
-          <Image source={{ uri: currentUser.image }} style={styles.navAvatar} />
-        ) : (
-          <View style={styles.navAvatarPlaceholder}>
-            <Feather name="user" size={16} color="#76777d" />
-          </View>
-        )}
-      </View>
-
-      {/* 2. MAIN HEADER & BUTTONS */}
+      {/* MAIN HEADER & BUTTONS */}
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Course Hubs</Text>
         <View style={styles.actionRow}>
@@ -290,7 +273,7 @@ export function Hubs() {
         onClose={() => setIsCreateModalVisible(false)}
         onSubmit={(payload) => createHubMutation.mutate(payload)}
         isPending={createHubMutation.isPending}
-        teachers={teachers}
+        teachers={teachers || []}
         isLoadingTeachers={isLoadingTeachers}
         currentUser={currentUser}
       />
@@ -301,36 +284,18 @@ export function Hubs() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f7f9fb" },
 
-  // Navigation Bar
-  navBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  navTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#131b2e",
-  },
-  navAvatar: { width: 36, height: 36, borderRadius: 18 },
-  navAvatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#e0e3e5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
   // Header & Buttons
-  header: { paddingHorizontal: 20, marginTop: 12, marginBottom: 20 },
+  header: { paddingHorizontal: 20, paddingTop: 16, marginBottom: 20 },
   pageTitle: {
-    fontSize: 32,
+    fontFamily: Platform.select({
+      ios: "Plus Jakarta Sans",
+      android: "sans-serif",
+      default: "sans-serif",
+    }),
+    fontSize: 28,
     fontWeight: "800",
     color: "#131b2e",
-    letterSpacing: -0.64,
+    letterSpacing: -0.5,
     marginBottom: 16,
   },
   actionRow: { flexDirection: "row", gap: 12 },

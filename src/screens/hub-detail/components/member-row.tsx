@@ -1,8 +1,34 @@
 import React, { memo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
-import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
-import { spacing, rounded } from "@/theme/layout";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Platform,
+} from "react-native";
+
+const BENTO_COLORS = {
+  deepNavy: "#131b2e",
+  white: "#ffffff",
+  neutralText: "#191c1d",
+  subtleText: "#64748b",
+  cardRadius: 20,
+  pillRadius: 9999,
+  shadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 24,
+    elevation: 2,
+  },
+};
+
+const fontFamily = Platform.select({
+  ios: "Plus Jakarta Sans",
+  android: "sans-serif",
+  default: "sans-serif",
+});
 
 interface Props {
   item: any;
@@ -10,16 +36,17 @@ interface Props {
 }
 
 const MemberRow = ({ item, onPress }: Props) => {
-  // Extract ID based on the user's role profile
-  const idDisplay =
-    item.role === "TEACHER"
-      ? item.user?.teacherProfile?.teacherId
-      : item.user?.studentProfile?.studentId;
+  const isTeacher = item.role === "TEACHER";
+  const isLeader = item.role === "CR" || item.role === "TA";
+
+  const idDisplay = isTeacher
+    ? item.user?.teacherProfile?.teacherId
+    : item.user?.studentProfile?.studentId;
 
   return (
     <TouchableOpacity
       style={styles.memberRow}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
       onPress={() => onPress(item)}
       accessible={true}
       accessibilityRole="button"
@@ -32,15 +59,13 @@ const MemberRow = ({ item, onPress }: Props) => {
           <View
             style={[
               styles.avatarFallback,
-              item.role === "TEACHER" && {
-                backgroundColor: colors.primaryContainer,
-              },
+              isTeacher && { backgroundColor: BENTO_COLORS.deepNavy },
             ]}
           >
             <Text
               style={[
                 styles.avatarText,
-                item.role === "TEACHER" && { color: colors.onPrimary },
+                isTeacher && { color: "#ffffff" },
               ]}
             >
               {item.user?.name?.charAt(0)?.toUpperCase() || "U"}
@@ -59,15 +84,21 @@ const MemberRow = ({ item, onPress }: Props) => {
       <View
         style={[
           styles.roleBadge,
-          item.role === "TEACHER" && {
-            backgroundColor: colors.primaryContainer + "20",
-          },
+          isTeacher
+            ? styles.roleTeacher
+            : isLeader
+              ? styles.roleLeader
+              : styles.roleStudent,
         ]}
       >
         <Text
           style={[
             styles.roleText,
-            item.role === "TEACHER" && { color: colors.primary },
+            isTeacher
+              ? styles.roleTextTeacher
+              : isLeader
+                ? styles.roleTextLeader
+                : styles.roleTextStudent,
           ]}
         >
           {item.role}
@@ -84,12 +115,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: colors.surfaceContainerLowest,
-    padding: spacing.stackMd,
-    borderRadius: rounded.md,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
+    backgroundColor: BENTO_COLORS.white,
+    padding: 16,
+    borderRadius: BENTO_COLORS.cardRadius,
+    marginBottom: 10,
+    ...BENTO_COLORS.shadow,
   },
   userInfoRow: {
     flexDirection: "row",
@@ -98,52 +128,70 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerHigh,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    marginRight: 12,
+    backgroundColor: "#edf2f7",
   },
   avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.secondaryContainer,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#e0f2fe",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.stackMd,
+    marginRight: 12,
   },
   avatarText: {
-    ...typography.bodyLg,
-    color: colors.secondary,
+    fontFamily,
+    fontSize: 15,
+    color: "#0369a1",
     fontWeight: "800",
   },
   textContainer: {
     flex: 1,
   },
   memberListName: {
-    ...typography.labelMd,
-    color: colors.onSurface,
+    fontFamily,
+    fontSize: 14,
+    color: BENTO_COLORS.deepNavy,
     fontWeight: "800",
   },
   metaText: {
-    ...typography.labelSm,
-    color: colors.outline,
+    fontFamily,
     fontSize: 11,
+    color: BENTO_COLORS.subtleText,
+    fontWeight: "500",
     marginTop: 2,
   },
   roleBadge: {
-    backgroundColor: colors.surfaceContainerHigh,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: rounded.md,
+    borderRadius: BENTO_COLORS.pillRadius,
+  },
+  roleTeacher: {
+    backgroundColor: BENTO_COLORS.deepNavy,
+  },
+  roleLeader: {
+    backgroundColor: "#e0f2fe",
+  },
+  roleStudent: {
+    backgroundColor: "#f1f5f9",
   },
   roleText: {
-    ...typography.labelSm,
-    color: colors.onSurfaceVariant,
-    fontWeight: "800",
+    fontFamily,
     fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  roleTextTeacher: {
+    color: "#ffffff",
+  },
+  roleTextLeader: {
+    color: "#0369a1",
+  },
+  roleTextStudent: {
+    color: BENTO_COLORS.subtleText,
   },
 });

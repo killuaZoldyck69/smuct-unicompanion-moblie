@@ -13,6 +13,7 @@ import {
   Alert,
   Modal,
   ScrollView,
+  Share,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -22,9 +23,39 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import api from "@/services/api";
 import { authClient } from "@/services/auth-client";
-import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
-import { spacing, rounded, shadows } from "@/theme/layout";
+
+// ==================================================
+// 1. SOFT CAMPUS BENTO DESIGN SYSTEM CONSTANTS
+// ==================================================
+const BENTO_COLORS = {
+  background: "#f7f9fb",
+  deepNavy: "#131b2e",
+  white: "#ffffff",
+  neutralText: "#191c1d",
+  subtleText: "#64748b",
+  cardRadius: 24,
+  pillRadius: 9999,
+  shadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 24,
+    elevation: 2,
+  },
+  heroShadow: {
+    shadowColor: "#131b2e",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 28,
+    elevation: 6,
+  },
+};
+
+const fontFamily = Platform.select({
+  ios: "Plus Jakarta Sans",
+  android: "sans-serif",
+  default: "sans-serif",
+});
 
 // --- Helpers ---
 export const format12HourTime = (dateString: string) => {
@@ -46,15 +77,20 @@ const getUserSubtitle = (user: any) => {
   if (!user) return "";
   if (user.studentProfile) {
     const { department, currentSemester, section } = user.studentProfile;
-    return `${department || "No Dept"} • Sem ${currentSemester || "N/A"} • Sec ${section || "N/A"}`;
+    return `${department || "Dept"} • Sem ${currentSemester || "N/A"}${
+      section ? ` • Sec ${section}` : ""
+    }`;
   }
   if (user.teacherProfile) {
     const { department, designation } = user.teacherProfile;
-    return `${designation || "Faculty"} • ${department || "No Dept"}`;
+    return `${designation || "Faculty"} • ${department || "Department"}`;
   }
   return "University Member";
 };
 
+// ==================================================
+// 2. MAIN COMPONENT
+// ==================================================
 export default function ThreadScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -66,8 +102,6 @@ export default function ThreadScreen() {
   const [replyText, setReplyText] = useState("");
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", description: "" });
-
-  // State for the Responder Profile Modal
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
 
   const { data: thread, isLoading } = useQuery({
@@ -83,7 +117,15 @@ export default function ThreadScreen() {
       await api.post(`/forum/${id}/respond`, { content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumThread", id] });
+      queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
       setReplyText("");
+    },
+    onError: (err: any) => {
+      Toast.show({
+        type: "error",
+        text1: "Failed to post reply",
+        text2: err.message || "Please try again.",
+      });
     },
   });
 
@@ -100,7 +142,7 @@ export default function ThreadScreen() {
     mutationFn: async () => await api.delete(`/forum/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
-      Toast.show({ type: "info", text1: "Post Deleted" });
+      Toast.show({ type: "info", text1: "Discussion Deleted" });
       router.back();
     },
   });
@@ -111,14 +153,14 @@ export default function ThreadScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumThread", id] });
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
-      Toast.show({ type: "success", text1: "Post Updated" });
+      Toast.show({ type: "success", text1: "Question Updated" });
       setIsEditModalVisible(false);
     },
   });
 
   const handleSendReply = () => {
     if (!replyText.trim()) return;
-    replyMutation.mutate(replyText);
+    replyMutation.mutate(replyText.trim());
   };
 
   const handleEditInit = () => {
@@ -133,7 +175,7 @@ export default function ThreadScreen() {
 
   const handleDelete = () => {
     Alert.alert(
-      "Delete Post",
+      "Delete Discussion",
       "Are you sure you want to permanently delete this discussion?",
       [
         { text: "Cancel", style: "cancel" },
@@ -142,723 +184,980 @@ export default function ThreadScreen() {
           style: "destructive",
           onPress: () => deleteMutation.mutate(),
         },
-      ],
+      ]
     );
+  };
+
+  const handleShare = async () => {
+    if (!thread) return;
+    try {
+      const msg = `💬 Campus Forum: ${thread.title}\n\n${thread.description}\n\nRead & reply on SMUCT UniCompanion!`;
+      await Share.share({ message: msg });
+    } catch {
+      // Ignored
+    }
   };
 
   if (isLoading || !thread) {
     return (
-      <View style={[styles.container, styles.centerContainer]}>
-        <ActivityIndicator size="large" color={colors.primaryContainer} />
-      </View>
+      <SafeAreaView style={[styles.container, styles.centerContainer]}>
+        <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
+      </SafeAreaView>
     );
   }
 
   const isAuthor = currentUserId === thread.authorId;
 
   const renderOriginalPost = () => (
-    <View style={styles.originalPostContainer}>
-      <Text style={styles.threadTitle}>{thread.title}</Text>
+    <View style={styles.postHeaderContainer}>
+      {/* 1. QUESTION BENTO CARD */}
+      <View style={styles.questionBentoCard}>
+        {/* Top Status Row */}
+        <View style={styles.topStatusRow}>
+          <View style={styles.categoryPill}>
+            <Text style={styles.categoryPillText}>DISCUSSION</Text>
+          </View>
+          {thread.isResolved ? (
+            <View style={styles.resolvedPill}>
+              <Feather
+                name="check-circle"
+                size={11}
+                color="#047857"
+                style={{ marginRight: 4 }}
+              />
+              <Text style={styles.resolvedPillText}>RESOLVED</Text>
+            </View>
+          ) : (
+            <View style={styles.openPill}>
+              <Text style={styles.openPillText}>OPEN QUESTION</Text>
+            </View>
+          )}
+        </View>
 
-      <View style={styles.authorRow}>
-        <TouchableOpacity onPress={() => setSelectedProfile(thread.author)}>
+        {/* Title */}
+        <Text style={styles.questionTitleText}>{thread.title}</Text>
+
+        {/* Author Metadata Row */}
+        <TouchableOpacity
+          style={styles.authorMetaRow}
+          onPress={() => setSelectedProfile(thread.author)}
+          activeOpacity={0.8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`View author profile for ${thread.author?.name}`}
+        >
           {thread.author?.image ? (
             <Image
               source={{ uri: thread.author.image }}
-              style={styles.avatarImage}
+              style={styles.authorAvatar}
             />
           ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>
-                {thread.author?.name?.charAt(0).toUpperCase() || "?"}
+            <View style={styles.authorAvatarFallback}>
+              <Text style={styles.authorAvatarText}>
+                {thread.author?.name?.charAt(0).toUpperCase() || "U"}
+              </Text>
+            </View>
+          )}
+
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={styles.authorNameText}>
+                {thread.author?.name || "University Member"}
+              </Text>
+              <View style={styles.authorTagBadge}>
+                <Text style={styles.authorTagText}>Author</Text>
+              </View>
+            </View>
+            <Text style={styles.authorSubtitleText}>
+              {getUserSubtitle(thread.author)}
+            </Text>
+            <Text style={styles.timestampText}>
+              Posted {format12HourTime(thread.createdAt)}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={styles.cardDivider} />
+
+        {/* Question Body */}
+        <Text style={styles.questionBodyText}>{thread.description}</Text>
+
+        {/* Author Action Buttons */}
+        {isAuthor && (
+          <View style={styles.authorActionsRow}>
+            {!thread.isResolved && (
+              <TouchableOpacity
+                style={styles.actionBtnResolve}
+                onPress={() => resolveMutation.mutate()}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Mark question as resolved"
+              >
+                <Feather
+                  name="check-circle"
+                  size={13}
+                  color="#ffffff"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.actionBtnTextResolve}>
+                  Mark as Resolved
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.actionBtnEdit}
+              onPress={handleEditInit}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Edit question"
+            >
+              <Feather
+                name="edit-2"
+                size={13}
+                color={BENTO_COLORS.deepNavy}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.actionBtnTextEdit}>Edit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionBtnDelete}
+              onPress={handleDelete}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Delete question"
+            >
+              <Feather
+                name="trash-2"
+                size={13}
+                color="#be123c"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.actionBtnTextDelete}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* 2. RESPONSES SECTION HEADER */}
+      <View style={styles.responsesHeaderRow}>
+        <Text style={styles.responsesHeaderTitle}>
+          {thread.responses?.length || 0} Response
+          {thread.responses?.length === 1 ? "" : "s"}
+        </Text>
+        <Text style={styles.responsesHeaderSubtitle}>
+          Community insights & answers
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderReply = ({ item }: { item: any }) => {
+    const isReplyFromAuthor = item.responderId === thread.authorId;
+
+    return (
+      <View style={styles.replyBentoCard}>
+        <TouchableOpacity
+          onPress={() => setSelectedProfile(item.responder)}
+          activeOpacity={0.8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`View responder profile of ${item.responder?.name}`}
+        >
+          {item.responder?.image ? (
+            <Image
+              source={{ uri: item.responder.image }}
+              style={styles.replyAvatar}
+            />
+          ) : (
+            <View style={styles.replyAvatarFallback}>
+              <Text style={styles.replyAvatarText}>
+                {item.responder?.name?.charAt(0).toUpperCase() || "U"}
               </Text>
             </View>
           )}
         </TouchableOpacity>
 
-        <View style={{ flex: 1 }}>
-          <Text style={styles.authorName}>
-            {thread.author?.name}{" "}
-            <Text style={styles.authorRoleBadge}>(Author)</Text>
-          </Text>
-
-          {/* NEW: Author Subtitle Info */}
-          <Text style={styles.authorSubtitle} numberOfLines={1}>
-            {getUserSubtitle(thread.author)}
-          </Text>
-
-          <View style={styles.metaRow}>
-            <Feather
-              name="clock"
-              size={12}
-              color={colors.outline}
-              style={{ marginRight: 4 }}
-            />
-            <Text style={styles.timeText}>
-              {format12HourTime(thread.createdAt)}
+        <View style={styles.replyContentBlock}>
+          <View style={styles.replyHeaderRow}>
+            <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+              <Text style={styles.replyAuthorName} numberOfLines={1}>
+                {item.responder?.name || "University Member"}
+              </Text>
+              {isReplyFromAuthor && (
+                <View style={styles.replyAuthorTag}>
+                  <Text style={styles.replyAuthorTagText}>Author</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.replyTimeText}>
+              {format12HourTime(item.createdAt)}
             </Text>
           </View>
-        </View>
 
-        {isAuthor && !thread.isResolved && (
-          <TouchableOpacity
-            style={styles.resolveBtn}
-            onPress={() => resolveMutation.mutate()}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Mark thread as resolved"
-          >
-            <Feather
-              name="check"
-              size={16}
-              color={colors.onPrimary}
-              style={{ marginRight: 4 }}
-            />
-            <Text style={styles.resolveBtnText}>Resolve</Text>
-          </TouchableOpacity>
-        )}
+          <Text style={styles.replyBodyText}>{item.content}</Text>
+        </View>
       </View>
-
-      <Text style={styles.threadDesc}>{thread.description}</Text>
-
-      {/* Author Actions */}
-      {isAuthor && (
-        <View style={styles.authorActionsRow}>
-          <TouchableOpacity
-            style={styles.actionBtnEdit}
-            onPress={handleEditInit}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Edit question"
-          >
-            <Feather
-              name="edit-2"
-              size={14}
-              color={colors.secondary}
-              style={{ marginRight: 4 }}
-            />
-            <Text style={styles.actionBtnTextEdit}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionBtnDelete}
-            onPress={handleDelete}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Delete question"
-          >
-            <Feather
-              name="trash-2"
-              size={14}
-              color={colors.error}
-              style={{ marginRight: 4 }}
-            />
-            <Text style={styles.actionBtnTextDelete}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View style={styles.divider} />
-      <Text style={styles.responseCountHeader}>
-        {thread.responses?.length || 0} Responses
-      </Text>
-    </View>
-  );
-
-  const renderReply = ({ item }: { item: any }) => (
-    <View style={styles.replyCard}>
-      <TouchableOpacity
-        onPress={() => setSelectedProfile(item.responder)}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={`View ${item.responder?.name || "User"}'s profile`}
-      >
-        {item.responder?.image ? (
-          <Image
-            source={{ uri: item.responder.image }}
-            style={styles.replyAvatarImage}
-            accessible={true}
-            accessibilityLabel={`${item.responder.name || "Responder"}'s profile image`}
-          />
-        ) : (
-          <View style={styles.replyAvatarFallback}>
-            <Text style={styles.replyAvatarText}>
-              {item.responder?.name?.charAt(0).toUpperCase() || "?"}
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
-
-      <View style={styles.replyContentBlock}>
-        <View style={styles.replyHeader}>
-          <Text style={styles.replyAuthorName}>
-            {item.responder?.name}
-            {item.responderId === thread.authorId && (
-              <Text style={{ color: colors.primary }}> (Author)</Text>
-            )}
-          </Text>
-          <Text style={styles.replyTimeText}>
-            {format12HourTime(item.createdAt)}
-          </Text>
-        </View>
-        <Text style={styles.replyText}>{item.content}</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
-    // FIX: Stronger Android Keyboard Support
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "padding"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 80}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Feather name="arrow-left" size={24} color={colors.onSurface} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Discussion</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <FlatList
-        data={thread.responses || []}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderOriginalPost}
-        renderItem={renderReply}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
-
-      {!thread.isResolved ? (
-        <View
-          style={[
-            styles.inputContainer,
-            { paddingBottom: Math.max(insets.bottom, 16) },
-          ]}
-        >
-          <TextInput
-            style={styles.textInput}
-            placeholder="Type a helpful response..."
-            placeholderTextColor={colors.outlineVariant}
-            value={replyText}
-            onChangeText={setReplyText}
-            multiline
-            maxLength={500}
-            accessible={true}
-            accessibilityLabel="Type a helpful response"
-          />
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {/* HEADER */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={[styles.sendBtn, !replyText.trim() && { opacity: 0.5 }]}
-            onPress={handleSendReply}
-            disabled={!replyText.trim() || replyMutation.isPending}
+            onPress={() => router.back()}
+            style={styles.headerIconButton}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Send response"
+            accessibilityLabel="Go back"
           >
-            {replyMutation.isPending ? (
-              <ActivityIndicator color={colors.onPrimary} />
-            ) : (
-              <Feather name="send" size={20} color={colors.onPrimary} />
-            )}
+            <Feather name="arrow-left" size={22} color={BENTO_COLORS.deepNavy} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Discussion</Text>
+          <TouchableOpacity
+            onPress={handleShare}
+            style={styles.headerIconButton}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Share discussion"
+          >
+            <Feather name="share-2" size={18} color={BENTO_COLORS.deepNavy} />
           </TouchableOpacity>
         </View>
-      ) : (
+
+        <FlatList
+          data={thread.responses || []}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={renderOriginalPost}
+          renderItem={renderReply}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 90 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyRepliesCard}>
+              <Feather
+                name="message-circle"
+                size={28}
+                color={BENTO_COLORS.subtleText}
+                style={{ marginBottom: 6 }}
+              />
+              <Text style={styles.emptyRepliesTitle}>No Responses Yet</Text>
+              <Text style={styles.emptyRepliesDesc}>
+                Be the first to share an answer or helpful tip.
+              </Text>
+            </View>
+          }
+        />
+
+        {/* BOTTOM ACTION BAR */}
         <View
           style={[
-            styles.resolvedFooter,
-            { paddingBottom: Math.max(insets.bottom, 16) },
+            styles.bottomInputBar,
+            { paddingBottom: Math.max(insets.bottom, 14) },
           ]}
         >
-          <Feather
-            name="lock"
-            size={16}
-            color={colors.outline}
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.resolvedFooterText}>
-            This discussion has been marked as resolved.
-          </Text>
-        </View>
-      )}
-
-      {/* --- EDIT POST MODAL --- */}
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <SafeAreaView
-          style={styles.modalContainer}
-          accessibilityViewIsModal={true}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1 }}
-          >
-            <View style={styles.modalHeader}>
+          {thread.isResolved ? (
+            <View style={styles.resolvedFooterBanner}>
+              <Feather
+                name="lock"
+                size={14}
+                color="#047857"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.resolvedFooterText}>
+                This discussion has been marked as resolved.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.textInputPill}
+                placeholder="Type a helpful response..."
+                placeholderTextColor={BENTO_COLORS.subtleText}
+                value={replyText}
+                onChangeText={setReplyText}
+                multiline={true}
+                maxLength={500}
+                accessible={true}
+                accessibilityLabel="Type response"
+              />
               <TouchableOpacity
-                onPress={() => setIsEditModalVisible(false)}
+                style={[
+                  styles.sendButtonPill,
+                  !replyText.trim() && { opacity: 0.5 },
+                ]}
+                onPress={handleSendReply}
+                disabled={!replyText.trim() || replyMutation.isPending}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Cancel editing"
+                accessibilityLabel="Send response"
               >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Edit Post</Text>
-              <TouchableOpacity
-                onPress={handleEditSubmit}
-                disabled={editMutation.isPending}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Save edited question"
-              >
-                {editMutation.isPending ? (
-                  <ActivityIndicator size="small" />
+                {replyMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.postTextBtn}>Save</Text>
+                  <Feather name="send" size={16} color="#ffffff" />
                 )}
               </TouchableOpacity>
             </View>
-            <View style={styles.modalContent}>
-              <TextInput
-                style={styles.titleInput}
-                value={editForm.title}
-                onChangeText={(text) =>
-                  setEditForm({ ...editForm, title: text })
-                }
-                maxLength={100}
-                accessible={true}
-                accessibilityLabel="Edit question title"
-              />
-              <TextInput
-                style={styles.descInput}
-                value={editForm.description}
-                onChangeText={(text) =>
-                  setEditForm({ ...editForm, description: text })
-                }
-                multiline
-                textAlignVertical="top"
-              />
-            </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </Modal>
+          )}
+        </View>
+      </KeyboardAvoidingView>
 
       {/* --- USER PROFILE INFO MODAL --- */}
-      <Modal
-        visible={!!selectedProfile}
-        animationType="fade"
-        transparent={true}
-      >
-        <View style={styles.profileModalOverlay}>
+      <Modal visible={!!selectedProfile} animationType="fade" transparent={true}>
+        <View style={styles.profileModalOverlay} accessibilityViewIsModal={true}>
           <View style={styles.profileModalCard}>
             <TouchableOpacity
               style={styles.profileCloseBtn}
               onPress={() => setSelectedProfile(null)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Close profile details"
             >
-              <Feather name="x" size={20} color={colors.onSurface} />
+              <Feather name="x" size={18} color={BENTO_COLORS.deepNavy} />
             </TouchableOpacity>
 
             {selectedProfile?.image ? (
               <Image
                 source={{ uri: selectedProfile.image }}
-                style={styles.profileModalAvatarImage}
+                style={styles.profileAvatarLarge}
               />
             ) : (
-              <View style={styles.profileModalAvatarFallback}>
-                <Text style={styles.profileModalAvatarText}>
-                  {selectedProfile?.name?.charAt(0).toUpperCase()}
+              <View style={styles.profileAvatarFallbackLarge}>
+                <Text style={styles.profileAvatarTextLarge}>
+                  {selectedProfile?.name?.charAt(0).toUpperCase() || "U"}
                 </Text>
               </View>
             )}
 
-            <Text style={styles.profileModalName}>{selectedProfile?.name}</Text>
-            <Text style={styles.profileModalRole}>
-              {selectedProfile?.role || "Member"}
+            <Text style={styles.profileNameText}>{selectedProfile?.name}</Text>
+            <Text style={styles.profileRoleText}>
+              {getUserSubtitle(selectedProfile)}
             </Text>
-
-            <View style={styles.profileInfoBox}>
-              <Text style={styles.profileInfoText}>
-                {getUserSubtitle(selectedProfile)}
-              </Text>
-              {selectedProfile?.studentProfile?.batch && (
-                <Text style={styles.profileInfoTextSub}>
-                  Batch: {selectedProfile.studentProfile.batch}
-                </Text>
-              )}
-            </View>
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+
+      {/* --- EDIT QUESTION MODAL --- */}
+      <Modal
+        visible={isEditModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <SafeAreaView style={styles.modalContainer} edges={["top", "bottom"]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setIsEditModalVisible(false)}
+                style={styles.modalCloseBtn}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel edit"
+              >
+                <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
+              </TouchableOpacity>
+              <Text style={styles.modalHeaderTitle}>Edit Question</Text>
+              <View style={{ width: 36 }} />
+            </View>
+
+            <ScrollView
+              contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>QUESTION TITLE</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editForm.title}
+                  onChangeText={(text) =>
+                    setEditForm((prev) => ({ ...prev, title: text }))
+                  }
+                  maxLength={120}
+                  accessible={true}
+                  accessibilityLabel="Edit question title"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>DETAILS & CONTEXT</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formInputArea]}
+                  value={editForm.description}
+                  onChangeText={(text) =>
+                    setEditForm((prev) => ({ ...prev, description: text }))
+                  }
+                  multiline={true}
+                  textAlignVertical="top"
+                  accessible={true}
+                  accessibilityLabel="Edit question details"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.saveEditBtn}
+                onPress={handleEditSubmit}
+                disabled={editMutation.isPending}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Save question changes"
+              >
+                {editMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.saveEditBtnText}>Save Changes</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
+// ==================================================
+// 3. STYLES
+// ==================================================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centerContainer: { justifyContent: "center", alignItems: "center" },
-
+  container: {
+    flex: 1,
+    backgroundColor: BENTO_COLORS.background,
+  },
+  centerContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 14,
+    backgroundColor: BENTO_COLORS.background,
+  },
+  headerIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: BENTO_COLORS.pillRadius,
+    backgroundColor: BENTO_COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    ...BENTO_COLORS.shadow,
+  },
+  headerTitle: {
+    fontFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+  },
+
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 6,
+  },
+  postHeaderContainer: {
+    marginBottom: 8,
+  },
+
+  // --- QUESTION BENTO CARD ---
+  questionBentoCard: {
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: BENTO_COLORS.cardRadius,
+    padding: 22,
+    marginBottom: 18,
+    ...BENTO_COLORS.shadow,
+  },
+  topStatusRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 60,
-    paddingBottom: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    marginBottom: 14,
   },
-  backBtn: { padding: spacing.stackSm, marginLeft: spacing.stackSm },
-  headerTitle: {
-    ...typography.bodyLg,
-    fontSize: 18,
-    color: colors.onSurface,
-    fontWeight: "700",
+  categoryPill: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BENTO_COLORS.pillRadius,
   },
-
-  listContent: { paddingBottom: spacing.sectionBreak },
-
-  originalPostContainer: {
-    backgroundColor: colors.surfaceContainerLowest,
-    padding: spacing.marginMobile,
-    marginBottom: spacing.stackSm,
+  categoryPillText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: BENTO_COLORS.subtleText,
+    letterSpacing: 0.6,
   },
-  threadTitle: {
-    ...typography.headlineMd,
-    color: colors.onSurface,
-    marginBottom: spacing.stackLg,
-    fontWeight: "700",
-  },
-  authorRow: {
+  resolvedPill: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.stackLg,
+    backgroundColor: "#d1fae5",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BENTO_COLORS.pillRadius,
   },
-  avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primaryContainer,
+  resolvedPillText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#047857",
+    letterSpacing: 0.4,
+  },
+  openPill: {
+    backgroundColor: "#e0f2fe",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BENTO_COLORS.pillRadius,
+  },
+  openPillText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#0284c7",
+    letterSpacing: 0.4,
+  },
+  questionTitleText: {
+    fontFamily,
+    fontSize: 22,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+    lineHeight: 28,
+    letterSpacing: -0.4,
+    marginBottom: 16,
+  },
+  authorMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  authorAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    marginRight: 12,
+  },
+  authorAvatarFallback: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#edf2f7",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.stackMd,
+    marginRight: 12,
   },
-  avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerHigh,
-  },
-  avatarText: {
-    ...typography.bodyLg,
-    fontSize: 18,
-    color: colors.onPrimary,
-    fontWeight: "700",
-  },
-
-  authorName: {
-    ...typography.bodyLg,
+  authorAvatarText: {
+    fontFamily,
     fontSize: 16,
-    color: colors.onSurface,
-    fontWeight: "700",
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
   },
-  authorRoleBadge: { fontSize: 12, fontWeight: "500", color: colors.primary },
-  authorSubtitle: {
-    ...typography.labelSm,
-    color: colors.secondary,
-    marginBottom: 2,
+  authorNameText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
   },
-
-  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  timeText: { ...typography.labelSm, color: colors.outline, fontSize: 11 },
-
-  resolveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#2E7D32",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: rounded.full,
+  authorTagBadge: {
+    backgroundColor: "#e0f2fe",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
   },
-  resolveBtnText: {
-    ...typography.labelSm,
-    color: colors.onPrimary,
-    fontWeight: "700",
+  authorTagText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#0369a1",
   },
-
-  threadDesc: {
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.onSurface,
-    lineHeight: 26,
+  authorSubtitleText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0284c7",
+    marginTop: 2,
   },
-
+  timestampText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+    marginTop: 2,
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    marginBottom: 14,
+  },
+  questionBodyText: {
+    fontFamily,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#334155",
+    lineHeight: 23,
+    marginBottom: 10,
+  },
   authorActionsRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: spacing.stackLg,
-    gap: spacing.stackMd,
+    gap: 8,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.05)",
+    paddingTop: 12,
+  },
+  actionBtnResolve: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#059669",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: BENTO_COLORS.pillRadius,
+  },
+  actionBtnTextResolve: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   actionBtnEdit: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.secondaryContainer,
+    backgroundColor: "#f1f5f9",
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: rounded.md,
+    paddingVertical: 8,
+    borderRadius: BENTO_COLORS.pillRadius,
   },
   actionBtnTextEdit: {
-    ...typography.labelSm,
-    color: colors.secondary,
+    fontFamily,
+    fontSize: 12,
     fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
   },
   actionBtnDelete: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.errorContainer,
+    backgroundColor: "#fff1f2",
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: rounded.md,
+    paddingVertical: 8,
+    borderRadius: BENTO_COLORS.pillRadius,
   },
   actionBtnTextDelete: {
-    ...typography.labelSm,
-    color: colors.error,
+    fontFamily,
+    fontSize: 12,
     fontWeight: "700",
+    color: "#be123c",
   },
 
-  divider: {
-    height: 1,
-    backgroundColor: colors.surfaceContainerHighest,
-    marginVertical: spacing.sectionBreak,
+  // --- RESPONSES SECTION HEADER ---
+  responsesHeaderRow: {
+    marginBottom: 12,
   },
-  responseCountHeader: {
-    ...typography.bodyLg,
+  responsesHeaderTitle: {
+    fontFamily,
     fontSize: 16,
-    color: colors.onSurface,
-    fontWeight: "700",
-    marginBottom: spacing.stackMd,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+  },
+  responsesHeaderSubtitle: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+    marginTop: 1,
   },
 
-  replyCard: {
+  // --- REPLY BENTO CARD ---
+  replyBentoCard: {
     flexDirection: "row",
-    paddingHorizontal: spacing.marginMobile,
-    paddingVertical: spacing.stackMd,
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 10,
+    ...BENTO_COLORS.shadow,
+  },
+  replyAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 12,
   },
   replyAvatarFallback: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surfaceContainerHigh,
+    backgroundColor: "#edf2f7",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.stackMd,
-  },
-  replyAvatarImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerHigh,
+    marginRight: 12,
   },
   replyAvatarText: {
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.onSurface,
-    fontWeight: "700",
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
   },
   replyContentBlock: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
-    padding: spacing.stackLg,
-    borderRadius: rounded.lg,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
   },
-  replyHeader: {
+  replyHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: spacing.stackSm,
+    alignItems: "center",
+    marginBottom: 6,
   },
   replyAuthorName: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
+    fontFamily,
+    fontSize: 13,
     fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
   },
-  replyTimeText: { fontSize: 10, color: colors.outline },
-  replyText: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
-    lineHeight: 22,
+  replyAuthorTag: {
+    backgroundColor: "#e0f2fe",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  replyAuthorTagText: {
+    fontFamily,
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#0369a1",
+  },
+  replyTimeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+  },
+  replyBodyText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "500",
+    color: BENTO_COLORS.neutralText,
+    lineHeight: 20,
   },
 
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    padding: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderTopWidth: 1,
-    borderTopColor: colors.surfaceContainerHighest,
-    paddingTop: 12,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: colors.surfaceContainerHigh,
+  emptyRepliesCard: {
+    backgroundColor: BENTO_COLORS.white,
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    maxHeight: 100,
-    ...typography.bodyMd,
-    color: colors.onSurface,
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primaryContainer,
-    justifyContent: "center",
+    padding: 24,
     alignItems: "center",
-    marginLeft: spacing.stackSm,
-    marginBottom: 2,
+    marginTop: 4,
+    ...BENTO_COLORS.shadow,
+  },
+  emptyRepliesTitle: {
+    fontFamily,
+    fontSize: 15,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+    marginBottom: 4,
+  },
+  emptyRepliesDesc: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+    textAlign: "center",
   },
 
-  resolvedFooter: {
+  // --- BOTTOM INPUT BAR ---
+  bottomInputBar: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: BENTO_COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.05)",
+  },
+  resolvedFooterBanner: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    padding: spacing.stackLg,
-    backgroundColor: colors.surfaceContainerHigh,
-    paddingTop: 20,
+    justifyContent: "center",
+    backgroundColor: "#ecfdf5",
+    paddingVertical: 12,
+    borderRadius: BENTO_COLORS.pillRadius,
   },
   resolvedFooterText: {
-    ...typography.bodyMd,
-    color: colors.outline,
-    fontStyle: "italic",
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#047857",
   },
-
-  // Edit Modal Styles
-  modalContainer: { flex: 1, backgroundColor: colors.surfaceContainerLowest },
-  modalHeader: {
+  inputRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    padding: spacing.marginMobile,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    gap: 8,
   },
-  cancelText: { ...typography.bodyLg, fontSize: 16, color: colors.outline },
-  modalTitle: {
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.onSurface,
-    fontWeight: "700",
-  },
-  postTextBtn: {
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.primaryContainer,
-    fontWeight: "700",
-  },
-  modalContent: { flex: 1, padding: spacing.marginMobile },
-  titleInput: {
-    ...typography.headlineMd,
-    color: colors.onSurface,
-    marginBottom: spacing.stackLg,
-    paddingVertical: spacing.stackSm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
-  },
-  descInput: {
+  textInputPill: {
     flex: 1,
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.onSurface,
-    lineHeight: 24,
+    backgroundColor: "#f8fafc",
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "500",
+    color: BENTO_COLORS.neutralText,
+    maxHeight: 100,
   },
-
-  // Info Modal Styles
-  profileModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+  sendButtonPill: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: BENTO_COLORS.deepNavy,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.marginMobile,
+  },
+
+  // --- PROFILE MODAL ---
+  profileModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
   },
   profileModalCard: {
     width: "100%",
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    padding: spacing.stackLg,
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: 28,
+    padding: 24,
     alignItems: "center",
-    ...shadows.level1,
+    ...BENTO_COLORS.heroShadow,
   },
   profileCloseBtn: {
     position: "absolute",
     top: 16,
     right: 16,
-    padding: 8,
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.full,
-  },
-  profileModalAvatarFallback: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primaryContainer,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: spacing.stackLg,
-    marginTop: spacing.stackLg,
   },
-  profileModalAvatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: spacing.stackLg,
-    marginTop: spacing.stackLg,
-    borderWidth: 2,
-    borderColor: colors.surfaceContainerLowest,
+  profileAvatarLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginBottom: 12,
   },
-  profileModalAvatarText: {
-    fontSize: 32,
-    color: colors.onPrimary,
-    fontWeight: "700",
+  profileAvatarFallbackLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#edf2f7",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  profileModalName: {
-    ...typography.headlineMd,
-    color: colors.onSurface,
-    fontWeight: "700",
+  profileAvatarTextLarge: {
+    fontFamily,
+    fontSize: 24,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+  },
+  profileNameText: {
+    fontFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
     marginBottom: 4,
   },
-  profileModalRole: {
-    ...typography.labelMd,
-    color: colors.primary,
+  profileRoleText: {
+    fontFamily,
+    fontSize: 13,
     fontWeight: "600",
-    marginBottom: spacing.stackLg,
-  },
-  profileInfoBox: {
-    width: "100%",
-    backgroundColor: colors.surfaceContainerHigh,
-    padding: spacing.stackLg,
-    borderRadius: rounded.lg,
-    alignItems: "center",
-  },
-  profileInfoText: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "600",
+    color: BENTO_COLORS.subtleText,
     textAlign: "center",
   },
-  profileInfoTextSub: {
-    ...typography.labelSm,
-    color: colors.outline,
-    marginTop: 4,
+
+  // --- EDIT MODAL ---
+  modalContainer: {
+    flex: 1,
+    backgroundColor: BENTO_COLORS.background,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: BENTO_COLORS.white,
+    ...BENTO_COLORS.shadow,
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalHeaderTitle: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+  },
+  modalScrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  formGroup: {
+    marginBottom: 18,
+  },
+  formLabel: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    color: BENTO_COLORS.subtleText,
+    marginBottom: 6,
+    letterSpacing: 0.4,
+  },
+  formInput: {
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    color: BENTO_COLORS.neutralText,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+  },
+  formInputArea: {
+    minHeight: 140,
+    paddingTop: 14,
+  },
+  saveEditBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: BENTO_COLORS.deepNavy,
+    paddingVertical: 16,
+    borderRadius: BENTO_COLORS.pillRadius,
+    marginTop: 10,
+    ...BENTO_COLORS.heroShadow,
+  },
+  saveEditBtnText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#ffffff",
   },
 });

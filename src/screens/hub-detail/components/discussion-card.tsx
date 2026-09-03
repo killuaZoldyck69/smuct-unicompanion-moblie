@@ -1,11 +1,36 @@
 import React, { memo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Platform,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
-
-import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
-import { spacing, rounded, shadows } from "@/theme/layout";
 import { formatDate } from "@/utils/date-formatter";
+
+const BENTO_COLORS = {
+  deepNavy: "#131b2e",
+  white: "#ffffff",
+  neutralText: "#191c1d",
+  subtleText: "#64748b",
+  cardRadius: 24,
+  pillRadius: 9999,
+  shadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 24,
+    elevation: 2,
+  },
+};
+
+const fontFamily = Platform.select({
+  ios: "Plus Jakarta Sans",
+  android: "sans-serif",
+  default: "sans-serif",
+});
 
 interface Props {
   item: any;
@@ -18,22 +43,13 @@ const DiscussionCard = ({ item, onPress }: Props) => {
   return (
     <TouchableOpacity
       style={styles.card}
-      activeOpacity={0.92}
+      activeOpacity={0.85}
       onPress={onPress}
       accessible={true}
       accessibilityRole="button"
       accessibilityLabel={`Discussion: ${item.title}, by ${item.author?.name || "Unknown User"}, ${replyCount} replies`}
     >
-      {/* Question First */}
-      <Text style={styles.discussionTitle}>{item.title}</Text>
-
-      {!!item.content && (
-        <Text style={styles.contentBody} numberOfLines={3}>
-          {item.content}
-        </Text>
-      )}
-
-      {/* Author Section */}
+      {/* Author Header Row */}
       <View style={styles.authorRow}>
         {item.author?.image ? (
           <Image
@@ -49,20 +65,44 @@ const DiscussionCard = ({ item, onPress }: Props) => {
         )}
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.authorText}>
-            {item.author?.name || "Unknown User"} • {formatDate(item.createdAt)}
+          <Text style={styles.authorNameText}>
+            {item.author?.name || "Student"}
           </Text>
+          <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
+        </View>
+
+        <View style={styles.actionArrowCircle}>
+          <Feather
+            name="arrow-up-right"
+            size={14}
+            color={BENTO_COLORS.deepNavy}
+          />
         </View>
       </View>
 
-      {/* Footer */}
+      {/* Discussion Title */}
+      <Text style={styles.discussionTitle}>{item.title}</Text>
+
+      {/* Content preview */}
+      {!!item.content && (
+        <Text style={styles.contentBody} numberOfLines={2}>
+          {item.content}
+        </Text>
+      )}
+
+      {/* Footer Pill */}
       <View style={styles.footer}>
-        <View style={styles.statItem}>
-          <Feather name="message-circle" size={15} color={colors.outline} />
-          <Text style={styles.statText}>
+        <View style={styles.replyPill}>
+          <Feather
+            name="message-circle"
+            size={13}
+            color={BENTO_COLORS.deepNavy}
+            style={{ marginRight: 6 }}
+          />
+          <Text style={styles.replyPillText}>
             {replyCount === 0
               ? "No replies yet"
-              : `${replyCount} Reply${replyCount > 1 ? "ies" : ""}`}
+              : `${replyCount} Repl${replyCount > 1 ? "ies" : "y"}`}
           </Text>
         </View>
       </View>
@@ -74,79 +114,94 @@ export default memo(DiscussionCard);
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: spacing.stackMd,
-    ...shadows.level1,
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: BENTO_COLORS.cardRadius,
+    padding: 20,
+    marginBottom: 14,
+    ...BENTO_COLORS.shadow,
   },
-
-  discussionTitle: {
-    ...typography.titleLg,
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.onSurface,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-
-  contentBody: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
-    lineHeight: 24,
-    marginBottom: 16,
-  },
-
   authorRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 12,
   },
-
   avatarImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     marginRight: 10,
-    backgroundColor: colors.surfaceContainerHigh,
+    backgroundColor: "#edf2f7",
   },
-
   avatarFallback: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     marginRight: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.secondaryContainer,
+    backgroundColor: "#e0f2fe",
   },
-
   avatarText: {
-    ...typography.labelMd,
-    color: colors.secondary,
-    fontWeight: "700",
+    fontFamily,
+    fontSize: 14,
+    color: "#0369a1",
+    fontWeight: "800",
   },
-
-  authorText: {
-    ...typography.labelMd,
-    color: colors.onSurfaceVariant,
+  authorNameText: {
+    fontFamily,
+    fontSize: 14,
+    color: BENTO_COLORS.deepNavy,
+    fontWeight: "800",
+  },
+  dateText: {
+    fontFamily,
+    fontSize: 11,
+    color: BENTO_COLORS.subtleText,
     fontWeight: "500",
+    marginTop: 2,
   },
-
+  actionArrowCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f8fafc",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  discussionTitle: {
+    fontFamily,
+    fontSize: 17,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+    lineHeight: 22,
+    marginBottom: 6,
+  },
+  contentBody: {
+    fontFamily,
+    fontSize: 13,
+    color: BENTO_COLORS.subtleText,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
   footer: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.surfaceContainerHighest,
-  },
-
-  statItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.05)",
   },
-
-  statText: {
-    ...typography.labelSm,
-    color: colors.outline,
+  replyPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BENTO_COLORS.pillRadius,
+  },
+  replyPillText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
   },
 });

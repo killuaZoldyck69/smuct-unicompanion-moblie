@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Platform,
+  BackHandler,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,9 +29,6 @@ import {
   archiveHub,
   createAssessment,
 } from "@/services/hub-service";
-import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
-import { spacing } from "@/theme/layout";
 
 // Components
 import HubHeader from "./components/hub-header";
@@ -59,17 +58,50 @@ import {
   useMyHubs,
 } from "@/features/hubs/useHubs";
 
+// ==================================================
+// 1. SOFT CAMPUS BENTO DESIGN SYSTEM CONSTANTS
+// ==================================================
+const BENTO_COLORS = {
+  background: "#f7f9fb",
+  deepNavy: "#131b2e",
+  white: "#ffffff",
+  neutralText: "#191c1d",
+  subtleText: "#64748b",
+  cardRadius: 24,
+  pillRadius: 9999,
+  shadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 24,
+    elevation: 2,
+  },
+  heroShadow: {
+    shadowColor: "#131b2e",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 6,
+  },
+};
+
+const fontFamily = Platform.select({
+  ios: "Plus Jakarta Sans",
+  android: "sans-serif",
+  default: "sans-serif",
+});
+
 type SubTab =
-  | "ANNOUNCEMENTS"
   | "COURSEWORK"
+  | "ANNOUNCEMENTS"
   | "QA"
   | "MATERIALS"
   | "MEMBERS"
   | "REVIEWS";
 
 const ALL_TABS: { id: SubTab; label: string }[] = [
-  { id: "ANNOUNCEMENTS", label: "Announcements" },
   { id: "COURSEWORK", label: "Coursework" },
+  { id: "ANNOUNCEMENTS", label: "Announcements" },
   { id: "QA", label: "Q&A" },
   { id: "MATERIALS", label: "Materials" },
   { id: "MEMBERS", label: "Members" },
@@ -82,9 +114,10 @@ export interface HubDetailProps {
 
 export function HubDetail({ hubId }: HubDetailProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<SubTab>("ANNOUNCEMENTS");
+  const [activeTab, setActiveTab] = useState<SubTab>("COURSEWORK");
 
   // Modal States
   const [isAnnounceModalVisible, setIsAnnounceModalVisible] = useState(false);
@@ -312,91 +345,89 @@ export function HubDetail({ hubId }: HubDetailProps) {
       }),
   });
 
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/hubs");
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const onHardwareBack = () => {
+      handleBack();
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onHardwareBack
+    );
+    return () => sub.remove();
+  }, [handleBack]);
+
   if (isLoadingHub) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primaryContainer} />
+        <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
       </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* 1. HUB HERO HEADER */}
       <HubHeader
         hubDetails={hubDetails}
         onOptionsPress={() => setIsHubOptionsVisible(true)}
+        onBack={handleBack}
       />
 
+      {/* 2. SOFT BENTO SUB-TABS */}
       <View style={styles.tabsWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsContainer}
         >
-          {visibleTabs.map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.tabButton,
-                activeTab === tab.id && styles.tabButtonActive,
-              ]}
-              onPress={() => setActiveTab(tab.id as SubTab)}
-              accessible={true}
-              accessibilityRole="tab"
-              accessibilityLabel={`${tab.label} tab`}
-            >
-              <Text
+          {visibleTabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
                 style={[
-                  styles.tabText,
-                  activeTab === tab.id && styles.tabTextActive,
+                  styles.tabButton,
+                  isActive && styles.tabButtonActive,
                 ]}
+                onPress={() => setActiveTab(tab.id as SubTab)}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="tab"
+                accessibilityLabel={`${tab.label} tab`}
               >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.tabText,
+                    isActive && styles.tabTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
-      {/* CONTENT LISTS */}
-      {activeTab === "ANNOUNCEMENTS" && (
-        <>
-          {isLoadingAnnouncements ? (
-            <ActivityIndicator style={{ marginTop: 40 }} />
-          ) : (
-            <FlatList
-              data={announcements}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <AnnouncementCard
-                  item={item}
-                  onCommentPress={setActiveAnnouncement}
-                />
-              )}
-              contentContainerStyle={styles.listContent}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>No announcements yet.</Text>
-              }
-            />
-          )}
-          {canManage && (
-            <TouchableOpacity
-              style={styles.fab}
-              onPress={() => setIsAnnounceModalVisible(true)}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Create announcement"
-            >
-              <Feather name="edit-2" size={24} color="#FFF" />
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-
+      {/* 3. SUB-TAB CONTENT LISTS */}
       {activeTab === "COURSEWORK" && (
         <>
           {isLoadingAssessments ? (
-            <ActivityIndicator style={{ marginTop: 40 }} />
+            <ActivityIndicator
+              size="large"
+              color={BENTO_COLORS.deepNavy}
+              style={{ marginTop: 40 }}
+            />
           ) : (
             <FlatList
               data={assessments}
@@ -409,23 +440,100 @@ export function HubDetail({ hubId }: HubDetailProps) {
                   myUserId={myUserId}
                 />
               )}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: insets.bottom > 0 ? insets.bottom + 90 : 100 },
+              ]}
+              showsVerticalScrollIndicator={false}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>
-                  No coursework assigned yet.
-                </Text>
+                <View style={styles.emptyBentoCard}>
+                  <View style={styles.emptyIconCircle}>
+                    <Feather
+                      name="clipboard"
+                      size={28}
+                      color={BENTO_COLORS.subtleText}
+                    />
+                  </View>
+                  <Text style={styles.emptyTitle}>No Coursework Assigned</Text>
+                  <Text style={styles.emptyDesc}>
+                    There are currently no assignments or quizzes scheduled for
+                    this class.
+                  </Text>
+                </View>
               }
             />
           )}
           {canManage && (
             <TouchableOpacity
-              style={styles.fab}
+              style={[
+                styles.fab,
+                { bottom: insets.bottom > 0 ? insets.bottom + 20 : 28 },
+              ]}
               onPress={() => setIsCourseworkModalVisible(true)}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Assign new coursework"
+              activeOpacity={0.85}
             >
               <Feather name="plus" size={24} color="#FFF" />
+            </TouchableOpacity>
+          )}
+        </>
+      )}
+
+      {activeTab === "ANNOUNCEMENTS" && (
+        <>
+          {isLoadingAnnouncements ? (
+            <ActivityIndicator
+              size="large"
+              color={BENTO_COLORS.deepNavy}
+              style={{ marginTop: 40 }}
+            />
+          ) : (
+            <FlatList
+              data={announcements}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <AnnouncementCard
+                  item={item}
+                  onCommentPress={setActiveAnnouncement}
+                />
+              )}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: insets.bottom > 0 ? insets.bottom + 90 : 100 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.emptyBentoCard}>
+                  <View style={styles.emptyIconCircle}>
+                    <Feather
+                      name="bell"
+                      size={28}
+                      color={BENTO_COLORS.subtleText}
+                    />
+                  </View>
+                  <Text style={styles.emptyTitle}>No Announcements Yet</Text>
+                  <Text style={styles.emptyDesc}>
+                    Your instructors have not published any class announcements.
+                  </Text>
+                </View>
+              }
+            />
+          )}
+          {canManage && (
+            <TouchableOpacity
+              style={[
+                styles.fab,
+                { bottom: insets.bottom > 0 ? insets.bottom + 20 : 28 },
+              ]}
+              onPress={() => setIsAnnounceModalVisible(true)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Create announcement"
+              activeOpacity={0.85}
+            >
+              <Feather name="edit-2" size={22} color="#FFF" />
             </TouchableOpacity>
           )}
         </>
@@ -434,7 +542,11 @@ export function HubDetail({ hubId }: HubDetailProps) {
       {activeTab === "QA" && (
         <>
           {isLoadingDiscussions ? (
-            <ActivityIndicator style={{ marginTop: 40 }} />
+            <ActivityIndicator
+              size="large"
+              color={BENTO_COLORS.deepNavy}
+              style={{ marginTop: 40 }}
+            />
           ) : (
             <FlatList
               data={discussions}
@@ -445,18 +557,39 @@ export function HubDetail({ hubId }: HubDetailProps) {
                   onPress={() => setActiveDiscussion(item)}
                 />
               )}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: insets.bottom > 0 ? insets.bottom + 90 : 100 },
+              ]}
+              showsVerticalScrollIndicator={false}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>No questions asked yet.</Text>
+                <View style={styles.emptyBentoCard}>
+                  <View style={styles.emptyIconCircle}>
+                    <Feather
+                      name="help-circle"
+                      size={28}
+                      color={BENTO_COLORS.subtleText}
+                    />
+                  </View>
+                  <Text style={styles.emptyTitle}>No Questions Asked</Text>
+                  <Text style={styles.emptyDesc}>
+                    Have questions about course topics? Start a discussion with
+                    your peers and instructors.
+                  </Text>
+                </View>
               }
             />
           )}
           <TouchableOpacity
-            style={styles.fab}
+            style={[
+              styles.fab,
+              { bottom: insets.bottom > 0 ? insets.bottom + 20 : 28 },
+            ]}
             onPress={() => setIsQuestionModalVisible(true)}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Ask a question"
+            activeOpacity={0.85}
           >
             <Feather name="help-circle" size={24} color="#FFF" />
           </TouchableOpacity>
@@ -466,24 +599,49 @@ export function HubDetail({ hubId }: HubDetailProps) {
       {activeTab === "MATERIALS" && (
         <>
           {isLoadingResources ? (
-            <ActivityIndicator style={{ marginTop: 40 }} />
+            <ActivityIndicator
+              size="large"
+              color={BENTO_COLORS.deepNavy}
+              style={{ marginTop: 40 }}
+            />
           ) : (
             <FlatList
               data={resources}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => <ResourceCard item={item} />}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: insets.bottom > 0 ? insets.bottom + 90 : 100 },
+              ]}
+              showsVerticalScrollIndicator={false}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>No materials uploaded yet.</Text>
+                <View style={styles.emptyBentoCard}>
+                  <View style={styles.emptyIconCircle}>
+                    <Feather
+                      name="folder"
+                      size={28}
+                      color={BENTO_COLORS.subtleText}
+                    />
+                  </View>
+                  <Text style={styles.emptyTitle}>No Materials Uploaded</Text>
+                  <Text style={styles.emptyDesc}>
+                    Slides, syllabus, and lecture notes will appear here once
+                    shared.
+                  </Text>
+                </View>
               }
             />
           )}
           <TouchableOpacity
-            style={styles.fab}
+            style={[
+              styles.fab,
+              { bottom: insets.bottom > 0 ? insets.bottom + 20 : 28 },
+            ]}
             onPress={() => setIsResourceModalVisible(true)}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Upload study material"
+            activeOpacity={0.85}
           >
             <Feather name="plus" size={24} color="#FFF" />
           </TouchableOpacity>
@@ -494,7 +652,11 @@ export function HubDetail({ hubId }: HubDetailProps) {
         <FlatList
           data={sortedMembers}
           keyExtractor={(item: any) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom > 0 ? insets.bottom + 40 : 50 },
+          ]}
+          showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <MemberRow
               item={item}
@@ -505,48 +667,55 @@ export function HubDetail({ hubId }: HubDetailProps) {
             />
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No members found.</Text>
+            <View style={styles.emptyBentoCard}>
+              <View style={styles.emptyIconCircle}>
+                <Feather
+                  name="users"
+                  size={28}
+                  color={BENTO_COLORS.subtleText}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>No Members Found</Text>
+              <Text style={styles.emptyDesc}>
+                Share the invite code with your classmates to build your course
+                hub.
+              </Text>
+            </View>
           }
         />
       )}
 
       {activeTab === "REVIEWS" && (
-        <View style={styles.centerContainer}>
-          <Feather
-            name="star"
-            size={48}
-            color={colors.surfaceContainerHighest}
-            style={{ marginBottom: 16 }}
-          />
-          <Text style={styles.emptyTitle}>Course Reviews</Text>
-          <Text style={styles.emptyText}>
-            {hubDetails?.isReviewOpen
-              ? "Reviews are currently open for this course."
-              : "Reviews are closed by the administration."}
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.fab,
-              {
-                position: "relative",
-                bottom: 0,
-                right: 0,
-                marginTop: 24,
-                width: "auto",
-                paddingHorizontal: 24,
-                height: 48,
-                borderRadius: 24,
-              },
-            ]}
-            onPress={() => router.push(`/hub/${hubId}/reviews`)}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Enter Reviews Portal"
-          >
-            <Text style={{ color: "#FFF", fontWeight: "700" }}>
-              Enter Reviews Portal
+        <View style={styles.reviewsCenterWrapper}>
+          <View style={styles.emptyBentoCard}>
+            <View style={[styles.emptyIconCircle, { backgroundColor: "#fefce8" }]}>
+              <Feather name="star" size={32} color="#b45309" />
+            </View>
+            <Text style={styles.emptyTitle}>Course Reviews</Text>
+            <Text style={styles.emptyDesc}>
+              {hubDetails?.isReviewOpen
+                ? "Student feedback and reviews are currently active for this course."
+                : "Course reviews are currently closed by the university administration."}
             </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.reviewActionBtn}
+              onPress={() => router.push(`/hub/${hubId}/reviews`)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Enter Reviews Portal"
+              activeOpacity={0.85}
+            >
+              <Text style={styles.reviewActionBtnText}>
+                Enter Reviews Portal
+              </Text>
+              <Feather
+                name="arrow-right"
+                size={16}
+                color="#ffffff"
+                style={{ marginLeft: 6 }}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -653,52 +822,126 @@ export function HubDetail({ hubId }: HubDetailProps) {
   );
 }
 
+// ==================================================
+// 4. STYLES
+// ==================================================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: {
+    flex: 1,
+    backgroundColor: BENTO_COLORS.background,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: BENTO_COLORS.background,
+  },
 
+  // --- SUB-TABS ---
   tabsWrapper: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    backgroundColor: BENTO_COLORS.background,
+    paddingVertical: 12,
   },
   tabsContainer: {
     flexDirection: "row",
-    paddingHorizontal: spacing.marginMobile,
+    paddingHorizontal: 20,
+    gap: 8,
   },
   tabButton: {
-    paddingVertical: 14,
+    paddingVertical: 9,
     paddingHorizontal: 16,
+    borderRadius: BENTO_COLORS.pillRadius,
+    backgroundColor: BENTO_COLORS.white,
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    ...BENTO_COLORS.shadow,
   },
-  tabButtonActive: { borderBottomColor: colors.primaryContainer },
-  tabText: { ...typography.labelMd, color: colors.outline, fontSize: 13 },
-  tabTextActive: { color: colors.primaryContainer, fontWeight: "700" },
-
-  listContent: { padding: spacing.marginMobile, paddingBottom: 100 },
-  emptyTitle: {
-    ...typography.titleLg,
-    color: colors.onSurface,
-    marginBottom: spacing.stackSm,
+  tabButtonActive: {
+    backgroundColor: BENTO_COLORS.deepNavy,
   },
-  emptyText: {
-    ...typography.bodyMd,
-    color: colors.outline,
-    textAlign: "center",
-    marginTop: 10,
+  tabText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: BENTO_COLORS.neutralText,
+  },
+  tabTextActive: {
+    color: "#ffffff",
   },
 
-  fab: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
+  // --- LIST CONTENT ---
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+  },
+
+  // --- EMPTY BENTO CARD ---
+  emptyBentoCard: {
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: BENTO_COLORS.cardRadius,
+    padding: 32,
+    alignItems: "center",
+    marginTop: 16,
+    ...BENTO_COLORS.shadow,
+  },
+  emptyIconCircle: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primaryContainer,
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    fontFamily,
+    fontSize: 17,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  emptyDesc: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: 10,
+  },
+
+  // --- REVIEWS TAB ---
+  reviewsCenterWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  reviewActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO_COLORS.deepNavy,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: BENTO_COLORS.pillRadius,
+    marginTop: 18,
+    ...BENTO_COLORS.heroShadow,
+  },
+  reviewActionBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+
+  // --- FAB ---
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: BENTO_COLORS.deepNavy,
+    justifyContent: "center",
+    alignItems: "center",
+    ...BENTO_COLORS.heroShadow,
   },
 });

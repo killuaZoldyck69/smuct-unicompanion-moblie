@@ -159,7 +159,7 @@ export function Home() {
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Today's Classes</Text>
           <TouchableOpacity
-            onPress={() => router.push("/my-schedule")}
+            onPress={() => router.push("/(tabs)/my-schedule")}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="See full routine"
@@ -222,7 +222,7 @@ export function Home() {
         <View style={[styles.sectionHeaderRow, { marginTop: 32 }]}>
           <Text style={styles.sectionTitle}>Recent Notices</Text>
           <TouchableOpacity
-            onPress={() => router.push("/notices")}
+            onPress={() => router.push("/(tabs)/notices")}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="View all notices"
@@ -255,7 +255,7 @@ export function Home() {
                     index !== Math.min(notices.length, 3) - 1 &&
                       styles.noticeDivider,
                   ]}
-                  onPress={() => router.push("/notices")}
+                  onPress={() => router.push("/(tabs)/notices")}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel={`Notice: ${notice.title}`}

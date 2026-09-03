@@ -1,175 +1,144 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Platform,
-  Alert,
-} from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
-import { useQueryClient } from "@tanstack/react-query";
-import { authClient } from "@/services/auth-client";
-import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
-import { spacing, rounded, shadows } from "@/theme/layout";
+import { PROFILE_COLORS, fontFamily } from "../constants";
+import { ProfileLogoutButton } from "./shared/profile-logout-button";
 
-export default function AdminProfile({ sessionUser }: { sessionUser: any }) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-
-  const handleLogout = async () => {
-    const performLogout = async () => {
-      await authClient.signOut();
-      if (Platform.OS !== "web") {
-        await SecureStore.deleteItemAsync("better-auth.session_token");
-        await SecureStore.deleteItemAsync("better-auth_cookie");
-        await SecureStore.deleteItemAsync("better-auth_session_data");
-      }
-      queryClient.setQueryData(["currentUser"], null);
-      queryClient.clear();
-      router.replace("/(auth)/login");
-    };
-    if (Platform.OS === "web") {
-      if (window.confirm("Log out?")) performLogout();
-    } else {
-      Alert.alert("Log Out", "Are you sure?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Log Out", style: "destructive", onPress: performLogout },
-      ]);
-    }
+interface AdminProfileProps {
+  sessionUser: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
   };
+}
+
+export default function AdminProfile({ sessionUser }: AdminProfileProps) {
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerBackground} />
-
-      <View style={styles.avatarSection}>
-        <View style={styles.avatarPlaceholder}>
-          <Feather name="shield" size={40} color={colors.onSurfaceVariant} />
+    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+      <View style={styles.heroCard}>
+        <View style={styles.avatarCircle}>
+          <Feather name="shield" size={36} color="#ffffff" />
         </View>
         <Text style={styles.nameText}>
           {sessionUser?.name || "Administrator"}
         </Text>
-        <Text style={styles.roleText}>SYSTEM ADMIN</Text>
+        <View style={styles.roleBadge}>
+          <Text style={styles.roleBadgeText}>SYSTEM ADMIN</Text>
+        </View>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardHeader}>ACCOUNT DETAILS</Text>
         <View style={styles.infoRow}>
-          <View style={styles.infoIconWrapper}>
-            <Feather name="mail" size={20} color={colors.onSurfaceVariant} />
+          <View style={styles.iconCircle}>
+            <Feather name="mail" size={18} color={PROFILE_COLORS.deepNavy} />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.infoLabel}>Admin Email</Text>
             <Text style={styles.infoValue}>{sessionUser?.email}</Text>
           </View>
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={handleLogout}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel="Log Out"
-      >
-        <Feather name="log-out" size={20} color={colors.error} />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
+      <View style={styles.logoutWrapper}>
+        <ProfileLogoutButton />
+      </View>
     </View>
   );
 }
 
-// Attach the same styles block used in TeacherProfile here to keep the UI consistent.
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F6F8" },
-  headerBackground: {
-    height: 140,
-    width: "100%",
-    position: "absolute",
-    top: 0,
-    backgroundColor: colors.primaryContainer,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+  container: {
+    flex: 1,
+    backgroundColor: PROFILE_COLORS.background,
+    paddingHorizontal: 20,
   },
-  avatarSection: {
+  heroCard: {
+    backgroundColor: PROFILE_COLORS.deepNavy,
+    borderRadius: PROFILE_COLORS.cardRadius,
+    padding: 24,
     alignItems: "center",
-    marginTop: 80,
-    marginBottom: spacing.stackLg,
+    marginBottom: 20,
+    ...PROFILE_COLORS.heroShadow,
   },
-  avatarPlaceholder: {
-    width: 110,
-    height: 110,
-    borderRadius: rounded.full,
-    backgroundColor: colors.surfaceContainerLowest,
+  avatarCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 4,
-    borderColor: colors.surfaceContainerLowest,
+    marginBottom: 12,
   },
   nameText: {
-    ...typography.headlineMd,
-    color: colors.onSurface,
-    marginTop: spacing.stackMd,
+    fontFamily,
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: 6,
   },
-  roleText: {
-    ...typography.labelMd,
-    color: colors.outline,
-    textTransform: "uppercase",
+  roleBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: PROFILE_COLORS.pillRadius,
+  },
+  roleBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#a5b4fc",
     letterSpacing: 1,
-    marginTop: 2,
   },
   card: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    marginHorizontal: spacing.marginMobile,
-    marginBottom: spacing.stackLg,
-    padding: spacing.marginMobile,
-    ...shadows.level1,
+    backgroundColor: PROFILE_COLORS.white,
+    borderRadius: PROFILE_COLORS.cardRadius,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    ...PROFILE_COLORS.shadow,
   },
   cardHeader: {
-    ...typography.labelSm,
-    color: colors.outline,
-    letterSpacing: 1.5,
-    marginBottom: spacing.stackLg,
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    color: PROFILE_COLORS.subtleText,
+    letterSpacing: 1,
+    marginBottom: 16,
   },
-  infoRow: { flexDirection: "row", alignItems: "center" },
-  infoIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: rounded.full,
-    backgroundColor: "#F0F4F8",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.stackMd,
-  },
-  infoLabel: { ...typography.labelSm, color: colors.outline, marginBottom: 2 },
-  infoValue: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "500",
-  },
-  logoutButton: {
+  infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: spacing.marginMobile,
-    marginTop: spacing.stackSm,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: colors.errorContainer,
-    borderRadius: rounded.lg,
-    paddingVertical: spacing.marginMobile,
-    ...shadows.level1,
   },
-  logoutText: {
-    ...typography.labelMd,
-    color: colors.error,
+  iconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  infoLabel: {
+    fontFamily,
+    fontSize: 11,
     fontWeight: "700",
-    marginLeft: spacing.stackSm,
+    color: PROFILE_COLORS.subtleText,
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    color: PROFILE_COLORS.neutralText,
+  },
+  logoutWrapper: {
+    marginTop: "auto",
+    marginBottom: 24,
   },
 });

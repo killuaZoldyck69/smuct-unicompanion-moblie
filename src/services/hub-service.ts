@@ -99,7 +99,7 @@ export const getHubDetails = async (hubId: string) => {
 export const getHubDetailsAPI = getHubDetails;
 
 export const getAvailableTeachers = async () => {
-  const res = await api.get("/hubs/available-teachers");
+  const res = await api.get("/hubs/teachers");
   return res.data?.data || [];
 };
 export const getAvailableTeachersAPI = getAvailableTeachers;

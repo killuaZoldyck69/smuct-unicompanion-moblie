@@ -113,7 +113,7 @@ export default function HubCard({ item, index }: HubCardProps) {
       activeOpacity={0.9}
       onPress={() => router.push(`/hub/${hub.id}`)}
       accessible={true}
-      accessibilityRole="button"
+      accessibilityRole="link"
       accessibilityLabel={`Course Hub: ${hub.courseName}, Code: ${hub.courseCode}, ${memberCount} students, taught by ${teacherName}`}
     >
       {/* 1. TITLE ROW */}
@@ -121,14 +121,9 @@ export default function HubCard({ item, index }: HubCardProps) {
         <Text style={styles.courseName} numberOfLines={1}>
           {hub.courseName}
         </Text>
-        <TouchableOpacity
-          style={styles.menuIcon}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={`Options for ${hub.courseName}`}
-        >
-          <Feather name="more-vertical" size={20} color="#131b2e" />
-        </TouchableOpacity>
+        <View style={styles.menuIcon}>
+          <Feather name="arrow-up-right" size={20} color="#131b2e" />
+        </View>
       </View>
 
       {/* 2. TAGS ROW */}

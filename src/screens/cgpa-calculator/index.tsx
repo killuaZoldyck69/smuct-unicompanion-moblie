@@ -1,191 +1,192 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  BackHandler,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { Picker } from "@react-native-picker/picker";
 import Toast from "react-native-toast-message";
 
 import { getMyHubs } from "@/services/hub-service";
-import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
-import { spacing, rounded, shadows } from "@/theme/layout";
-
-const GRADE_POINTS: Record<string, number> = {
-  "A+": 4.0,
-  A: 3.75,
-  "A-": 3.5,
-  "B+": 3.25,
-  B: 3.0,
-  "B-": 2.75,
-  "C+": 2.5,
-  C: 2.25,
-  D: 2.0,
-  F: 0.0,
-};
-
-interface CourseEntry {
-  id: string;
-  name: string;
-  credit: string;
-  grade: string;
-}
+import { BENTO_COLORS, CourseEntry, fontFamily } from "./constants";
+import { calculateCGPA } from "./utils";
+import { CGPAHeroCard } from "./components/cgpa-hero-card";
+import { CourseEntryCard } from "./components/course-entry-card";
+import { GradePickerModal } from "./components/grade-picker-modal";
+import { GradeScaleModal } from "./components/grade-scale-modal";
 
 export function CGPACalculator() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [courses, setCourses] = useState<CourseEntry[]>([
-    { id: "1", name: "", credit: "", grade: "" },
+    { id: "1", name: "", credit: "3.0", grade: "" },
   ]);
+  const [activePickerCourseId, setActivePickerCourseId] = useState<string | null>(null);
+  const [isScaleModalVisible, setIsScaleModalVisible] = useState(false);
 
-  const { data: myHubs, isLoading } = useQuery({
+  const { data: myHubs, isLoading: isHubsLoading } = useQuery({
     queryKey: ["myHubs"],
     queryFn: getMyHubs,
   });
 
-  const addCourseRow = () => {
-    setCourses([
-      ...courses,
-      { id: Math.random().toString(), name: "", credit: "", grade: "" },
+  const addCourseRow = useCallback(() => {
+    setCourses((prev) => [
+      ...prev,
+      { id: Math.random().toString(), name: "", credit: "3.0", grade: "" },
     ]);
-  };
+  }, []);
 
-  const removeCourseRow = (id: string) => {
-    setCourses(courses.filter((c) => c.id !== id));
-  };
+  const removeCourseRow = useCallback((id: string) => {
+    setCourses((prev) => prev.filter((c) => c.id !== id));
+  }, []);
 
-  const updateCourse = (
-    id: string,
-    field: keyof CourseEntry,
-    value: string,
-  ) => {
-    setCourses(
-      courses.map((c) => (c.id === id ? { ...c, [field]: value } : c)),
-    );
-  };
+  const updateCourse = useCallback(
+    (id: string, field: keyof CourseEntry, value: string) => {
+      setCourses((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
+      );
+    },
+    []
+  );
 
-  const handleAutoFill = () => {
+  const handleAutoFill = useCallback(() => {
     if (!myHubs || myHubs.length === 0) {
-      Toast.show({ type: "info", text1: "No active courses found." });
+      Toast.show({ type: "info", text1: "No active courses found to auto-fill." });
       return;
     }
 
-    const activeHubs = myHubs.filter((m: any) => !m.hub.isArchived);
-    const importedCourses = activeHubs.map((m: any) => ({
+    const activeHubs = myHubs.filter((m: any) => !m.hub?.isArchived);
+    if (activeHubs.length === 0) {
+      Toast.show({ type: "info", text1: "No active course hubs found." });
+      return;
+    }
+
+    const imported: CourseEntry[] = activeHubs.map((m: any) => ({
       id: Math.random().toString(),
-      name: m.hub.courseName,
-      credit: String(m.hub.credit),
+      name: `${m.hub.courseCode} - ${m.hub.courseName}`,
+      credit: String(m.hub.credit || 3.0),
       grade: "",
     }));
 
-    setCourses(importedCourses);
-    Toast.show({ type: "success", text1: "Courses imported successfully!" });
-  };
-
-  const handleClearAll = () => {
-    setCourses([
-      { id: Math.random().toString(), name: "", credit: "", grade: "" },
-    ]);
-  };
-
-  const { totalCredits, cgpa } = useMemo(() => {
-    let tCredits = 0;
-    let tPoints = 0;
-
-    courses.forEach((c) => {
-      const creditNum = parseFloat(c.credit);
-      const gradePoint = GRADE_POINTS[c.grade];
-
-      if (!isNaN(creditNum) && gradePoint !== undefined) {
-        tCredits += creditNum;
-        tPoints += creditNum * gradePoint;
-      }
+    setCourses(imported);
+    Toast.show({
+      type: "success",
+      text1: "Courses Imported",
+      text2: `Successfully loaded ${imported.length} courses from your hubs.`,
     });
+  }, [myHubs]);
 
-    const calculatedCGPA =
-      tCredits > 0 ? (tPoints / tCredits).toFixed(2) : "0.00";
+  const handleClearAll = useCallback(() => {
+    setCourses([{ id: Math.random().toString(), name: "", credit: "3.0", grade: "" }]);
+  }, []);
 
-    return { totalCredits: tCredits, cgpa: calculatedCGPA };
-  }, [courses]);
+  const cgpaResult = useMemo(() => calculateCGPA(courses), [courses]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (activePickerCourseId) {
+        setActivePickerCourseId(null);
+        return true;
+      }
+      if (isScaleModalVisible) {
+        setIsScaleModalVisible(false);
+        return true;
+      }
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => sub.remove();
+  }, [activePickerCourseId, isScaleModalVisible]);
+
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/menu");
+    }
+  }, [router]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.safeContainer} edges={["top"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
-        {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
+            onPress={handleBack}
+            style={styles.headerIconButton}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Go back"
+            activeOpacity={0.7}
           >
-            <Feather name="arrow-left" size={24} color={colors.onSurface} />
+            <Feather name="arrow-left" size={22} color={BENTO_COLORS.deepNavy} />
           </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>CGPA Calculator</Text>
-            <Text style={styles.headerSubtitle}>
-              Estimate your semester results
-            </Text>
+
+          <View style={styles.headerTitlesContainer}>
+            <Text style={styles.screenTitle}>CGPA Calculator</Text>
+            <Text style={styles.screenSubtitle}>Estimate your semester results</Text>
           </View>
+
+          <TouchableOpacity
+            onPress={() => setIsScaleModalVisible(true)}
+            style={styles.headerIconButton}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="View official grading scale"
+            activeOpacity={0.7}
+          >
+            <Feather name="help-circle" size={19} color={BENTO_COLORS.deepNavy} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom > 0 ? insets.bottom + 40 : 56 },
+          ]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* RESULT CARD */}
-          <View style={styles.resultCard}>
-            <View style={styles.resultCol}>
-              <Text style={styles.resultLabel}>Total Credits</Text>
-              <Text style={styles.resultValue}>{totalCredits}</Text>
-            </View>
-            <View style={styles.resultDivider} />
-            <View style={styles.resultCol}>
-              <Text style={styles.resultLabel}>Estimated CGPA</Text>
-              <Text style={[styles.resultValue, { color: colors.primary }]}>
-                {cgpa}
-              </Text>
-            </View>
-          </View>
+          <CGPAHeroCard
+            result={cgpaResult}
+            totalCoursesCount={courses.length}
+          />
 
-          {/* ACTION BUTTONS */}
-          <View style={styles.actionRow}>
+          <View style={styles.actionsRow}>
             <TouchableOpacity
-              style={[styles.actionBtn, styles.autoFillBtn]}
+              style={styles.autoFillBtn}
               onPress={handleAutoFill}
-              disabled={isLoading}
+              disabled={isHubsLoading}
+              activeOpacity={0.8}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Auto-fill my courses"
+              accessibilityLabel="Auto-fill enrolled courses from your hubs"
             >
               <Feather
                 name="download-cloud"
                 size={16}
-                color={colors.onPrimary}
+                color={BENTO_COLORS.deepNavy}
                 style={{ marginRight: 6 }}
               />
-              <Text style={styles.actionBtnTextWhite}>
-                Auto-fill My Courses
-              </Text>
+              <Text style={styles.autoFillBtnText}>Auto-fill My Courses</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, styles.clearBtn]}
+              style={styles.clearBtn}
               onPress={handleClearAll}
+              activeOpacity={0.8}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Clear all courses"
@@ -193,252 +194,170 @@ export function CGPACalculator() {
               <Feather
                 name="trash-2"
                 size={16}
-                color={colors.error}
+                color="#be123c"
                 style={{ marginRight: 6 }}
               />
-              <Text style={styles.actionBtnTextRed}>Clear</Text>
+              <Text style={styles.clearBtnText}>Clear</Text>
             </TouchableOpacity>
           </View>
 
-          {/* COURSE LIST */}
-          <View style={styles.courseList}>
+          <View style={styles.coursesListContainer}>
             {courses.map((course, index) => (
-              <View key={course.id} style={styles.courseRow}>
-                {courses.length > 1 && (
-                  <TouchableOpacity
-                    style={styles.removeBtn}
-                    onPress={() => removeCourseRow(course.id)}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove course ${index + 1}`}
-                  >
-                    <Feather
-                      name="minus-circle"
-                      size={20}
-                      color={colors.error}
-                    />
-                  </TouchableOpacity>
-                )}
-
-                <View style={styles.inputsContainer}>
-                  <TextInput
-                    style={styles.inputName}
-                    placeholder={`Course ${index + 1} Name`}
-                    placeholderTextColor={colors.outlineVariant}
-                    value={course.name}
-                    onChangeText={(val) => updateCourse(course.id, "name", val)}
-                    accessible={true}
-                    accessibilityLabel={`Course ${index + 1} Name`}
-                  />
-
-                  <View style={styles.bottomInputs}>
-                    <View style={styles.creditBox}>
-                      <Text style={styles.miniLabel}>Credits</Text>
-                      <TextInput
-                        style={styles.inputCredit}
-                        placeholder="3.0"
-                        placeholderTextColor={colors.outlineVariant}
-                        keyboardType="numeric"
-                        value={course.credit}
-                        onChangeText={(val) =>
-                          updateCourse(course.id, "credit", val)
-                        }
-                        accessible={true}
-                        accessibilityLabel={`Course ${index + 1} Credits`}
-                      />
-                    </View>
-
-                    <View style={styles.gradeBox}>
-                      <Text style={styles.miniLabel}>Expected Grade</Text>
-                      <View style={styles.pickerWrapper}>
-                        <Picker
-                          selectedValue={course.grade}
-                          onValueChange={(val) =>
-                            updateCourse(course.id, "grade", val)
-                          }
-                          style={styles.picker}
-                          accessibilityLabel={`Course ${index + 1} Expected Grade`}
-                        >
-                          <Picker.Item
-                            label="Select..."
-                            value=""
-                            color={colors.outline}
-                          />
-                          {Object.keys(GRADE_POINTS).map((grade) => (
-                            <Picker.Item
-                              key={grade}
-                              label={grade}
-                              value={grade}
-                            />
-                          ))}
-                        </Picker>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </View>
+              <CourseEntryCard
+                key={course.id}
+                course={course}
+                index={index}
+                canDelete={courses.length > 1}
+                onUpdate={updateCourse}
+                onRemove={removeCourseRow}
+                onOpenGradePicker={setActivePickerCourseId}
+              />
             ))}
           </View>
 
           <TouchableOpacity
             style={styles.addCourseBtn}
             onPress={addCourseRow}
+            activeOpacity={0.8}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Add another course"
           >
             <Feather
-              name="plus"
+              name="plus-circle"
               size={18}
-              color={colors.primary}
+              color={BENTO_COLORS.deepNavy}
               style={{ marginRight: 8 }}
             />
-            <Text style={styles.addCourseText}>Add Another Course</Text>
+            <Text style={styles.addCourseBtnText}>Add Another Course</Text>
           </TouchableOpacity>
         </ScrollView>
+
+        <GradePickerModal
+          visible={!!activePickerCourseId}
+          onSelectGrade={(grade) => {
+            if (activePickerCourseId) {
+              updateCourse(activePickerCourseId, "grade", grade);
+              setActivePickerCourseId(null);
+            }
+          }}
+          onClose={() => setActivePickerCourseId(null)}
+        />
+
+        <GradeScaleModal
+          visible={isScaleModalVisible}
+          onClose={() => setIsScaleModalVisible(false)}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  safeContainer: {
+    flex: 1,
+    backgroundColor: BENTO_COLORS.background,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 14,
   },
-  backButton: { marginRight: 16 },
-  headerTitle: { ...typography.headlineMd, color: colors.onSurface },
-  headerSubtitle: { ...typography.bodyMd, color: colors.outline, marginTop: 2 },
-
-  scrollContent: { padding: spacing.marginMobile, paddingBottom: 100 },
-
-  resultCard: {
-    flexDirection: "row",
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    padding: spacing.stackLg,
-    marginBottom: spacing.stackLg,
-    ...shadows.level1,
+  headerIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: BENTO_COLORS.pillRadius,
+    backgroundColor: BENTO_COLORS.white,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
+    borderColor: BENTO_COLORS.subtleBorder,
+    ...BENTO_COLORS.shadow,
   },
-  resultCol: { flex: 1, alignItems: "center", justifyContent: "center" },
-  resultDivider: {
-    width: 1,
-    backgroundColor: colors.surfaceContainerHighest,
-    marginHorizontal: 16,
+  headerTitlesContainer: {
+    alignItems: "center",
   },
-  resultLabel: {
-    ...typography.labelMd,
-    color: colors.outline,
-    textTransform: "uppercase",
-    marginBottom: 8,
+  screenTitle: {
+    fontFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
   },
-  resultValue: { fontSize: 36, fontWeight: "800", color: colors.onSurface },
-
-  actionRow: {
+  screenSubtitle: {
+    fontFamily,
+    fontSize: 11,
+    color: BENTO_COLORS.subtleText,
+    marginTop: 2,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  actionsRow: {
     flexDirection: "row",
-    gap: spacing.stackMd,
-    marginBottom: spacing.stackLg,
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    gap: 10,
   },
-  actionBtn: {
+  autoFillBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: BENTO_COLORS.white,
     paddingVertical: 12,
-    borderRadius: rounded.md,
+    paddingHorizontal: 16,
+    borderRadius: BENTO_COLORS.pillRadius,
     borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    ...BENTO_COLORS.shadow,
   },
-  autoFillBtn: {
-    backgroundColor: colors.primaryContainer,
-    borderColor: colors.primaryContainer,
+  autoFillBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
   },
   clearBtn: {
-    backgroundColor: colors.errorContainer,
-    borderColor: colors.error + "30",
-  },
-  actionBtnTextWhite: {
-    ...typography.labelMd,
-    color: colors.onPrimary,
-    fontWeight: "700",
-  },
-  actionBtnTextRed: {
-    ...typography.labelMd,
-    color: colors.error,
-    fontWeight: "700",
-  },
-
-  courseList: { gap: spacing.stackMd },
-  courseRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surfaceContainerLowest,
-    padding: spacing.stackMd,
-    borderRadius: rounded.lg,
+    justifyContent: "center",
+    backgroundColor: "#fff1f2",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: BENTO_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
+    borderColor: "rgba(244, 63, 94, 0.15)",
   },
-  removeBtn: { padding: 8, marginRight: 4 },
-
-  inputsContainer: { flex: 1 },
-  inputName: {
-    ...typography.bodyLg,
-    color: colors.onSurface,
+  clearBtnText: {
+    fontFamily,
+    fontSize: 12,
     fontWeight: "700",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
-    paddingBottom: 8,
+    color: "#be123c",
+  },
+  coursesListContainer: {
     marginBottom: 8,
   },
-
-  bottomInputs: { flexDirection: "row", gap: 12 },
-  creditBox: { flex: 0.4 },
-  gradeBox: { flex: 0.6 },
-  miniLabel: {
-    ...typography.labelSm,
-    color: colors.outline,
-    fontSize: 10,
-    marginBottom: 4,
-  },
-
-  inputCredit: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    textAlign: "center",
-  },
-  pickerWrapper: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.sm,
-    overflow: "hidden",
-    height: 40,
-    justifyContent: "center",
-  },
-  picker: { color: colors.onSurface },
-
   addCourseBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    marginTop: spacing.stackMd,
-    borderStyle: "dashed",
-    borderWidth: 2,
-    borderColor: colors.outlineVariant,
-    borderRadius: rounded.lg,
+    backgroundColor: BENTO_COLORS.white,
+    paddingVertical: 14,
+    borderRadius: BENTO_COLORS.pillRadius,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    marginBottom: 24,
+    ...BENTO_COLORS.shadow,
   },
-  addCourseText: {
-    ...typography.labelMd,
-    color: colors.primary,
+  addCourseBtnText: {
+    fontFamily,
+    fontSize: 13,
     fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
   },
 });

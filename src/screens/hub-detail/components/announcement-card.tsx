@@ -5,13 +5,33 @@ import {
   StyleSheet,
   TouchableOpacity,
   Linking,
-  Image, // 👈 Added Image import
+  Image,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
-import { spacing, rounded, shadows } from "@/theme/layout";
 import { formatDate } from "@/utils/date-formatter";
+
+const BENTO_COLORS = {
+  deepNavy: "#131b2e",
+  white: "#ffffff",
+  neutralText: "#191c1d",
+  subtleText: "#64748b",
+  cardRadius: 24,
+  pillRadius: 9999,
+  shadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 24,
+    elevation: 2,
+  },
+};
+
+const fontFamily = Platform.select({
+  ios: "Plus Jakarta Sans",
+  android: "sans-serif",
+  default: "sans-serif",
+});
 
 interface Props {
   item: any;
@@ -20,9 +40,9 @@ interface Props {
 
 const AnnouncementCard = ({ item, onCommentPress }: Props) => (
   <View style={styles.card}>
+    {/* Author Header */}
     <View style={styles.cardHeaderRow}>
       <View style={styles.userInfoRow}>
-        {/* 👈 Conditionally render the Image or the Fallback */}
         {item.creator?.image ? (
           <Image
             source={{ uri: item.creator.image }}
@@ -41,8 +61,11 @@ const AnnouncementCard = ({ item, onCommentPress }: Props) => (
         </View>
       </View>
     </View>
+
+    {/* Announcement Content */}
     <Text style={styles.contentBody}>{item.content}</Text>
 
+    {/* Attachment Link */}
     {item.attachedLinkUrl && (
       <TouchableOpacity
         style={styles.attachmentPill}
@@ -54,8 +77,8 @@ const AnnouncementCard = ({ item, onCommentPress }: Props) => (
       >
         <Feather
           name="link"
-          size={16}
-          color={colors.primary}
+          size={15}
+          color="#0369a1"
           style={{ marginRight: 8 }}
         />
         <Text style={styles.attachmentText} numberOfLines={1}>
@@ -64,23 +87,24 @@ const AnnouncementCard = ({ item, onCommentPress }: Props) => (
       </TouchableOpacity>
     )}
 
+    {/* Footer */}
     <View style={styles.cardFooter}>
       <TouchableOpacity
-        style={styles.footerAction}
+        style={styles.commentPill}
         onPress={() => onCommentPress(item)}
-        activeOpacity={0.6}
+        activeOpacity={0.7}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel={`View ${item.comments?.length || 0} class comments`}
       >
         <Feather
           name="message-circle"
-          size={16}
-          color={colors.outline}
+          size={14}
+          color={BENTO_COLORS.deepNavy}
           style={{ marginRight: 6 }}
         />
-        <Text style={styles.metaText}>
-          {item.comments?.length || 0} Class comments
+        <Text style={styles.commentPillText}>
+          {item.comments?.length || 0} Class Comments
         </Text>
       </TouchableOpacity>
     </View>
@@ -91,92 +115,99 @@ export default memo(AnnouncementCard);
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    padding: spacing.stackLg,
-    marginBottom: spacing.stackMd,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
-    ...shadows.level1,
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: BENTO_COLORS.cardRadius,
+    padding: 20,
+    marginBottom: 14,
+    ...BENTO_COLORS.shadow,
   },
   cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.stackSm,
+    marginBottom: 12,
   },
   userInfoRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   avatarImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     marginRight: 12,
-    backgroundColor: colors.surfaceContainerHigh,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
+    backgroundColor: "#edf2f7",
   },
   avatarFallbackSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryContainer,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: BENTO_COLORS.deepNavy,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   avatarTextSmall: {
-    ...typography.labelMd,
-    color: colors.onPrimary,
-    fontWeight: "700",
+    fontFamily,
+    fontSize: 14,
+    color: "#ffffff",
+    fontWeight: "800",
   },
   userName: {
-    ...typography.labelMd,
-    color: colors.onSurface,
-    fontWeight: "800", // Made slightly bolder for better hierarchy
+    fontFamily,
+    fontSize: 15,
+    color: BENTO_COLORS.deepNavy,
+    fontWeight: "800",
   },
   dateText: {
-    ...typography.labelSm,
-    color: colors.outline,
+    fontFamily,
     fontSize: 11,
+    color: BENTO_COLORS.subtleText,
+    fontWeight: "500",
     marginTop: 2,
   },
   contentBody: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
+    fontFamily,
+    fontSize: 14,
+    color: "#334155",
     lineHeight: 22,
-    marginTop: 8, // Added a bit more breathing room
+    marginBottom: 12,
   },
   attachmentPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surfaceContainerHigh,
-    padding: 12,
-    borderRadius: rounded.md,
-    marginTop: spacing.stackMd,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
+    backgroundColor: "#e0f2fe",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: BENTO_COLORS.pillRadius,
+    marginBottom: 12,
   },
   attachmentText: {
     flex: 1,
-    ...typography.bodyMd,
-    color: colors.primary,
-    fontWeight: "600",
+    fontFamily,
+    fontSize: 13,
+    color: "#0369a1",
+    fontWeight: "700",
   },
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: spacing.stackLg, // Increased separation from content
-    paddingTop: spacing.stackSm,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: colors.surfaceContainerHighest,
+    borderTopColor: "rgba(0, 0, 0, 0.05)",
   },
-  footerAction: {
+  commentPill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BENTO_COLORS.pillRadius,
   },
-  metaText: { ...typography.labelSm, color: colors.outline },
+  commentPillText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
+  },
 });
