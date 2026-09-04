@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
 
 interface AvatarChipProps {
@@ -7,6 +8,7 @@ interface AvatarChipProps {
   image?: string | null;
   subtitle?: string;
   size?: number;
+  onPress?: () => void;
 }
 
 export const AvatarChip = React.memo(function AvatarChip({
@@ -14,11 +16,12 @@ export const AvatarChip = React.memo(function AvatarChip({
   image,
   subtitle,
   size = 36,
+  onPress,
 }: AvatarChipProps) {
   const initial = (name ?? "U").charAt(0).toUpperCase();
   const halfSize = size / 2;
 
-  return (
+  const content = (
     <View style={styles.row}>
       {image ? (
         <Image
@@ -49,8 +52,27 @@ export const AvatarChip = React.memo(function AvatarChip({
           </Text>
         ) : null}
       </View>
+      {onPress && (
+        <Feather name="chevron-right" size={16} color={CAMPUS_HUB_COLORS.subtleText} />
+      )}
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.7}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`View ${name}'s profile`}
+      >
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return content;
 });
 
 const styles = StyleSheet.create({

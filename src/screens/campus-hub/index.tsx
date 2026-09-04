@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,19 +14,51 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { Forum } from "@/screens/forum";
 import { LostFoundSection } from "./lost-found";
 import { MarketplaceSection } from "./marketplace";
+import { ComplaintsSection } from "./complaints";
 import {
   SectionTabBar,
   type HubSection,
 } from "./shared/section-tab-bar";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./shared/design-tokens";
+import {
+  getCampusHubActiveSection,
+  setCampusHubActiveSection,
+  subscribeCampusHubSection,
+} from "./shared/hub-state";
 
-export function CampusHub() {
+export {
+  getCampusHubActiveSection,
+  setCampusHubActiveSection,
+  subscribeCampusHubSection,
+};
+
+interface CampusHubProps {
+  initialSection?: HubSection;
+}
+
+export function CampusHub({ initialSection }: CampusHubProps) {
   const router = useRouter();
   const { user: currentUser } = useCurrentUser();
 
-  const [activeSection, setActiveSection] = useState<HubSection>("FORUM");
+  const [activeSection, setActiveSection] = useState<HubSection>(() => {
+    return initialSection || getCampusHubActiveSection();
+  });
+
+  useEffect(() => {
+    if (initialSection) {
+      setCampusHubActiveSection(initialSection);
+      setActiveSection(initialSection);
+    }
+  }, [initialSection]);
+
+  useEffect(() => {
+    return subscribeCampusHubSection((newSec) => {
+      setActiveSection(newSec);
+    });
+  }, []);
 
   const handleSectionChange = useCallback((section: HubSection) => {
+    setCampusHubActiveSection(section);
     setActiveSection(section);
   }, []);
 
@@ -71,6 +103,7 @@ export function CampusHub() {
         {activeSection === "FORUM" && <Forum embedded={true} />}
         {activeSection === "LOST_FOUND" && <LostFoundSection />}
         {activeSection === "MARKETPLACE" && <MarketplaceSection />}
+        {activeSection === "COMPLAINTS" && <ComplaintsSection />}
       </View>
     </SafeAreaView>
   );

@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
 
-export type HubSection = "FORUM" | "LOST_FOUND" | "MARKETPLACE";
+export type HubSection = "FORUM" | "LOST_FOUND" | "MARKETPLACE" | "COMPLAINTS";
 
 interface Tab {
   key: HubSection;
@@ -21,6 +21,11 @@ const TABS: Tab[] = [
     key: "MARKETPLACE",
     label: "Buy & Sell",
     accent: CAMPUS_HUB_COLORS.marketplaceAccent,
+  },
+  {
+    key: "COMPLAINTS",
+    label: "Complaints",
+    accent: CAMPUS_HUB_COLORS.complaintAccent,
   },
 ];
 

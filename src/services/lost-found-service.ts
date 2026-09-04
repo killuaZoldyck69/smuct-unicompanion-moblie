@@ -14,14 +14,33 @@ export type LostFoundCategory =
 export interface LostFoundAuthor {
   id: string;
   name: string;
+  email?: string | null;
   image?: string | null;
+  role?: string | null;
+  phoneNumber?: string | null;
+  bloodGroup?: string | null;
+  studentProfile?: {
+    studentId?: string | null;
+    department?: string | null;
+    batch?: string | null;
+    currentSemester?: number | string | null;
+    section?: string | null;
+  } | null;
+  teacherProfile?: {
+    department?: string | null;
+    designation?: string | null;
+    officeRoom?: string | null;
+    consultationHours?: string | null;
+  } | null;
 }
 
 export interface LostFoundComment {
   id: string;
   content: string;
+  parentId?: string | null;
   createdAt: string;
   author: LostFoundAuthor;
+  replies?: LostFoundComment[];
 }
 
 export interface LostFoundPost {
@@ -51,6 +70,7 @@ export interface CreateLostFoundInput {
 
 export interface CreateCommentInput {
   content: string;
+  parentId?: string | null;
 }
 
 export const getLostFoundFeed = async (params?: {

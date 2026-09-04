@@ -22,7 +22,7 @@ import api from "@/services/api";
 import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
 import { spacing, rounded, shadows } from "@/theme/layout";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { formatDate } from "@/utils/date-formatter";
 import {
   useAllComplaintsAdmin,

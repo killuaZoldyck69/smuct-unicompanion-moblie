@@ -21,6 +21,7 @@ import {
 } from "@/features/campus-hub/useLostFound";
 import type { LostFoundPost, LostFoundType, LostFoundStatus } from "@/services/lost-found-service";
 import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../shared/design-tokens";
+import { setCampusHubActiveSection } from "../shared/hub-state";
 import { ComposeLostFoundModal } from "./compose-modal";
 
 type FilterTab = "ALL" | LostFoundType | "CLAIMED";
@@ -91,7 +92,10 @@ export function LostFoundSection() {
   }, [refetch]);
 
   const navigateToDetail = useCallback(
-    (id: string) => router.push(`/campus-hub/lost-found/${id}` as any),
+    (id: string) => {
+      setCampusHubActiveSection("LOST_FOUND");
+      router.push(`/campus-hub/lost-found/${id}` as any);
+    },
     [router]
   );
 

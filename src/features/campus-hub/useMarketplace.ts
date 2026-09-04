@@ -65,8 +65,10 @@ export const useMarkMarketplaceSold = () => {
 export const useAddMarketplaceComment = (postId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) =>
-      addMarketplaceComment(postId, { content }),
+    mutationFn: (input: { content: string; parentId?: string | null } | string) => {
+      const payload = typeof input === "string" ? { content: input } : input;
+      return addMarketplaceComment(postId, payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["marketplacePost", postId] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });

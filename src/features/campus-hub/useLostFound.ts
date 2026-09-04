@@ -63,8 +63,10 @@ export const useMarkLostFoundClaimed = () => {
 export const useAddLostFoundComment = (postId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) =>
-      addLostFoundComment(postId, { content }),
+    mutationFn: (input: { content: string; parentId?: string | null } | string) => {
+      const payload = typeof input === "string" ? { content: input } : input;
+      return addLostFoundComment(postId, payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lostFoundPost", postId] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  BackHandler,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -24,7 +28,17 @@ import {
 } from "@/features/campus-hub/useLostFound";
 import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "@/screens/campus-hub/shared/design-tokens";
 import { AvatarChip } from "@/screens/campus-hub/shared/avatar-chip";
-import { CommentSheet } from "@/screens/campus-hub/shared/comment-sheet";
+import {
+  InlineComments,
+  CommentInputBar,
+  type ReplyTarget,
+} from "@/screens/campus-hub/shared/inline-comments";
+import {
+  AuthorDetailsModal,
+  type AuthorProfileModalData,
+} from "@/screens/campus-hub/shared/author-modal";
+import { ImageViewerModal } from "@/screens/campus-hub/shared/image-viewer-modal";
+import { setCampusHubActiveSection } from "@/screens/campus-hub";
 import type { LostFoundComment } from "@/services/lost-found-service";
 
 const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
@@ -45,7 +59,11 @@ export default function LostFoundDetailPage() {
   const { user: currentUser } = useCurrentUser();
 
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<AuthorProfileModalData | null>(null);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   const { data: post, isLoading, isError } = useLostFoundPost(id);
   const deleteMutation = useDeleteLostFoundPost();
@@ -54,6 +72,40 @@ export default function LostFoundDetailPage() {
   const deleteCommentMutation = useDeleteLostFoundComment(id);
 
   const isAuthor = currentUser?.id === post?.authorId;
+
+  const handleBack = useCallback(() => {
+    setCampusHubActiveSection("LOST_FOUND");
+    router.replace({
+      pathname: "/(tabs)/forum",
+      params: { section: "LOST_FOUND" },
+    });
+  }, [router]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isImageViewerOpen) {
+        setIsImageViewerOpen(false);
+        return true;
+      }
+      if (selectedAuthor) {
+        setSelectedAuthor(null);
+        return true;
+      }
+      if (replyTarget) {
+        setReplyTarget(null);
+        return true;
+      }
+      handleBack();
+      return true;
+    };
+
+    const backHandlerSubscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    );
+
+    return () => backHandlerSubscription.remove();
+  }, [isImageViewerOpen, selectedAuthor, replyTarget, handleBack]);
 
   const handleDelete = useCallback(() => {
     Alert.alert("Delete Post", "Permanently remove this post?", [
@@ -65,14 +117,14 @@ export default function LostFoundDetailPage() {
           deleteMutation.mutate(id, {
             onSuccess: () => {
               Toast.show({ type: "info", text1: "Post deleted" });
-              router.back();
+              handleBack();
             },
             onError: () =>
               Toast.show({ type: "error", text1: "Failed to delete post" }),
           }),
       },
     ]);
-  }, [id, deleteMutation, router]);
+  }, [id, deleteMutation, handleBack]);
 
   const handleClaim = useCallback(() => {
     Alert.alert("Mark as Claimed", "Mark this item as claimed/resolved?", [
@@ -91,11 +143,14 @@ export default function LostFoundDetailPage() {
   }, [id, claimMutation]);
 
   const handleAddComment = useCallback(
-    (content: string) => {
-      addCommentMutation.mutate(content, {
-        onError: () =>
-          Toast.show({ type: "error", text1: "Failed to post comment" }),
-      });
+    (content: string, parentId?: string | null) => {
+      addCommentMutation.mutate(
+        { content, parentId: parentId ?? undefined },
+        {
+          onError: () =>
+            Toast.show({ type: "error", text1: "Failed to post comment" }),
+        }
+      );
     },
     [addCommentMutation]
   );
@@ -110,6 +165,22 @@ export default function LostFoundDetailPage() {
     [deleteCommentMutation]
   );
 
+  const handleStartReply = useCallback(
+    (targetId: string, authorName: string) => {
+      setReplyTarget({ id: targetId, authorName });
+      inputRef.current?.focus();
+    },
+    []
+  );
+
+  const handleSendComment = useCallback(() => {
+    const trimmed = commentText.trim();
+    if (!trimmed) return;
+    handleAddComment(trimmed, replyTarget?.id);
+    setCommentText("");
+    setReplyTarget(null);
+  }, [commentText, replyTarget, handleAddComment]);
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.center} edges={["top"]}>
@@ -123,7 +194,7 @@ export default function LostFoundDetailPage() {
       <SafeAreaView style={styles.center} edges={["top"]}>
         <Feather name="alert-circle" size={36} color={CAMPUS_HUB_COLORS.dangerText} />
         <Text style={styles.errorText}>Post not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Text style={styles.backBtnText}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -135,158 +206,191 @@ export default function LostFoundDetailPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.iconBtn}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Feather name="arrow-left" size={22} color={CAMPUS_HUB_COLORS.deepNavy} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isLost ? "Lost Item" : "Found Item"}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {post.images?.length > 0 && (
-          <View style={styles.imageGallery}>
-            <Image source={{ uri: post.images[selectedImage] }} style={styles.mainImage} />
-            {post.images.length > 1 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbnailRow}>
-                {post.images.map((img, idx) => (
-                  <TouchableOpacity key={img} onPress={() => setSelectedImage(idx)}>
-                    <Image
-                      source={{ uri: img }}
-                      style={[styles.thumbnail, selectedImage === idx && styles.thumbnailActive]}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        )}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.iconBtn}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Feather name="arrow-left" size={22} color={CAMPUS_HUB_COLORS.deepNavy} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            {isLost ? "Lost Item" : "Found Item"}
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-        <View style={styles.contentCard}>
-          <View style={styles.badgeRow}>
-            <View
-              style={[
-                styles.typeBadge,
-                {
-                  backgroundColor: isLost
-                    ? CAMPUS_HUB_COLORS.dangerBg
-                    : CAMPUS_HUB_COLORS.marketplaceAccentLight,
-                },
-              ]}
-            >
-              <Text
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: 48 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {post.images?.length > 0 && (
+            <View style={styles.imageGallery}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => setIsImageViewerOpen(true)}
+                style={styles.mainImageTouchable}
+              >
+                <Image
+                  source={{ uri: post.images[selectedImage] }}
+                  style={styles.mainImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.zoomBadge}>
+                  <Feather name="maximize-2" size={12} color="#ffffff" />
+                  <Text style={styles.zoomBadgeText}>Tap to enlarge</Text>
+                </View>
+              </TouchableOpacity>
+
+              {post.images.length > 1 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbnailRow}>
+                  {post.images.map((img, idx) => (
+                    <TouchableOpacity key={img} onPress={() => setSelectedImage(idx)}>
+                      <Image
+                        source={{ uri: img }}
+                        style={[styles.thumbnail, selectedImage === idx && styles.thumbnailActive]}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          )}
+
+          <View style={styles.contentCard}>
+            <View style={styles.badgeRow}>
+              <View
                 style={[
-                  styles.typeBadgeText,
+                  styles.typeBadge,
                   {
-                    color: isLost
-                      ? CAMPUS_HUB_COLORS.dangerText
-                      : CAMPUS_HUB_COLORS.marketplaceAccentText,
+                    backgroundColor: isLost
+                      ? CAMPUS_HUB_COLORS.dangerBg
+                      : CAMPUS_HUB_COLORS.marketplaceAccentLight,
                   },
                 ]}
               >
-                {isLost ? "LOST" : "FOUND"}
-              </Text>
-            </View>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>
-                {CATEGORY_LABELS[post.category] ?? post.category}
-              </Text>
-            </View>
-            {post.status === "CLAIMED" && (
-              <View style={[styles.typeBadge, { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight }]}>
-                <Text style={[styles.typeBadgeText, { color: CAMPUS_HUB_COLORS.marketplaceAccentText }]}>
-                  CLAIMED
+                <Text
+                  style={[
+                    styles.typeBadgeText,
+                    {
+                      color: isLost
+                        ? CAMPUS_HUB_COLORS.dangerText
+                        : CAMPUS_HUB_COLORS.marketplaceAccentText,
+                    },
+                  ]}
+                >
+                  {isLost ? "LOST" : "FOUND"}
                 </Text>
+              </View>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>
+                  {CATEGORY_LABELS[post.category] ?? post.category}
+                </Text>
+              </View>
+              {post.status === "CLAIMED" && (
+                <View style={[styles.typeBadge, { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight }]}>
+                  <Text style={[styles.typeBadgeText, { color: CAMPUS_HUB_COLORS.marketplaceAccentText }]}>
+                    CLAIMED
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.title}>{post.title}</Text>
+
+            <View style={styles.locationRow}>
+              <Feather name="map-pin" size={13} color={CAMPUS_HUB_COLORS.subtleText} />
+              <Text style={styles.locationText}>{post.location}</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <AvatarChip
+              name={post.author?.name ?? ""}
+              image={post.author?.image}
+              subtitle={`${timeAgo(post.createdAt)} • View Profile`}
+              onPress={() => setSelectedAuthor(post.author as any)}
+            />
+
+            <View style={styles.divider} />
+
+            <Text style={styles.sectionLabel}>DETAILS</Text>
+            <Text style={styles.description}>{post.description}</Text>
+
+            {isAuthor && post.status === "ACTIVE" && (
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight }]}
+                  onPress={handleClaim}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Mark as claimed"
+                >
+                  <Feather name="check-circle" size={14} color={CAMPUS_HUB_COLORS.marketplaceAccentText} />
+                  <Text style={[styles.actionBtnText, { color: CAMPUS_HUB_COLORS.marketplaceAccentText }]}>
+                    Mark Claimed
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: CAMPUS_HUB_COLORS.dangerBg }]}
+                  onPress={handleDelete}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete post"
+                >
+                  <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
+                  <Text style={[styles.actionBtnText, { color: CAMPUS_HUB_COLORS.dangerText }]}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
 
-          <Text style={styles.title}>{post.title}</Text>
-
-          <View style={styles.locationRow}>
-            <Feather name="map-pin" size={13} color={CAMPUS_HUB_COLORS.subtleText} />
-            <Text style={styles.locationText}>{post.location}</Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <AvatarChip
-            name={post.author?.name ?? ""}
-            image={post.author?.image}
-            subtitle={timeAgo(post.createdAt)}
+          {/* Inline Comments & Replies Section directly under post details */}
+          <InlineComments
+            comments={comments as any}
+            currentUserId={currentUser?.id}
+            accent={ACCENT}
+            onStartReply={handleStartReply}
+            onDeleteComment={handleDeleteComment}
+            onViewAuthorProfile={(author) => setSelectedAuthor(author as any)}
           />
+        </ScrollView>
 
-          <View style={styles.divider} />
+        {/* Sticky Comment Composer at Bottom */}
+        <CommentInputBar
+          replyTarget={replyTarget}
+          onCancelReply={() => setReplyTarget(null)}
+          text={commentText}
+          onChangeText={setCommentText}
+          onSubmit={handleSendComment}
+          isSubmitting={addCommentMutation.isPending}
+          accent={ACCENT}
+          inputRef={inputRef}
+        />
+      </KeyboardAvoidingView>
 
-          <Text style={styles.sectionLabel}>DETAILS</Text>
-          <Text style={styles.description}>{post.description}</Text>
+      {/* Author Details Modal */}
+      <AuthorDetailsModal
+        visible={!!selectedAuthor}
+        onClose={() => setSelectedAuthor(null)}
+        author={selectedAuthor}
+      />
 
-          {isAuthor && post.status === "ACTIVE" && (
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight }]}
-                onPress={handleClaim}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Mark as claimed"
-              >
-                <Feather name="check-circle" size={14} color={CAMPUS_HUB_COLORS.marketplaceAccentText} />
-                <Text style={[styles.actionBtnText, { color: CAMPUS_HUB_COLORS.marketplaceAccentText }]}>
-                  Mark Claimed
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: CAMPUS_HUB_COLORS.dangerBg }]}
-                onPress={handleDelete}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Delete post"
-              >
-                <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
-                <Text style={[styles.actionBtnText, { color: CAMPUS_HUB_COLORS.dangerText }]}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-        <TouchableOpacity
-          style={styles.commentBarBtn}
-          onPress={() => setIsCommentSheetOpen(true)}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={`View ${comments.length} comments`}
-        >
-          <Feather name="message-circle" size={18} color={ACCENT} />
-          <Text style={[styles.commentBarText, { color: ACCENT }]}>
-            {comments.length} Comment{comments.length !== 1 ? "s" : ""}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <CommentSheet
-        visible={isCommentSheetOpen}
-        onClose={() => setIsCommentSheetOpen(false)}
-        comments={comments}
-        currentUserId={currentUser?.id}
-        accent={ACCENT}
-        isSubmitting={addCommentMutation.isPending}
-        onSubmit={handleAddComment}
-        onDelete={handleDeleteComment}
+      {/* Fullscreen Image Viewer Modal */}
+      <ImageViewerModal
+        visible={isImageViewerOpen}
+        images={post.images}
+        initialIndex={selectedImage}
+        onClose={() => setIsImageViewerOpen(false)}
       />
     </SafeAreaView>
   );
@@ -331,16 +435,42 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   imageGallery: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
+    backgroundColor: "#0f172a",
+  },
+  mainImageTouchable: {
+    position: "relative",
+    width: "100%",
+    height: 300,
+    backgroundColor: "#0f172a",
+    justifyContent: "center",
+    alignItems: "center",
   },
   mainImage: {
     width: "100%",
-    height: 260,
-    resizeMode: "cover",
+    height: "100%",
+  },
+  zoomBadge: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  zoomBadgeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   thumbnailRow: {
     paddingHorizontal: 16,
     paddingVertical: 10,
+    backgroundColor: "#1e293b",
   },
   thumbnail: {
     width: 56,
@@ -444,27 +574,6 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontFamily,
     fontSize: 13,
-    fontWeight: "700",
-  },
-  bottomBar: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
-  },
-  commentBarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    backgroundColor: "#fef3c7",
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-  },
-  commentBarText: {
-    fontFamily,
-    fontSize: 14,
     fontWeight: "700",
   },
   errorText: {

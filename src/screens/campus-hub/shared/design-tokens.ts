@@ -20,6 +20,10 @@ export const CAMPUS_HUB_COLORS = {
   forumAccentLight: "#dbeafe",
   forumAccentText: "#1e40af",
 
+  complaintAccent: "#8b5cf6",
+  complaintAccentLight: "#ede9fe",
+  complaintAccentText: "#6d28d9",
+
   dangerText: "#be123c",
   dangerBg: "#ffe4e6",
 

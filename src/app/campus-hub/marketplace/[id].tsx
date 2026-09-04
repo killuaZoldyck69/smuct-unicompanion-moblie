@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,10 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  BackHandler,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -25,7 +29,17 @@ import {
 } from "@/features/campus-hub/useMarketplace";
 import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "@/screens/campus-hub/shared/design-tokens";
 import { AvatarChip } from "@/screens/campus-hub/shared/avatar-chip";
-import { CommentSheet } from "@/screens/campus-hub/shared/comment-sheet";
+import {
+  InlineComments,
+  CommentInputBar,
+  type ReplyTarget,
+} from "@/screens/campus-hub/shared/inline-comments";
+import {
+  AuthorDetailsModal,
+  type AuthorProfileModalData,
+} from "@/screens/campus-hub/shared/author-modal";
+import { ImageViewerModal } from "@/screens/campus-hub/shared/image-viewer-modal";
+import { setCampusHubActiveSection } from "@/screens/campus-hub";
 import type { MarketplaceComment } from "@/services/marketplace-service";
 
 const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
@@ -52,7 +66,11 @@ export default function MarketplaceDetailPage() {
   const { user: currentUser } = useCurrentUser();
 
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<AuthorProfileModalData | null>(null);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   const { data: post, isLoading, isError } = useMarketplacePost(id);
   const deleteMutation = useDeleteMarketplacePost();
@@ -61,6 +79,40 @@ export default function MarketplaceDetailPage() {
   const deleteCommentMutation = useDeleteMarketplaceComment(id);
 
   const isAuthor = currentUser?.id === post?.authorId;
+
+  const handleBack = useCallback(() => {
+    setCampusHubActiveSection("MARKETPLACE");
+    router.replace({
+      pathname: "/(tabs)/forum",
+      params: { section: "MARKETPLACE" },
+    });
+  }, [router]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isImageViewerOpen) {
+        setIsImageViewerOpen(false);
+        return true;
+      }
+      if (selectedAuthor) {
+        setSelectedAuthor(null);
+        return true;
+      }
+      if (replyTarget) {
+        setReplyTarget(null);
+        return true;
+      }
+      handleBack();
+      return true;
+    };
+
+    const backHandlerSubscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    );
+
+    return () => backHandlerSubscription.remove();
+  }, [isImageViewerOpen, selectedAuthor, replyTarget, handleBack]);
 
   const handleDelete = useCallback(() => {
     Alert.alert("Delete Listing", "Permanently remove this listing?", [
@@ -72,14 +124,14 @@ export default function MarketplaceDetailPage() {
           deleteMutation.mutate(id, {
             onSuccess: () => {
               Toast.show({ type: "info", text1: "Listing deleted" });
-              router.back();
+              handleBack();
             },
             onError: () =>
               Toast.show({ type: "error", text1: "Failed to delete" }),
           }),
       },
     ]);
-  }, [id, deleteMutation, router]);
+  }, [id, deleteMutation, handleBack]);
 
   const handleMarkSold = useCallback(() => {
     Alert.alert("Mark as Sold", "Mark this item as sold?", [
@@ -106,11 +158,14 @@ export default function MarketplaceDetailPage() {
   }, [post]);
 
   const handleAddComment = useCallback(
-    (content: string) => {
-      addCommentMutation.mutate(content, {
-        onError: () =>
-          Toast.show({ type: "error", text1: "Failed to post comment" }),
-      });
+    (content: string, parentId?: string | null) => {
+      addCommentMutation.mutate(
+        { content, parentId: parentId ?? undefined },
+        {
+          onError: () =>
+            Toast.show({ type: "error", text1: "Failed to post comment" }),
+        }
+      );
     },
     [addCommentMutation]
   );
@@ -125,6 +180,22 @@ export default function MarketplaceDetailPage() {
     [deleteCommentMutation]
   );
 
+  const handleStartReply = useCallback(
+    (targetId: string, authorName: string) => {
+      setReplyTarget({ id: targetId, authorName });
+      inputRef.current?.focus();
+    },
+    []
+  );
+
+  const handleSendComment = useCallback(() => {
+    const trimmed = commentText.trim();
+    if (!trimmed) return;
+    handleAddComment(trimmed, replyTarget?.id);
+    setCommentText("");
+    setReplyTarget(null);
+  }, [commentText, replyTarget, handleAddComment]);
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.center} edges={["top"]}>
@@ -138,7 +209,7 @@ export default function MarketplaceDetailPage() {
       <SafeAreaView style={styles.center} edges={["top"]}>
         <Feather name="alert-circle" size={36} color={CAMPUS_HUB_COLORS.dangerText} />
         <Text style={styles.errorText}>Listing not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Text style={styles.backBtnText}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -151,180 +222,216 @@ export default function MarketplaceDetailPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.iconBtn}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Feather name="arrow-left" size={22} color={CAMPUS_HUB_COLORS.deepNavy} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isSelling ? "For Sale" : "Wanted"}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 110 }]}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {post.images?.length > 0 ? (
-          <View style={styles.imageGallery}>
-            <Image source={{ uri: post.images[selectedImage] }} style={styles.mainImage} />
-            {isSold && (
-              <View style={styles.soldOverlay}>
-                <Text style={styles.soldOverlayText}>SOLD</Text>
-              </View>
-            )}
-            {post.images.length > 1 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.thumbnailRow}
-              >
-                {post.images.map((img, idx) => (
-                  <TouchableOpacity key={img} onPress={() => setSelectedImage(idx)}>
-                    <Image
-                      source={{ uri: img }}
-                      style={[
-                        styles.thumbnail,
-                        selectedImage === idx && styles.thumbnailActive,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        ) : null}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.iconBtn}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Feather name="arrow-left" size={22} color={CAMPUS_HUB_COLORS.deepNavy} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            {isSelling ? "For Sale" : "Buying Request"}
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-        <View style={styles.contentCard}>
-          <View style={styles.badgeRow}>
-            <View
-              style={[
-                styles.typeBadge,
-                {
-                  backgroundColor: isSelling
-                    ? CAMPUS_HUB_COLORS.marketplaceAccentLight
-                    : CAMPUS_HUB_COLORS.lostFoundAccentLight,
-                },
-              ]}
-            >
-              <Text
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: 48 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {post.images?.length > 0 && (
+            <View style={styles.imageGallery}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => setIsImageViewerOpen(true)}
+                style={styles.mainImageTouchable}
+              >
+                <Image
+                  source={{ uri: post.images[selectedImage] }}
+                  style={styles.mainImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.zoomBadge}>
+                  <Feather name="maximize-2" size={12} color="#ffffff" />
+                  <Text style={styles.zoomBadgeText}>Tap to enlarge</Text>
+                </View>
+              </TouchableOpacity>
+
+              {post.images.length > 1 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbnailRow}>
+                  {post.images.map((img, idx) => (
+                    <TouchableOpacity key={img} onPress={() => setSelectedImage(idx)}>
+                      <Image
+                        source={{ uri: img }}
+                        style={[styles.thumbnail, selectedImage === idx && styles.thumbnailActive]}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          )}
+
+          <View style={styles.contentCard}>
+            <View style={styles.badgeRow}>
+              <View
                 style={[
-                  styles.typeBadgeText,
+                  styles.typeBadge,
                   {
-                    color: isSelling
-                      ? CAMPUS_HUB_COLORS.marketplaceAccentText
-                      : CAMPUS_HUB_COLORS.lostFoundAccentText,
+                    backgroundColor: isSelling
+                      ? CAMPUS_HUB_COLORS.marketplaceAccentLight
+                      : CAMPUS_HUB_COLORS.forumAccentLight,
                   },
                 ]}
               >
-                {isSelling ? "SELLING" : "WANTED"}
-              </Text>
-            </View>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>
-                {CATEGORY_LABELS[post.category] ?? post.category}
-              </Text>
-            </View>
-            {post.condition && (
+                <Text
+                  style={[
+                    styles.typeBadgeText,
+                    {
+                      color: isSelling
+                        ? CAMPUS_HUB_COLORS.marketplaceAccentText
+                        : CAMPUS_HUB_COLORS.forumAccentText,
+                    },
+                  ]}
+                >
+                  {isSelling ? "SELLING" : "BUYING"}
+                </Text>
+              </View>
+
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryBadgeText}>
-                  {CONDITION_LABELS[post.condition] ?? post.condition}
+                  {CATEGORY_LABELS[post.category] ?? post.category}
                 </Text>
+              </View>
+
+              {post.condition && (
+                <View style={[styles.categoryBadge, { backgroundColor: "#f0fdf4" }]}>
+                  <Text style={[styles.categoryBadgeText, { color: "#15803d" }]}>
+                    {CONDITION_LABELS[post.condition] ?? post.condition}
+                  </Text>
+                </View>
+              )}
+
+              {isSold && (
+                <View style={[styles.typeBadge, { backgroundColor: "#f1f5f9" }]}>
+                  <Text style={[styles.typeBadgeText, { color: CAMPUS_HUB_COLORS.subtleText }]}>
+                    SOLD
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.title}>{post.title}</Text>
+
+            {post.price != null && (
+              <Text style={styles.price}>৳{post.price.toLocaleString()}</Text>
+            )}
+
+            <View style={styles.divider} />
+
+            <AvatarChip
+              name={post.author?.name ?? ""}
+              image={post.author?.image}
+              subtitle={`Posted ${timeAgo(post.createdAt)} • View Profile`}
+              onPress={() => setSelectedAuthor(post.author as any)}
+            />
+
+            <View style={styles.divider} />
+
+            <Text style={styles.sectionLabel}>DESCRIPTION</Text>
+            <Text style={styles.description}>{post.description}</Text>
+
+            {/* Direct Contact Seller button inside card */}
+            {post.contactPhone && !isAuthor && (
+              <TouchableOpacity
+                style={styles.sellerContactCardBtn}
+                onPress={handleContact}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Call seller"
+              >
+                <Feather name="phone-call" size={15} color="#ffffff" />
+                <Text style={styles.sellerContactCardBtnText}>
+                  Call Seller ({post.contactPhone})
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {isAuthor && !isSold && (
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight }]}
+                  onPress={handleMarkSold}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Mark as sold"
+                >
+                  <Feather name="check-circle" size={14} color={CAMPUS_HUB_COLORS.marketplaceAccentText} />
+                  <Text style={[styles.actionBtnText, { color: CAMPUS_HUB_COLORS.marketplaceAccentText }]}>
+                    Mark Sold
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: CAMPUS_HUB_COLORS.dangerBg }]}
+                  onPress={handleDelete}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete listing"
+                >
+                  <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
+                  <Text style={[styles.actionBtnText, { color: CAMPUS_HUB_COLORS.dangerText }]}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
 
-          <Text style={styles.title}>{post.title}</Text>
-
-          {post.price != null && (
-            <Text style={styles.price}>৳{post.price.toLocaleString()}</Text>
-          )}
-
-          <View style={styles.divider} />
-
-          <AvatarChip
-            name={post.author?.name ?? ""}
-            image={post.author?.image}
-            subtitle={`Posted ${timeAgo(post.createdAt)}`}
+          {/* Inline Comments & Replies Section directly under post details */}
+          <InlineComments
+            comments={comments as any}
+            currentUserId={currentUser?.id}
+            accent={ACCENT}
+            onStartReply={handleStartReply}
+            onDeleteComment={handleDeleteComment}
+            onViewAuthorProfile={(author) => setSelectedAuthor(author as any)}
           />
+        </ScrollView>
 
-          <View style={styles.divider} />
+        {/* Sticky Comment Composer at Bottom */}
+        <CommentInputBar
+          replyTarget={replyTarget}
+          onCancelReply={() => setReplyTarget(null)}
+          text={commentText}
+          onChangeText={setCommentText}
+          onSubmit={handleSendComment}
+          isSubmitting={addCommentMutation.isPending}
+          accent={ACCENT}
+          inputRef={inputRef}
+        />
+      </KeyboardAvoidingView>
 
-          <Text style={styles.sectionLabel}>DESCRIPTION</Text>
-          <Text style={styles.description}>{post.description}</Text>
+      {/* Author Details Modal */}
+      <AuthorDetailsModal
+        visible={!!selectedAuthor}
+        onClose={() => setSelectedAuthor(null)}
+        author={selectedAuthor}
+      />
 
-          {isAuthor && !isSold && (
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight }]}
-                onPress={handleMarkSold}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Mark as sold"
-              >
-                <Feather name="check-circle" size={14} color={CAMPUS_HUB_COLORS.marketplaceAccentText} />
-                <Text style={[styles.actionBtnText, { color: CAMPUS_HUB_COLORS.marketplaceAccentText }]}>
-                  Mark Sold
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: CAMPUS_HUB_COLORS.dangerBg }]}
-                onPress={handleDelete}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Delete listing"
-              >
-                <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
-                <Text style={[styles.actionBtnText, { color: CAMPUS_HUB_COLORS.dangerText }]}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-        <TouchableOpacity
-          style={styles.commentBarBtn}
-          onPress={() => setIsCommentSheetOpen(true)}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={`${comments.length} comments`}
-        >
-          <Feather name="message-circle" size={18} color={CAMPUS_HUB_COLORS.subtleText} />
-          <Text style={styles.commentBarLabel}>{comments.length} Comments</Text>
-        </TouchableOpacity>
-
-        {post.contactPhone && !isAuthor && (
-          <TouchableOpacity
-            style={styles.contactBtn}
-            onPress={handleContact}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Call seller"
-          >
-            <Feather name="phone" size={16} color="#ffffff" />
-            <Text style={styles.contactBtnText}>Contact</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <CommentSheet
-        visible={isCommentSheetOpen}
-        onClose={() => setIsCommentSheetOpen(false)}
-        comments={comments}
-        currentUserId={currentUser?.id}
-        accent={ACCENT}
-        isSubmitting={addCommentMutation.isPending}
-        onSubmit={handleAddComment}
-        onDelete={handleDeleteComment}
+      {/* Fullscreen Image Viewer Modal */}
+      <ImageViewerModal
+        visible={isImageViewerOpen}
+        images={post.images}
+        initialIndex={selectedImage}
+        onClose={() => setIsImageViewerOpen(false)}
       />
     </SafeAreaView>
   );
@@ -367,20 +474,45 @@ const styles = StyleSheet.create({
   },
   scroll: {},
   imageGallery: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
+    backgroundColor: "#0f172a",
+  },
+  mainImageTouchable: {
+    position: "relative",
+    width: "100%",
+    height: 300,
+    backgroundColor: "#0f172a",
+    justifyContent: "center",
+    alignItems: "center",
   },
   mainImage: {
     width: "100%",
-    height: 280,
-    resizeMode: "cover",
+    height: "100%",
+  },
+  zoomBadge: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  zoomBadgeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   soldOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 280,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.55)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -443,6 +575,18 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.subtleText,
   },
+  conditionBadge: {
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+  },
+  conditionBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#2563eb",
+  },
   title: {
     fontFamily,
     fontSize: 22,
@@ -494,43 +638,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-  bottomBar: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
-    flexDirection: "row",
-    gap: 10,
-  },
-  commentBarBtn: {
-    flex: 1,
+  sellerContactCardBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 12,
-    backgroundColor: "#f1f5f9",
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-  },
-  commentBarLabel: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
-  contactBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 22,
     paddingVertical: 12,
     backgroundColor: ACCENT,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderRadius: 14,
+    marginTop: 14,
     ...CAMPUS_HUB_COLORS.heroShadow,
   },
-  contactBtnText: {
+  sellerContactCardBtnText: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",

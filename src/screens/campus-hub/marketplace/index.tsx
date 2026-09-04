@@ -19,6 +19,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useMarketplaceFeed } from "@/features/campus-hub/useMarketplace";
 import type { MarketplacePost, ListingType, MarketplaceCategory } from "@/services/marketplace-service";
 import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../shared/design-tokens";
+import { setCampusHubActiveSection } from "../shared/hub-state";
 import { ComposeMarketplaceModal } from "./compose-modal";
 
 type FilterTab = "ALL" | ListingType | "SOLD";
@@ -86,7 +87,10 @@ export function MarketplaceSection() {
   }, [refetch]);
 
   const navigateToDetail = useCallback(
-    (id: string) => router.push(`/campus-hub/marketplace/${id}` as any),
+    (id: string) => {
+      setCampusHubActiveSection("MARKETPLACE");
+      router.push(`/campus-hub/marketplace/${id}` as any);
+    },
     [router]
   );
 

@@ -28,6 +28,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false, // Hide labels for the minimalist look

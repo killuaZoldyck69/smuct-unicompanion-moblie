@@ -1,4 +1,4 @@
-import * as FileSystem from "expo-file-system";
+import { Platform } from "react-native";
 import api from "./api";
 
 export interface CloudinaryUploadResult {
@@ -31,20 +31,27 @@ export async function uploadImageToCloudinary(
   localUri: string,
   folder: string = "unicompanion"
 ): Promise<CloudinaryUploadResult> {
-  const fileInfo = await FileSystem.getInfoAsync(localUri);
-  if (!fileInfo.exists) {
-    throw new Error("Selected file does not exist.");
+  if (!localUri || typeof localUri !== "string" || !localUri.trim()) {
+    throw new Error("Invalid image URI provided.");
   }
 
   const filename = localUri.split("/").pop() ?? "upload.jpg";
   const type = getMimeType(filename);
 
   const formData = new FormData();
-  formData.append("image", {
-    uri: localUri,
-    name: filename,
-    type,
-  } as any);
+
+  if (Platform.OS === "web") {
+    const response = await fetch(localUri);
+    const blob = await response.blob();
+    formData.append("image", blob, filename);
+  } else {
+    formData.append("image", {
+      uri: localUri,
+      name: filename,
+      type,
+    } as any);
+  }
+
   formData.append("folder", folder);
 
   const response = await api.post("/upload/image", formData, {
@@ -78,18 +85,24 @@ export async function uploadMultipleImages(
   const formData = new FormData();
 
   for (const uri of localUris) {
-    const fileInfo = await FileSystem.getInfoAsync(uri);
-    if (!fileInfo.exists) {
+    if (!uri || typeof uri !== "string" || !uri.trim()) {
       continue;
     }
+
     const filename = uri.split("/").pop() ?? "upload.jpg";
     const type = getMimeType(filename);
 
-    formData.append("images", {
-      uri,
-      name: filename,
-      type,
-    } as any);
+    if (Platform.OS === "web") {
+      const res = await fetch(uri);
+      const blob = await res.blob();
+      formData.append("images", blob, filename);
+    } else {
+      formData.append("images", {
+        uri,
+        name: filename,
+        type,
+      } as any);
+    }
   }
 
   formData.append("folder", folder);
