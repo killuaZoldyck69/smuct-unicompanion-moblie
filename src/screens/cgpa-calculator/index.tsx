@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   BackHandler,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -118,6 +119,11 @@ export function CGPACalculator() {
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}

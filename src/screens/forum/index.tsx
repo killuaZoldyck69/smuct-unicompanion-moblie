@@ -81,7 +81,11 @@ const timeAgo = (dateString: string) => {
 // ==================================================
 // 2. MAIN COMPONENT
 // ==================================================
-export function Forum() {
+export interface ForumProps {
+  embedded?: boolean;
+}
+
+export function Forum({ embedded = false }: ForumProps = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -191,41 +195,48 @@ export function Forum() {
     return () => backHandler.remove();
   }, [isComposeVisible]);
 
-  return (
-    <SafeAreaView style={styles.safeContainer} edges={["top"]}>
-      {/* 1. TOP BRAND NAVIGATION BAR */}
-      <View style={styles.topNavBar}>
-        <View style={styles.topNavLeft}>
-          {currentUser?.image ? (
-            <Image
-              source={{ uri: currentUser.image }}
-              style={styles.navAvatar}
-            />
-          ) : (
-            <View style={styles.navAvatarFallback}>
-              <Text style={styles.navAvatarText}>
-                {currentUser?.name?.charAt(0) || "U"}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.navBrandTitle}>UniCompanion</Text>
-        </View>
+  const ContainerComponent = embedded ? View : SafeAreaView;
+  const containerProps = embedded
+    ? { style: styles.safeContainer }
+    : { style: styles.safeContainer, edges: ["top" as const] };
 
-        <TouchableOpacity
-          style={styles.headerIconButton}
-          onPress={() => router.push("/(tabs)/notices")}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="View notices and notifications"
-        >
-          <Feather name="bell" size={18} color={BENTO_COLORS.deepNavy} />
-        </TouchableOpacity>
-      </View>
+  return (
+    <ContainerComponent {...(containerProps as any)}>
+      {/* 1. TOP BRAND NAVIGATION BAR */}
+      {!embedded && (
+        <View style={styles.topNavBar}>
+          <View style={styles.topNavLeft}>
+            {currentUser?.image ? (
+              <Image
+                source={{ uri: currentUser.image }}
+                style={styles.navAvatar}
+              />
+            ) : (
+              <View style={styles.navAvatarFallback}>
+                <Text style={styles.navAvatarText}>
+                  {currentUser?.name?.charAt(0) || "U"}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.navBrandTitle}>UniCompanion</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={() => router.push("/(tabs)/notices")}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="View notices and notifications"
+          >
+            <Feather name="bell" size={18} color={BENTO_COLORS.deepNavy} />
+          </TouchableOpacity>
+        </View>
+      )}
+
 
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          // Safe bottom padding so all discussion cards scroll freely above the single floating tab bar
           { paddingBottom: insets.bottom > 0 ? insets.bottom + 120 : 132 },
         ]}
         showsVerticalScrollIndicator={false}
@@ -239,6 +250,7 @@ export function Forum() {
         }
       >
         {/* 2. SCREEN TITLE & SUBTITLE */}
+
         <View style={styles.headerTitlesContainer}>
           <Text style={styles.screenTitle}>Campus Forum</Text>
           <Text style={styles.screenSubtitle}>
@@ -656,7 +668,7 @@ export function Forum() {
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </ContainerComponent>
   );
 }
 

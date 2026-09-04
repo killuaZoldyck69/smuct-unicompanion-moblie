@@ -1,5 +1,5 @@
-import { Forum } from "@/screens/forum";
+import { CampusHub } from "@/screens/campus-hub";
 
 export default function ForumFeedScreen() {
-  return <Forum />;
+  return <CampusHub />;
 }

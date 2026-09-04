@@ -25,6 +25,11 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.killuazoldyck.smuctunicompanionmobile"
     },
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#00000000",
+      "translucent": true
+    },
     "web": {
       "favicon": "./src/assets/icons8-university-60.png"
     },

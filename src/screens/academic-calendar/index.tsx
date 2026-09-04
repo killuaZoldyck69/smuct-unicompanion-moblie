@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -134,6 +135,11 @@ export function AcademicCalendarScreen() {
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={styles.navHeader}>
         <TouchableOpacity
           onPress={handleBack}
