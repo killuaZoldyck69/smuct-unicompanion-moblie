@@ -3,20 +3,26 @@ import api from "./api";
 export interface AlumniItem {
   id: string;
   name: string;
-  department: string;
-  batch?: string;
-  graduationBatch?: string;
-  passingYear?: number | null;
-  graduationYear?: number | null;
-  currentCompany?: string | null;
-  designation?: string | null;
-  currentRole?: string | null;
-  linkedinUrl?: string | null;
-  linkedInUrl?: string | null;
   email?: string | null;
   phone?: string | null;
+  department: string;
+  batch?: string | null;
+  graduationBatch?: string | null;
+  graduationYear?: number | null;
+  passingYear?: number | null;
+  degree?: string | null;
+  currentCompany?: string | null;
+  currentPosition?: string | null;
+  currentRole?: string | null;
+  designation?: string | null;
+  skills?: string[];
+  linkedInUrl?: string | null;
+  linkedinUrl?: string | null;
+  personalWebsiteUrl?: string | null;
+  image?: string | null;
   imageUrl?: string | null;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateAlumniInput {
