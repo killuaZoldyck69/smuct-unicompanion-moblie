@@ -28,6 +28,26 @@ export const formatDateTime = (dateString: string) => {
   });
 };
 
+export const formatDateTime12h = (dateString: string) => {
+  if (!dateString) return "";
+  try {
+    const d = new Date(dateString);
+    const datePart = d.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const timePart = d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    return `${datePart} • ${timePart}`;
+  } catch (e) {
+    return dateString;
+  }
+};
+
 export const formatTime = (dateString: string) => {
   if (!dateString) return "";
   return new Date(dateString)

@@ -55,10 +55,14 @@ export default function HubAssessmentsScreen() {
       (await api.get(`/hubs/${id}/assessments`)).data?.data || [],
   });
 
-  const safeAssessments = useMemo(
-    () => (Array.isArray(assessments) ? assessments : []),
-    [assessments],
-  );
+  const safeAssessments = useMemo(() => {
+    if (!Array.isArray(assessments)) return [];
+    return [...assessments].sort((a: any, b: any) => {
+      const timeA = new Date(a.createdAt || a.deadline).getTime();
+      const timeB = new Date(b.createdAt || b.deadline).getTime();
+      return timeB - timeA;
+    });
+  }, [assessments]);
 
   const myHubMembership = myHubs?.find(
     (m: any) => m.hubId === id || m.hub?.id === id,

@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { formatDate } from "@/utils/date-formatter";
+import { formatDateTime12h } from "@/utils/date-formatter";
 
 const BENTO_COLORS = {
   deepNavy: "#131b2e",
@@ -57,7 +57,17 @@ const AnnouncementCard = ({ item, onCommentPress }: Props) => (
         )}
         <View>
           <Text style={styles.userName}>{item.creator?.name}</Text>
-          <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
+          <View style={styles.dateRow}>
+            <Feather
+              name="clock"
+              size={11}
+              color={BENTO_COLORS.subtleText}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={styles.dateText}>
+              {formatDateTime12h(item.createdAt)}
+            </Text>
+          </View>
         </View>
       </View>
     </View>
@@ -159,12 +169,16 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.deepNavy,
     fontWeight: "800",
   },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
   dateText: {
     fontFamily,
     fontSize: 11,
     color: BENTO_COLORS.subtleText,
     fontWeight: "500",
-    marginTop: 2,
   },
   contentBody: {
     fontFamily,

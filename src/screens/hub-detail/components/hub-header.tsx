@@ -50,8 +50,6 @@ export default function HubHeader({
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else if (router.canGoBack()) {
-      router.back();
     } else {
       router.replace("/(tabs)/hubs");
     }

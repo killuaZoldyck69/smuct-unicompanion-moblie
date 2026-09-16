@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -149,6 +149,15 @@ export function HubDetail({ hubId }: HubDetailProps) {
   const { data: assessments, isLoading: isLoadingAssessments } =
     useAssessments(hubId);
   const { data: myHubs } = useMyHubs();
+
+  const sortedAssessments = useMemo(() => {
+    if (!Array.isArray(assessments)) return [];
+    return [...assessments].sort((a: any, b: any) => {
+      const timeA = new Date(a.createdAt || a.deadline).getTime();
+      const timeB = new Date(b.createdAt || b.deadline).getTime();
+      return timeB - timeA;
+    });
+  }, [assessments]);
 
   // --- Derived State ---
   const currentActiveAnnouncement = activeAnnouncement
@@ -419,11 +428,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
   });
 
   const handleBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(tabs)/hubs");
-    }
+    router.replace("/(tabs)/hubs");
   }, [router]);
 
   useEffect(() => {
@@ -514,7 +519,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
             />
           ) : (
             <FlatList
-              data={assessments}
+              data={sortedAssessments}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <AssessmentCard
@@ -883,6 +888,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
         isVisible={isHubOptionsVisible}
         onClose={() => setIsHubOptionsVisible(false)}
         canManage={canManage}
+        isTeacher={myRole === "TEACHER"}
         onViewMembers={() => {
           setIsHubOptionsVisible(false);
           setActiveTab("MEMBERS");
