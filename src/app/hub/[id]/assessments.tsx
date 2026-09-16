@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -33,6 +34,9 @@ export default function HubAssessmentsScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(
     assessmentId || null,
   );
+  const [activeFilterId, setActiveFilterId] = useState<string | null>(
+    assessmentId || null,
+  );
 
   // --- Data Fetching ---
   const { data: myHubs } = useQuery({
@@ -45,11 +49,16 @@ export default function HubAssessmentsScreen() {
     queryFn: async () => (await api.get(`/hubs/${id}`)).data?.data,
   });
 
-  const { data: assessments, isLoading } = useQuery({
+  const { data: assessments, isLoading, refetch } = useQuery({
     queryKey: ["hubAssessments", id],
     queryFn: async () =>
       (await api.get(`/hubs/${id}/assessments`)).data?.data || [],
   });
+
+  const safeAssessments = useMemo(
+    () => (Array.isArray(assessments) ? assessments : []),
+    [assessments],
+  );
 
   const myHubMembership = myHubs?.find(
     (m: any) => m.hubId === id || m.hub?.id === id,
@@ -71,6 +80,8 @@ export default function HubAssessmentsScreen() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubAssessments", id] });
+      queryClient.invalidateQueries({ queryKey: ["assessments", id] });
+      queryClient.invalidateQueries({ queryKey: ["hub", id] });
       Toast.show({ type: "success", text1: "Work Submitted!" });
     },
     onError: (err: any) =>
@@ -96,6 +107,8 @@ export default function HubAssessmentsScreen() {
       ]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubAssessments", id] });
+      queryClient.invalidateQueries({ queryKey: ["assessments", id] });
+      queryClient.invalidateQueries({ queryKey: ["hub", id] });
       Toast.show({ type: "success", text1: "Grade Saved!" });
     },
     onError: (err: any) =>
@@ -106,10 +119,12 @@ export default function HubAssessmentsScreen() {
       }),
   });
 
-  // 👇 3. Filter the data so ONLY the clicked assessment is shown
-  const displayedAssessments = assessmentId
-    ? assessments.filter((a: any) => a.id === assessmentId)
-    : assessments;
+  // 👇 3. Filter safely so undefined is never accessed with .filter()
+  const displayedAssessments = useMemo(() => {
+    if (!activeFilterId) return safeAssessments;
+    const filtered = safeAssessments.filter((a: any) => a.id === activeFilterId);
+    return filtered.length > 0 ? filtered : safeAssessments;
+  }, [activeFilterId, safeAssessments]);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -129,20 +144,42 @@ export default function HubAssessmentsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Feather name="arrow-left" size={24} color={colors.onSurface} />
+          <Feather name="arrow-left" size={20} color="#131b2e" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Assessment Details</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>
+            {activeFilterId ? "Coursework Details" : "All Coursework"}
+          </Text>
+          {hubDetails?.courseName ? (
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              {hubDetails.courseCode} • {hubDetails.courseName}
+            </Text>
+          ) : null}
+        </View>
+        {activeFilterId && safeAssessments.length > 1 ? (
+          <TouchableOpacity
+            style={styles.viewAllBadge}
+            onPress={() => setActiveFilterId(null)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="View all coursework"
+          >
+            <Text style={styles.viewAllBadgeText}>View All ({safeAssessments.length})</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {isLoading ? (
-        <ActivityIndicator
-          size="large"
-          color={colors.primaryContainer}
-          style={{ marginTop: 40 }}
-        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={colors.primaryContainer}
+          />
+          <Text style={styles.loadingText}>Loading coursework...</Text>
+        </View>
       ) : (
         <FlatList
-          data={displayedAssessments} // 👈 Use the filtered list here
+          data={displayedAssessments}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <AssessmentCard
@@ -161,7 +198,10 @@ export default function HubAssessmentsScreen() {
           )}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Assessment not found.</Text>
+            <View style={styles.emptyContainer}>
+              <Feather name="file-text" size={48} color={colors.outlineVariant} />
+              <Text style={styles.emptyText}>No coursework found.</Text>
+            </View>
           }
         />
       )}
@@ -169,27 +209,92 @@ export default function HubAssessmentsScreen() {
   );
 }
 
+const fontFamily = Platform.select({
+  ios: "Plus Jakarta Sans",
+  android: "sans-serif",
+  default: "sans-serif",
+});
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: "#f7f9fb",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    borderBottomColor: "rgba(19, 27, 46, 0.08)",
   },
-  backButton: { marginRight: 16 },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f7f9fb",
+    borderWidth: 1,
+    borderColor: "rgba(19, 27, 46, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
   headerTitle: {
-    ...typography.titleLg,
-    fontWeight: "700",
-    color: colors.onSurface,
+    fontFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#131b2e",
+    letterSpacing: -0.2,
   },
-  listContent: { padding: spacing.marginMobile, paddingBottom: 100 },
+  headerSubtitle: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+    marginTop: 2,
+  },
+  viewAllBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#131b2e",
+    marginLeft: 10,
+  },
+  viewAllBadgeText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 100,
+    gap: 14,
+  },
+  loadingText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 100,
+    paddingHorizontal: 30,
+    gap: 14,
+  },
   emptyText: {
-    ...typography.bodyMd,
-    color: colors.outline,
+    fontFamily,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#64748b",
     textAlign: "center",
-    marginTop: 40,
   },
 });
