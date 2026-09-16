@@ -47,6 +47,8 @@ export interface UpdateHubInput {
   termOffer?: string;
   termExams?: TermExamItem[];
   isReviewOpen?: boolean;
+  meetUrl?: string | null;
+  isClassLive?: boolean;
 }
 
 export interface CreateAssessmentInput {
@@ -124,6 +126,19 @@ export const updateHub = async (hubId: string, data: UpdateHubInput) => {
   return res.data?.data;
 };
 export const updateHubAPI = updateHub;
+
+export const toggleLiveClass = async (
+  hubId: string,
+  isClassLive: boolean,
+  meetUrl?: string | null,
+) => {
+  const res = await api.patch(`/hubs/${hubId}/live-class`, {
+    isClassLive,
+    meetUrl,
+  });
+  return res.data?.data;
+};
+export const toggleLiveClassAPI = toggleLiveClass;
 
 export const archiveHub = async (hubId: string, isArchived: boolean = true) => {
   const res = await api.patch(`/hubs/${hubId}/archive`, { isArchived });

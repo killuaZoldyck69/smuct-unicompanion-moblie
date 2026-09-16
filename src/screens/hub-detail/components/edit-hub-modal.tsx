@@ -81,6 +81,7 @@ export default function EditHubModal({
     department: "",
     batch: "",
     termOffer: "",
+    meetUrl: "",
   });
 
   // Schedule State
@@ -103,6 +104,7 @@ export default function EditHubModal({
         department: hubDetails.department || "",
         batch: hubDetails.batch || "",
         termOffer: hubDetails.termOffer || "",
+        meetUrl: hubDetails.meetUrl || "",
       });
 
       // Parse JSON schedules
@@ -259,6 +261,7 @@ export default function EditHubModal({
 
     const payload = {
       ...form,
+      meetUrl: form.meetUrl.trim() ? form.meetUrl.trim() : null,
       weeklyClassSchedule: formattedSchedules,
       // Pass the array directly to match your Zod Schema!
       termExams: formattedTermExams.length > 0 ? formattedTermExams : undefined,
@@ -369,6 +372,32 @@ export default function EditHubModal({
               accessible={true}
               accessibilityLabel="Term or Semester"
             />
+
+            {/* ONLINE CLASS (GOOGLE MEET) */}
+            <View style={styles.sectionHeaderBox}>
+              <Feather
+                name="video"
+                size={18}
+                color={colors.primary}
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.sectionHeader}>Online Class (Google Meet)</Text>
+            </View>
+            <Text style={styles.label}>Google Meet URL</Text>
+            <TextInput
+              style={styles.input}
+              value={form.meetUrl}
+              onChangeText={(t) => setForm({ ...form, meetUrl: t })}
+              placeholder="https://meet.google.com/abc-defg-hij"
+              placeholderTextColor="#94a3b8"
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessible={true}
+              accessibilityLabel="Google Meet Link"
+            />
+            <Text style={styles.inputHelperText}>
+              Teachers and students can 1-tap join online lectures from the live class banner.
+            </Text>
 
             {/* CLASS SCHEDULES */}
             <View style={styles.sectionHeaderBox}>
@@ -739,5 +768,12 @@ const styles = StyleSheet.create({
     ...typography.labelMd,
     color: colors.primary,
     fontWeight: "700",
+  },
+  inputHelperText: {
+    ...typography.bodyMd,
+    color: colors.onSurfaceVariant,
+    marginTop: -spacing.stackSm,
+    marginBottom: spacing.stackMd,
+    fontSize: 12,
   },
 });

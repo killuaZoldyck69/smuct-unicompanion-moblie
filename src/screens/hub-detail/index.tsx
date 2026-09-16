@@ -30,6 +30,7 @@ import {
   createAssessment,
   updateAssessment,
   deleteAssessment,
+  toggleLiveClass,
 } from "@/services/hub-service";
 
 // Components
@@ -39,6 +40,7 @@ import ResourceCard from "./components/resource-card";
 import DiscussionCard from "./components/discussion-card";
 import MemberRow from "./components/member-row";
 import { AssessmentCard } from "./components/assessment-card";
+import { LiveClassBanner } from "./components/live-class-banner";
 
 // Modals
 import CreateAnnouncementModal from "./components/create-announcement-modal";
@@ -390,6 +392,32 @@ export function HubDetail({ hubId }: HubDetailProps) {
       }),
   });
 
+  const toggleLiveClassMutation = useMutation({
+    mutationFn: async ({
+      isLive,
+      meetUrl,
+    }: {
+      isLive: boolean;
+      meetUrl?: string;
+    }) => toggleLiveClass(hubId, isLive, meetUrl),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["hub", hubId] });
+      Toast.show({
+        type: "success",
+        text1: variables.isLive ? "Class is Now Live! 🟢" : "Live Class Ended",
+        text2: variables.isLive
+          ? "Students can now 1-tap join Google Meet."
+          : undefined,
+      });
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Status Update Failed",
+        text2: err.message,
+      }),
+  });
+
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
@@ -426,6 +454,17 @@ export function HubDetail({ hubId }: HubDetailProps) {
         hubDetails={hubDetails}
         onOptionsPress={() => setIsHubOptionsVisible(true)}
         onBack={handleBack}
+      />
+
+      {/* 1.5 LIVE ONLINE CLASS BANNER */}
+      <LiveClassBanner
+        hubDetails={hubDetails}
+        canManage={canManage}
+        onToggleLive={(isLive, meetUrl) =>
+          toggleLiveClassMutation.mutate({ isLive, meetUrl })
+        }
+        onConfigureMeet={() => setIsEditHubModalVisible(true)}
+        isPending={toggleLiveClassMutation.isPending}
       />
 
       {/* 2. SOFT BENTO SUB-TABS */}
