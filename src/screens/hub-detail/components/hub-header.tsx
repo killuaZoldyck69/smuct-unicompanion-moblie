@@ -135,10 +135,11 @@ export default function HubHeader({
           ) : null}
         </View>
 
-        {/* Department, Batch & Semester */}
+        {/* Department, Batch, Section & Semester */}
         <Text style={styles.departmentText} numberOfLines={2}>
           {hubDetails?.department}
           {hubDetails?.batch ? ` • Batch ${hubDetails.batch}` : ""}
+          {hubDetails?.section ? ` • Sec ${hubDetails.section}` : ""}
           {hubDetails?.semesterNumber ? ` • Semester ${hubDetails.semesterNumber}` : ""}
         </Text>
       </View>

@@ -66,6 +66,7 @@ export default function CreateHubModal({
     credit: "",
     department: "",
     batch: "",
+    section: "",
     semesterNumber: "",
     termOffer: "",
     teacherId: "",
@@ -100,6 +101,7 @@ export default function CreateHubModal({
         ...prev,
         department: currentUser?.studentProfile?.department || "",
         batch: currentUser?.studentProfile?.batch || "",
+        section: currentUser?.studentProfile?.section || "",
         semesterNumber:
           currentUser?.studentProfile?.currentSemester?.toString() || "",
       }));
@@ -120,6 +122,7 @@ export default function CreateHubModal({
       credit: "",
       department: "",
       batch: "",
+      section: "",
       semesterNumber: "",
       termOffer: "",
       teacherId: "",
@@ -210,6 +213,7 @@ export default function CreateHubModal({
 
     const payload = {
       ...form,
+      section: form.section.trim() || undefined,
       credit: parseFloat(form.credit),
       semesterNumber: parseInt(form.semesterNumber, 10),
       weeklyClassSchedule: formattedSchedules,
@@ -250,8 +254,6 @@ export default function CreateHubModal({
             >
               <Feather name="x" size={24} color="#131b2e" />
             </TouchableOpacity>
-
-            <Text style={styles.headerTitle}>SMUCT Companion</Text>
 
             <View style={styles.headerActions}>
               <TouchableOpacity
@@ -378,36 +380,39 @@ export default function CreateHubModal({
             <View style={[styles.bentoCard, styles.mintCard]}>
               <Text style={styles.bentoTitleMint}>COHORT DETAILS</Text>
 
-              <View style={styles.gridRow}>
-                <View style={styles.gridItem}>
-                  <View style={styles.labelRow}>
-                    <Feather
-                      name="layers"
-                      size={14}
-                      color="#065f46"
-                      style={styles.labelIcon}
-                    />
-                    <Text style={styles.inputLabel}>Department</Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.inputBox,
-                      isTeacher && styles.disabledInputBox,
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.input}
-                      value={form.department}
-                      onChangeText={(t) => setForm({ ...form, department: t })}
-                      placeholder="e.g. CSE"
-                      placeholderTextColor="#76777d"
-                      autoCapitalize="characters"
-                      editable={isTeacher}
-                      accessible={true}
-                      accessibilityLabel="Department"
-                    />
-                  </View>
+              {/* Single Column: Department */}
+              <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                  <Feather
+                    name="layers"
+                    size={14}
+                    color="#065f46"
+                    style={styles.labelIcon}
+                  />
+                  <Text style={styles.inputLabel}>Department</Text>
                 </View>
+                <View
+                  style={[
+                    styles.inputBox,
+                    isTeacher && styles.disabledInputBox,
+                  ]}
+                >
+                  <TextInput
+                    style={styles.input}
+                    value={form.department}
+                    onChangeText={(t) => setForm({ ...form, department: t })}
+                    placeholder="e.g. Computer Science and Engineering"
+                    placeholderTextColor="#76777d"
+                    autoCapitalize="characters"
+                    editable={isTeacher}
+                    accessible={true}
+                    accessibilityLabel="Department"
+                  />
+                </View>
+              </View>
+
+              {/* 2 Columns: Batch & Section */}
+              <View style={styles.gridRow}>
                 <View style={styles.gridItem}>
                   <View style={styles.labelRow}>
                     <Feather
@@ -428,7 +433,7 @@ export default function CreateHubModal({
                       style={styles.input}
                       value={form.batch}
                       onChangeText={(t) => setForm({ ...form, batch: t })}
-                      placeholder="e.g. 21st"
+                      placeholder="e.g. 31"
                       placeholderTextColor="#76777d"
                       editable={isTeacher}
                       accessible={true}
@@ -436,8 +441,33 @@ export default function CreateHubModal({
                     />
                   </View>
                 </View>
+
+                <View style={styles.gridItem}>
+                  <View style={styles.labelRow}>
+                    <Feather
+                      name="bookmark"
+                      size={14}
+                      color="#065f46"
+                      style={styles.labelIcon}
+                    />
+                    <Text style={styles.inputLabel}>Section</Text>
+                  </View>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.input}
+                      value={form.section}
+                      onChangeText={(t) => setForm({ ...form, section: t })}
+                      placeholder="e.g. B"
+                      placeholderTextColor="#76777d"
+                      autoCapitalize="characters"
+                      accessible={true}
+                      accessibilityLabel="Section"
+                    />
+                  </View>
+                </View>
               </View>
 
+              {/* 2 Columns: Term / Offer & Semester */}
               <View style={styles.gridRow}>
                 <View style={styles.gridItem}>
                   <View style={styles.labelRow}>
@@ -461,6 +491,7 @@ export default function CreateHubModal({
                     />
                   </View>
                 </View>
+
                 <View style={styles.gridItem}>
                   <View style={styles.labelRow}>
                     <Feather
@@ -486,7 +517,7 @@ export default function CreateHubModal({
                           semesterNumber: t.replace(/[^0-9]/g, ""),
                         })
                       }
-                      placeholder="e.g. 5"
+                      placeholder="e.g. 9"
                       placeholderTextColor="#76777d"
                       keyboardType="numeric"
                       editable={isTeacher}
