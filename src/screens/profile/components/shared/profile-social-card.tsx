@@ -9,7 +9,7 @@ import {
 } from "../../constants";
 import {
   safeOpenURL,
-  resolvePersonalWebsite,
+  resolveSocialUrl,
   formatFriendlyLink,
 } from "../../utils";
 
@@ -32,11 +32,14 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
 }: ProfileSocialCardProps) {
   const theme = SECTION_THEMES.LINKS;
 
-  // Step 0 Option 3: Resolve test dev URLs to clean placeholder
-  const websiteResolution = resolvePersonalWebsite(personalWebsiteUrl, userName);
+  // Step 0: Resolve test dev URLs to clean placeholders with SAMPLE badges
+  const linkedInResolution = resolveSocialUrl(linkedInUrl, "linkedin", userName);
+  const displayLinkedIn = linkedInResolution.displayUrl;
+
+  const websiteResolution = resolveSocialUrl(personalWebsiteUrl, "website", userName);
   const displayWebsite = websiteResolution.displayUrl;
 
-  const friendlyLinkedIn = formatFriendlyLink(linkedInUrl);
+  const friendlyLinkedIn = formatFriendlyLink(displayLinkedIn);
   const friendlyWebsite = formatFriendlyLink(displayWebsite);
 
   return (
@@ -54,7 +57,14 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
           <Feather name="linkedin" size={18} color="#0077b5" />
         </View>
         <View style={styles.itemContent}>
-          <Text style={styles.label}>LinkedIn</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>LinkedIn</Text>
+            {linkedInResolution.isPlaceholder && !isEditing && (
+              <View style={styles.placeholderBadge}>
+                <Text style={styles.placeholderBadgeText}>SAMPLE</Text>
+              </View>
+            )}
+          </View>
           {isEditing ? (
             <TextInput
               style={styles.input}
@@ -67,14 +77,14 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
               accessible={true}
               accessibilityLabel="LinkedIn URL input"
             />
-          ) : linkedInUrl ? (
+          ) : (
             <TouchableOpacity
-              onPress={() => safeOpenURL(linkedInUrl)}
+              onPress={() => safeOpenURL(displayLinkedIn)}
               style={styles.linkTouchable}
               activeOpacity={0.7}
               accessible={true}
               accessibilityRole="link"
-              accessibilityLabel={`Open LinkedIn profile: ${linkedInUrl}`}
+              accessibilityLabel={`Open LinkedIn profile: ${displayLinkedIn}`}
             >
               <Text style={styles.linkText} numberOfLines={1}>
                 {friendlyLinkedIn}
@@ -86,8 +96,6 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
                 style={{ marginLeft: 4 }}
               />
             </TouchableOpacity>
-          ) : (
-            <Text style={styles.emptyText}>Not provided</Text>
           )}
         </View>
       </View>

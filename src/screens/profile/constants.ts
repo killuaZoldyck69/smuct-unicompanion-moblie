@@ -42,7 +42,11 @@ export const SECTION_THEMES = {
     accentText: "#131b2e",
     accentColor: "#131b2e",
   },
-  // Academic Record: Reuses Academic Blue from Explore Features (#1d4ed8 / #eff6ff)
+  // ROLE-BASED HUE SEPARATION RULE:
+  // Color in this app expresses ROLE at the top level (e.g. Student Academic Blue vs. Faculty Academic Amber)
+  // and CONTENT CATEGORY within a role (Contact/Safety = Crimson, Links = Cyan across all roles).
+
+  // Student Academic Record: Academic Blue (#1d4ed8 / #eff6ff)
   ACADEMIC: {
     primaryText: "#1d4ed8",
     headerBg: "rgba(37, 99, 235, 0.06)",
@@ -52,6 +56,18 @@ export const SECTION_THEMES = {
     tileBorder: "rgba(37, 99, 235, 0.10)",
     iconColor: "#2563eb",
     divider: "rgba(37, 99, 235, 0.08)",
+  },
+  // Faculty Academic Position: Deliberately distinct Amber/Yellow (#854d0e / #fefce8 / #fffbeb)
+  FACULTY_ACADEMIC: {
+    primaryText: "#854d0e",
+    headerBg: "rgba(202, 138, 4, 0.08)",
+    badgeBg: "#fefce8",
+    badgeBorder: "rgba(202, 138, 4, 0.18)",
+    tileBg: "#fffbeb",
+    tileBorder: "rgba(202, 138, 4, 0.14)",
+    iconColor: "#854d0e",
+    iconCircleBg: "#fef9c3",
+    divider: "rgba(202, 138, 4, 0.10)",
   },
   // Professional Skills: Reuses Campus Life Emerald (#047857 / #ecfdf5)
   SKILLS: {
@@ -64,7 +80,7 @@ export const SECTION_THEMES = {
     chipText: "#065f46",
     addBtnBg: "#059669",
   },
-  // Contact & Safety: Reuses Support & Aid Crimson (#be123c / #fff1f2)
+  // Contact & Safety: Reuses Support & Aid Crimson (#be123c / #fff1f2) across both student & faculty
   CONTACT: {
     primaryText: "#be123c",
     badgeBg: "#fff1f2",
@@ -73,7 +89,7 @@ export const SECTION_THEMES = {
     iconCircleBg: "#fee2e2",
     tileBg: "#ffffff",
   },
-  // External Links: Digital web cyan (#0284c7 / #f0f9ff)
+  // External Links: Digital web cyan (#0284c7 / #f0f9ff) across all roles
   LINKS: {
     primaryText: "#0284c7",
     badgeBg: "#f0f9ff",

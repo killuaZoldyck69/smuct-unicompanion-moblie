@@ -44,17 +44,23 @@ export const formatPhoneNumber = (phone?: string | null): string => {
 };
 
 /**
- * Sanitizes URLs to prevent dev/local IP addresses from polluting the UI (Step 0 - Option 3).
- * If the URL is a local dev URL (e.g. 192.168.x.x, localhost), replaces it with a clean placeholder.
+ * Sanitizes URLs to prevent dev/local IP addresses from polluting the UI (Step 0).
+ * Handles both LinkedIn and Personal Website URLs.
  */
-export const resolvePersonalWebsite = (
+export const resolveSocialUrl = (
   url?: string | null,
+  type: "linkedin" | "website" = "website",
   userName?: string
 ): { displayUrl: string; isPlaceholder: boolean } => {
+  const slug = (userName || "user").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const defaultPlaceholder =
+    type === "linkedin"
+      ? `https://linkedin.com/in/${slug}`
+      : `https://portfolio.me/${slug}`;
+
   if (!url || !url.trim()) {
-    const slug = (userName || "student").toLowerCase().replace(/[^a-z0-9]/g, "");
     return {
-      displayUrl: `https://portfolio.me/${slug}`,
+      displayUrl: defaultPlaceholder,
       isPlaceholder: true,
     };
   }
@@ -67,14 +73,20 @@ export const resolvePersonalWebsite = (
     /:8081/i.test(trimmed);
 
   if (isLocalDevUrl) {
-    const slug = (userName || "student").toLowerCase().replace(/[^a-z0-9]/g, "");
     return {
-      displayUrl: `https://portfolio.me/${slug}`,
+      displayUrl: defaultPlaceholder,
       isPlaceholder: true,
     };
   }
 
   return { displayUrl: trimmed, isPlaceholder: false };
+};
+
+export const resolvePersonalWebsite = (
+  url?: string | null,
+  userName?: string
+): { displayUrl: string; isPlaceholder: boolean } => {
+  return resolveSocialUrl(url, "website", userName);
 };
 
 /**
