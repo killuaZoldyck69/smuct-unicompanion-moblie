@@ -224,7 +224,7 @@ export const createResourceAPI = createResource;
 
 // Announcements & Discussions
 export const getAnnouncements = async (hubId: string) => {
-  const res = await api.get(`/hubs/${hubId}/content/announcements`);
+  const res = await api.get(`/hubs/${hubId}/announcements`);
   return res.data?.data || [];
 };
 export const getAnnouncementsAPI = getAnnouncements;
@@ -233,7 +233,7 @@ export const createAnnouncement = async (
   hubId: string,
   data: CreateAnnouncementInput,
 ) => {
-  const res = await api.post(`/hubs/${hubId}/content/announcements`, data);
+  const res = await api.post(`/hubs/${hubId}/announcements`, data);
   return res.data?.data;
 };
 export const createAnnouncementAPI = createAnnouncement;
@@ -244,7 +244,7 @@ export const addAnnouncementComment = async (
   content: string,
 ) => {
   const res = await api.post(
-    `/hubs/${hubId}/content/announcements/${announcementId}/comments`,
+    `/hubs/${hubId}/announcements/${announcementId}/comments`,
     { content },
   );
   return res.data?.data;
@@ -252,7 +252,7 @@ export const addAnnouncementComment = async (
 export const addAnnouncementCommentAPI = addAnnouncementComment;
 
 export const getDiscussions = async (hubId: string) => {
-  const res = await api.get(`/hubs/${hubId}/content/discussions`);
+  const res = await api.get(`/hubs/${hubId}/discussions`);
   return res.data?.data || [];
 };
 export const getDiscussionsAPI = getDiscussions;
@@ -261,7 +261,7 @@ export const createDiscussion = async (
   hubId: string,
   data: CreateDiscussionInput,
 ) => {
-  const res = await api.post(`/hubs/${hubId}/content/discussions`, data);
+  const res = await api.post(`/hubs/${hubId}/discussions`, data);
   return res.data?.data;
 };
 export const createDiscussionAPI = createDiscussion;
@@ -272,7 +272,7 @@ export const replyDiscussion = async (
   content: string,
 ) => {
   const res = await api.post(
-    `/hubs/${hubId}/content/discussions/${discussionId}/reply`,
+    `/hubs/${hubId}/discussions/${discussionId}/reply`,
     { content },
   );
   return res.data?.data;

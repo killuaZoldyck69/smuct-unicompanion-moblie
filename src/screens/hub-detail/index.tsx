@@ -179,6 +179,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
   const postAnnouncementMutation = useMutation({
     mutationFn: async (payload: any) => createAnnouncement(hubId, payload),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
       queryClient.invalidateQueries({ queryKey: ["hubAnnouncements", hubId] });
       Toast.show({ type: "success", text1: "Announcement Posted" });
       setIsAnnounceModalVisible(false);
@@ -194,6 +195,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
   const postQuestionMutation = useMutation({
     mutationFn: async (payload: any) => createDiscussion(hubId, payload),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions", hubId] });
       queryClient.invalidateQueries({ queryKey: ["hubDiscussions", hubId] });
       Toast.show({ type: "success", text1: "Question Posted" });
       setIsQuestionModalVisible(false);
@@ -215,6 +217,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
       content: string;
     }) => replyDiscussion(hubId, discussionId, content),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions", hubId] });
       queryClient.invalidateQueries({ queryKey: ["hubDiscussions", hubId] });
       Toast.show({ type: "success", text1: "Reply Posted!" });
     },
@@ -262,6 +265,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
   const postResourceMutation = useMutation({
     mutationFn: async (payload: any) => createResource(hubId, payload),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resources", hubId] });
       queryClient.invalidateQueries({ queryKey: ["hubResources", hubId] });
       Toast.show({ type: "success", text1: "Material Uploaded!" });
       setIsResourceModalVisible(false);
@@ -279,6 +283,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
       content: string;
     }) => addAnnouncementComment(hubId, announcementId, content),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
       queryClient.invalidateQueries({ queryKey: ["hubAnnouncements", hubId] });
       Toast.show({ type: "success", text1: "Comment Posted!" });
     },
