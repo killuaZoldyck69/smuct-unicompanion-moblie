@@ -28,6 +28,8 @@ import {
   deleteHub,
   archiveHub,
   createAssessment,
+  updateAssessment,
+  deleteAssessment,
 } from "@/services/hub-service";
 
 // Components
@@ -48,6 +50,7 @@ import ManageMemberModal from "./components/manage-member-modal";
 import EditHubModal from "./components/edit-hub-modal";
 import HubOptionsModal from "./components/hub-options-modal";
 import CreateCourseworkModal from "./components/create-coursework-modal";
+import EditCourseworkModal from "./components/edit-coursework-modal";
 
 import {
   useHubDetails,
@@ -128,6 +131,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
   const [isHubOptionsVisible, setIsHubOptionsVisible] = useState(false);
   const [isCourseworkModalVisible, setIsCourseworkModalVisible] =
     useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<any | null>(null);
 
   const [activeAnnouncement, setActiveAnnouncement] = useState<any>(null);
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -350,6 +354,42 @@ export function HubDetail({ hubId }: HubDetailProps) {
       }),
   });
 
+  const updateAssessmentMutation = useMutation({
+    mutationFn: async ({
+      assessmentId,
+      payload,
+    }: {
+      assessmentId: string;
+      payload: any;
+    }) => updateAssessment(hubId, assessmentId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hubAssessments", hubId] });
+      Toast.show({ type: "success", text1: "Coursework Updated" });
+      setEditingAssessment(null);
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: err.message,
+      }),
+  });
+
+  const deleteAssessmentMutation = useMutation({
+    mutationFn: async (assessmentId: string) =>
+      deleteAssessment(hubId, assessmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hubAssessments", hubId] });
+      Toast.show({ type: "success", text1: "Coursework Deleted" });
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Deletion Failed",
+        text2: err.message,
+      }),
+  });
+
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
@@ -443,6 +483,10 @@ export function HubDetail({ hubId }: HubDetailProps) {
                   hubId={hubId}
                   canManage={canManage}
                   myUserId={myUserId}
+                  onEdit={(assessment) => setEditingAssessment(assessment)}
+                  onDelete={(assessmentId) =>
+                    deleteAssessmentMutation.mutate(assessmentId)
+                  }
                 />
               )}
               contentContainerStyle={[
@@ -822,6 +866,19 @@ export function HubDetail({ hubId }: HubDetailProps) {
         onClose={() => setIsCourseworkModalVisible(false)}
         onSubmit={(payload: any) => createAssessmentMutation.mutate(payload)}
         isPending={createAssessmentMutation.isPending}
+      />
+
+      <EditCourseworkModal
+        isVisible={!!editingAssessment}
+        onClose={() => setEditingAssessment(null)}
+        assessment={editingAssessment}
+        onSubmit={(payload: any) =>
+          updateAssessmentMutation.mutate({
+            assessmentId: editingAssessment.id,
+            payload,
+          })
+        }
+        isPending={updateAssessmentMutation.isPending}
       />
     </SafeAreaView>
   );

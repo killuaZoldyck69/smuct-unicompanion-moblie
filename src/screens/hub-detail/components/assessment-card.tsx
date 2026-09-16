@@ -5,26 +5,28 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCountdown } from "@/hooks/use-countdown";
 
 // ==================================================
-// 1. SOFT CAMPUS BENTO DESIGN SYSTEM CONSTANTS
+// SOFT CAMPUS BENTO DESIGN TOKENS
 // ==================================================
 const BENTO_COLORS = {
   deepNavy: "#131b2e",
   white: "#ffffff",
   neutralText: "#191c1d",
   subtleText: "#64748b",
-  cardRadius: 24,
+  cardRadius: 22,
   pillRadius: 9999,
+  border: "rgba(19, 27, 46, 0.07)",
   shadow: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.04,
-    shadowRadius: 24,
+    shadowRadius: 18,
     elevation: 2,
   },
 };
@@ -40,166 +42,312 @@ interface AssessmentCardProps {
   hubId: string;
   canManage: boolean;
   myUserId?: string;
+  onEdit?: (item: any) => void;
+  onDelete?: (assessmentId: string) => void;
 }
+
+const formatDeadlineDate = (deadlineStr?: string) => {
+  if (!deadlineStr) return "No deadline set";
+  try {
+    const d = new Date(deadlineStr);
+    if (isNaN(d.getTime())) return "Invalid date";
+    return d.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return deadlineStr;
+  }
+};
 
 export const AssessmentCard: React.FC<AssessmentCardProps> = ({
   item,
   hubId,
   canManage,
   myUserId,
+  onEdit,
+  onDelete,
 }) => {
   const router = useRouter();
   const { timeLeft, isOverdue } = useCountdown(item.deadline);
   const mySub = item.submissions?.find((s: any) => s.studentId === myUserId);
 
-  // Type badge colors
+  // Type configuration
   const typeStr = (item.type || "ASSIGNMENT").toUpperCase();
   const isQuiz = typeStr.includes("QUIZ");
-  const isExam = typeStr.includes("MID") || typeStr.includes("FINAL") || typeStr.includes("EXAM");
+  const isPresentation = typeStr.includes("PRESENTATION");
+  const isExam =
+    typeStr.includes("MID") || typeStr.includes("FINAL") || typeStr.includes("EXAM");
+
+  let typeIcon: keyof typeof Feather.glyphMap = "file-text";
+  let typeBadgeStyle = styles.typeAssignment;
+  let typeTextStyle = styles.textAssignment;
+  let typeLabel = "Assignment";
+
+  if (isQuiz) {
+    typeIcon = "help-circle";
+    typeBadgeStyle = styles.typeQuiz;
+    typeTextStyle = styles.textQuiz;
+    typeLabel = "Quiz / CT";
+  } else if (isPresentation) {
+    typeIcon = "monitor";
+    typeBadgeStyle = styles.typePresentation;
+    typeTextStyle = styles.textPresentation;
+    typeLabel = "Presentation";
+  } else if (isExam) {
+    typeIcon = "award";
+    typeBadgeStyle = styles.typeExam;
+    typeTextStyle = styles.textExam;
+    typeLabel = typeStr;
+  }
+
+  // Submission method configuration
+  const submissionType = (item.submissionType || "ONLINE").toUpperCase();
+  const isHand = submissionType === "HAND";
+
+  const handleDeletePress = () => {
+    Alert.alert(
+      "Delete Coursework",
+      `Are you sure you want to delete "${item.title}"? All student submissions will also be deleted.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => onDelete?.(item.id),
+        },
+      ],
+    );
+  };
+
+  const handleCardPress = () => {
+    router.push({
+      pathname: `/hub/${hubId}/assessments`,
+      params: { assessmentId: item.id },
+    });
+  };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.85}
-      onPress={() =>
-        router.push({
-          pathname: `/hub/${hubId}/assessments`,
-          params: { assessmentId: item.id },
-        })
-      }
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={`Coursework: ${item.title}, ${item.type}, Total Marks: ${item.totalMarks}, Deadline: ${timeLeft}`}
-    >
-      {/* Top Meta Bar */}
+    <View style={styles.card}>
+      {/* 1. TOP HEADER ROW: Badges on left, Status & Edit/Delete on right */}
       <View style={styles.cardHeaderRow}>
-        <View
-          style={[
-            styles.typeBadgePill,
-            isQuiz
-              ? styles.typeQuiz
-              : isExam
-                ? styles.typeExam
-                : styles.typeAssignment,
-          ]}
-        >
-          <Text
-            style={[
-              styles.typeBadgeText,
-              isQuiz
-                ? styles.textQuiz
-                : isExam
-                  ? styles.textExam
-                  : styles.textAssignment,
-            ]}
-          >
-            {typeStr}
-          </Text>
-        </View>
-
-        {/* Status / Countdown Pill */}
-        <View
-          style={[
-            styles.timerBadgePill,
-            isOverdue ? styles.timerOverdue : styles.timerActive,
-          ]}
-        >
-          <Feather
-            name="clock"
-            size={11}
-            color={isOverdue ? "#be123c" : "#0284c7"}
-            style={{ marginRight: 4 }}
-          />
-          <Text
-            style={[
-              styles.timerBadgeText,
-              isOverdue ? styles.textOverdue : styles.textActiveTimer,
-            ]}
-          >
-            {isOverdue ? "Closed" : timeLeft}
-          </Text>
-        </View>
-      </View>
-
-      {/* Coursework Title (Plus Jakarta Sans, Extra Bold) */}
-      <Text style={styles.courseworkTitleText} numberOfLines={2}>
-        {item.title}
-      </Text>
-
-      {/* Description Preview */}
-      {item.description ? (
-        <Text style={styles.courseworkDescText} numberOfLines={2}>
-          {item.description}
-        </Text>
-      ) : null}
-
-      {/* Divider */}
-      <View style={styles.cardDivider} />
-
-      {/* Card Footer: Marks, Submissions & Action */}
-      <View style={styles.cardFooterRow}>
-        <View style={styles.footerChipsRow}>
-          <View style={styles.marksChipPill}>
-            <Text style={styles.marksChipText}>
-              Total Marks: {item.totalMarks}
+        <View style={styles.headerLeftTags}>
+          {/* Assessment Type Pill with Icon */}
+          <View style={[styles.typeBadgePill, typeBadgeStyle]}>
+            <Feather
+              name={typeIcon}
+              size={11}
+              color={typeTextStyle.color}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[styles.typeBadgeText, typeTextStyle]}>
+              {typeLabel}
             </Text>
           </View>
 
-          {canManage ? (
-            <View style={styles.submissionsChipPill}>
-              <Text style={styles.submissionsChipText}>
-                {item.submissions?.length || 0} Submissions
-              </Text>
-            </View>
-          ) : mySub ? (
-            <View style={styles.submittedPill}>
-              <Feather
-                name="check"
-                size={11}
-                color="#047857"
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.submittedPillText}>Submitted</Text>
-            </View>
-          ) : (
-            <View
+          {/* Submission Method Pill (Online vs In-Hand) */}
+          <View
+            style={[
+              styles.methodBadgePill,
+              isHand ? styles.methodHand : styles.methodOnline,
+            ]}
+          >
+            <Feather
+              name={isHand ? "inbox" : "globe"}
+              size={10}
+              color={isHand ? "#c2410c" : "#0f766e"}
+              style={{ marginRight: 4 }}
+            />
+            <Text
               style={[
-                styles.pendingPill,
-                isOverdue && styles.overduePendingPill,
+                styles.methodBadgeText,
+                isHand ? styles.textHand : styles.textOnline,
               ]}
             >
-              <Text
-                style={[
-                  styles.pendingPillText,
-                  isOverdue && styles.overduePendingText,
-                ]}
-              >
-                {isOverdue ? "Overdue" : "Pending"}
-              </Text>
+              {isHand ? "In-Hand" : "Online Link"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Right side: Countdown & Management Actions */}
+        <View style={styles.headerRightActions}>
+          <View
+            style={[
+              styles.timerBadgePill,
+              isOverdue ? styles.timerOverdue : styles.timerActive,
+            ]}
+          >
+            <Feather
+              name={isOverdue ? "alert-circle" : "clock"}
+              size={10}
+              color={isOverdue ? "#be123c" : "#0284c7"}
+              style={{ marginRight: 3 }}
+            />
+            <Text
+              style={[
+                styles.timerBadgeText,
+                isOverdue ? styles.textOverdue : styles.textActiveTimer,
+              ]}
+            >
+              {isOverdue ? "Closed" : timeLeft}
+            </Text>
+          </View>
+
+          {/* Manager Action Buttons (Edit & Delete) */}
+          {canManage && (
+            <View style={styles.managementButtonsRow}>
+              {onEdit && (
+                <TouchableOpacity
+                  onPress={() => onEdit(item)}
+                  style={styles.actionIconBtn}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit coursework ${item.title}`}
+                >
+                  <Feather name="edit-2" size={13} color="#334155" />
+                </TouchableOpacity>
+              )}
+              {onDelete && (
+                <TouchableOpacity
+                  onPress={handleDeletePress}
+                  style={[styles.actionIconBtn, styles.actionDeleteBtn]}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete coursework ${item.title}`}
+                >
+                  <Feather name="trash-2" size={13} color="#e11d48" />
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
-
-        <View style={styles.cardActionCircle}>
-          <Feather
-            name="arrow-up-right"
-            size={14}
-            color={BENTO_COLORS.deepNavy}
-          />
-        </View>
       </View>
-    </TouchableOpacity>
+
+      {/* 2. CLICKABLE BODY: Navigates to detail / submission */}
+      <TouchableOpacity
+        onPress={handleCardPress}
+        activeOpacity={0.8}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`View details for ${item.title}`}
+        style={styles.cardBodyPressable}
+      >
+        {/* Title */}
+        <Text style={styles.courseworkTitleText} numberOfLines={2}>
+          {item.title}
+        </Text>
+
+        {/* Description Preview */}
+        {item.description ? (
+          <Text style={styles.courseworkDescText} numberOfLines={2}>
+            {item.description}
+          </Text>
+        ) : null}
+
+        {/* 3. EXPLICIT DEADLINE BAR */}
+        <View style={styles.deadlineContainer}>
+          <View style={styles.deadlineContainerLeft}>
+            <Feather
+              name="calendar"
+              size={12}
+              color="#64748b"
+              style={{ marginRight: 5 }}
+            />
+            <Text style={styles.deadlinePrefix}>Due: </Text>
+            <Text style={styles.deadlineValue}>
+              {formatDeadlineDate(item.deadline)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Divider */}
+        <View style={styles.cardDivider} />
+
+        {/* 4. FOOTER: Total Marks, Submissions & Arrow */}
+        <View style={styles.cardFooterRow}>
+          <View style={styles.footerChipsRow}>
+            <View style={styles.marksChipPill}>
+              <Feather
+                name="award"
+                size={11}
+                color={BENTO_COLORS.subtleText}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={styles.marksChipText}>
+                {item.totalMarks} Marks
+              </Text>
+            </View>
+
+            {canManage ? (
+              <View style={styles.submissionsChipPill}>
+                <Feather
+                  name="users"
+                  size={11}
+                  color={BENTO_COLORS.deepNavy}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.submissionsChipText}>
+                  {item.submissions?.length || 0} Submissions
+                </Text>
+              </View>
+            ) : mySub ? (
+              <View style={styles.submittedPill}>
+                <Feather
+                  name="check-circle"
+                  size={11}
+                  color="#047857"
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.submittedPillText}>Submitted</Text>
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.pendingPill,
+                  isOverdue && styles.overduePendingPill,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.pendingPillText,
+                    isOverdue && styles.overduePendingText,
+                  ]}
+                >
+                  {isOverdue ? "Overdue" : "Pending"}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.cardActionCircle}>
+            <Feather
+              name="arrow-up-right"
+              size={14}
+              color={BENTO_COLORS.deepNavy}
+            />
+          </View>
+        </View>
+      </TouchableOpacity>
+    </View>
   );
 };
 
 // ==================================================
-// 2. STYLES
+// STYLES
 // ==================================================
 const styles = StyleSheet.create({
   card: {
     backgroundColor: BENTO_COLORS.white,
     borderRadius: BENTO_COLORS.cardRadius,
-    padding: 20,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.border,
+    padding: 18,
     marginBottom: 14,
     ...BENTO_COLORS.shadow,
   },
@@ -209,41 +357,98 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
+  headerLeftTags: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+    flex: 1,
+  },
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  // Assessment Type Pills
   typeBadgePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
     borderRadius: BENTO_COLORS.pillRadius,
+    borderWidth: 1,
   },
   typeAssignment: {
-    backgroundColor: "#e0f2fe",
+    backgroundColor: "#eff6ff",
+    borderColor: "#bfdbfe",
   },
   typeQuiz: {
-    backgroundColor: "#fefce8",
+    backgroundColor: "#faf5ff",
+    borderColor: "#e9d5ff",
+  },
+  typePresentation: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
   },
   typeExam: {
-    backgroundColor: "#ffe4e6",
+    backgroundColor: "#fff1f2",
+    borderColor: "#fecdd3",
   },
   typeBadgeText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   textAssignment: {
-    color: "#0369a1",
+    color: "#1d4ed8",
   },
   textQuiz: {
+    color: "#7e22ce",
+  },
+  textPresentation: {
     color: "#b45309",
   },
   textExam: {
     color: "#be123c",
   },
 
+  // Submission Method Pills
+  methodBadgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: BENTO_COLORS.pillRadius,
+    borderWidth: 1,
+  },
+  methodOnline: {
+    backgroundColor: "#f0fdfa",
+    borderColor: "#ccfbf1",
+  },
+  methodHand: {
+    backgroundColor: "#fff7ed",
+    borderColor: "#fed7aa",
+  },
+  methodBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  textOnline: {
+    color: "#0f766e",
+  },
+  textHand: {
+    color: "#c2410c",
+  },
+
+  // Timer Pills
   timerBadgePill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
     borderRadius: BENTO_COLORS.pillRadius,
   },
   timerActive: {
@@ -254,7 +459,7 @@ const styles = StyleSheet.create({
   },
   timerBadgeText: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "700",
   },
   textActiveTimer: {
@@ -264,13 +469,35 @@ const styles = StyleSheet.create({
     color: "#be123c",
   },
 
+  // Action Buttons
+  managementButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginLeft: 2,
+  },
+  actionIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  actionDeleteBtn: {
+    backgroundColor: "#fff1f2",
+  },
+
+  cardBodyPressable: {
+    marginTop: 2,
+  },
   courseworkTitleText: {
     fontFamily,
-    fontSize: 17,
+    fontSize: 16.5,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    lineHeight: 23,
-    marginBottom: 6,
+    lineHeight: 22,
+    marginBottom: 4,
   },
   courseworkDescText: {
     fontFamily,
@@ -278,13 +505,46 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
     lineHeight: 18,
-    marginBottom: 14,
+    marginBottom: 10,
   },
+
+  // Deadline Container
+  deadlineContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(19, 27, 46, 0.04)",
+  },
+  deadlineContainerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  deadlinePrefix: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  deadlineValue: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
+  },
+
   cardDivider: {
     height: 1,
     backgroundColor: "rgba(0, 0, 0, 0.05)",
     marginBottom: 12,
   },
+
+  // Footer Row
   cardFooterRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -299,8 +559,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   marksChipPill: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#f8fafc",
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
   },
@@ -311,8 +573,10 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.subtleText,
   },
   submissionsChipPill: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#f1f5f9",
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
   },
@@ -326,7 +590,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#d1fae5",
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
   },
@@ -338,7 +602,7 @@ const styles = StyleSheet.create({
   },
   pendingPill: {
     backgroundColor: "#fef3c7",
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
   },

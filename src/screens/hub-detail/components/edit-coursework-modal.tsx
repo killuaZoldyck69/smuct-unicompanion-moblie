@@ -1,4 +1,4 @@
-import React, { useState, createElement } from "react";
+import React, { useState, useEffect, createElement } from "react";
 import {
   View,
   Text,
@@ -47,6 +47,7 @@ interface Props {
   onClose: () => void;
   onSubmit: (payload: any) => void;
   isPending: boolean;
+  assessment: any | null;
 }
 
 const toDateTimeLocalString = (date: Date) => {
@@ -59,11 +60,12 @@ const toDateTimeLocalString = (date: Date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-export default function CreateCourseworkModal({
+export default function EditCourseworkModal({
   isVisible,
   onClose,
   onSubmit,
   isPending,
+  assessment,
 }: Props) {
   const [form, setForm] = useState({
     title: "",
@@ -73,17 +75,30 @@ export default function CreateCourseworkModal({
     totalMarks: "100",
   });
 
-  // Default to tomorrow at 11:59 PM
-  const getInitialDeadline = () => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    d.setHours(23, 59, 0, 0);
-    return d;
-  };
-
-  const [deadline, setDeadline] = useState<Date>(getInitialDeadline);
+  const [deadline, setDeadline] = useState<Date>(() => new Date());
   const [showNativePicker, setShowNativePicker] = useState(false);
   const [nativePickerMode, setNativePickerMode] = useState<"date" | "time">("date");
+
+  useEffect(() => {
+    if (assessment && isVisible) {
+      setForm({
+        title: assessment.title || "",
+        description: assessment.description || "",
+        type: (assessment.type || "ASSIGNMENT").toUpperCase(),
+        submissionType: (assessment.submissionType || "ONLINE").toUpperCase() as "ONLINE" | "HAND",
+        totalMarks: assessment.totalMarks != null ? String(assessment.totalMarks) : "100",
+      });
+
+      if (assessment.deadline) {
+        setDeadline(new Date(assessment.deadline));
+      } else {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        d.setHours(23, 59, 0, 0);
+        setDeadline(d);
+      }
+    }
+  }, [assessment, isVisible]);
 
   const handleSubmit = () => {
     if (!form.title.trim() || !form.totalMarks.trim()) return;
@@ -96,16 +111,6 @@ export default function CreateCourseworkModal({
       totalMarks: parseFloat(form.totalMarks) || 100,
       deadline: deadline.toISOString(),
     });
-
-    // Reset Form
-    setForm({
-      title: "",
-      description: "",
-      type: "ASSIGNMENT",
-      submissionType: "ONLINE",
-      totalMarks: "100",
-    });
-    setDeadline(getInitialDeadline());
   };
 
   // Quick Preset Handlers
@@ -116,7 +121,6 @@ export default function CreateCourseworkModal({
     setDeadline(d);
   };
 
-  // Native DatePicker sequence for Android / iOS
   const openNativePicker = () => {
     if (Platform.OS === "web") return;
     setNativePickerMode("date");
@@ -164,14 +168,14 @@ export default function CreateCourseworkModal({
               activeOpacity={0.7}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Cancel coursework creation"
+              accessibilityLabel="Cancel coursework editing"
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
 
             <View style={styles.headerCenterCol}>
-              <Text style={styles.headerTitle}>New Coursework</Text>
-              <Text style={styles.headerSubtitle}>Assign tasks to cohort</Text>
+              <Text style={styles.headerTitle}>Edit Coursework</Text>
+              <Text style={styles.headerSubtitle}>Update assignment details</Text>
             </View>
 
             <TouchableOpacity
@@ -184,14 +188,14 @@ export default function CreateCourseworkModal({
               activeOpacity={0.85}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Publish coursework"
+              accessibilityLabel="Save coursework changes"
             >
               {isPending ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
                 <>
                   <Feather name="check" size={14} color="#ffffff" style={{ marginRight: 4 }} />
-                  <Text style={styles.publishBtnText}>Publish</Text>
+                  <Text style={styles.publishBtnText}>Save</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -367,7 +371,7 @@ export default function CreateCourseworkModal({
               </View>
             </View>
 
-            {/* 4. Total Marks (Clean & spacious) */}
+            {/* 4. Total Marks */}
             <View style={styles.sectionBlock}>
               <Text style={styles.fieldLabel}>TOTAL MARKS</Text>
               <View style={styles.inputCard}>
@@ -389,11 +393,10 @@ export default function CreateCourseworkModal({
               </View>
             </View>
 
-            {/* 5. Deadline & Time (Unified, Spacious Bento Card) */}
+            {/* 5. Deadline & Time */}
             <View style={styles.sectionBlock}>
               <Text style={styles.fieldLabel}>DEADLINE & TIME</Text>
 
-              {/* Clickable Bento Card */}
               <TouchableOpacity
                 style={styles.deadlineContainer}
                 onPress={openNativePicker}
@@ -420,7 +423,7 @@ export default function CreateCourseworkModal({
                 </View>
                 <Feather name="edit-2" size={16} color={BENTO.slate} />
 
-                {/* On Web: Invisible overlay input that opens native browser picker on click without crushing layout */}
+                {/* On Web: Invisible overlay input that opens native browser picker */}
                 {Platform.OS === "web" && (
                   createElement("input", {
                     type: "datetime-local",
@@ -539,19 +542,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: BENTO.slate,
-    marginTop: 1,
   },
   publishBtn: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: BENTO.navy,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 9999,
   },
   publishBtnDisabled: {
     backgroundColor: "#cbd5e1",
-    opacity: 0.7,
   },
   publishBtnText: {
     fontFamily,
@@ -559,23 +560,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#ffffff",
   },
+
   content: {
-    padding: 18,
+    padding: 20,
     paddingBottom: 40,
   },
   sectionBlock: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   fieldLabel: {
     fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: BENTO.slate,
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     marginBottom: 8,
+    textTransform: "uppercase",
   },
 
-  // Input Card
   inputCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -583,8 +585,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: BENTO.border,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   inputIcon: {
     marginRight: 10,
@@ -595,16 +597,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: BENTO.navy,
+    padding: 0,
   },
   unitSuffix: {
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: BENTO.slate,
-    marginLeft: 8,
+    marginLeft: 6,
   },
 
-  // Type Tabs
   typeTabsContainer: {
     flexDirection: "row",
     gap: 8,
@@ -618,8 +620,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: BENTO.border,
-    paddingVertical: 11,
-    paddingHorizontal: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
   },
   typeTabText: {
     fontFamily,
@@ -628,53 +630,57 @@ const styles = StyleSheet.create({
     color: BENTO.slate,
   },
 
-  // Submission Grid
   submissionGrid: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
   },
   submissionCard: {
     flex: 1,
     backgroundColor: "#ffffff",
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1.5,
     borderColor: BENTO.border,
     padding: 14,
   },
   submissionCardActive: {
+    backgroundColor: "#ffffff",
     borderColor: BENTO.navy,
-    backgroundColor: "#fcfdfe",
+    shadowColor: BENTO.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   submissionCardHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
   submissionIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: BENTO.canvas,
-    alignItems: "center",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
+    alignItems: "center",
   },
   submissionIconCircleActive: {
     backgroundColor: BENTO.navy,
   },
   activeCheckPill: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: BENTO.mintSoft,
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: BENTO.mintBorder,
-    alignItems: "center",
-    justifyContent: "center",
   },
   submissionTitle: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     color: BENTO.navy,
     marginBottom: 2,
@@ -682,29 +688,29 @@ const styles = StyleSheet.create({
   submissionSubtitle: {
     fontFamily,
     fontSize: 11,
+    fontWeight: "500",
     color: BENTO.slate,
-    lineHeight: 14,
+    lineHeight: 15,
   },
 
-  // Deadline Card
   deadlineContainer: {
     position: "relative",
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: BENTO.border,
     padding: 14,
     marginBottom: 10,
   },
   deadlineIconBox: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: BENTO.canvas,
-    alignItems: "center",
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   deadlinInfoCol: {
@@ -712,39 +718,38 @@ const styles = StyleSheet.create({
   },
   deadlineSubLabel: {
     fontFamily,
-    fontSize: 10,
-    fontWeight: "700",
+    fontSize: 11,
+    fontWeight: "600",
     color: BENTO.slate,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
+    marginBottom: 2,
   },
   deadlineDateText: {
     fontFamily,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
     color: BENTO.navy,
-    marginTop: 2,
   },
+
   presetChipsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
     gap: 6,
+    flexWrap: "wrap",
   },
   presetHeading: {
     fontFamily,
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "700",
     color: BENTO.slate,
     marginRight: 2,
   },
   presetChip: {
     backgroundColor: "#ffffff",
-    borderRadius: 8,
+    borderRadius: 9999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 1,
     borderColor: BENTO.border,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
   },
   presetChipText: {
     fontFamily,
@@ -753,19 +758,20 @@ const styles = StyleSheet.create({
     color: BENTO.navy,
   },
 
-  // Description / Textarea
   textAreaCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: BENTO.border,
-    padding: 12,
+    padding: 14,
   },
   textArea: {
     fontFamily,
     fontSize: 13,
+    fontWeight: "500",
     color: BENTO.navy,
-    lineHeight: 20,
     minHeight: 90,
+    lineHeight: 18,
+    padding: 0,
   },
 });

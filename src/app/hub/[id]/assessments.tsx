@@ -66,7 +66,7 @@ export default function HubAssessmentsScreen() {
   const myRole = myHubMembership?.role;
   const myUserId = myHubMembership?.userId;
 
-  const canManage = ["TEACHER", "TA"].includes(myRole);
+  const canManage = ["TEACHER", "CR", "TA"].includes(myRole);
   const canSubmit = ["STUDENT", "CR", "TA"].includes(myRole);
 
   // --- Mutations ---

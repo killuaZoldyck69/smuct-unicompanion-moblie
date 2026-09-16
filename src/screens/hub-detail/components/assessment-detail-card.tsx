@@ -219,6 +219,18 @@ export default function AssessmentCard({
             </Text>
           </View>
 
+          {/* Submission Mode Chip */}
+          <View style={styles.metaChip}>
+            <Feather
+              name={item.submissionType === "HAND" ? "clipboard" : "globe"}
+              size={13}
+              color={BENTO.navy}
+            />
+            <Text style={styles.metaChipText}>
+              {item.submissionType === "HAND" ? "In-Hand / Offline" : "Online Link"}
+            </Text>
+          </View>
+
           {mySub && canSubmit ? (
             <View style={[styles.metaChip, styles.submittedChip]}>
               <Feather name="check-circle" size={13} color={BENTO.mintText} />
@@ -244,7 +256,36 @@ export default function AssessmentCard({
           {/* STUDENT VIEW: Inline Submission */}
           {canSubmit && (
             <View style={styles.studentSection}>
-              {mySub ? (
+              {item.submissionType === "HAND" ? (
+                <View style={styles.bentoHandBox}>
+                  <View style={styles.handHeader}>
+                    <View style={styles.handIconBadge}>
+                      <Feather name="clipboard" size={18} color="#ffffff" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.handTitle}>In-Hand / Physical Submission</Text>
+                      <Text style={styles.handSubtitle}>
+                        Submit your hardcopy assignment or lab report directly to the course instructor in class.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.gradeResultBox}>
+                    <Text style={styles.gradeResultLabel}>Evaluation Status</Text>
+                    {mySub?.marks !== null && mySub?.marks !== undefined ? (
+                      <View style={styles.scoreRow}>
+                        <Text style={styles.scoreNumber}>{mySub.marks}</Text>
+                        <Text style={styles.scoreMax}> / {item.totalMarks} Marks</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.pendingBadge}>
+                        <Feather name="clock" size={13} color={BENTO.amberText} />
+                        <Text style={styles.pendingText}>Pending Faculty Review</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : mySub ? (
                 <View style={styles.bentoSuccessBox}>
                   <View style={styles.successHeader}>
                     <View style={styles.successIconBadge}>
@@ -454,6 +495,11 @@ export default function AssessmentCard({
                             />
                             <Text style={styles.viewWorkBtnText}>View Work</Text>
                           </TouchableOpacity>
+                        </View>
+                      ) : item.submissionType === "HAND" ? (
+                        <View style={styles.handSubTag}>
+                          <Feather name="clipboard" size={11} color={BENTO.amberText} />
+                          <Text style={styles.handSubText}>In-Hand Physical</Text>
                         </View>
                       ) : (
                         <View style={styles.noSubTag}>
@@ -997,6 +1043,56 @@ const styles = StyleSheet.create({
   saveGradeBtnDisabled: {
     backgroundColor: "#94a3b8",
     opacity: 0.5,
+  },
+  bentoHandBox: {
+    backgroundColor: BENTO.amberSoft,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: BENTO.amberBorder,
+  },
+  handHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+  handIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: BENTO.amberText,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  handTitle: {
+    fontFamily,
+    fontSize: 15,
+    fontWeight: "800",
+    color: BENTO.amberText,
+  },
+  handSubtitle: {
+    fontFamily,
+    fontSize: 12,
+    color: BENTO.slate,
+    marginTop: 2,
+  },
+  handSubTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: BENTO.amberSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: BENTO.amberBorder,
+  },
+  handSubText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: BENTO.amberText,
   },
   collapseFooter: {
     flexDirection: "row",

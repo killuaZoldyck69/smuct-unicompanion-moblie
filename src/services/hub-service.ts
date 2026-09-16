@@ -53,9 +53,12 @@ export interface CreateAssessmentInput {
   title: string;
   description?: string;
   type: "ASSIGNMENT" | "QUIZ" | "PRESENTATION" | string;
+  submissionType?: "ONLINE" | "HAND" | string;
   deadline: string | Date;
   totalMarks: number;
 }
+
+export type UpdateAssessmentInput = Partial<CreateAssessmentInput>;
 
 export interface CreateResourceInput {
   title: string;
@@ -165,6 +168,28 @@ export const createAssessment = async (
   return res.data?.data;
 };
 export const createAssessmentAPI = createAssessment;
+
+export const updateAssessment = async (
+  hubId: string,
+  assessmentId: string,
+  data: UpdateAssessmentInput,
+) => {
+  const res = await api.patch(
+    `/hubs/${hubId}/assessments/${assessmentId}`,
+    data,
+  );
+  return res.data?.data;
+};
+export const updateAssessmentAPI = updateAssessment;
+
+export const deleteAssessment = async (
+  hubId: string,
+  assessmentId: string,
+) => {
+  const res = await api.delete(`/hubs/${hubId}/assessments/${assessmentId}`);
+  return res.data?.data;
+};
+export const deleteAssessmentAPI = deleteAssessment;
 
 export const getAssessmentSubmissions = async (assessmentId: string) => {
   const res = await api.get(`/hubs/assessments/${assessmentId}/submissions`);
