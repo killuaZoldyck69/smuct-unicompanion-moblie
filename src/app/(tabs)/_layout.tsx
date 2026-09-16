@@ -101,8 +101,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="menu"
         options={{
-          title: "Menu",
-          tabBarAccessibilityLabel: "Features menu tab",
+          title: "Explore",
+          tabBarAccessibilityLabel: "Explore university services directory",
           tabBarIcon: ({ focused }) => (
             <View
               style={[
@@ -111,9 +111,13 @@ export default function TabsLayout() {
               ]}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Open features menu"
+              accessibilityLabel="Explore university services directory"
             >
-              <Feather name="plus" size={24} color="#131b2e" />
+              <Feather
+                name="grid"
+                size={22}
+                color={focused ? "#131b2e" : "#ffffff"}
+              />
             </View>
           ),
         }}

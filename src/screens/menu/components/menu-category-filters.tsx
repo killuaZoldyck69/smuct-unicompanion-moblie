@@ -4,6 +4,7 @@ import {
   BENTO_COLORS,
   CATEGORY_LABELS,
   MenuCategoryKey,
+  SPACING,
   fontFamily,
 } from "../constants";
 
@@ -38,17 +39,18 @@ export const MenuCategoryFilters = React.memo(function MenuCategoryFilters({
               onPress={() => onSelectCategory(catKey)}
               style={[
                 styles.pill,
-                isSelected && styles.pillActive,
+                isSelected ? styles.pillActive : styles.pillInactive,
               ]}
               accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={`Filter by ${label}, ${count} services available`}
-              activeOpacity={0.8}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`Category tab: ${label}, ${count} services available`}
+              activeOpacity={0.75}
             >
               <Text
                 style={[
                   styles.text,
-                  isSelected && styles.textActive,
+                  isSelected ? styles.textActive : styles.textInactive,
                 ]}
               >
                 {label}
@@ -56,13 +58,13 @@ export const MenuCategoryFilters = React.memo(function MenuCategoryFilters({
               <View
                 style={[
                   styles.countChip,
-                  isSelected && styles.countChipActive,
+                  isSelected ? styles.countChipActive : styles.countChipInactive,
                 ]}
               >
                 <Text
                   style={[
                     styles.countText,
-                    isSelected && styles.countTextActive,
+                    isSelected ? styles.countTextActive : styles.countTextInactive,
                   ]}
                 >
                   {count}
@@ -78,50 +80,59 @@ export const MenuCategoryFilters = React.memo(function MenuCategoryFilters({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 20,
+    marginBottom: SPACING.lg, // 16px
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingHorizontal: SPACING.xl, // 20px
+    gap: SPACING.sm, // 8px
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: BENTO_COLORS.white,
-    paddingVertical: 9,
+    paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: BENTO_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+  },
+  pillInactive: {
+    backgroundColor: BENTO_COLORS.white,
+    borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
   pillActive: {
     backgroundColor: BENTO_COLORS.deepNavy,
     borderColor: BENTO_COLORS.deepNavy,
+    ...BENTO_COLORS.shadow,
   },
   text: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: BENTO_COLORS.neutralText,
     marginRight: 6,
+  },
+  textInactive: {
+    color: BENTO_COLORS.neutralText,
   },
   textActive: {
     color: BENTO_COLORS.white,
   },
   countChip: {
-    backgroundColor: "#f1f5f9",
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: BENTO_COLORS.pillRadius,
   },
+  countChipInactive: {
+    backgroundColor: "#f1f5f9",
+  },
   countChipActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
   },
   countText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "800",
+  },
+  countTextInactive: {
     color: BENTO_COLORS.subtleText,
   },
   countTextActive: {

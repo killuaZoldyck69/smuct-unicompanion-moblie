@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO_COLORS, SPACING, fontFamily } from "../constants";
 
 interface MenuHeroCardProps {
   totalCount: number;
@@ -14,7 +14,12 @@ export const MenuHeroCard = React.memo(function MenuHeroCard({
   isAdmin,
 }: MenuHeroCardProps) {
   return (
-    <View style={styles.card}>
+    <View
+      style={styles.card}
+      accessible={true}
+      accessibilityRole="summary"
+      accessibilityLabel={`University Services Directory: ${totalCount} active services across Academic, Campus Life, and Support.`}
+    >
       <View style={styles.topRow}>
         <View style={styles.tagPill}>
           <Text style={styles.tagText}>CAMPUS DIRECTORY</Text>
@@ -63,17 +68,19 @@ export const MenuHeroCard = React.memo(function MenuHeroCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: BENTO_COLORS.deepNavy,
-    borderRadius: 28,
-    padding: 24,
-    marginHorizontal: 20,
-    marginBottom: 20,
+    borderRadius: BENTO_COLORS.heroRadius,
+    padding: SPACING.xl, // 20px
+    marginHorizontal: SPACING.xl,
+    marginBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
     ...BENTO_COLORS.heroShadow,
   },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: SPACING.md, // 12px
   },
   tagPill: {
     backgroundColor: "rgba(255, 255, 255, 0.12)",
@@ -86,7 +93,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     color: "#a5b4fc",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   countPill: {
     backgroundColor: "rgba(255, 255, 255, 0.08)",
@@ -102,27 +109,29 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily,
-    fontSize: 24,
+    fontSize: 23,
     fontWeight: "800",
     color: BENTO_COLORS.white,
     letterSpacing: -0.4,
-    marginBottom: 8,
+    marginBottom: SPACING.sm, // 8px
   },
   subtitle: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 12.5,
     color: "#94a3b8",
-    lineHeight: 19,
-    marginBottom: 20,
+    lineHeight: 18,
+    marginBottom: SPACING.lg, // 16px
   },
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    borderRadius: 16,
+    paddingVertical: SPACING.md, // 12px
+    paddingHorizontal: SPACING.lg, // 16px
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.04)",
   },
   statItem: {
     flex: 1,
@@ -143,7 +152,7 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    height: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    height: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
   },
 });
