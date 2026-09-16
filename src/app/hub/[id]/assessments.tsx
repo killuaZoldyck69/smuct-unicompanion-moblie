@@ -16,10 +16,8 @@ import Toast from "react-native-toast-message";
 
 import api from "@/services/api";
 import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
 
 import AssessmentCard from "@/screens/hub-detail/components/assessment-detail-card";
-import { spacing } from "@/theme/layout";
 
 export default function HubAssessmentsScreen() {
   // 👇 1. Grab the assessmentId from the route parameters
@@ -49,7 +47,7 @@ export default function HubAssessmentsScreen() {
     queryFn: async () => (await api.get(`/hubs/${id}`)).data?.data,
   });
 
-  const { data: assessments, isLoading, refetch } = useQuery({
+  const { data: assessments, isLoading} = useQuery({
     queryKey: ["hubAssessments", id],
     queryFn: async () =>
       (await api.get(`/hubs/${id}/assessments`)).data?.data || [],
