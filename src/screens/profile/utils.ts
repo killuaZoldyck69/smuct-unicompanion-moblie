@@ -3,12 +3,86 @@ import * as SecureStore from "expo-secure-store";
 import Toast from "react-native-toast-message";
 import { authClient } from "@/services/auth-client";
 
-export const getOrdinalSuffix = (num: number | string): string => {
+/**
+ * Splits a number into its numeric string and ordinal suffix (e.g. 9 -> { number: "9", suffix: "th" }).
+ * Enables pixel-perfect superscript rendering across all platforms.
+ */
+export const splitOrdinal = (
+  num: number | string
+): { number: string; suffix: string } => {
   const n = typeof num === "string" ? parseInt(num, 10) : num;
-  if (isNaN(n)) return String(num);
-  const s = ["ᵗʰ", "ˢᵗ", "ⁿᵈ", "ʳᵈ"];
+  if (isNaN(n)) return { number: String(num), suffix: "" };
+  const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  const suffix = s[(v - 20) % 10] || s[v] || s[0];
+  return { number: String(n), suffix };
+};
+
+export const getOrdinalSuffix = (num: number | string): string => {
+  const { number, suffix } = splitOrdinal(num);
+  return `${number}${suffix}`;
+};
+
+/**
+ * Formats a phone number for clean readability.
+ * E.g., "01712345678" -> "01712-345678"
+ *       "+8801712345678" -> "+880 1712-345678"
+ */
+export const formatPhoneNumber = (phone?: string | null): string => {
+  if (!phone) return "Not provided";
+  const cleaned = phone.replace(/[\s-]/g, "");
+
+  // Bangladesh format with country code (+880 1XXX-XXXXXX)
+  if (cleaned.startsWith("+880") && cleaned.length === 14) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+  }
+  // Local 11-digit Bangladesh mobile (01XXX-XXXXXX)
+  if (cleaned.startsWith("01") && cleaned.length === 11) {
+    return `${cleaned.slice(0, 5)}-${cleaned.slice(5)}`;
+  }
+  return phone;
+};
+
+/**
+ * Sanitizes URLs to prevent dev/local IP addresses from polluting the UI (Step 0 - Option 3).
+ * If the URL is a local dev URL (e.g. 192.168.x.x, localhost), replaces it with a clean placeholder.
+ */
+export const resolvePersonalWebsite = (
+  url?: string | null,
+  userName?: string
+): { displayUrl: string; isPlaceholder: boolean } => {
+  if (!url || !url.trim()) {
+    const slug = (userName || "student").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return {
+      displayUrl: `https://portfolio.me/${slug}`,
+      isPlaceholder: true,
+    };
+  }
+
+  const trimmed = url.trim();
+  const isLocalDevUrl =
+    /192\.168\.\d+\.\d+/i.test(trimmed) ||
+    /localhost/i.test(trimmed) ||
+    /127\.0\.0\.1/i.test(trimmed) ||
+    /:8081/i.test(trimmed);
+
+  if (isLocalDevUrl) {
+    const slug = (userName || "student").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return {
+      displayUrl: `https://portfolio.me/${slug}`,
+      isPlaceholder: true,
+    };
+  }
+
+  return { displayUrl: trimmed, isPlaceholder: false };
+};
+
+/**
+ * Extracts a friendly display label for long links (e.g. "https://linkedin.com/in/nahid" -> "linkedin.com/in/nahid")
+ */
+export const formatFriendlyLink = (url?: string | null): string => {
+  if (!url) return "Not provided";
+  return url.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 };
 
 export const safeOpenURL = async (url?: string | null): Promise<void> => {
