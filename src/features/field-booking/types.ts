@@ -10,12 +10,13 @@ export interface FieldBookingSettings {
 export interface FieldBookingItem {
   id: string;
   purpose: string;
+  bookingDate?: string;
   startTime: string;
   endTime: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | string;
   adminFeedback?: string | null;
   createdAt: string;
-  userId: string;
+  userId?: string;
   user?: {
     id: string;
     name: string;
@@ -26,6 +27,7 @@ export interface FieldBookingItem {
 
 export interface CreateFieldBookingInput {
   purpose: string;
+  bookingDate?: string;
   startTime: string;
   endTime: string;
 }
