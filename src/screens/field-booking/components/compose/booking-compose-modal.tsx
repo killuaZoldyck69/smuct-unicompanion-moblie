@@ -152,7 +152,8 @@ export const BookingComposeModal = memo(function BookingComposeModal({
               minimumDate={
                 nativePickerMode === "date" ? new Date() : undefined
               }
-              onChange={handleNativePickerChange}
+              onValueChange={handleNativePickerChange}
+              onDismiss={() => setNativePickerMode(null)}
             />
           )}
         </KeyboardAvoidingView>

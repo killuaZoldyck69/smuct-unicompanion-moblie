@@ -473,7 +473,8 @@ export default function EditCourseworkModal({
                   value={deadline}
                   mode={Platform.OS === "ios" ? "datetime" : nativePickerMode}
                   display="default"
-                  onChange={handleNativeDateChange}
+                  onValueChange={(_event, date) => handleNativeDateChange({ type: "set" }, date)}
+                  onDismiss={() => setShowNativePicker(false)}
                 />
               )}
             </View>

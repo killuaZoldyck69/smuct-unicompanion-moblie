@@ -2,8 +2,10 @@ import {
   ClassRoutineItem,
   DayScheduleSection,
   DAYS_ORDER,
+  DAY_ABBREVIATIONS,
   PASTEL_THEMES,
   PastelTheme,
+  RoutineDayFilterItem,
   TodayStats,
 } from "./constants";
 
@@ -24,6 +26,28 @@ export const timeToMinutes = (timeStr: string): number => {
   } catch {
     return 0;
   }
+};
+
+export const formatTimeDisplay = (timeStr?: string): string => {
+  if (!timeStr) return "TBA";
+  const trimmed = timeStr.trim();
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return trimmed;
+
+  let h = parseInt(match[1], 10);
+  const m = match[2];
+  const mod = match[3]?.toUpperCase();
+
+  if (mod) {
+    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    const paddedH = hour12 < 10 ? `0${hour12}` : `${hour12}`;
+    return `${paddedH}:${m} ${mod}`;
+  }
+
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 || 12;
+  const paddedH = hour12 < 10 ? `0${hour12}` : `${hour12}`;
+  return `${paddedH}:${m} ${period}`;
 };
 
 export const calculateDuration = (
@@ -113,6 +137,10 @@ export const getDeterministicColorTheme = (
     return PASTEL_THEMES.rose;
   }
 
+  if (combined.includes("system") || combined.includes("security") || combined.includes("ai")) {
+    return PASTEL_THEMES.purple;
+  }
+
   let sum = 0;
   for (let i = 0; i < combined.length; i++) {
     sum += combined.charCodeAt(i);
@@ -122,9 +150,40 @@ export const getDeterministicColorTheme = (
     PASTEL_THEMES.mint,
     PASTEL_THEMES.yellow,
     PASTEL_THEMES.rose,
+    PASTEL_THEMES.purple,
     PASTEL_THEMES.white,
   ];
   return themes[sum % themes.length];
+};
+
+export const getCurrentWeekDays = (
+  classesCountByDay: Map<string, number>
+): RoutineDayFilterItem[] => {
+  const now = new Date();
+  const currentDayIndex = now.getDay(); // 0 = Sunday, 1 = Monday ... 6 = Saturday
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() - currentDayIndex);
+
+  return DAYS_ORDER.map((dayName, idx) => {
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + idx);
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
+
+    const count = classesCountByDay.get(dayName) || 0;
+
+    return {
+      dayName,
+      abbrev: DAY_ABBREVIATIONS[dayName] || dayName.substring(0, 3),
+      dateNumber: d.getDate(),
+      dateFormatted: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      isToday,
+      hasClasses: count > 0,
+      classCount: count,
+    };
+  });
 };
 
 export const parseWeeklySchedule = (
@@ -141,6 +200,14 @@ export const parseWeeklySchedule = (
       const hub = membership.hub;
       if (!hub || hub.isArchived) return;
 
+      const teacherMember =
+        hub.members?.find((m: any) => m.role === "TEACHER") ||
+        hub.members?.find((m: any) => m.user?.name) ||
+        hub.members?.[0];
+      const hubTeacherName =
+        teacherMember?.user?.name || teacherMember?.name || undefined;
+      const hubSection = hub.section ? String(hub.section).trim() : undefined;
+
       let scheduleArray = hub.weeklyClassSchedule;
       if (typeof scheduleArray === "string") {
         try {
@@ -156,8 +223,51 @@ export const parseWeeklySchedule = (
           const startMin = timeToMinutes(session.startTime);
           const duration = calculateDuration(session.startTime, session.endTime || "");
 
+          const sessionTeacher =
+            session.teacherName || session.instructor || session.teacher;
+          const sessionSection = session.section
+            ? String(session.section).trim()
+            : undefined;
+
+          // Find active notice matching this day and not expired
+          const now = new Date();
+          const activeNotice = Array.isArray(hub.classNotices)
+            ? hub.classNotices.find((n: any) => {
+                if (!n.isActive) return false;
+                if (n.targetDay !== session.day) return false;
+                if (n.effectiveDate) {
+                  const noticeDate = new Date(n.effectiveDate);
+                  const diffHours =
+                    (now.getTime() - noticeDate.getTime()) / (1000 * 60 * 60);
+                  if (diffHours > 24) return false;
+                }
+                return true;
+              })
+            : undefined;
+
+          const mappedNotice = activeNotice
+            ? {
+                id: activeNotice.id,
+                hubId: activeNotice.hubId || hub.id,
+                authorId: activeNotice.authorId,
+                authorName: activeNotice.author?.name,
+                authorRole: activeNotice.author?.role,
+                type: activeNotice.type,
+                title: activeNotice.title,
+                message: activeNotice.message,
+                targetDay: activeNotice.targetDay,
+                effectiveDate: String(activeNotice.effectiveDate),
+                newRoom: activeNotice.newRoom,
+                newTime: activeNotice.newTime,
+                meetUrl: activeNotice.meetUrl,
+                isActive: activeNotice.isActive,
+                createdAt: String(activeNotice.createdAt),
+              }
+            : undefined;
+
           list.push({
             id: `${hub.id}-${session.day}-${session.startTime}`,
+            hubId: hub.id,
             courseCode: hub.courseCode || "COURSE",
             courseName: hub.courseName || "Untitled Course",
             day: session.day,
@@ -166,6 +276,10 @@ export const parseWeeklySchedule = (
             room: session.room?.trim() || "TBA",
             duration,
             sortValue: startMin,
+            teacherName: sessionTeacher || hubTeacherName,
+            section: sessionSection || hubSection,
+            userRole: membership.role,
+            activeNotice: mappedNotice,
           });
         });
       }

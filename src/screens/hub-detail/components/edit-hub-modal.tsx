@@ -1283,7 +1283,8 @@ export default function EditHubModal({
                 }
                 is24Hour={false}
                 display="default"
-                onChange={handlePickerChange}
+                onValueChange={handlePickerChange}
+                onDismiss={() => setActivePicker(null)}
               />
             )}
           </ScrollView>

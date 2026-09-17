@@ -381,3 +381,65 @@ export const submitReview = async (
   return res.data?.data;
 };
 export const submitReviewAPI = submitReview;
+
+// Class Routine Notices & Status Updates
+export type ClassNoticeType =
+  | "CANCELLED"
+  | "ROOM_CHANGE"
+  | "TIME_CHANGE"
+  | "ONLINE_CLASS"
+  | "URGENT_NOTICE";
+
+export interface ClassNoticeItem {
+  id: string;
+  hubId: string;
+  authorId: string;
+  authorName?: string;
+  authorRole?: string;
+  author?: {
+    id: string;
+    name: string;
+    image?: string | null;
+    role?: string;
+  };
+  type: ClassNoticeType;
+  title?: string | null;
+  message: string;
+  targetDay: string;
+  effectiveDate: string;
+  newRoom?: string | null;
+  newTime?: string | null;
+  meetUrl?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreateClassNoticeInput {
+  type: ClassNoticeType;
+  title?: string;
+  message?: string;
+  targetDay: string;
+  effectiveDate: string;
+  newRoom?: string;
+  newTime?: string;
+  meetUrl?: string;
+}
+
+export const createClassNotice = async (
+  hubId: string,
+  data: CreateClassNoticeInput,
+) => {
+  const res = await api.post(`/hubs/${hubId}/class-notices`, data);
+  return res.data?.data;
+};
+export const createClassNoticeAPI = createClassNotice;
+
+export const deleteClassNotice = async (
+  hubId: string,
+  noticeId: string,
+) => {
+  const res = await api.delete(`/hubs/${hubId}/class-notices/${noticeId}`);
+  return res.data;
+};
+export const deleteClassNoticeAPI = deleteClassNotice;
+

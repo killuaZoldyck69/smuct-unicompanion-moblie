@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import Toast from "react-native-toast-message";
-import { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import { DateTimePickerChangeEvent } from "@react-native-community/datetimepicker";
 import { useCreateFieldBooking } from "@/features/field-booking/useFieldBooking";
 import { NativePickerMode } from "../types";
 import { toISODateString, calculateDurationString } from "../utils";
@@ -56,7 +56,7 @@ export function useFieldBookingForm(
   }, []);
 
   const handleNativePickerChange = useCallback(
-    (_event: DateTimePickerEvent, date?: Date) => {
+    (_event: DateTimePickerChangeEvent, date?: Date) => {
       const mode = nativePickerMode;
       setNativePickerMode(null);
       if (!date) return;

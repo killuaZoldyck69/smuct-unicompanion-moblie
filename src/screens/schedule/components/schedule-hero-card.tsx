@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily, TodayStats } from "../constants";
 
@@ -14,6 +14,7 @@ export const ScheduleHeroCard = React.memo(function ScheduleHeroCard({
 
   return (
     <View style={styles.card}>
+      {/* Top Meta Line: Today Badge & Date */}
       <View style={styles.topRow}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>TODAY</Text>
@@ -21,39 +22,47 @@ export const ScheduleHeroCard = React.memo(function ScheduleHeroCard({
         <Text style={styles.dateText}>{dateFormatted}</Text>
       </View>
 
+      {/* Weekday Title */}
       <Text style={styles.weekdayText}>{weekday.toUpperCase()}</Text>
 
+      {/* Status Footer */}
       <View style={styles.footer}>
-        <View style={styles.summaryRow}>
-          <Feather
-            name="book-open"
-            size={16}
-            color="#c1dcff"
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.summaryText}>
-            {totalClassesToday === 0
-              ? "No classes scheduled today"
-              : totalClassesToday === 1
-                ? "1 class scheduled today"
-                : `${totalClassesToday} classes scheduled today`}
-          </Text>
-        </View>
-
         {liveClass ? (
           <View style={styles.liveChip}>
             <View style={styles.liveDot} />
             <Text style={styles.liveChipText} numberOfLines={1}>
-              Now: {liveClass.courseCode} ({liveClass.room})
+              Live: {liveClass.courseCode} ({liveClass.room ? `Room ${liveClass.room}` : "TBA"})
             </Text>
           </View>
         ) : nextClass ? (
           <View style={styles.nextChip}>
+            <Feather
+              name="clock"
+              size={12}
+              color="#93c5fd"
+              style={{ marginRight: 5 }}
+            />
             <Text style={styles.nextChipText} numberOfLines={1}>
-              Next at {nextClass.startTime} ({nextClass.courseCode})
+              Next: {nextClass.startTime} · {nextClass.courseCode} ({nextClass.room ? `Room ${nextClass.room}` : "TBA"})
             </Text>
           </View>
-        ) : null}
+        ) : (
+          <View style={styles.summaryRow}>
+            <Feather
+              name={totalClassesToday === 0 ? "coffee" : "book-open"}
+              size={14}
+              color="#c1dcff"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.summaryText}>
+              {totalClassesToday === 0
+                ? "No classes scheduled today · Free Day"
+                : totalClassesToday === 1
+                  ? "1 class scheduled today"
+                  : `${totalClassesToday} classes scheduled today`}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -62,49 +71,59 @@ export const ScheduleHeroCard = React.memo(function ScheduleHeroCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: BENTO_COLORS.deepNavy,
-    borderRadius: BENTO_COLORS.cardRadius,
-    padding: 24,
-    marginBottom: 18,
-    ...BENTO_COLORS.heroShadow,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: BENTO_COLORS.deepNavy,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.16,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 6,
   },
   badge: {
-    backgroundColor: "rgba(255, 255, 255, 0.16)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BENTO_COLORS.pillRadius,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   badgeText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "800",
     color: "#a5b4fc",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   dateText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "600",
     color: "#94a3b8",
   },
   weekdayText: {
     fontFamily,
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "800",
     color: "#ffffff",
-    letterSpacing: -0.5,
-    marginBottom: 16,
+    letterSpacing: -0.3,
+    marginBottom: 10,
   },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
-    paddingTop: 14,
-    gap: 8,
+    borderTopColor: "rgba(255, 255, 255, 0.08)",
+    paddingTop: 10,
   },
   summaryRow: {
     flexDirection: "row",
@@ -112,7 +131,7 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "600",
     color: "#c1dcff",
   },
@@ -120,9 +139,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(239, 68, 68, 0.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BENTO_COLORS.pillRadius,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     alignSelf: "flex-start",
     borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.4)",
@@ -136,23 +155,25 @@ const styles = StyleSheet.create({
   },
   liveChipText: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "700",
     color: "#fca5a5",
   },
   nextChip: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "rgba(59, 130, 246, 0.18)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BENTO_COLORS.pillRadius,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     alignSelf: "flex-start",
     borderWidth: 1,
     borderColor: "rgba(59, 130, 246, 0.35)",
   },
   nextChipText: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "700",
-    color: "#93c5fd",
+    color: "#bfdbfe",
   },
 });

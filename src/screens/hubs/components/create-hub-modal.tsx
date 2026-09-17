@@ -686,6 +686,7 @@ export default function CreateHubModal({
                 is24Hour={false}
                 display="default"
                 onValueChange={handleTimeChange}
+                onDismiss={() => setActivePicker(null)}
               />
             )}
 
