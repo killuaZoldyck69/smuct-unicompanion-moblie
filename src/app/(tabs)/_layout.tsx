@@ -1,10 +1,56 @@
 // app/(tabs)/_layout.tsx
 import React, { useEffect } from "react";
 import { Tabs, useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
-import { ActivityIndicator, View, StyleSheet } from "react-native";
+import {
+  ActivityIndicator,
+  View,
+  StyleSheet,
+  Image,
+  ImageSourcePropType,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCurrentUser } from "@/hooks/use-current-user";
+
+const TAB_ICONS = {
+  home: require("@/assets/tab-icons/home.png"),
+  lecture: require("@/assets/tab-icons/lecture.png"),
+  menu: require("@/assets/tab-icons/main-menu.png"),
+  group: require("@/assets/tab-icons/group.png"),
+  user: require("@/assets/tab-icons/user.png"),
+} as const;
+
+interface TabBarIconProps {
+  source: ImageSourcePropType;
+  focused: boolean;
+  size?: number;
+}
+
+const TabIcon = React.memo(function TabIcon({
+  source,
+  focused,
+  size = 25,
+}: TabBarIconProps) {
+  return (
+    <View style={styles.tabIconWrapper}>
+      <Image
+        source={source}
+        style={{
+          width: size,
+          height: size,
+          opacity: focused ? 1 : 0.55,
+          transform: [{ scale: focused ? 1.08 : 1 }],
+        }}
+        resizeMode="contain"
+      />
+      <View
+        style={[
+          styles.activeIndicator,
+          focused && styles.activeIndicatorFocused,
+        ]}
+      />
+    </View>
+  );
+});
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -31,11 +77,10 @@ export default function TabsLayout() {
       backBehavior="history"
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false, // Hide labels for the minimalist look
-        tabBarActiveTintColor: "#ffffff", // White icons when active
-        tabBarInactiveTintColor: "#76777d", // Grey icons when inactive
+        tabBarShowLabel: false,
+        tabBarActiveTintColor: "#ffffff",
+        tabBarInactiveTintColor: "#76777d",
 
-        // 👇 NEW: Forces the icons to center perfectly, ignoring the hidden label space
         tabBarItemStyle: {
           justifyContent: "center",
           alignItems: "center",
@@ -44,13 +89,12 @@ export default function TabsLayout() {
 
         tabBarStyle: {
           position: "absolute",
-          // Push up safely above the Android navigation bar
           bottom: insets.bottom > 0 ? insets.bottom + 16 : 24,
           marginHorizontal: 20,
           height: 72,
-          backgroundColor: "#131b2e", // Deep Navy background
-          borderRadius: 36, // Perfect pill shape
-          borderTopWidth: 0, // Remove default top line
+          backgroundColor: "#131b2e",
+          borderRadius: 36,
+          borderTopWidth: 0,
           elevation: 10,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 8 },
@@ -67,8 +111,8 @@ export default function TabsLayout() {
         options={{
           title: "Home",
           tabBarAccessibilityLabel: "Home tab",
-          tabBarIcon: ({ color }) => (
-            <Feather name="home" size={24} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon source={TAB_ICONS.home} focused={focused} />
           ),
         }}
       />
@@ -80,8 +124,8 @@ export default function TabsLayout() {
           title: "Hubs",
           tabBarAccessibilityLabel: "Course hubs tab",
           href: userRole === "ADMIN" ? null : "/(tabs)/hubs",
-          tabBarIcon: ({ color }) => (
-            <Feather name="calendar" size={24} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon source={TAB_ICONS.lecture} focused={focused} />
           ),
         }}
       />
@@ -91,8 +135,8 @@ export default function TabsLayout() {
           title: "Users",
           tabBarAccessibilityLabel: "Manage users tab",
           href: userRole === "ADMIN" ? "/(tabs)/admin_users" : null,
-          tabBarIcon: ({ color }) => (
-            <Feather name="users" size={24} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon source={TAB_ICONS.group} focused={focused} />
           ),
         }}
       />
@@ -113,10 +157,13 @@ export default function TabsLayout() {
               accessibilityRole="button"
               accessibilityLabel="Explore university services directory"
             >
-              <Feather
-                name="grid"
-                size={22}
-                color={focused ? "#131b2e" : "#ffffff"}
+              <Image
+                source={TAB_ICONS.menu}
+                style={[
+                  styles.centerIconImage,
+                  { opacity: focused ? 1 : 0.8 },
+                ]}
+                resizeMode="contain"
               />
             </View>
           ),
@@ -130,8 +177,8 @@ export default function TabsLayout() {
           title: "Forum",
           tabBarAccessibilityLabel: "Discussions forum tab",
           href: userRole === "ADMIN" ? null : "/(tabs)/forum",
-          tabBarIcon: ({ color }) => (
-            <Feather name="map" size={24} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon source={TAB_ICONS.group} focused={focused} />
           ),
         }}
       />
@@ -141,8 +188,8 @@ export default function TabsLayout() {
           title: "Add Staff",
           tabBarAccessibilityLabel: "Add faculty staff tab",
           href: userRole === "ADMIN" ? "/(tabs)/admin_add_teacher" : null,
-          tabBarIcon: ({ color }) => (
-            <Feather name="user-plus" size={24} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon source={TAB_ICONS.lecture} focused={focused} />
           ),
         }}
       />
@@ -153,8 +200,8 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarAccessibilityLabel: "User profile tab",
-          tabBarIcon: ({ color }) => (
-            <Feather name="user" size={24} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon source={TAB_ICONS.user} focused={focused} />
           ),
         }}
       />
@@ -171,7 +218,6 @@ export default function TabsLayout() {
   );
 }
 
-// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
@@ -179,15 +225,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f7f9fb",
   },
+  tabIconWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeIndicator: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "transparent",
+    marginTop: 4,
+  },
+  activeIndicatorFocused: {
+    backgroundColor: "#ffffff",
+  },
   centerButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#76777d", // Grey background from the mockup
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.15)",
   },
   centerButtonActive: {
-    backgroundColor: "#ffffff", // Turns pure white when active
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    borderColor: "rgba(255, 255, 255, 0.35)",
+    transform: [{ scale: 1.05 }],
+  },
+  centerIconImage: {
+    width: 25,
+    height: 25,
   },
 });
