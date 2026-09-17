@@ -1,33 +1,3 @@
-/**
- * FACULTY PROFILE REDESIGN & REFACTORING RATIONALE:
- *
- * 1. ACADEMIC POSITION HUE PRESERVATION:
- *    The Amber/Yellow palette (#854d0e on #fefce8 / #fffbeb) for "Academic Position"
- *    is strictly preserved. It serves as the visual anchor for official university
- *    post details (Designation, Department, Office Room, Consultation Hours).
- *
- * 2. ROLE-BASED HUE SEPARATION RULE:
- *    Color in this application expresses ROLE at the top level (Faculty Academic = Amber #854d0e,
- *    Student Academic = Blue #1d4ed8), while functional CONTENT CATEGORIES remain unified
- *    across all roles (Contact/Safety = Crimson #be123c, External Links = Cyan #0284c7).
- *    This rule is formally documented and codified in `src/screens/profile/constants.ts`.
- *
- * 3. CREDENTIALS CONTRAST DECISION (STEP 2 - OPTION A):
- *    "Professional Expertise" and "Qualifications" are unified inside a pristine, elevated
- *    neutral white Bento card with dedicated sub-sections. This establishes a clear visual hierarchy:
- *    the official university appointment (Amber) commands primary attention, while personal
- *    credentials sit cleanly in high-contrast neutral space, preventing "color soup".
- *
- * 4. CONTACT & SAFETY HUE REUSE (STEP 3):
- *    Blood Group and Emergency Phone Number reuse the Crimson/Rose theme (#be123c on #fff1f2)
- *    established on the student profile. Emergency medical identification is universally
- *    recognized and not role-specific.
- *
- * 5. ARCHITECTURAL DECOUPLING:
- *    Decomposed the 951-line monolith into dedicated, memoized sub-components and an isolated
- *    form hook (`useTeacherProfileForm`), achieving isolated re-renders and full type safety.
- */
-
 import React, { useState, useCallback } from "react";
 import {
   View,
