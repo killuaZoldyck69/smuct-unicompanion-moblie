@@ -32,15 +32,19 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
 }: ProfileSocialCardProps) {
   const theme = SECTION_THEMES.LINKS;
 
-  // Step 0: Resolve test dev URLs to clean placeholders with SAMPLE badges
   const linkedInResolution = resolveSocialUrl(linkedInUrl, "linkedin", userName);
-  const displayLinkedIn = linkedInResolution.displayUrl;
-
   const websiteResolution = resolveSocialUrl(personalWebsiteUrl, "website", userName);
-  const displayWebsite = websiteResolution.displayUrl;
 
-  const friendlyLinkedIn = formatFriendlyLink(displayLinkedIn);
-  const friendlyWebsite = formatFriendlyLink(displayWebsite);
+  const hasLinkedIn = linkedInResolution.isValid;
+  const hasWebsite = websiteResolution.isValid;
+
+  // In read mode, if neither link is provided by the user, do not show anything
+  if (!isEditing && !hasLinkedIn && !hasWebsite) {
+    return null;
+  }
+
+  const friendlyLinkedIn = formatFriendlyLink(linkedInResolution.displayUrl);
+  const friendlyWebsite = formatFriendlyLink(websiteResolution.displayUrl);
 
   return (
     <View style={styles.card}>
@@ -52,105 +56,102 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
       </View>
 
       {/* LinkedIn Row */}
-      <View style={styles.itemRow}>
-        <View style={styles.iconCircle}>
-          <Feather name="linkedin" size={18} color="#0077b5" />
-        </View>
-        <View style={styles.itemContent}>
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>LinkedIn</Text>
-            {linkedInResolution.isPlaceholder && !isEditing && (
-              <View style={styles.placeholderBadge}>
-                <Text style={styles.placeholderBadgeText}>SAMPLE</Text>
-              </View>
+      {(isEditing || hasLinkedIn) && (
+        <View style={styles.itemRow}>
+          <View style={styles.iconCircle}>
+            <Feather name="linkedin" size={18} color="#0077b5" />
+          </View>
+          <View style={styles.itemContent}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>LinkedIn</Text>
+            </View>
+            {isEditing ? (
+              <TextInput
+                style={styles.input}
+                value={linkedInUrl}
+                onChangeText={onChangeLinkedIn}
+                placeholder="https://linkedin.com/in/username"
+                placeholderTextColor={PROFILE_COLORS.mutedText}
+                autoCapitalize="none"
+                keyboardType="url"
+                accessible={true}
+                accessibilityLabel="LinkedIn URL input"
+              />
+            ) : (
+              <TouchableOpacity
+                onPress={() => safeOpenURL(linkedInResolution.displayUrl)}
+                style={styles.linkTouchable}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="link"
+                accessibilityLabel={`Open LinkedIn profile: ${linkedInResolution.displayUrl}`}
+              >
+                <Text style={styles.linkText} numberOfLines={1}>
+                  {friendlyLinkedIn}
+                </Text>
+                <Feather
+                  name="arrow-up-right"
+                  size={14}
+                  color="#0077b5"
+                  style={{ marginLeft: 4 }}
+                />
+              </TouchableOpacity>
             )}
           </View>
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={linkedInUrl}
-              onChangeText={onChangeLinkedIn}
-              placeholder="https://linkedin.com/in/username"
-              placeholderTextColor={PROFILE_COLORS.mutedText}
-              autoCapitalize="none"
-              keyboardType="url"
-              accessible={true}
-              accessibilityLabel="LinkedIn URL input"
-            />
-          ) : (
-            <TouchableOpacity
-              onPress={() => safeOpenURL(displayLinkedIn)}
-              style={styles.linkTouchable}
-              activeOpacity={0.7}
-              accessible={true}
-              accessibilityRole="link"
-              accessibilityLabel={`Open LinkedIn profile: ${displayLinkedIn}`}
-            >
-              <Text style={styles.linkText} numberOfLines={1}>
-                {friendlyLinkedIn}
-              </Text>
-              <Feather
-                name="arrow-up-right"
-                size={14}
-                color="#0077b5"
-                style={{ marginLeft: 4 }}
+        </View>
+      )}
+
+      {/* Divider between LinkedIn and Website */}
+      {(isEditing || (hasLinkedIn && hasWebsite)) && (
+        <View style={styles.divider} />
+      )}
+
+      {/* Personal Website Row */}
+      {(isEditing || hasWebsite) && (
+        <View style={styles.itemRow}>
+          <View style={styles.iconCircle}>
+            <Feather name="external-link" size={17} color={theme.primaryText} />
+          </View>
+          <View style={styles.itemContent}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Personal Website</Text>
+            </View>
+
+            {isEditing ? (
+              <TextInput
+                style={styles.input}
+                value={personalWebsiteUrl}
+                onChangeText={onChangeWebsite}
+                placeholder="https://yourwebsite.com"
+                placeholderTextColor={PROFILE_COLORS.mutedText}
+                autoCapitalize="none"
+                keyboardType="url"
+                accessible={true}
+                accessibilityLabel="Personal Website URL input"
               />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Personal Website Row (Step 0 - Option 3 Placeholder applied) */}
-      <View style={styles.itemRow}>
-        <View style={styles.iconCircle}>
-          <Feather name="external-link" size={17} color={theme.primaryText} />
-        </View>
-        <View style={styles.itemContent}>
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>Personal Website</Text>
-            {websiteResolution.isPlaceholder && !isEditing && (
-              <View style={styles.placeholderBadge}>
-                <Text style={styles.placeholderBadgeText}>SAMPLE</Text>
-              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => safeOpenURL(websiteResolution.displayUrl)}
+                style={styles.linkTouchable}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="link"
+                accessibilityLabel={`Open Personal Website: ${websiteResolution.displayUrl}`}
+              >
+                <Text style={styles.linkText} numberOfLines={1}>
+                  {friendlyWebsite}
+                </Text>
+                <Feather
+                  name="arrow-up-right"
+                  size={14}
+                  color={theme.primaryText}
+                  style={{ marginLeft: 4 }}
+                />
+              </TouchableOpacity>
             )}
           </View>
-
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={personalWebsiteUrl}
-              onChangeText={onChangeWebsite}
-              placeholder="https://portfolio.me/username"
-              placeholderTextColor={PROFILE_COLORS.mutedText}
-              autoCapitalize="none"
-              keyboardType="url"
-              accessible={true}
-              accessibilityLabel="Personal Website URL input"
-            />
-          ) : (
-            <TouchableOpacity
-              onPress={() => safeOpenURL(displayWebsite)}
-              style={styles.linkTouchable}
-              activeOpacity={0.7}
-              accessible={true}
-              accessibilityRole="link"
-              accessibilityLabel={`Open Personal Website: ${displayWebsite}`}
-            >
-              <Text style={styles.linkText} numberOfLines={1}>
-                {friendlyWebsite}
-              </Text>
-              <Feather
-                name="arrow-up-right"
-                size={14}
-                color={theme.primaryText}
-                style={{ marginLeft: 4 }}
-              />
-            </TouchableOpacity>
-          )}
         </View>
-      </View>
+      )}
     </View>
   );
 });
@@ -216,19 +217,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: PROFILE_COLORS.subtleText,
   },
-  placeholderBadge: {
-    backgroundColor: "rgba(2, 132, 199, 0.1)",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  placeholderBadgeText: {
-    fontFamily,
-    fontSize: 9,
-    fontWeight: "800",
-    color: "#0284c7",
-    letterSpacing: 0.5,
-  },
   linkTouchable: {
     flexDirection: "row",
     alignItems: "center",
@@ -239,11 +227,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: SECTION_THEMES.LINKS.primaryText,
     maxWidth: "90%",
-  },
-  emptyText: {
-    fontFamily,
-    fontSize: 13,
-    color: PROFILE_COLORS.mutedText,
   },
   input: {
     fontFamily,

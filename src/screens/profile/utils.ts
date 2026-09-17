@@ -44,24 +44,19 @@ export const formatPhoneNumber = (phone?: string | null): string => {
 };
 
 /**
- * Sanitizes URLs to prevent dev/local IP addresses from polluting the UI (Step 0).
- * Handles both LinkedIn and Personal Website URLs.
+ * Sanitizes URLs to prevent dev/local IP addresses from polluting the UI.
+ * Returns empty if no link is provided or if it's a dev IP address.
  */
 export const resolveSocialUrl = (
   url?: string | null,
-  type: "linkedin" | "website" = "website",
-  userName?: string
-): { displayUrl: string; isPlaceholder: boolean } => {
-  const slug = (userName || "user").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const defaultPlaceholder =
-    type === "linkedin"
-      ? `https://linkedin.com/in/${slug}`
-      : `https://portfolio.me/${slug}`;
-
+  _type?: "linkedin" | "website",
+  _userName?: string
+): { displayUrl: string; isValid: boolean; isPlaceholder: boolean } => {
   if (!url || !url.trim()) {
     return {
-      displayUrl: defaultPlaceholder,
-      isPlaceholder: true,
+      displayUrl: "",
+      isValid: false,
+      isPlaceholder: false,
     };
   }
 
@@ -74,18 +69,20 @@ export const resolveSocialUrl = (
 
   if (isLocalDevUrl) {
     return {
-      displayUrl: defaultPlaceholder,
-      isPlaceholder: true,
+      displayUrl: "",
+      isValid: false,
+      isPlaceholder: false,
     };
   }
 
-  return { displayUrl: trimmed, isPlaceholder: false };
+  const normalizedUrl = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return { displayUrl: normalizedUrl, isValid: true, isPlaceholder: false };
 };
 
 export const resolvePersonalWebsite = (
   url?: string | null,
   userName?: string
-): { displayUrl: string; isPlaceholder: boolean } => {
+): { displayUrl: string; isValid: boolean; isPlaceholder: boolean } => {
   return resolveSocialUrl(url, "website", userName);
 };
 
@@ -93,8 +90,8 @@ export const resolvePersonalWebsite = (
  * Extracts a friendly display label for long links (e.g. "https://linkedin.com/in/nahid" -> "linkedin.com/in/nahid")
  */
 export const formatFriendlyLink = (url?: string | null): string => {
-  if (!url) return "Not provided";
-  return url.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
+  if (!url || !url.trim()) return "";
+  return url.trim().replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 };
 
 export const safeOpenURL = async (url?: string | null): Promise<void> => {

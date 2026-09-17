@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { BLOOD_GROUPS, ONBOARD_COLORS } from "../constants";
 import type { BloodGroupOption } from "../types";
@@ -59,9 +59,16 @@ export const BloodGroupModal = memo(function BloodGroupModal({
       animationType="slide"
       transparent={true}
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
       <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
-        <View style={styles.modalContent}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+          accessible={false}
+        />
+        <SafeAreaView edges={["bottom"]} style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Blood Group</Text>
             <TouchableOpacity
@@ -81,7 +88,7 @@ export const BloodGroupModal = memo(function BloodGroupModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
           />
-        </View>
+        </SafeAreaView>
       </View>
     </Modal>
   );
