@@ -1,5 +1,3 @@
-import { decode } from "base64-arraybuffer";
-import { supabase } from "@/services/supabase";
 import type { OnboardFormData, SanitizedOnboardData } from "./types";
 import { MIN_SEMESTER, MAX_SEMESTER, MAX_SECTION_LENGTH } from "./constants";
 
@@ -52,31 +50,4 @@ export function sanitizeOnboardForm(form: OnboardFormData): SanitizedOnboardData
     },
     bloodGroup: form.bloodGroup || undefined,
   };
-}
-
-export async function uploadAvatarToSupabase(
-  studentId: string,
-  imageBase64: string,
-  imageMimeType: string = "image/jpeg",
-): Promise<string> {
-  const safeId = studentId.replace(/[^a-zA-Z0-9_-]/g, "");
-  const fileExt = imageMimeType.split("/").pop() || "jpg";
-  const fileName = `${Date.now()}-${safeId}.${fileExt}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(fileName, decode(imageBase64), {
-      contentType: imageMimeType,
-      upsert: true,
-    });
-
-  if (uploadError) {
-    throw new Error(`Avatar upload failed: ${uploadError.message}`);
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from("avatars")
-    .getPublicUrl(fileName);
-
-  return publicUrlData.publicUrl;
 }

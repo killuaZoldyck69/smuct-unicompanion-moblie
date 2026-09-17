@@ -1,4 +1,5 @@
 import api from "./api";
+import { createSingleImageFormData } from "./cloudinary-service";
 
 export interface TeacherProfileData {
   id: string;
@@ -73,8 +74,21 @@ export const updateTeacherProfile = async (
 };
 export const updateTeacherProfileAPI = updateTeacherProfile;
 
-export const updateTeacherProfileImage = async (imageUrl: string) => {
-  const response = await api.patch("/teachers/profile/image", { imageUrl });
+export const updateTeacherProfileImage = async (imageUriOrUrl: string) => {
+  if (!imageUriOrUrl || typeof imageUriOrUrl !== "string") {
+    throw new Error("Invalid image provided.");
+  }
+
+  if (/^https?:\/\//i.test(imageUriOrUrl)) {
+    const response = await api.patch("/teachers/profile/image", { imageUrl: imageUriOrUrl });
+    return response.data?.user ?? response.data?.data;
+  }
+
+  const formData = await createSingleImageFormData(imageUriOrUrl, "image");
+  const response = await api.patch("/teachers/profile/image", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return response.data?.user ?? response.data?.data;
 };
 export const updateTeacherProfileImageAPI = updateTeacherProfileImage;
+

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
-import { decode } from "base64-arraybuffer";
 import Toast from "react-native-toast-message";
 
 import {
@@ -9,8 +8,8 @@ import {
   updateStudentProfileAPI,
   updateStudentProfileImageAPI,
 } from "@/services/student-service";
+import { PROFILE_CACHE_CONFIG } from "@/screens/profile/constants";
 import { UpdateStudentProfileInput } from "./types";
-import { supabase } from "@/services/supabase";
 
 export const useStudentProfile = () => {
   const queryClient = useQueryClient();
@@ -19,6 +18,7 @@ export const useStudentProfile = () => {
   const profileQuery = useQuery({
     queryKey: ["studentProfile"],
     queryFn: getStudentProfileAPI,
+    ...PROFILE_CACHE_CONFIG,
   });
 
   const updateMutation = useMutation({
@@ -38,35 +38,18 @@ export const useStudentProfile = () => {
     },
   });
 
-  const pickAndUploadAvatar = async (safeName: string = "student") => {
+  const pickAndUploadAvatar = async (_safeName: string = "student") => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
-      base64: true,
     });
 
-    if (!result.canceled && result.assets[0].base64) {
+    if (!result.canceled && result.assets[0]?.uri) {
       try {
         setIsUploading(true);
-        const fileExt = result.assets[0].mimeType?.split("/").pop() || "jpg";
-        const fileName = `student-${Date.now()}-${safeName}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(fileName, decode(result.assets[0].base64), {
-            contentType: result.assets[0].mimeType || "image/jpeg",
-            upsert: true,
-          });
-
-        if (uploadError) throw new Error(uploadError.message);
-
-        const { data: publicUrlData } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(fileName);
-
-        await updateStudentProfileImageAPI(publicUrlData.publicUrl);
+        await updateStudentProfileImageAPI(result.assets[0].uri);
 
         queryClient.invalidateQueries({ queryKey: ["studentProfile"] });
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
@@ -75,7 +58,10 @@ export const useStudentProfile = () => {
         Toast.show({
           type: "error",
           text1: "Upload Failed",
-          text2: error.message,
+          text2:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to update profile picture.",
         });
       } finally {
         setIsUploading(false);
@@ -86,6 +72,7 @@ export const useStudentProfile = () => {
   return {
     profile: profileQuery.data,
     isLoading: profileQuery.isLoading,
+    isRefetching: profileQuery.isRefetching,
     isError: profileQuery.isError,
     refetch: profileQuery.refetch,
     updateProfile: updateMutation.mutate,

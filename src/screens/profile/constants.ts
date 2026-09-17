@@ -132,3 +132,12 @@ export const fontFamily = Platform.select({
   android: "sans-serif",
   default: "sans-serif",
 });
+
+export const PROFILE_CACHE_CONFIG = {
+  staleTime: Infinity,
+  gcTime: 1000 * 60 * 60 * 24, // 24 hours
+  refetchOnMount: false as const,
+  refetchOnWindowFocus: false as const,
+  refetchOnReconnect: false as const,
+} as const;
+

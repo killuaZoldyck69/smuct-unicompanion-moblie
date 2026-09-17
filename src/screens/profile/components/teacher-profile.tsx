@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -41,6 +42,7 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
   const {
     profile,
     isLoading,
+    isRefetching,
     isError,
     refetch,
     updateProfile: updateTeacherProfile,
@@ -109,6 +111,14 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={PROFILE_COLORS.deepNavy}
+            colors={[PROFILE_COLORS.deepNavy]}
+          />
+        }
       >
         <TeacherIdentityCard
           profile={profile}

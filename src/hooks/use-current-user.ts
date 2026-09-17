@@ -50,7 +50,11 @@ export const useCurrentUser = (): CurrentUserResult => {
 
       return null;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const session = data?.session || data;

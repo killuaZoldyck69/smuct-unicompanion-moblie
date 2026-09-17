@@ -9,7 +9,7 @@ import {
 } from "@/services/auth-service";
 import { updateStudentProfile } from "@/services/student-service";
 import type { AcademicProgram, OnboardFormData } from "../types";
-import { sanitizeOnboardForm, uploadAvatarToSupabase } from "../utils";
+import { sanitizeOnboardForm } from "../utils";
 
 export function useOnboardForm() {
   const router = useRouter();
@@ -94,23 +94,6 @@ export function useOnboardForm() {
 
     try {
       setIsSubmitting(true);
-      let finalImageUrl: string | undefined;
-
-      if (imageUri && imageBase64) {
-        try {
-          finalImageUrl = await uploadAvatarToSupabase(
-            validated.payload.studentId,
-            imageBase64,
-            imageMimeType,
-          );
-        } catch (uploadErr: any) {
-          Toast.show({
-            type: "error",
-            text1: "Avatar Upload Issue",
-            text2: uploadErr.message || "Continuing with profile setup...",
-          });
-        }
-      }
 
       await onboardStudentAPI(validated.payload);
 
@@ -122,11 +105,12 @@ export function useOnboardForm() {
         }
       }
 
-      if (finalImageUrl) {
+      if (imageUri) {
         try {
-          await updateInitialProfileImageAPI(finalImageUrl);
-        } catch {
-          // Non-blocking secondary profile image update
+          await updateInitialProfileImageAPI(imageUri);
+        } catch (uploadErr: any) {
+          // Non-blocking secondary profile image upload
+          console.warn("Profile image upload issue:", uploadErr);
         }
       }
 

@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -31,6 +32,7 @@ interface StudentProfileProps {
     name: string;
     email: string;
     role?: string;
+    image?: string | null;
   };
 }
 
@@ -41,6 +43,7 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
   const {
     profile,
     isLoading,
+    isRefetching,
     isError,
     refetch,
     updateProfile: updateStudentProfile,
@@ -107,6 +110,14 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={PROFILE_COLORS.deepNavy}
+            colors={[PROFILE_COLORS.deepNavy]}
+          />
+        }
       >
         <StudentIdentityCard
           profile={profile}

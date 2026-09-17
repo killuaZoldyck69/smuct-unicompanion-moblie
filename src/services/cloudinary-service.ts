@@ -6,7 +6,7 @@ export interface CloudinaryUploadResult {
   publicId: string;
 }
 
-function getMimeType(filename: string): string {
+export function getMimeType(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase();
   switch (ext) {
     case "png":
@@ -24,6 +24,29 @@ function getMimeType(filename: string): string {
   }
 }
 
+export async function createSingleImageFormData(
+  localUri: string,
+  fieldName: string = "image"
+): Promise<FormData> {
+  const filename = localUri.split("/").pop() ?? `upload-${Date.now()}.jpg`;
+  const type = getMimeType(filename);
+  const formData = new FormData();
+
+  if (Platform.OS === "web") {
+    const response = await fetch(localUri);
+    const blob = await response.blob();
+    formData.append(fieldName, blob, filename);
+  } else {
+    formData.append(fieldName, {
+      uri: localUri,
+      name: filename,
+      type,
+    } as any);
+  }
+
+  return formData;
+}
+
 /**
  * Uploads a single image to Cloudinary securely via the backend API.
  */
@@ -35,23 +58,7 @@ export async function uploadImageToCloudinary(
     throw new Error("Invalid image URI provided.");
   }
 
-  const filename = localUri.split("/").pop() ?? "upload.jpg";
-  const type = getMimeType(filename);
-
-  const formData = new FormData();
-
-  if (Platform.OS === "web") {
-    const response = await fetch(localUri);
-    const blob = await response.blob();
-    formData.append("image", blob, filename);
-  } else {
-    formData.append("image", {
-      uri: localUri,
-      name: filename,
-      type,
-    } as any);
-  }
-
+  const formData = await createSingleImageFormData(localUri, "image");
   formData.append("folder", folder);
 
   const response = await api.post("/upload/image", formData, {

@@ -22,6 +22,7 @@ import { getTeacherProfile } from "@/services/teacher-service";
 import CreateHubModal from "./components/create-hub-modal";
 import HubCard from "./components/hub-card";
 import { authClient } from "@/services/auth-client";
+import { PROFILE_CACHE_CONFIG } from "@/screens/profile/constants";
 
 type HubTab = "ACTIVE" | "ARCHIVED";
 
@@ -48,15 +49,17 @@ export function Hubs() {
     | undefined;
 
   const { data: studentProfile, isLoading: isLoadingStudent } = useQuery({
-    queryKey: ["studentProfile", user?.id],
+    queryKey: ["studentProfile"],
     queryFn: getStudentProfile,
     enabled: user?.role === "STUDENT",
+    ...PROFILE_CACHE_CONFIG,
   });
 
   const { data: teacherProfile, isLoading: isLoadingTeacher } = useQuery({
-    queryKey: ["teacherProfile", user?.id],
+    queryKey: ["teacherProfile"],
     queryFn: getTeacherProfile,
     enabled: user?.role === "TEACHER",
+    ...PROFILE_CACHE_CONFIG,
   });
 
   const currentUser = user
