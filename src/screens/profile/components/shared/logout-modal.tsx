@@ -7,8 +7,9 @@ import {
   Modal,
   ActivityIndicator,
   Platform,
-  TouchableWithoutFeedback,
+  StatusBar,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { PROFILE_COLORS, fontFamily } from "../../constants";
 
@@ -25,91 +26,81 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
   onConfirm,
   isLoggingOut,
 }) => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal
       visible={isVisible}
       transparent={true}
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <TouchableWithoutFeedback onPress={isLoggingOut ? undefined : onClose}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <View style={styles.cardContainer}>
-              {/* 1. Bento Icon Circle */}
-              <View style={styles.iconCircle}>
-                <Feather name="log-out" size={26} color="#e11d48" />
-              </View>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <View
+        style={[
+          styles.backdrop,
+          {
+            paddingTop: Math.max(insets.top, 16),
+            paddingBottom: Math.max(insets.bottom, 16),
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={isLoggingOut ? undefined : onClose}
+          accessible={false}
+        />
+        <View style={styles.cardContainer}>
+          <View style={styles.iconCircle}>
+            <Feather name="log-out" size={22} color="#dc2626" />
+          </View>
 
-              {/* 2. Modal Title */}
-              <Text style={styles.titleText}>Log Out of UniCompanion?</Text>
+          <Text style={styles.titleText}>Log Out?</Text>
 
-              {/* 3. Description */}
-              <Text style={styles.descriptionText}>
-                You will be signed out of this session. You will need your
-                university credentials to sign back in.
-              </Text>
+          <Text style={styles.descriptionText}>
+            Are you sure you want to log out?
+          </Text>
 
-              {/* 4. Bento Security Note */}
-              <View style={styles.securityNoteBadge}>
-                <Feather
-                  name="shield"
-                  size={13}
-                  color="#64748b"
-                  style={{ marginRight: 6 }}
-                />
-                <Text style={styles.securityNoteText}>
-                  Your session data will be safely cleared
-                </Text>
-              </View>
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={onClose}
+              disabled={isLoggingOut}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel log out"
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
 
-              {/* 5. Action Buttons */}
-              <View style={styles.actionButtonsContainer}>
-                {/* Confirm Logout Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.confirmButton,
-                    isLoggingOut && styles.confirmButtonDisabled,
-                  ]}
-                  onPress={onConfirm}
-                  disabled={isLoggingOut}
-                  activeOpacity={0.85}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Confirm log out"
-                >
-                  {isLoggingOut ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <>
-                      <Feather
-                        name="log-out"
-                        size={16}
-                        color="#ffffff"
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={styles.confirmButtonText}>Yes, Log Out</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                {/* Cancel Button */}
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={onClose}
-                  disabled={isLoggingOut}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Stay signed in and cancel log out"
-                >
-                  <Text style={styles.cancelButtonText}>Stay Signed In</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
+            <TouchableOpacity
+              style={[
+                styles.confirmButton,
+                isLoggingOut && styles.confirmButtonDisabled,
+              ]}
+              onPress={onConfirm}
+              disabled={isLoggingOut}
+              activeOpacity={0.85}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Confirm log out"
+            >
+              {isLoggingOut ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.confirmButtonText}>Log Out</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 };
@@ -117,53 +108,53 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(19, 27, 46, 0.62)",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 24,
   },
   cardContainer: {
-    width: Platform.OS === "web" ? 380 : "92%",
-    maxWidth: 400,
+    width: Platform.OS === "web" ? 340 : "100%",
+    maxWidth: 320,
     backgroundColor: "#ffffff",
-    borderRadius: 28,
-    borderWidth: 1.5,
+    borderRadius: 24,
+    borderWidth: 1,
     borderColor: "rgba(19, 27, 46, 0.08)",
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 22,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    paddingBottom: 18,
     alignItems: "center",
     ...Platform.select({
       web: {
-        boxShadow: "0 20px 40px -10px rgba(19, 27, 46, 0.25)",
+        boxShadow: "0 20px 40px -10px rgba(15, 23, 42, 0.25)",
       } as any,
       default: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.15,
-        shadowRadius: 28,
-        elevation: 8,
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.18,
+        shadowRadius: 20,
+        elevation: 10,
       },
     }),
   },
   iconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#fff1f2",
-    borderWidth: 1.5,
-    borderColor: "#fecdd3",
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "#fee2e2",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   titleText: {
     fontFamily,
-    fontSize: 18,
-    fontWeight: "800",
+    fontSize: 17,
+    fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 6,
     letterSpacing: -0.2,
   },
   descriptionText: {
@@ -172,64 +163,18 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: PROFILE_COLORS.subtleText,
     textAlign: "center",
-    lineHeight: 19,
-    marginBottom: 16,
-    paddingHorizontal: 6,
-  },
-  securityNoteBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    marginBottom: 22,
-  },
-  securityNoteText: {
-    fontFamily,
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: "#64748b",
+    lineHeight: 18,
+    marginBottom: 18,
+    paddingHorizontal: 8,
   },
   actionButtonsContainer: {
+    flexDirection: "row",
     width: "100%",
     gap: 10,
   },
-  confirmButton: {
-    width: "100%",
-    height: 48,
-    backgroundColor: "#dc2626",
-    borderRadius: PROFILE_COLORS.pillRadius,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    ...Platform.select({
-      web: {
-        boxShadow: "0 4px 12px rgba(220, 38, 38, 0.25)",
-      } as any,
-      default: {
-        shadowColor: "#dc2626",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 3,
-      },
-    }),
-  },
-  confirmButtonDisabled: {
-    backgroundColor: "#f87171",
-  },
-  confirmButtonText: {
-    fontFamily,
-    fontSize: 14.5,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
   cancelButton: {
-    width: "100%",
-    height: 46,
+    flex: 1,
+    height: 44,
     backgroundColor: "#f1f5f9",
     borderRadius: PROFILE_COLORS.pillRadius,
     justifyContent: "center",
@@ -238,7 +183,24 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontFamily,
     fontSize: 14,
-    fontWeight: "700",
-    color: "#334155",
+    fontWeight: "600",
+    color: "#475569",
+  },
+  confirmButton: {
+    flex: 1,
+    height: 44,
+    backgroundColor: "#dc2626",
+    borderRadius: PROFILE_COLORS.pillRadius,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  confirmButtonDisabled: {
+    backgroundColor: "#f87171",
+  },
+  confirmButtonText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#ffffff",
   },
 });
