@@ -1,45 +1,41 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO, fontFamily } from "../constants";
 
 interface AlumniHeaderProps {
   totalCount?: number;
+  filteredCount?: number;
   onBack: () => void;
 }
 
 export const AlumniHeader: React.FC<AlumniHeaderProps> = React.memo(
-  ({ totalCount, onBack }) => {
+  ({ totalCount = 0, filteredCount, onBack }) => {
+    const displayCount =
+      typeof filteredCount === "number" ? filteredCount : totalCount;
+
     return (
       <View style={styles.header}>
+        {/* Squircle Back Button */}
         <TouchableOpacity
           onPress={onBack}
-          style={styles.headerIconButton}
+          style={styles.squircleButton}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel="Go back to all features"
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Feather name="arrow-left" size={22} color={BENTO_COLORS.deepNavy} />
+          <Feather name="chevron-left" size={20} color={BENTO.navy} />
         </TouchableOpacity>
 
-        <View style={styles.headerTitlesContainer}>
-          <View style={styles.titleRow}>
-            <Text style={styles.screenTitle} numberOfLines={1}>
-              Alumni Network
-            </Text>
-            {typeof totalCount === "number" && totalCount > 0 ? (
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{totalCount}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={styles.screenSubtitle} numberOfLines={1}>
-            Connect with SMUCT graduates & industry leaders
-          </Text>
-        </View>
+        {/* Title */}
+        <Text style={styles.screenTitle}>Alumni Network</Text>
 
-        <View style={styles.headerSpacer} />
+        {/* Right Section: Count */}
+        <View style={styles.headerRight}>
+          <Text style={styles.countText}>{displayCount} alumni</Text>
+        </View>
       </View>
     );
   },
@@ -50,63 +46,49 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    backgroundColor: BENTO_COLORS.background,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 10,
+    backgroundColor: BENTO.canvas,
   },
-  headerIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: BENTO_COLORS.pillRadius,
-    backgroundColor: BENTO_COLORS.white,
+  squircleButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: BENTO.card,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
-    ...BENTO_COLORS.shadow,
-  },
-  headerTitlesContainer: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 12,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: BENTO.border,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+      } as any,
+      default: {
+        elevation: 1,
+      },
+    }),
   },
   screenTitle: {
     fontFamily,
     fontSize: 18,
     fontWeight: "800",
-    color: BENTO_COLORS.deepNavy,
+    color: BENTO.navy,
     letterSpacing: -0.3,
+    marginLeft: 10,
+    flex: 1,
   },
-  countBadge: {
-    backgroundColor: "#eff6ff",
-    borderColor: "rgba(37, 99, 235, 0.2)",
-    borderWidth: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-    borderRadius: BENTO_COLORS.pillRadius,
-    marginLeft: 6,
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   countText: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#2563eb",
-  },
-  screenSubtitle: {
-    fontFamily,
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: "500",
-    color: BENTO_COLORS.subtleText,
-    marginTop: 1,
-  },
-  headerSpacer: {
-    width: 42,
-    height: 42,
+    color: BENTO.slateLight,
   },
 });
+
+

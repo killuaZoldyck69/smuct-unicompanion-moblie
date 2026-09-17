@@ -9,18 +9,19 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { BENTO } from "../constants";
+import { BENTO, fontFamily } from "../constants";
 import { AlumniItem } from "../types";
 import {
   getDeptTheme,
   getAvatarTheme,
   getInitials,
   openSafeLink,
-  copyToClipboard,
   shareAlumniProfile,
+  copyToClipboard,
 } from "../utils";
 
 interface AlumniProfileModalProps {
@@ -30,6 +31,7 @@ interface AlumniProfileModalProps {
 
 export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
   ({ alumni, onClose }) => {
+    const insets = useSafeAreaInsets();
     const [imageError, setImageError] = useState(false);
 
     if (!alumni) return null;
@@ -44,39 +46,81 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
       alumni.currentPosition ||
       alumni.designation ||
       alumni.currentRole ||
-      "Professional";
+      "Graduate";
+    const company = alumni.currentCompany;
     const batch = alumni.batch || alumni.graduationBatch;
     const year = alumni.graduationYear || alumni.passingYear;
+
+    // Academic badge line: "19th Batch · Class of 2022 · CSE"
+    const academicParts: string[] = [];
+    if (batch) academicParts.push(String(batch));
+    if (year) {
+      const yearStr = String(year);
+      academicParts.push(
+        yearStr.toLowerCase().includes("class")
+          ? yearStr
+          : `Class of ${yearStr}`,
+      );
+    }
+    if (alumni.department) academicParts.push(deptTheme.badge);
+    const academicSummary =
+      academicParts.length > 0 ? academicParts.join(" · ") : "SMUCT Graduate";
+
+    // Combined batch/year for Academic Background section
+    const batchYearText = [
+      batch ? (batch.toLowerCase().includes("batch") ? batch : `${batch} Batch`) : null,
+      year ? `Class of ${year}` : null,
+    ]
+      .filter(Boolean)
+      .join(", ") || "Graduate";
+
+    const handleCopyDetails = () => {
+      const details = `${alumni.name}\n${role}${company ? " at " + company : ""}\n${academicSummary}\n${
+        alumni.email ? "Email: " + alumni.email : ""
+      }${linkedIn ? "\nLinkedIn: " + linkedIn : ""}`;
+      copyToClipboard(details, "Alumni details");
+    };
 
     return (
       <Modal
         visible={Boolean(alumni)}
         animationType="slide"
-        presentationStyle="pageSheet"
         onRequestClose={onClose}
-        transparent={Platform.OS === "web"}
+        transparent={true}
+        statusBarTranslucent={true}
       >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="transparent"
+          translucent={true}
+        />
         <View style={styles.modalOverlay}>
-          <SafeAreaView style={styles.safeArea} accessibilityViewIsModal={true}>
-            {/* Drag Handle Bar */}
-            <View style={styles.handleWrap}>
-              <View style={styles.handle} />
-            </View>
+          {/* Backdrop dismiss touchable */}
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={onClose}
+            accessible={false}
+          />
 
-            {/* Modal Header */}
-            <View style={styles.header}>
-              <View style={styles.headerTitleWrap}>
-                <Text style={styles.headerTitle}>Graduate Profile</Text>
-                <Text style={styles.headerSub}>SMUCT Alumni Network</Text>
-              </View>
+          <View
+            style={[
+              styles.sheetContainer,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
+          >
+            {/* Top Bar: Drag Handle & Close Button */}
+            <View style={styles.topBar}>
+              <View style={styles.dragHandle} />
               <TouchableOpacity
                 onPress={onClose}
                 style={styles.closeBtn}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Close profile"
+                accessibilityLabel="Close profile sheet"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Feather name="x" size={18} color={BENTO.navy} />
+                <Feather name="x" size={16} color="#6b7280" />
               </TouchableOpacity>
             </View>
 
@@ -85,9 +129,10 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
-              {/* 1. Hero Identity Card */}
-              <View style={styles.heroCard}>
-                <View style={styles.avatarContainer}>
+              {/* Hero Identity Section */}
+              <View style={styles.heroSection}>
+                {/* Avatar with Overlapping Department Badge */}
+                <View style={styles.avatarWrap}>
                   {hasImage ? (
                     <Image
                       source={{ uri: imageUrl! }}
@@ -99,198 +144,165 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
                       style={[
                         styles.avatarFallback,
                         {
-                          backgroundColor: avatarTheme.bg,
-                          borderColor: avatarTheme.border,
+                          backgroundColor: deptTheme.bg,
+                          borderColor: deptTheme.border,
                         },
                       ]}
                     >
                       <Text
                         style={[
                           styles.avatarInitial,
-                          { color: avatarTheme.text },
+                          { color: deptTheme.text },
                         ]}
                       >
                         {getInitials(alumni.name)}
                       </Text>
                     </View>
                   )}
+
+                  {/* Overlapping Department Pill */}
                   <View
                     style={[
-                      styles.deptTag,
-                      {
-                        backgroundColor: deptTheme.bg,
-                        borderColor: deptTheme.border,
-                      },
+                      styles.avatarBadgePill,
+                      { backgroundColor: deptTheme.bg },
                     ]}
                   >
                     <Text
-                      style={[styles.deptTagText, { color: deptTheme.text }]}
+                      style={[
+                        styles.avatarBadgeText,
+                        { color: deptTheme.text },
+                      ]}
                     >
                       {deptTheme.badge}
                     </Text>
                   </View>
                 </View>
 
+                {/* Name */}
                 <Text style={styles.heroName}>{alumni.name}</Text>
 
-                {/* Role and Company */}
-                <View style={styles.roleWrap}>
-                  <Feather
-                    name="briefcase"
-                    size={14}
-                    color={BENTO.indigo}
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={styles.roleText}>
-                    {role}
-                    {alumni.currentCompany ? ` at ${alumni.currentCompany}` : ""}
-                  </Text>
-                </View>
+                {/* Role at Company */}
+                <Text style={styles.heroSubtitle}>
+                  {role}
+                  {company ? ` at ${company}` : ""}
+                </Text>
 
-                {/* Academic Summary Badge */}
-                <View style={styles.eduBadge}>
+                {/* Academic Pill with Star Icon */}
+                <View style={styles.academicPill}>
                   <Feather
-                    name="award"
+                    name="star"
                     size={13}
-                    color={BENTO.slate}
+                    color="#6b7280"
                     style={{ marginRight: 6 }}
                   />
-                  <Text style={styles.eduBadgeText}>
-                    {batch ? `${batch} • ` : ""}
-                    Class of {year || "Alumni"} • {alumni.department}
-                  </Text>
+                  <Text style={styles.academicPillText}>{academicSummary}</Text>
                 </View>
               </View>
 
-              {/* 2. Quick Action Grid */}
-              <View style={styles.actionGrid}>
-                {Boolean(linkedIn) ? (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.actionLinkedIn]}
-                    onPress={() => openSafeLink(linkedIn)}
-                    activeOpacity={0.8}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Open LinkedIn profile"
-                  >
-                    <Feather
-                      name="linkedin"
-                      size={15}
-                      color="#ffffff"
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.actionTextWhite}>LinkedIn</Text>
-                  </TouchableOpacity>
-                ) : null}
-
-                {Boolean(alumni.email) ? (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.actionEmail]}
-                    onPress={() => openSafeLink(`mailto:${alumni.email}`)}
-                    activeOpacity={0.8}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Send email to alumnus"
-                  >
-                    <Feather
-                      name="mail"
-                      size={15}
-                      color="#ffffff"
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.actionTextWhite}>Email</Text>
-                  </TouchableOpacity>
-                ) : null}
-
-                {Boolean(alumni.email) ? (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.actionSubtle]}
-                    onPress={() => copyToClipboard(alumni.email!, "Email")}
-                    activeOpacity={0.8}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Copy email address"
-                  >
-                    <Feather
-                      name="copy"
-                      size={14}
-                      color={BENTO.navy}
-                      style={{ marginRight: 5 }}
-                    />
-                    <Text style={styles.actionTextDark}>Copy</Text>
-                  </TouchableOpacity>
-                ) : null}
-
+              {/* Action Buttons Row: LinkedIn + Email + Copy + Share */}
+              <View style={styles.actionRow}>
+                {/* Primary Button: Connect on LinkedIn */}
                 <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionSubtle]}
-                  onPress={() => shareAlumniProfile(alumni)}
+                  style={styles.actionLinkedInBtn}
+                  onPress={() => openSafeLink(linkedIn)}
                   activeOpacity={0.8}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Connect with ${alumni.name} on LinkedIn`}
+                >
+                  <View style={styles.inBadge}>
+                    <Text style={styles.inBadgeText}>in</Text>
+                  </View>
+                  <Text style={styles.actionLinkedInText}>
+                    Connect on LinkedIn
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Email Button */}
+                <TouchableOpacity
+                  style={styles.iconActionBtn}
+                  onPress={() =>
+                    alumni.email && openSafeLink(`mailto:${alumni.email}`)
+                  }
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Email ${alumni.name}`}
+                >
+                  <Feather name="mail" size={17} color="#111827" />
+                </TouchableOpacity>
+
+                {/* Copy Button */}
+                <TouchableOpacity
+                  style={styles.iconActionBtn}
+                  onPress={handleCopyDetails}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Copy alumni details"
+                >
+                  <Feather name="copy" size={17} color="#111827" />
+                </TouchableOpacity>
+
+                {/* Share Button */}
+                <TouchableOpacity
+                  style={styles.iconActionBtn}
+                  onPress={() => shareAlumniProfile(alumni)}
+                  activeOpacity={0.7}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Share alumni profile"
                 >
-                  <Feather
-                    name="share-2"
-                    size={14}
-                    color={BENTO.navy}
-                    style={{ marginRight: 5 }}
-                  />
-                  <Text style={styles.actionTextDark}>Share</Text>
+                  <Feather name="share-2" size={17} color="#111827" />
                 </TouchableOpacity>
               </View>
 
-              {/* 3. Career & Industry Card */}
-              {Boolean(
-                alumni.currentCompany ||
-                  alumni.currentPosition ||
-                  alumni.designation ||
-                  alumni.personalWebsiteUrl,
-              ) ? (
-                <View style={styles.sectionCard}>
-                  <View style={styles.sectionHeaderRow}>
+              {/* Section 1: CAREER & INDUSTRY */}
+              {Boolean(company || role || alumni.personalWebsiteUrl) ? (
+                <View style={styles.bentoCard}>
+                  <View style={styles.cardHeader}>
                     <View
                       style={[
-                        styles.sectionIconWrap,
-                        { backgroundColor: BENTO.indigoBg },
+                        styles.cardIconBox,
+                        { backgroundColor: "#ede9fe" },
                       ]}
                     >
                       <Feather
                         name="briefcase"
                         size={14}
-                        color={BENTO.indigo}
+                        color="#6366f1"
                       />
                     </View>
-                    <Text style={styles.sectionTitle}>CAREER & INDUSTRY</Text>
+                    <Text style={styles.cardTitle}>CAREER & INDUSTRY</Text>
                   </View>
 
-                  {Boolean(alumni.currentCompany) ? (
-                    <View style={styles.infoLine}>
+                  {Boolean(company) ? (
+                    <View style={styles.infoRow}>
                       <Text style={styles.infoLabel}>Company</Text>
-                      <Text style={styles.infoValue}>
-                        {alumni.currentCompany}
-                      </Text>
+                      <Text style={styles.infoValue}>{company}</Text>
                     </View>
                   ) : null}
 
-                  {Boolean(
-                    alumni.currentPosition ||
-                      alumni.designation ||
-                      alumni.currentRole,
-                  ) ? (
-                    <View style={styles.infoLine}>
-                      <Text style={styles.infoLabel}>Designation / Role</Text>
+                  {Boolean(role) ? (
+                    <View
+                      style={[
+                        styles.infoRow,
+                        !alumni.personalWebsiteUrl && { borderBottomWidth: 0 },
+                      ]}
+                    >
+                      <Text style={styles.infoLabel}>Role</Text>
                       <Text style={styles.infoValue}>{role}</Text>
                     </View>
                   ) : null}
 
                   {Boolean(alumni.personalWebsiteUrl) ? (
-                    <View style={styles.infoLine}>
-                      <Text style={styles.infoLabel}>Portfolio / Web</Text>
+                    <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.infoLabel}>Website</Text>
                       <TouchableOpacity
                         onPress={() => openSafeLink(alumni.personalWebsiteUrl)}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.infoLink}>
+                        <Text style={styles.linkText} numberOfLines={1}>
                           {alumni.personalWebsiteUrl}
                         </Text>
                       </TouchableOpacity>
@@ -299,100 +311,72 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
                 </View>
               ) : null}
 
-              {/* 4. Academic Background Card */}
-              <View style={styles.sectionCard}>
-                <View style={styles.sectionHeaderRow}>
+              {/* Section 2: ACADEMIC BACKGROUND */}
+              <View style={styles.bentoCard}>
+                <View style={styles.cardHeader}>
                   <View
                     style={[
-                      styles.sectionIconWrap,
-                      { backgroundColor: BENTO.emeraldBg },
+                      styles.cardIconBox,
+                      { backgroundColor: "#dcfce7" },
                     ]}
                   >
                     <Feather
                       name="book-open"
                       size={14}
-                      color={BENTO.emerald}
+                      color="#16a34a"
                     />
                   </View>
-                  <Text style={styles.sectionTitle}>ACADEMIC BACKGROUND</Text>
+                  <Text style={styles.cardTitle}>ACADEMIC BACKGROUND</Text>
                 </View>
 
-                <View style={styles.infoLine}>
+                <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Institution</Text>
-                  <Text style={styles.infoValue}>
-                    Shanto-Mariam University of Creative Technology
-                  </Text>
+                  <Text style={styles.infoValue}>SMUCT</Text>
                 </View>
 
                 {Boolean(alumni.department) ? (
-                  <View style={styles.infoLine}>
+                  <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Department</Text>
                     <Text style={styles.infoValue}>{alumni.department}</Text>
                   </View>
                 ) : null}
 
-                {Boolean(alumni.degree) ? (
-                  <View style={styles.infoLine}>
-                    <Text style={styles.infoLabel}>Degree</Text>
-                    <Text style={styles.infoValue}>{alumni.degree}</Text>
-                  </View>
-                ) : null}
-
-                {Boolean(batch) ? (
-                  <View style={styles.infoLine}>
-                    <Text style={styles.infoLabel}>Batch</Text>
-                    <Text style={styles.infoValue}>{batch}</Text>
-                  </View>
-                ) : null}
-
-                {Boolean(year) ? (
-                  <View style={styles.infoLine}>
-                    <Text style={styles.infoLabel}>Graduation Year</Text>
-                    <Text style={styles.infoValue}>{year}</Text>
-                  </View>
-                ) : null}
+                <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.infoLabel}>Batch</Text>
+                  <Text style={styles.infoValue}>{batchYearText}</Text>
+                </View>
               </View>
 
-              {/* 5. Professional Skills Grid */}
+              {/* Optional Skills Section if Available */}
               {alumni.skills && alumni.skills.length > 0 ? (
-                <View style={styles.sectionCard}>
-                  <View style={styles.sectionHeaderRow}>
+                <View style={styles.bentoCard}>
+                  <View style={styles.cardHeader}>
                     <View
                       style={[
-                        styles.sectionIconWrap,
-                        { backgroundColor: BENTO.amberBg },
+                        styles.cardIconBox,
+                        { backgroundColor: "#fef3c7" },
                       ]}
                     >
-                      <Feather name="zap" size={14} color={BENTO.amber} />
+                      <Feather
+                        name="award"
+                        size={14}
+                        color="#d97706"
+                      />
                     </View>
-                    <Text style={styles.sectionTitle}>EXPERTISE & SKILLS</Text>
+                    <Text style={styles.cardTitle}>SKILLS & EXPERTISE</Text>
                   </View>
 
-                  <View style={styles.skillsGrid}>
+                  <View style={styles.skillsWrapper}>
                     {alumni.skills.map((skill, index) => (
-                      <View key={index} style={styles.skillTag}>
-                        <Text style={styles.skillTagText}>{skill}</Text>
+                      <View key={index} style={styles.skillChip}>
+                        <Text style={styles.skillChipText}>{skill}</Text>
                       </View>
                     ))}
                   </View>
                 </View>
               ) : null}
-
-              {/* 6. Mentorship Guidance Card */}
-              <View style={styles.mentorshipCard}>
-                <Feather
-                  name="compass"
-                  size={18}
-                  color={BENTO.indigo}
-                  style={{ marginRight: 10, marginTop: 2 }}
-                />
-                <Text style={styles.mentorshipText}>
-                  Tip: You can reach out to alumni on LinkedIn or email for career
-                  mentoring, resume guidance, or industry insights.
-                </Text>
-              </View>
             </ScrollView>
-          </SafeAreaView>
+          </View>
         </View>
       </Modal>
     );
@@ -402,276 +386,263 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
     justifyContent: "flex-end",
   },
-  safeArea: {
-    flex: 1,
-    backgroundColor: BENTO.canvas,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: "hidden",
+  sheetContainer: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    maxHeight: "88%",
+    ...Platform.select({
+      web: {
+        maxWidth: 500,
+        alignSelf: "center",
+        width: "100%",
+        boxShadow: "0 -4px 24px rgba(0, 0, 0, 0.12)",
+      } as any,
+      default: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        elevation: 10,
+      },
+    }),
   },
-  handleWrap: {
+  topBar: {
     alignItems: "center",
-    paddingTop: 8,
+    justifyContent: "center",
+    paddingTop: 10,
     paddingBottom: 4,
-    backgroundColor: BENTO.card,
+    position: "relative",
   },
-  handle: {
-    width: 36,
+  dragHandle: {
+    width: 38,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#cbd5e1",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    backgroundColor: BENTO.card,
-    borderBottomWidth: 1,
-    borderBottomColor: BENTO.border,
-  },
-  headerTitleWrap: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: BENTO.navy,
-  },
-  headerSub: {
-    fontSize: 11,
-    color: BENTO.slate,
-    marginTop: 1,
+    backgroundColor: "#d1d5db",
   },
   closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: BENTO.slateSubtle,
+    position: "absolute",
+    right: 18,
+    top: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#f3f4f6",
     alignItems: "center",
     justifyContent: "center",
-    ...(Platform.OS === "web" ? { cursor: "pointer" as const } : {}),
   },
   scroll: {
-    flex: 1,
+    flexGrow: 0,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 50,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
-  heroCard: {
-    backgroundColor: BENTO.card,
-    borderRadius: 20,
-    padding: 20,
+  heroSection: {
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: BENTO.border,
-    marginBottom: 12,
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0 2px 10px rgba(15, 23, 42, 0.04)" }
-      : { elevation: 2 }),
+    paddingVertical: 10,
   },
-  avatarContainer: {
+  avatarWrap: {
     position: "relative",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   avatarImg: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 3,
-    borderColor: BENTO.canvas,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   avatarFallback: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
   },
   avatarInitial: {
-    fontSize: 32,
-    fontWeight: "800",
-    letterSpacing: -1,
+    fontFamily,
+    fontSize: 24,
+    fontWeight: "700",
+    letterSpacing: -0.3,
   },
-  deptTag: {
+  avatarBadgePill: {
     position: "absolute",
-    bottom: -4,
+    bottom: -2,
     right: -4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#ffffff",
   },
-  deptTagText: {
+  avatarBadgeText: {
+    fontFamily,
     fontSize: 10,
     fontWeight: "800",
   },
   heroName: {
+    fontFamily,
     fontSize: 20,
     fontWeight: "800",
-    color: BENTO.navy,
-    letterSpacing: -0.4,
+    color: "#111827",
+    letterSpacing: -0.3,
     textAlign: "center",
-    marginBottom: 5,
-    fontFamily: BENTO.fontHeading,
-  },
-  roleWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-    paddingHorizontal: 12,
-  },
-  roleText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: BENTO.navySecondary,
-    textAlign: "center",
-  },
-  eduBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: BENTO.slateSubtle,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 12,
     marginTop: 4,
   },
-  eduBadgeText: {
-    fontSize: 11,
-    color: BENTO.slate,
-    fontWeight: "600",
+  heroSubtitle: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "500",
+    color: "#4b5563",
     textAlign: "center",
+    marginTop: 3,
   },
-  actionGrid: {
+  academicPill: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 14,
+    alignItems: "center",
+    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginTop: 10,
   },
-  actionBtn: {
+  academicPillText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#4b5563",
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 18,
+    marginBottom: 16,
+  },
+  actionLinkedInBtn: {
     flex: 1,
+    height: 48,
+    backgroundColor: "#0066cc",
+    borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 11,
-    borderRadius: 12,
-    ...(Platform.OS === "web" ? { cursor: "pointer" as const } : {}),
+    paddingHorizontal: 12,
   },
-  actionLinkedIn: {
-    backgroundColor: "#0a66c2",
+  inBadge: {
+    marginRight: 6,
   },
-  actionEmail: {
-    backgroundColor: BENTO.navy,
+  inBadgeText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#ffffff",
   },
-  actionSubtle: {
-    backgroundColor: BENTO.card,
-    borderWidth: 1,
-    borderColor: BENTO.border,
-  },
-  actionTextWhite: {
-    fontSize: 12,
+  actionLinkedInText: {
+    fontFamily,
+    fontSize: 13.5,
     fontWeight: "700",
     color: "#ffffff",
   },
-  actionTextDark: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: BENTO.navy,
+  iconActionBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      web: {
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03)",
+        cursor: "pointer" as const,
+      } as any,
+      default: {
+        elevation: 1,
+      },
+    }),
   },
-  sectionCard: {
-    backgroundColor: BENTO.card,
+  bentoCard: {
+    backgroundColor: "#f8fafc",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: BENTO.border,
+    borderColor: "rgba(0, 0, 0, 0.04)",
     marginBottom: 12,
   },
-  sectionHeaderRow: {
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  sectionIconWrap: {
-    width: 26,
-    height: 26,
+  cardIconBox: {
+    width: 28,
+    height: 28,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
   },
-  sectionTitle: {
-    fontSize: 11,
+  cardTitle: {
+    fontFamily,
+    fontSize: 11.5,
     fontWeight: "800",
-    color: BENTO.slate,
+    color: "#64748b",
     letterSpacing: 0.5,
   },
-  infoLine: {
+  infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(15, 23, 42, 0.04)",
+    borderBottomColor: "rgba(0, 0, 0, 0.04)",
   },
   infoLabel: {
-    fontSize: 12,
-    color: BENTO.slate,
+    fontFamily,
+    fontSize: 13,
+    color: "#94a3b8",
   },
   infoValue: {
-    fontSize: 12,
+    fontFamily,
+    fontSize: 13,
     fontWeight: "700",
-    color: BENTO.navy,
+    color: "#111827",
     flex: 1,
     textAlign: "right",
     marginLeft: 12,
   },
-  infoLink: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: BENTO.indigo,
-    textDecorationLine: "underline",
+  linkText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2563eb",
     textAlign: "right",
+    maxWidth: 200,
   },
-  skillsGrid: {
+  skillsWrapper: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
     marginTop: 2,
   },
-  skillTag: {
-    backgroundColor: BENTO.indigoBg,
+  skillChip: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: BENTO.indigoBorder,
   },
-  skillTagText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: BENTO.indigo,
-  },
-  mentorshipCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: BENTO.indigoBg,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: BENTO.indigoBorder,
-  },
-  mentorshipText: {
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 16,
-    color: BENTO.indigo,
+  skillChipText: {
+    fontFamily,
+    fontSize: 11.5,
     fontWeight: "600",
+    color: "#334155",
   },
 });
+

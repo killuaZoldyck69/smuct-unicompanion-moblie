@@ -7,16 +7,16 @@ import { DeptTheme, AvatarTheme, AlumniItem } from "./types";
 export const getDeptTheme = (dept?: string | null): DeptTheme => {
   const d = (dept || "").toLowerCase();
   if (d.includes("cse") || d.includes("computer")) {
-    return { bg: "#eef2ff", border: "#c7d2fe", text: "#4338ca", badge: "CSE" };
-  }
-  if (d.includes("bba") || d.includes("business")) {
-    return { bg: "#ecfdf5", border: "#a7f3d0", text: "#059669", badge: "BBA" };
+    return { bg: "#dbeafe", border: "#bfdbfe", text: "#2563eb", badge: "CSE" };
   }
   if (d.includes("civil")) {
-    return { bg: "#fffbeb", border: "#fde68a", text: "#d97706", badge: "Civil" };
+    return { bg: "#fef3c7", border: "#fde68a", text: "#b45309", badge: "Civil" };
   }
   if (d.includes("eee") || d.includes("electrical")) {
-    return { bg: "#f5f3ff", border: "#ddd6fe", text: "#7c3aed", badge: "EEE" };
+    return { bg: "#ccfbf1", border: "#99f6e4", text: "#0f766e", badge: "EEE" };
+  }
+  if (d.includes("bba") || d.includes("business")) {
+    return { bg: "#fce7f3", border: "#fbcfe8", text: "#be185d", badge: "BBA" };
   }
   if (d.includes("textile")) {
     return { bg: "#fdf2f8", border: "#fbcfe8", text: "#db2777", badge: "Textile" };
@@ -27,8 +27,9 @@ export const getDeptTheme = (dept?: string | null): DeptTheme => {
   if (d.includes("law")) {
     return { bg: "#f0fdfa", border: "#99f6e4", text: "#0d9488", badge: "Law" };
   }
-  return { bg: "#f1f5f9", border: "#e2e8f0", text: "#334155", badge: dept || "Alumni" };
+  return { bg: "#f1f5f9", border: "#e2e8f0", text: "#475569", badge: dept || "Alumni" };
 };
+
 
 export const getAvatarTheme = (
   name?: string | null,

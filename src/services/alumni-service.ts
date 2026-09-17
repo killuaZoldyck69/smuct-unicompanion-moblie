@@ -42,11 +42,77 @@ export interface CreateAlumniInput {
   imageUrl?: string;
 }
 
-export const getAlumniList = async (): Promise<AlumniItem[]> => {
-  const res = await api.get("/alumni");
-  return res.data?.data || [];
+export interface AlumniQueryParams {
+  page?: number;
+  limit?: number;
+  department?: string | null;
+  search?: string | null;
+  all?: boolean;
+}
+
+export interface AlumniPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface AlumniPaginatedResponse {
+  data: AlumniItem[];
+  meta: AlumniPaginationMeta;
+}
+
+export interface AlumniDepartmentItem {
+  department: string;
+  count: number;
+}
+
+export const getAlumniPaginated = async (
+  params?: AlumniQueryParams,
+): Promise<AlumniPaginatedResponse> => {
+  const queryParams: Record<string, any> = {};
+  if (params?.all) queryParams.all = true;
+  if (params?.page) queryParams.page = params.page;
+  if (params?.limit) queryParams.limit = params.limit;
+  if (params?.department && params.department.trim()) {
+    queryParams.department = params.department.trim();
+  }
+  if (params?.search && params.search.trim()) {
+    queryParams.search = params.search.trim();
+  }
+
+  const res = await api.get("/alumni", { params: queryParams });
+  const rawData = res.data?.data;
+  const items: AlumniItem[] = Array.isArray(rawData) ? rawData : [];
+  const meta: AlumniPaginationMeta = res.data?.meta || {
+    page: params?.page || 1,
+    limit: params?.limit || items.length,
+    total: items.length,
+    totalPages: 1,
+    hasMore: false,
+  };
+
+  return {
+    data: items,
+    meta,
+  };
+};
+export const getAlumniPaginatedAPI = getAlumniPaginated;
+
+export const getAlumniList = async (
+  params?: AlumniQueryParams,
+): Promise<AlumniItem[]> => {
+  const res = await getAlumniPaginated(params);
+  return res.data;
 };
 export const getAlumniListAPI = getAlumniList;
+
+export const getAlumniDepartments = async (): Promise<AlumniDepartmentItem[]> => {
+  const res = await api.get("/alumni/departments");
+  return Array.isArray(res.data?.data) ? res.data.data : [];
+};
+export const getAlumniDepartmentsAPI = getAlumniDepartments;
 
 export const getAlumniById = async (id: string): Promise<AlumniItem> => {
   const res = await api.get(`/alumni/${id}`);

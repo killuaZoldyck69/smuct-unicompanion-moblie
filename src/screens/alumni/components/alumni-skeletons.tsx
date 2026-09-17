@@ -5,21 +5,20 @@ import { BENTO } from "../constants";
 export const AlumniSkeletons: React.FC = React.memo(() => {
   return (
     <View style={styles.container}>
-      {[1, 2, 3, 4, 5].map((idx) => (
+      {[1, 2, 3, 4, 5, 6].map((idx) => (
         <View key={idx} style={styles.card}>
+          {/* Avatar Skeleton */}
           <View style={styles.avatar} />
+
+          {/* Text Content Skeleton */}
           <View style={styles.info}>
-            <View style={styles.row}>
-              <View style={styles.title} />
-              <View style={styles.badge} />
-            </View>
-            <View style={styles.line} />
-            <View style={styles.lineShort} />
-            <View style={styles.pillsRow}>
-              <View style={styles.pill} />
-              <View style={styles.pill} />
-            </View>
+            <View style={styles.nameLine} />
+            <View style={styles.roleLine} />
+            <View style={styles.academicLine} />
           </View>
+
+          {/* Chevron Placeholder */}
+          <View style={styles.chevron} />
         </View>
       ))}
     </View>
@@ -29,15 +28,15 @@ export const AlumniSkeletons: React.FC = React.memo(() => {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 4,
     gap: 10,
   },
   card: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: BENTO.card,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: BENTO.border,
   },
@@ -45,50 +44,38 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#e2e8f0",
-    marginRight: 12,
+    backgroundColor: BENTO.surfaceSecondary,
+    marginRight: 14,
   },
   info: {
     flex: 1,
-    gap: 6,
+    gap: 7,
+    justifyContent: "center",
   },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  title: {
-    width: "45%",
+  nameLine: {
+    width: "48%",
     height: 14,
-    borderRadius: 4,
-    backgroundColor: "#e2e8f0",
+    borderRadius: 6,
+    backgroundColor: BENTO.surfaceSecondary,
   },
-  badge: {
-    width: 40,
-    height: 14,
-    borderRadius: 4,
-    backgroundColor: "#e2e8f0",
-  },
-  line: {
-    width: "70%",
+  roleLine: {
+    width: "72%",
     height: 12,
-    borderRadius: 4,
-    backgroundColor: "#f1f5f9",
+    borderRadius: 5,
+    backgroundColor: BENTO.slateSubtle,
   },
-  lineShort: {
-    width: "40%",
-    height: 10,
-    borderRadius: 4,
-    backgroundColor: "#f1f5f9",
+  academicLine: {
+    width: "55%",
+    height: 11,
+    borderRadius: 5,
+    backgroundColor: BENTO.slateSubtle,
   },
-  pillsRow: {
-    flexDirection: "row",
-    gap: 6,
-    marginTop: 2,
-  },
-  pill: {
-    width: 50,
-    height: 16,
-    borderRadius: 4,
-    backgroundColor: "#f1f5f9",
+  chevron: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: BENTO.surfaceSecondary,
+    marginLeft: 8,
   },
 });
+
