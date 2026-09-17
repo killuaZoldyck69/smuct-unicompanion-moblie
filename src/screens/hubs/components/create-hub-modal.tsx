@@ -13,7 +13,7 @@ import {
   StatusBar,
   FlatList,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Toast from "react-native-toast-message";
@@ -114,7 +114,6 @@ export default function CreateHubModal({
     }
   }, [isVisible, populateInitialData]);
 
-  // FIX 5: Reset Form Logic
   const handleResetForm = () => {
     setForm({
       courseName: "",
@@ -136,7 +135,7 @@ export default function CreateHubModal({
         room: "",
       },
     ]);
-    populateInitialData(); // Re-apply default locked fields
+    populateInitialData();
     Toast.show({ type: "info", text1: "Form Cleared" });
   };
 
@@ -172,27 +171,36 @@ export default function CreateHubModal({
       const field = activePicker.type === "start" ? "startTime" : "endTime";
       updateSchedule(activePicker.id, field, selectedDate);
     }
-    // Close picker automatically on Android, iOS needs explicit close if we added a done button,
-    // but setting it to null handles both reasonably well in standard mode.
     setActivePicker(null);
   };
 
   const handleCreate = () => {
+    const courseCode = form.courseCode.trim().toUpperCase();
+    const courseName = form.courseName.trim();
+    const creditNum = parseFloat(form.credit);
+    const department = form.department.trim();
+    const batch = form.batch.trim();
+    const semesterNumber = parseInt(form.semesterNumber, 10);
+    const termOffer = form.termOffer.trim();
+
     if (
-      !form.courseCode ||
-      !form.courseName ||
-      !form.credit ||
-      !form.department ||
-      !form.batch ||
-      !form.semesterNumber ||
-      !form.termOffer
+      !courseCode ||
+      !courseName ||
+      isNaN(creditNum) ||
+      creditNum <= 0 ||
+      !department ||
+      !batch ||
+      isNaN(semesterNumber) ||
+      semesterNumber <= 0 ||
+      !termOffer
     ) {
       return Toast.show({
         type: "error",
-        text1: "Missing Fields",
-        text2: "Please fill out all required course details.",
+        text1: "Invalid Form",
+        text2: "Please fill out all required course details with valid values.",
       });
     }
+
     if (isCR && !form.teacherId) {
       return Toast.show({
         type: "error",
@@ -212,10 +220,15 @@ export default function CreateHubModal({
     }));
 
     const payload = {
-      ...form,
+      courseCode,
+      courseName,
+      credit: creditNum,
+      department,
+      batch,
       section: form.section.trim() || undefined,
-      credit: parseFloat(form.credit),
-      semesterNumber: parseInt(form.semesterNumber, 10),
+      semesterNumber,
+      termOffer,
+      teacherId: form.teacherId || undefined,
       weeklyClassSchedule: formattedSchedules,
     };
 
@@ -226,21 +239,23 @@ export default function CreateHubModal({
     <Modal
       visible={isVisible}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      {/* FIX 1: Using standard View with dynamic insets fixes Android/iOS safe area padding bugs */}
-      <View
-        style={[styles.modalContainer, { paddingTop: insets.top + 8 }]}
+      <SafeAreaView
+        style={styles.modalContainer}
+        edges={["top", "bottom"]}
         accessibilityViewIsModal={true}
       >
         <StatusBar
           barStyle="dark-content"
-          backgroundColor="#f7f9fb"
+          backgroundColor="transparent"
           translucent={true}
         />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1 }}
         >
           {/* TOP HEADER */}
@@ -255,44 +270,18 @@ export default function CreateHubModal({
               <Feather name="x" size={24} color="#131b2e" />
             </TouchableOpacity>
 
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                onPress={handleResetForm}
-                style={styles.resetBtn}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Reset form fields"
-              >
-                <Feather name="refresh-cw" size={18} color="#45464d" />
-              </TouchableOpacity>
+            <Text style={styles.headerTitle}>New Course Hub</Text>
 
-              <TouchableOpacity
-                style={[styles.createBtn, isPending && { opacity: 0.7 }]}
-                onPress={handleCreate}
-                disabled={isPending}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Create course hub"
-              >
-                {isPending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.createBtnText}>Create</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <View style={styles.headerSpacer} />
           </View>
 
           <ScrollView
-            contentContainerStyle={[
-              styles.modalScrollContent,
-              { paddingBottom: insets.bottom + 100 },
-            ]}
+            contentContainerStyle={styles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* PAGE TITLE */}
+            {/* SUBTITLE */}
             <View style={styles.pageTitleContainer}>
-              <Text style={styles.pageTitle}>New Course Hub</Text>
               <Text style={styles.pageSubtitle}>Set up a new class module</Text>
             </View>
 
@@ -722,17 +711,67 @@ export default function CreateHubModal({
                 />
               </View>
             )}
+
+            {/* BOTTOM ACTIONS */}
+            <View style={styles.bottomActions}>
+              <TouchableOpacity
+                style={[styles.bottomCreateBtn, isPending && { opacity: 0.7 }]}
+                onPress={handleCreate}
+                disabled={isPending}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Create course hub"
+                activeOpacity={0.85}
+              >
+                {isPending ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Feather
+                      name="plus-circle"
+                      size={18}
+                      color="#ffffff"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.bottomCreateBtnText}>Create Course Hub</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleResetForm}
+                style={styles.bottomResetBtn}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Reset form fields"
+                activeOpacity={0.7}
+              >
+                <Feather
+                  name="refresh-cw"
+                  size={16}
+                  color="#45464d"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.bottomResetBtnText}>Reset Form</Text>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </View>
+      </SafeAreaView>
 
-      {/* FIX 4: Custom Day Selector Modal */}
       <Modal
         visible={!!activeDayPickerId}
         animationType="fade"
         transparent={true}
+        statusBarTranslucent={true}
+        onRequestClose={() => setActiveDayPickerId(null)}
       >
         <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
+          <TouchableOpacity
+            style={styles.modalOverlayBackdrop}
+            activeOpacity={1}
+            onPress={() => setActiveDayPickerId(null)}
+          />
           <View style={styles.modalDropdownSheet}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalSheetTitle}>Select Day</Text>
@@ -799,50 +838,77 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
+    paddingTop: 12,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
   },
-  iconBtn: { padding: 4 },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "800",
     color: "#131b2e",
+    letterSpacing: -0.3,
   },
-  headerActions: { flexDirection: "row", alignItems: "center" },
-  resetBtn: {
-    padding: 8,
-    marginRight: 12,
-    backgroundColor: "rgba(0,0,0,0.05)",
-    borderRadius: 9999,
+  headerSpacer: {
+    width: 36,
   },
-  createBtn: {
+
+  // Bottom Actions
+  bottomActions: {
+    marginTop: 14,
+    marginBottom: 4,
+    gap: 10,
+  },
+  bottomCreateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#131b2e",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 14,
     borderRadius: 9999,
+    shadowColor: "#131b2e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  createBtnText: {
-    fontSize: 14,
+  bottomCreateBtnText: {
+    fontSize: 15,
     fontWeight: "800",
     color: "#ffffff",
+    letterSpacing: 0.2,
+  },
+  bottomResetBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(19, 27, 46, 0.12)",
+    paddingVertical: 12,
+    borderRadius: 9999,
+  },
+  bottomResetBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#45464d",
   },
 
   // Typography
-  pageTitleContainer: { marginTop: 24, marginBottom: 24 },
-  pageTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#131b2e",
-    letterSpacing: -0.64,
-  },
+  pageTitleContainer: { marginTop: 14, marginBottom: 16 },
   pageSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "500",
-    color: "#45464d",
-    marginTop: 4,
+    color: "#64748b",
   },
-  modalScrollContent: { paddingHorizontal: 20 },
+  modalScrollContent: { paddingHorizontal: 20, paddingBottom: 12 },
 
   // Bento Boxes
   bentoCard: { borderRadius: 32, padding: 24, marginBottom: 16 },
@@ -949,6 +1015,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(19, 27, 46, 0.4)",
     justifyContent: "flex-end",
+  },
+  modalOverlayBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   modalDropdownSheet: {
     backgroundColor: "#f7f9fb",

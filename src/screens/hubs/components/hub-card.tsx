@@ -74,11 +74,13 @@ export default function HubCard({ item, index }: HubCardProps) {
   const hub = item.hub;
   const role = item.role;
 
-  // Determine dynamic colors based on index cycling through the 8 themes
   const theme = CARD_THEMES[index % CARD_THEMES.length];
 
-  // Extract relational data
-  const teacherName = hub.members?.[0]?.user?.name || "Assigning...";
+  const teacherMember = hub.members?.find((m: any) => m.role === "TEACHER");
+  const teacherName =
+    teacherMember?.user?.name ||
+    hub.teacher?.name ||
+    (hub.members?.length ? hub.members[0]?.user?.name : "Assigning...");
   const memberCount = hub._count?.members || 1;
   const nextAssessment = hub.assessments?.[0] || null;
 

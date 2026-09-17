@@ -103,8 +103,55 @@ export const getHubDetails = async (hubId: string) => {
 };
 export const getHubDetailsAPI = getHubDetails;
 
-export const getAvailableTeachers = async () => {
-  const res = await api.get("/hubs/teachers");
+export interface TeacherQueryParams {
+  search?: string;
+  department?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TeacherPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface TeachersPaginatedResponse {
+  data: any[];
+  meta: TeacherPaginationMeta;
+}
+
+export const getAvailableTeachersPaginated = async (
+  params?: TeacherQueryParams,
+): Promise<TeachersPaginatedResponse> => {
+  const queryParams: Record<string, any> = {};
+  if (params?.page) queryParams.page = params.page;
+  if (params?.limit) queryParams.limit = params.limit;
+  if (params?.department?.trim()) queryParams.department = params.department.trim();
+  if (params?.search?.trim()) queryParams.search = params.search.trim();
+
+  const res = await api.get("/hubs/teachers", { params: queryParams });
+  const rawData = res.data?.data;
+  const items = Array.isArray(rawData) ? rawData : [];
+  const meta: TeacherPaginationMeta = res.data?.meta || {
+    page: params?.page || 1,
+    limit: params?.limit || items.length,
+    total: items.length,
+    totalPages: 1,
+    hasMore: false,
+  };
+
+  return {
+    data: items,
+    meta,
+  };
+};
+export const getAvailableTeachersPaginatedAPI = getAvailableTeachersPaginated;
+
+export const getAvailableTeachers = async (params?: TeacherQueryParams) => {
+  const res = await api.get("/hubs/teachers", { params });
   return res.data?.data || [];
 };
 export const getAvailableTeachersAPI = getAvailableTeachers;

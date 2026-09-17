@@ -13,11 +13,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { BENTO, fontFamily } from "../constants";
+import { fontFamily } from "../constants";
 import { AlumniItem } from "../types";
 import {
   getDeptTheme,
-  getAvatarTheme,
   getInitials,
   openSafeLink,
   shareAlumniProfile,
@@ -37,7 +36,6 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
     if (!alumni) return null;
 
     const deptTheme = getDeptTheme(alumni.department);
-    const avatarTheme = getAvatarTheme(alumni.name, alumni.department);
     const imageUrl = alumni.image || alumni.imageUrl;
     const hasImage = Boolean(imageUrl) && !imageError;
     const linkedIn = alumni.linkedInUrl || alumni.linkedinUrl;
@@ -67,12 +65,17 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
       academicParts.length > 0 ? academicParts.join(" · ") : "SMUCT Graduate";
 
     // Combined batch/year for Academic Background section
-    const batchYearText = [
-      batch ? (batch.toLowerCase().includes("batch") ? batch : `${batch} Batch`) : null,
-      year ? `Class of ${year}` : null,
-    ]
-      .filter(Boolean)
-      .join(", ") || "Graduate";
+    const batchYearText =
+      [
+        batch
+          ? batch.toLowerCase().includes("batch")
+            ? batch
+            : `${batch} Batch`
+          : null,
+        year ? `Class of ${year}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ") || "Graduate";
 
     const handleCopyDetails = () => {
       const details = `${alumni.name}\n${role}${company ? " at " + company : ""}\n${academicSummary}\n${
@@ -106,7 +109,13 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
           <View
             style={[
               styles.sheetContainer,
-              { paddingBottom: Math.max(insets.bottom, 16) },
+              {
+                paddingBottom: Platform.select({
+                  ios: Math.max(insets.bottom, 12),
+                  android: 6,
+                  default: 10,
+                }),
+              },
             ]}
           >
             {/* Top Bar: Drag Handle & Close Button */}
@@ -267,11 +276,7 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
                         { backgroundColor: "#ede9fe" },
                       ]}
                     >
-                      <Feather
-                        name="briefcase"
-                        size={14}
-                        color="#6366f1"
-                      />
+                      <Feather name="briefcase" size={14} color="#6366f1" />
                     </View>
                     <Text style={styles.cardTitle}>CAREER & INDUSTRY</Text>
                   </View>
@@ -315,16 +320,9 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
               <View style={styles.bentoCard}>
                 <View style={styles.cardHeader}>
                   <View
-                    style={[
-                      styles.cardIconBox,
-                      { backgroundColor: "#dcfce7" },
-                    ]}
+                    style={[styles.cardIconBox, { backgroundColor: "#dcfce7" }]}
                   >
-                    <Feather
-                      name="book-open"
-                      size={14}
-                      color="#16a34a"
-                    />
+                    <Feather name="book-open" size={14} color="#16a34a" />
                   </View>
                   <Text style={styles.cardTitle}>ACADEMIC BACKGROUND</Text>
                 </View>
@@ -357,11 +355,7 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
                         { backgroundColor: "#fef3c7" },
                       ]}
                     >
-                      <Feather
-                        name="award"
-                        size={14}
-                        color="#d97706"
-                      />
+                      <Feather name="award" size={14} color="#d97706" />
                     </View>
                     <Text style={styles.cardTitle}>SKILLS & EXPERTISE</Text>
                   </View>
@@ -393,7 +387,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
-    maxHeight: "88%",
+    maxHeight: Platform.select({
+      android: "92%",
+      default: "88%",
+    }),
     ...Platform.select({
       web: {
         maxWidth: 500,
@@ -440,7 +437,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
   heroSection: {
     alignItems: "center",
@@ -645,4 +642,3 @@ const styles = StyleSheet.create({
     color: "#334155",
   },
 });
-

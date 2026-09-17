@@ -15,8 +15,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import Toast from "react-native-toast-message";
 
-import { useMyHubs, useAvailableTeachers, useJoinHub, useCreateHub } from "@/features/hubs/useHubs";
+import { useMyHubs, useJoinHub, useCreateHub } from "@/features/hubs/useHubs";
 import { getStudentProfile } from "@/services/student-service";
 import { getTeacherProfile } from "@/services/teacher-service";
 import CreateHubModal from "./components/create-hub-modal";
@@ -70,25 +71,46 @@ export function Hubs() {
       }
     : null;
 
-  // --- Fetch Hubs Data ---
   const { data: myHubs, isLoading: isLoadingHubs } = useMyHubs();
-  const { data: teachers, isLoading: isLoadingTeachers } = useAvailableTeachers();
 
-  // --- Role Check & Filtering ---
   const canCreateHub =
     currentUser?.role === "TEACHER" ||
     (currentUser?.studentProfile as any)?.isCR === true;
   const isLoadingScreen =
     isSessionPending || isLoadingHubs || isLoadingStudent || isLoadingTeacher;
 
-  // Filter hubs based on archive status
   const activeHubs = myHubs?.filter((item: any) => !item.hub.isArchived) || [];
   const archivedHubs = myHubs?.filter((item: any) => item.hub.isArchived) || [];
   const displayedHubs = activeTab === "ACTIVE" ? activeHubs : archivedHubs;
 
-  // --- Mutations ---
   const joinHubMutation = useJoinHub();
   const createHubMutation = useCreateHub();
+
+  const handleJoinCourse = () => {
+    const code = joinCode.trim().toUpperCase();
+    if (!code || code.length !== 6) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid Code",
+        text2: "Join code must be exactly 6 characters.",
+      });
+      return;
+    }
+    joinHubMutation.mutate(code, {
+      onSuccess: () => {
+        setIsJoinModalVisible(false);
+        setJoinCode("");
+      },
+    });
+  };
+
+  const handleCreateCourse = (payload: any) => {
+    createHubMutation.mutate(payload, {
+      onSuccess: () => {
+        setIsCreateModalVisible(false);
+      },
+    });
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -98,7 +120,6 @@ export function Hubs() {
         translucent={true}
       />
 
-      {/* MAIN HEADER & BUTTONS */}
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Course Hubs</Text>
         <View style={styles.actionRow}>
@@ -138,7 +159,6 @@ export function Hubs() {
         </View>
       </View>
 
-      {/* 3. CUSTOM PILL TABS */}
       <View style={styles.tabsWrapper}>
         <View style={styles.tabsContainer}>
           {(["ACTIVE", "ARCHIVED"] as HubTab[]).map((tab) => {
@@ -150,7 +170,9 @@ export function Hubs() {
                 onPress={() => setActiveTab(tab)}
                 accessible={true}
                 accessibilityRole="tab"
-                accessibilityLabel={tab === "ACTIVE" ? "Active Classes tab" : "Archived Classes tab"}
+                accessibilityLabel={
+                  tab === "ACTIVE" ? "Active Classes tab" : "Archived Classes tab"
+                }
               >
                 <Text
                   style={[styles.tabText, isActive && styles.tabTextActive]}
@@ -163,7 +185,6 @@ export function Hubs() {
         </View>
       </View>
 
-      {/* 4. LIST CONTENT */}
       {isLoadingScreen ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#131b2e" />
@@ -215,14 +236,28 @@ export function Hubs() {
         />
       )}
 
-      {/* JOIN MODAL */}
-      <Modal visible={isJoinModalVisible} animationType="slide" transparent>
+      <Modal
+        visible={isJoinModalVisible}
+        animationType="slide"
+        transparent
+        statusBarTranslucent={true}
+        onRequestClose={() => setIsJoinModalVisible(false)}
+      >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.modalOverlay}
-          accessibilityViewIsModal={true}
         >
-          <View style={styles.bottomSheet}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsJoinModalVisible(false)}
+          />
+          <View
+            style={[
+              styles.bottomSheet,
+              { paddingBottom: Math.max(insets.bottom, 24) },
+            ]}
+          >
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Join a Course</Text>
               <TouchableOpacity
@@ -252,9 +287,7 @@ export function Hubs() {
                 styles.submitBlockBtn,
                 joinHubMutation.isPending && { opacity: 0.7 },
               ]}
-              onPress={() =>
-                joinHubMutation.mutate(joinCode.trim().toUpperCase())
-              }
+              onPress={handleJoinCourse}
               disabled={joinHubMutation.isPending}
               accessible={true}
               accessibilityRole="button"
@@ -270,14 +303,11 @@ export function Hubs() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* CREATE HUB MODAL */}
       <CreateHubModal
         isVisible={isCreateModalVisible}
         onClose={() => setIsCreateModalVisible(false)}
-        onSubmit={(payload) => createHubMutation.mutate(payload)}
+        onSubmit={handleCreateCourse}
         isPending={createHubMutation.isPending}
-        teachers={teachers || []}
-        isLoadingTeachers={isLoadingTeachers}
         currentUser={currentUser}
       />
     </View>
@@ -391,6 +421,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(19, 27, 46, 0.4)",
     justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   bottomSheet: {
     backgroundColor: "#f7f9fb",

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,37 +10,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  ScrollView,
-  Linking,
+  ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import Toast from "react-native-toast-message";
+import { useAvailableTeachersInfinite } from "@/features/hubs/useHubs";
+import TeacherProfileModal, { Teacher } from "./teacher-profile-modal";
 
-export interface Teacher {
-  id: string;
-  name: string;
-  email: string;
-  image?: string | null;
-  phoneNumber?: string | null;
-  role?: string | null;
-  teacherProfile?: {
-    department?: string | null;
-    designation?: string | null;
-    faculty?: string | null;
-    officeRoom?: string | null;
-    consultationHours?: string | null;
-    expertiseFields?: string[] | null;
-    linkedInUrl?: string | null;
-    personalWebsiteUrl?: string | null;
-  };
-}
+export type { Teacher };
 
 interface Props {
-  teachers?: Teacher[];
   selectedId: string;
   onSelect: (id: string) => void;
-  isLoading: boolean;
+  teachers?: Teacher[];
+  isLoading?: boolean;
 }
 
 const BENTO_COLORS = {
@@ -54,12 +37,6 @@ const BENTO_COLORS = {
   blueDark: "#1e3a8a",
   mintSoft: "#c3f0d2",
   mintDark: "#065f46",
-  yellowSoft: "#fef08a",
-  yellowDark: "#854d0e",
-  pinkSoft: "#ffdad6",
-  pinkDark: "#9f1239",
-  lavenderSoft: "#f3e8ff",
-  lavenderDark: "#581c87",
 };
 
 const fontFamily = Platform.select({
@@ -69,123 +46,160 @@ const fontFamily = Platform.select({
 });
 
 export default function SearchableTeacherSelect({
-  teachers = [],
   selectedId,
   onSelect,
-  isLoading,
+  teachers: initialTeachers = [],
+  isLoading: isParentLoading = false,
 }: Props) {
+  const insets = useSafeAreaInsets();
   const [isVisible, setIsVisible] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [viewingTeacher, setViewingTeacher] = useState<Teacher | null>(null);
+  const [selectedTeacherObj, setSelectedTeacherObj] = useState<Teacher | null>(null);
 
-  const safeTeachers = useMemo(
-    () => (Array.isArray(teachers) ? teachers : []),
-    [teachers],
-  );
-  const selectedTeacher = safeTeachers.find((t) => t.id === selectedId);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const filteredTeachers = useMemo(() => {
-    if (!search.trim()) return safeTeachers;
-    const lowerQ = search.trim().toLowerCase();
-    return safeTeachers.filter(
-      (t) =>
-        t.name?.toLowerCase().includes(lowerQ) ||
-        t.teacherProfile?.department?.toLowerCase().includes(lowerQ) ||
-        t.teacherProfile?.designation?.toLowerCase().includes(lowerQ),
-    );
-  }, [search, safeTeachers]);
+  const {
+    data,
+    isLoading: isQueryLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useAvailableTeachersInfinite({
+    search: debouncedSearch,
+  });
 
-  const handleSelect = (id: string) => {
-    onSelect(id);
+  const allLoadedTeachers: Teacher[] = useMemo(() => {
+    const serverList = data?.pages.flatMap((page) => page.data) ?? [];
+    return serverList.length > 0 ? serverList : initialTeachers;
+  }, [data, initialTeachers]);
+
+  const teachersList: Teacher[] = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const serverList = data?.pages.flatMap((page) => page.data) ?? [];
+
+    if (debouncedSearch && debouncedSearch === search.trim()) {
+      return serverList;
+    }
+
+    if (query) {
+      return allLoadedTeachers.filter((t) => {
+        const name = (t.name || "").toLowerCase();
+        const email = (t.email || "").toLowerCase();
+        const dept = (t.teacherProfile?.department || "").toLowerCase();
+        const desig = (t.teacherProfile?.designation || "").toLowerCase();
+        const room = (t.teacherProfile?.officeRoom || "").toLowerCase();
+        return (
+          name.includes(query) ||
+          email.includes(query) ||
+          dept.includes(query) ||
+          desig.includes(query) ||
+          room.includes(query)
+        );
+      });
+    }
+
+    return allLoadedTeachers;
+  }, [data, debouncedSearch, search, allLoadedTeachers]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setSelectedTeacherObj(null);
+      return;
+    }
+    const found =
+      allLoadedTeachers.find((t) => t.id === selectedId) ||
+      initialTeachers.find((t) => t.id === selectedId);
+    if (found) {
+      setSelectedTeacherObj(found);
+    }
+  }, [selectedId, allLoadedTeachers, initialTeachers]);
+
+  const handleClose = () => {
+    setIsVisible(false);
+    setSearch("");
+  };
+
+  const handleSelect = (teacher: Teacher) => {
+    setSelectedTeacherObj(teacher);
+    onSelect(teacher.id);
     setIsVisible(false);
     setViewingTeacher(null);
     setSearch("");
   };
 
-  const handleOpenLink = (url?: string | null) => {
-    if (!url) return;
-    const validUrl = url.startsWith("http") ? url : `https://${url}`;
-    Linking.openURL(validUrl).catch(() => {
-      Toast.show({ type: "error", text1: "Unable to open link" });
-    });
-  };
-
-  const handleCall = (phone?: string | null) => {
-    if (!phone) return;
-    Linking.openURL(`tel:${phone.replace(/\s+/g, "")}`).catch(() => {
-      Toast.show({ type: "error", text1: "Unable to open dialer" });
-    });
-  };
-
-  const handleEmail = (email?: string | null) => {
-    if (!email) return;
-    Linking.openURL(`mailto:${email}`).catch(() => {
-      Toast.show({ type: "error", text1: "Unable to open mail client" });
-    });
+  const handleEndReached = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
   };
 
   return (
     <>
-      {/* TRIGGER SELECTOR BUTTON (Bento Campus Style) */}
       <TouchableOpacity
         style={[
           styles.selectorBtn,
-          selectedTeacher && styles.selectorBtnActive,
+          selectedTeacherObj && styles.selectorBtnActive,
         ]}
         onPress={() => setIsVisible(true)}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel={
-          selectedTeacher
-            ? `Assigned instructor: ${selectedTeacher.name}`
+          selectedTeacherObj
+            ? `Assigned instructor: ${selectedTeacherObj.name}`
             : "Search & Assign Course Instructor"
         }
         activeOpacity={0.85}
       >
-        {selectedTeacher ? (
+        {selectedTeacherObj ? (
           <View style={styles.selectedRow}>
-            {selectedTeacher.image ? (
+            {selectedTeacherObj.image ? (
               <Image
-                source={{ uri: selectedTeacher.image }}
+                source={{ uri: selectedTeacherObj.image }}
                 style={styles.triggerAvatar}
               />
             ) : (
               <View style={styles.triggerAvatarFallback}>
                 <Text style={styles.triggerAvatarText}>
-                  {selectedTeacher.name?.charAt(0)?.toUpperCase() || "T"}
+                  {selectedTeacherObj.name?.charAt(0)?.toUpperCase() || "T"}
                 </Text>
               </View>
             )}
-            <View style={{ flex: 1, marginLeft: 12 }}>
+            <View style={styles.selectedInfo}>
               <Text style={styles.selectedTeacherName} numberOfLines={1}>
-                {selectedTeacher.name}
+                {selectedTeacherObj.name}
               </Text>
               <Text style={styles.selectedTeacherSub} numberOfLines={1}>
-                {selectedTeacher.teacherProfile?.designation || "Faculty"} •{" "}
-                {selectedTeacher.teacherProfile?.department || "Department"}
+                {selectedTeacherObj.teacherProfile?.department ||
+                  selectedTeacherObj.teacherProfile?.designation ||
+                  "Faculty Member"}
               </Text>
             </View>
             <View style={styles.changeBadge}>
+              <Feather name="repeat" size={12} color={BENTO_COLORS.deepNavy} />
               <Text style={styles.changeBadgeText}>Change</Text>
-              <Feather
-                name="chevron-down"
-                size={14}
-                color={BENTO_COLORS.deepNavy}
-              />
             </View>
           </View>
         ) : (
-          <View style={styles.placeholderRow}>
-            <View style={styles.searchIconCircle}>
-              <Feather
-                name="user-plus"
-                size={16}
-                color={BENTO_COLORS.pinkDark}
-              />
+          <View style={styles.unselectedRow}>
+            <View style={styles.triggerIconCircle}>
+              <Feather name="user" size={18} color={BENTO_COLORS.blueDark} />
             </View>
-            <Text style={styles.placeholderText}>
-              {isLoading ? "Loading teachers..." : "Select Course Instructor"}
-            </Text>
+            <View style={styles.unselectedInfo}>
+              <Text style={styles.placeholderTitle}>
+                {isParentLoading ? "Loading instructors..." : "Select Course Instructor"}
+              </Text>
+              <Text style={styles.placeholderSub}>
+                Assign a teacher or search directory
+              </Text>
+            </View>
             <Feather
               name="chevron-down"
               size={18}
@@ -195,23 +209,34 @@ export default function SearchableTeacherSelect({
         )}
       </TouchableOpacity>
 
-      {/* SELECT INSTRUCTOR MODAL (Bento Campus Bottom Sheet) */}
-      <Modal visible={isVisible} animationType="slide" transparent>
+      <Modal
+        visible={isVisible}
+        animationType="slide"
+        transparent
+        statusBarTranslucent={true}
+        onRequestClose={handleClose}
+      >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.modalOverlay}
         >
-          <SafeAreaView
-            style={styles.bentoSheet}
-            edges={["top"]}
+          <TouchableOpacity
+            style={styles.backdropTouchable}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+
+          <View
+            style={[
+              styles.bentoSheet,
+              { paddingBottom: Math.max(insets.bottom, 14) },
+            ]}
             accessibilityViewIsModal={true}
           >
-            {/* Sheet Handle */}
             <View style={styles.sheetHandleContainer}>
               <View style={styles.sheetHandle} />
             </View>
 
-            {/* Sheet Header */}
             <View style={styles.sheetHeader}>
               <View>
                 <Text style={styles.sheetTitle}>Select Instructor</Text>
@@ -220,7 +245,7 @@ export default function SearchableTeacherSelect({
                 </Text>
               </View>
               <TouchableOpacity
-                onPress={() => setIsVisible(false)}
+                onPress={handleClose}
                 style={styles.closeBtn}
                 accessible={true}
                 accessibilityRole="button"
@@ -230,13 +255,12 @@ export default function SearchableTeacherSelect({
               </TouchableOpacity>
             </View>
 
-            {/* Bento Search Box */}
             <View style={styles.searchBox}>
               <Feather
                 name="search"
                 size={18}
                 color={BENTO_COLORS.blueDark}
-                style={{ marginRight: 10 }}
+                style={styles.searchIcon}
               />
               <TextInput
                 style={styles.searchInput}
@@ -248,7 +272,13 @@ export default function SearchableTeacherSelect({
                 accessible={true}
                 accessibilityLabel="Search instructors"
               />
-              {!!search && (
+              {isFetching && !isFetchingNextPage ? (
+                <ActivityIndicator
+                  size="small"
+                  color={BENTO_COLORS.blueDark}
+                  style={styles.searchStatus}
+                />
+              ) : !!search ? (
                 <TouchableOpacity
                   onPress={() => setSearch("")}
                   style={styles.searchClearBtn}
@@ -262,15 +292,50 @@ export default function SearchableTeacherSelect({
                     color={BENTO_COLORS.subtleText}
                   />
                 </TouchableOpacity>
-              )}
+              ) : null}
             </View>
 
-            {/* Teachers List as Bento Cards */}
             <FlatList
-              data={filteredTeachers}
+              data={teachersList}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              contentContainerStyle={styles.listContentContainer}
+              keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.4}
+              ListEmptyComponent={
+                isQueryLoading || (isFetching && teachersList.length === 0) ? (
+                  <View style={styles.emptyContainer}>
+                    <ActivityIndicator size="large" color={BENTO_COLORS.blueDark} />
+                    <Text style={styles.emptyDesc}>Searching instructors...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Feather
+                      name="user-x"
+                      size={40}
+                      color={BENTO_COLORS.subtleText}
+                      style={styles.emptyIcon}
+                    />
+                    <Text style={styles.emptyTitle}>No Instructors Found</Text>
+                    <Text style={styles.emptyDesc}>
+                      {search.trim()
+                        ? `No instructors match "${search.trim()}". Try another search term.`
+                        : "No teachers are registered in the directory yet."}
+                    </Text>
+                  </View>
+                )
+              }
+              ListFooterComponent={
+                isFetchingNextPage ? (
+                  <View style={styles.footerLoader}>
+                    <ActivityIndicator size="small" color={BENTO_COLORS.blueDark} />
+                    <Text style={styles.footerLoaderText}>
+                      Loading more instructors...
+                    </Text>
+                  </View>
+                ) : null
+              }
               renderItem={({ item }) => {
                 const isSelected = selectedId === item.id;
                 return (
@@ -280,7 +345,6 @@ export default function SearchableTeacherSelect({
                       isSelected && styles.teacherBentoCardSelected,
                     ]}
                   >
-                    {/* TAPPABLE PROFILE PICTURE */}
                     <TouchableOpacity
                       style={styles.avatarTapWrapper}
                       onPress={() => setViewingTeacher(item)}
@@ -301,20 +365,18 @@ export default function SearchableTeacherSelect({
                           </Text>
                         </View>
                       )}
-                      {/* View Profile Indicator Badge */}
                       <View style={styles.viewProfileBadge}>
                         <Feather name="eye" size={9} color="#ffffff" />
                       </View>
                     </TouchableOpacity>
 
-                    {/* TEACHER DETAILS & SELECT ACTION */}
                     <TouchableOpacity
                       style={styles.teacherContentWrapper}
-                      onPress={() => handleSelect(item.id)}
+                      onPress={() => handleSelect(item)}
                       accessible={true}
                       accessibilityRole="button"
-                      accessibilityLabel={`Select ${item.name} as instructor`}
-                      activeOpacity={0.75}
+                      accessibilityLabel={`Assign ${item.name}`}
+                      activeOpacity={0.7}
                     >
                       <View style={styles.nameRow}>
                         <Text style={styles.teacherNameText} numberOfLines={1}>
@@ -322,41 +384,38 @@ export default function SearchableTeacherSelect({
                         </Text>
                       </View>
 
-                      {/* Pill Badge: Designation & Dept */}
                       <View style={styles.metaBadgeRow}>
                         <View style={styles.designationPill}>
                           <Text style={styles.designationPillText}>
-                            {item.teacherProfile?.designation || "Faculty"}
+                            {item.teacherProfile?.designation || "Lecturer"}
                           </Text>
                         </View>
-                        <Text style={styles.departmentText} numberOfLines={1}>
-                          {item.teacherProfile?.department || "General"}
-                        </Text>
                       </View>
 
-                      {/* Office Room if available */}
+                      <Text style={styles.departmentText} numberOfLines={1}>
+                        {item.teacherProfile?.department || "Faculty of Sciences"}
+                      </Text>
+
                       {!!item.teacherProfile?.officeRoom && (
-                        <View style={styles.extraInfoRow}>
+                        <View style={styles.roomRow}>
                           <Feather
                             name="map-pin"
-                            size={12}
+                            size={11}
                             color={BENTO_COLORS.subtleText}
-                            style={{ marginRight: 4 }}
                           />
-                          <Text style={styles.extraInfoText}>
+                          <Text style={styles.roomText}>
                             Room: {item.teacherProfile.officeRoom}
                           </Text>
                         </View>
                       )}
                     </TouchableOpacity>
 
-                    {/* SELECT ACTION BUTTON */}
                     <TouchableOpacity
                       style={[
-                        styles.selectActionBtn,
-                        isSelected && styles.selectActionBtnSelected,
+                        styles.assignActionBtn,
+                        isSelected && styles.assignActionBtnActive,
                       ]}
-                      onPress={() => handleSelect(item.id)}
+                      onPress={() => handleSelect(item)}
                       accessible={true}
                       accessibilityRole="button"
                       accessibilityLabel={
@@ -364,332 +423,30 @@ export default function SearchableTeacherSelect({
                       }
                       activeOpacity={0.8}
                     >
-                      {isSelected ? (
-                        <Feather name="check" size={16} color="#ffffff" />
-                      ) : (
-                        <Feather
-                          name="plus"
-                          size={16}
-                          color={BENTO_COLORS.deepNavy}
-                        />
-                      )}
+                      <Feather
+                        name={isSelected ? "check" : "plus"}
+                        size={18}
+                        color={isSelected ? "#ffffff" : BENTO_COLORS.deepNavy}
+                      />
                     </TouchableOpacity>
                   </View>
                 );
               }}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <View style={styles.emptyIconCircle}>
-                    <Feather
-                      name="user-x"
-                      size={24}
-                      color={BENTO_COLORS.subtleText}
-                    />
-                  </View>
-                  <Text style={styles.emptyTitle}>No Instructors Found</Text>
-                  <Text style={styles.emptyDesc}>
-                    {search
-                      ? `No teachers match "${search}". Try searching by name or department.`
-                      : "No teachers are registered in the directory yet."}
-                  </Text>
-                </View>
-              }
             />
-          </SafeAreaView>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* TEACHER PROFILE DETAILS MODAL (Campus Bento Card UI) */}
-      <Modal
-        visible={!!viewingTeacher}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setViewingTeacher(null)}
-      >
-        <View style={styles.profileModalOverlay}>
-          <TouchableOpacity
-            style={styles.profileModalBackdrop}
-            activeOpacity={1}
-            onPress={() => setViewingTeacher(null)}
-          />
-
-          <View style={styles.profileBentoCard}>
-            {/* Top Close Row */}
-            <View style={styles.profileTopRow}>
-              <View style={styles.profileBadge}>
-                <Feather
-                  name="shield"
-                  size={12}
-                  color={BENTO_COLORS.blueDark}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.profileBadgeText}>Faculty Member</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setViewingTeacher(null)}
-                style={styles.profileCloseBtn}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Close profile details"
-              >
-                <Feather name="x" size={18} color={BENTO_COLORS.deepNavy} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 16 }}
-            >
-              {/* Profile Header Hero */}
-              <View style={styles.profileHero}>
-                {viewingTeacher?.image ? (
-                  <Image
-                    source={{ uri: viewingTeacher.image }}
-                    style={styles.profileHeroAvatar}
-                  />
-                ) : (
-                  <View style={styles.profileHeroAvatarFallback}>
-                    <Text style={styles.profileHeroAvatarFallbackText}>
-                      {viewingTeacher?.name?.charAt(0)?.toUpperCase() || "T"}
-                    </Text>
-                  </View>
-                )}
-
-                <Text style={styles.profileHeroName}>
-                  {viewingTeacher?.name}
-                </Text>
-
-                <View style={styles.profileHeroPills}>
-                  <View style={styles.profileDesignationPill}>
-                    <Text style={styles.profileDesignationText}>
-                      {viewingTeacher?.teacherProfile?.designation || "Faculty"}
-                    </Text>
-                  </View>
-                  <Text style={styles.profileDepartmentText}>
-                    {viewingTeacher?.teacherProfile?.department ||
-                      "University Faculty"}
-                  </Text>
-                </View>
-              </View>
-
-              {/* BENTO SECTION: ACADEMIC & OFFICE DETAILS */}
-              <View style={[styles.profileSectionBox, styles.sectionMint]}>
-                <Text style={styles.sectionTitleMint}>CAMPUS LOCATION</Text>
-
-                <View style={styles.infoRow}>
-                  <Feather
-                    name="map-pin"
-                    size={15}
-                    color={BENTO_COLORS.mintDark}
-                    style={styles.infoRowIcon}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.infoRowLabel}>Office Room</Text>
-                    <Text style={styles.infoRowValue}>
-                      {viewingTeacher?.teacherProfile?.officeRoom ||
-                        "Not specified"}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={[styles.infoRow, { marginTop: 10 }]}>
-                  <Feather
-                    name="clock"
-                    size={15}
-                    color={BENTO_COLORS.mintDark}
-                    style={styles.infoRowIcon}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.infoRowLabel}>Consultation Hours</Text>
-                    <Text style={styles.infoRowValue}>
-                      {viewingTeacher?.teacherProfile?.consultationHours ||
-                        "Available by appointment"}
-                    </Text>
-                  </View>
-                </View>
-
-                {!!viewingTeacher?.teacherProfile?.faculty && (
-                  <View style={[styles.infoRow, { marginTop: 10 }]}>
-                    <Feather
-                      name="award"
-                      size={15}
-                      color={BENTO_COLORS.mintDark}
-                      style={styles.infoRowIcon}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.infoRowLabel}>Faculty</Text>
-                      <Text style={styles.infoRowValue}>
-                        {viewingTeacher.teacherProfile.faculty}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              {/* BENTO SECTION: CONTACT INFO */}
-              <View style={[styles.profileSectionBox, styles.sectionBlue]}>
-                <Text style={styles.sectionTitleBlue}>COMMUNICATION</Text>
-
-                {!!viewingTeacher?.email && (
-                  <TouchableOpacity
-                    style={styles.contactRow}
-                    onPress={() => handleEmail(viewingTeacher?.email)}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Send email to ${viewingTeacher.email}`}
-                  >
-                    <Feather
-                      name="mail"
-                      size={15}
-                      color={BENTO_COLORS.blueDark}
-                      style={styles.infoRowIcon}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.infoRowLabel}>Email Address</Text>
-                      <Text style={styles.contactValueText}>
-                        {viewingTeacher.email}
-                      </Text>
-                    </View>
-                    <Feather
-                      name="arrow-up-right"
-                      size={14}
-                      color={BENTO_COLORS.blueDark}
-                    />
-                  </TouchableOpacity>
-                )}
-
-                {!!viewingTeacher?.phoneNumber && (
-                  <TouchableOpacity
-                    style={[styles.contactRow, { marginTop: 10 }]}
-                    onPress={() => handleCall(viewingTeacher?.phoneNumber)}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Call ${viewingTeacher.phoneNumber}`}
-                  >
-                    <Feather
-                      name="phone"
-                      size={15}
-                      color={BENTO_COLORS.blueDark}
-                      style={styles.infoRowIcon}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.infoRowLabel}>Phone Number</Text>
-                      <Text style={styles.contactValueText}>
-                        {viewingTeacher.phoneNumber}
-                      </Text>
-                    </View>
-                    <Feather
-                      name="arrow-up-right"
-                      size={14}
-                      color={BENTO_COLORS.blueDark}
-                    />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* BENTO SECTION: EXPERTISE FIELDS (if any) */}
-              {Array.isArray(
-                viewingTeacher?.teacherProfile?.expertiseFields,
-              ) &&
-                viewingTeacher.teacherProfile.expertiseFields.length > 0 && (
-                  <View
-                    style={[styles.profileSectionBox, styles.sectionLavender]}
-                  >
-                    <Text style={styles.sectionTitleLavender}>
-                      AREAS OF EXPERTISE
-                    </Text>
-                    <View style={styles.expertisePillContainer}>
-                      {viewingTeacher.teacherProfile.expertiseFields.map(
-                        (field, idx) => (
-                          <View key={idx} style={styles.expertisePill}>
-                            <Text style={styles.expertisePillText}>
-                              {field}
-                            </Text>
-                          </View>
-                        ),
-                      )}
-                    </View>
-                  </View>
-                )}
-
-              {/* SOCIAL / ACADEMIC WEBSITES */}
-              {(viewingTeacher?.teacherProfile?.linkedInUrl ||
-                viewingTeacher?.teacherProfile?.personalWebsiteUrl) && (
-                <View style={styles.linksRow}>
-                  {!!viewingTeacher?.teacherProfile?.linkedInUrl && (
-                    <TouchableOpacity
-                      style={styles.socialLinkBtn}
-                      onPress={() =>
-                        handleOpenLink(
-                          viewingTeacher?.teacherProfile?.linkedInUrl,
-                        )
-                      }
-                      accessible={true}
-                      accessibilityRole="button"
-                      accessibilityLabel="Open LinkedIn Profile"
-                    >
-                      <Feather
-                        name="linkedin"
-                        size={14}
-                        color={BENTO_COLORS.deepNavy}
-                      />
-                      <Text style={styles.socialLinkText}>LinkedIn</Text>
-                    </TouchableOpacity>
-                  )}
-                  {!!viewingTeacher?.teacherProfile?.personalWebsiteUrl && (
-                    <TouchableOpacity
-                      style={styles.socialLinkBtn}
-                      onPress={() =>
-                        handleOpenLink(
-                          viewingTeacher?.teacherProfile?.personalWebsiteUrl,
-                        )
-                      }
-                      accessible={true}
-                      accessibilityRole="button"
-                      accessibilityLabel="Open Website"
-                    >
-                      <Feather
-                        name="globe"
-                        size={14}
-                        color={BENTO_COLORS.deepNavy}
-                      />
-                      <Text style={styles.socialLinkText}>Website</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </ScrollView>
-
-            {/* PRIMARY ACTION: ASSIGN INSTRUCTOR */}
-            <TouchableOpacity
-              style={styles.profileAssignBtn}
-              onPress={() => {
-                if (viewingTeacher) handleSelect(viewingTeacher.id);
-              }}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={`Assign ${viewingTeacher?.name} as Course Instructor`}
-              activeOpacity={0.85}
-            >
-              <Feather
-                name="check-circle"
-                size={18}
-                color="#ffffff"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.profileAssignBtnText}>
-                Assign as Course Instructor
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <TeacherProfileModal
+        teacher={viewingTeacher}
+        onClose={() => setViewingTeacher(null)}
+        onAssign={handleSelect}
+      />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  // Trigger Selector Box
   selectorBtn: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
@@ -702,39 +459,32 @@ const styles = StyleSheet.create({
     borderColor: BENTO_COLORS.blueDark,
     backgroundColor: "#f8faff",
   },
-  placeholderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  searchIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: BENTO_COLORS.pinkSoft,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  placeholderText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily,
-    color: BENTO_COLORS.subtleText,
-  },
   selectedRow: {
     flexDirection: "row",
     alignItems: "center",
   },
+  selectedInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  unselectedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  unselectedInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
   triggerAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#e2e8f0",
   },
   triggerAvatarFallback: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: BENTO_COLORS.blueSoft,
     justifyContent: "center",
     alignItems: "center",
@@ -743,6 +493,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: BENTO_COLORS.blueDark,
+    fontFamily,
+  },
+  triggerIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: BENTO_COLORS.blueSoft,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  placeholderTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
+    fontFamily,
+  },
+  placeholderSub: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+    marginTop: 2,
     fontFamily,
   },
   selectedTeacherName: {
@@ -773,20 +544,27 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.deepNavy,
     fontFamily,
   },
-
-  // Modal Sheet (Bento Campus)
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(19, 27, 46, 0.45)",
     justifyContent: "flex-end",
+  },
+  backdropTouchable: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   bentoSheet: {
     backgroundColor: BENTO_COLORS.canvas,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     maxHeight: "88%",
+    minHeight: 320,
     paddingHorizontal: 20,
     paddingTop: 8,
+    width: "100%",
   },
   sheetHandleContainer: {
     alignItems: "center",
@@ -829,8 +607,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.06)",
   },
-
-  // Search Box
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -842,6 +618,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.06)",
   },
+  searchIcon: {
+    marginRight: 10,
+  },
   searchInput: {
     flex: 1,
     fontSize: 14,
@@ -849,11 +628,15 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.deepNavy,
     fontFamily,
   },
+  searchStatus: {
+    padding: 4,
+  },
   searchClearBtn: {
     padding: 4,
   },
-
-  // Teacher Card (Bento Style)
+  listContentContainer: {
+    paddingBottom: 12,
+  },
   teacherBentoCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -939,49 +722,41 @@ const styles = StyleSheet.create({
   },
   departmentText: {
     fontSize: 12,
-    fontWeight: "500",
     color: BENTO_COLORS.subtleText,
+    marginTop: 4,
+    fontWeight: "500",
     fontFamily,
-    flexShrink: 1,
   },
-  extraInfoRow: {
+  roomRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 4,
+    gap: 4,
   },
-  extraInfoText: {
+  roomText: {
     fontSize: 11,
-    fontWeight: "500",
     color: BENTO_COLORS.subtleText,
+    fontWeight: "600",
     fontFamily,
   },
-  selectActionBtn: {
+  assignActionBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: BENTO_COLORS.canvas,
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
   },
-  selectActionBtnSelected: {
+  assignActionBtnActive: {
     backgroundColor: BENTO_COLORS.blueDark,
-    borderColor: BENTO_COLORS.blueDark,
   },
-
-  // Empty State
   emptyContainer: {
     alignItems: "center",
-    paddingVertical: 40,
-  },
-  emptyIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(0,0,0,0.04)",
     justifyContent: "center",
-    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyIcon: {
     marginBottom: 12,
   },
   emptyTitle: {
@@ -989,264 +764,26 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
     fontFamily,
+    marginBottom: 6,
   },
   emptyDesc: {
     fontSize: 13,
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
-    textAlign: "center",
-    marginTop: 4,
-    paddingHorizontal: 20,
-    fontFamily,
-  },
-
-  // PROFILE DETAILS MODAL
-  profileModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(19, 27, 46, 0.55)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  profileModalBackdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  profileBentoCard: {
-    width: "100%",
-    maxWidth: 440,
-    maxHeight: "85%",
-    backgroundColor: "#ffffff",
-    borderRadius: 32,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 28,
-    elevation: 10,
-  },
-  profileTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  profileBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: BENTO_COLORS.blueSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-  },
-  profileBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: BENTO_COLORS.blueDark,
-    fontFamily,
-  },
-  profileCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(0,0,0,0.05)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profileHero: {
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  profileHeroAvatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 28,
-    backgroundColor: "#e2e8f0",
-    marginBottom: 12,
-  },
-  profileHeroAvatarFallback: {
-    width: 90,
-    height: 90,
-    borderRadius: 28,
-    backgroundColor: BENTO_COLORS.blueSoft,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  profileHeroAvatarFallbackText: {
-    fontSize: 36,
-    fontWeight: "800",
-    color: BENTO_COLORS.blueDark,
-    fontFamily,
-  },
-  profileHeroName: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: BENTO_COLORS.deepNavy,
     fontFamily,
     textAlign: "center",
   },
-  profileHeroPills: {
+  footerLoader: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
+    justifyContent: "center",
+    paddingVertical: 12,
+    gap: 8,
   },
-  profileDesignationPill: {
-    backgroundColor: BENTO_COLORS.mintSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  profileDesignationText: {
+  footerLoaderText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: BENTO_COLORS.mintDark,
-    fontFamily,
-  },
-  profileDepartmentText: {
-    fontSize: 13,
     fontWeight: "600",
     color: BENTO_COLORS.subtleText,
-    fontFamily,
-    textAlign: "center",
-  },
-
-  // Bento Boxes inside Profile
-  profileSectionBox: {
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
-  },
-  sectionMint: {
-    backgroundColor: "#e8f8ee",
-  },
-  sectionTitleMint: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: BENTO_COLORS.mintDark,
-    letterSpacing: 0.8,
-    marginBottom: 10,
-    fontFamily,
-  },
-  sectionBlue: {
-    backgroundColor: "#eef5ff",
-  },
-  sectionTitleBlue: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: BENTO_COLORS.blueDark,
-    letterSpacing: 0.8,
-    marginBottom: 10,
-    fontFamily,
-  },
-  sectionLavender: {
-    backgroundColor: "#f5efff",
-  },
-  sectionTitleLavender: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: BENTO_COLORS.lavenderDark,
-    letterSpacing: 0.8,
-    marginBottom: 10,
-    fontFamily,
-  },
-
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  infoRowIcon: {
-    marginRight: 10,
-  },
-  infoRowLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: BENTO_COLORS.subtleText,
-    fontFamily,
-  },
-  infoRowValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
-    fontFamily,
-    marginTop: 1,
-  },
-  contactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  contactValueText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: BENTO_COLORS.blueDark,
-    fontFamily,
-    marginTop: 1,
-  },
-
-  // Expertise Pills
-  expertisePillContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  expertisePill: {
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(88, 28, 135, 0.1)",
-  },
-  expertisePillText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: BENTO_COLORS.lavenderDark,
-    fontFamily,
-  },
-
-  // Social Links
-  linksRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
-  },
-  socialLinkBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: BENTO_COLORS.canvas,
-    borderRadius: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
-  },
-  socialLinkText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
-    fontFamily,
-  },
-
-  // Primary Assign Action Button
-  profileAssignBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: BENTO_COLORS.deepNavy,
-    borderRadius: 9999,
-    paddingVertical: 14,
-    marginTop: 8,
-  },
-  profileAssignBtnText: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#ffffff",
     fontFamily,
   },
 });
-

@@ -1,8 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import {
   getMyHubsAPI,
   getHubDetailsAPI,
   getAvailableTeachersAPI,
+  getAvailableTeachersPaginatedAPI,
   createHubAPI,
   joinHubAPI,
   updateHubAPI,
@@ -55,7 +61,35 @@ export const useHubDetails = (hubId: string) => {
 export const useAvailableTeachers = () => {
   return useQuery({
     queryKey: ["availableTeachers"],
-    queryFn: getAvailableTeachersAPI,
+    queryFn: () => getAvailableTeachersAPI(),
+  });
+};
+
+export const useAvailableTeachersInfinite = (filters?: {
+  search?: string;
+  department?: string;
+}) => {
+  const search = filters?.search?.trim() || "";
+  const department = filters?.department?.trim() || "";
+
+  return useInfiniteQuery({
+    queryKey: ["availableTeachers", "infinite", search, department],
+    queryFn: async ({ pageParam = 1 }) => {
+      return await getAvailableTeachersPaginatedAPI({
+        page: pageParam as number,
+        limit: 15,
+        search: search || undefined,
+        department: department || undefined,
+      });
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.meta?.hasMore) {
+        return lastPage.meta.page + 1;
+      }
+      return undefined;
+    },
+    staleTime: 1000 * 60 * 3,
   });
 };
 
