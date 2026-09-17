@@ -66,6 +66,8 @@ export const CalendarFilterPills = React.memo(function CalendarFilterPills({
             </TouchableOpacity>
           );
         })}
+        {/* Trailing Spacer to fix Android horizontal scroll padding clipping */}
+        <View style={styles.scrollEndSpacer} />
       </ScrollView>
     </View>
   );
@@ -73,12 +75,15 @@ export const CalendarFilterPills = React.memo(function CalendarFilterPills({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 20,
-    marginHorizontal: -20,
+    marginBottom: 12,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
     gap: 8,
+  },
+  scrollEndSpacer: {
+    width: 12,
   },
   pill: {
     flexDirection: "row",

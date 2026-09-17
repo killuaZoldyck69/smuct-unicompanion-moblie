@@ -26,158 +26,146 @@ import {
 } from "@/services/schedule-service";
 import { CreateBusRouteInput } from "./types";
 
-// ==========================================
-// BUS SCHEDULE HOOKS
-// ==========================================
-
-export const useBusSchedules = () => {
-  return useQuery({
-    queryKey: ["busSchedules"],
-    queryFn: getBusSchedulesAPI,
-  });
+const calendarKeys = {
+  all: ["academicCalendars"] as const,
+  current: ["academicCalendar", "current"] as const,
+  detail: (id: string) => ["academicCalendar", id] as const,
+  admin: (status?: CalendarStatus) => ["adminCalendars", status] as const,
+  upcoming: ["academicEvents", "upcoming"] as const,
 };
 
+const CALENDAR_CACHE = {
+  staleTime: 1000 * 60 * 60 * 24,
+  gcTime: 1000 * 60 * 60 * 48,
+} as const;
+
+const busKeys = {
+  all: ["busSchedules"] as const,
+};
+
+// Bus Schedule
+
+export const useBusSchedules = () =>
+  useQuery({ queryKey: busKeys.all, queryFn: getBusSchedulesAPI });
+
 export const useCreateBusRoute = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateBusRouteInput) => createBusRouteAPI(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["busSchedules"] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: busKeys.all }),
   });
 };
 
 export const useDeleteBusRoute = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteBusRouteAPI(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["busSchedules"] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: busKeys.all }),
   });
 };
 
-// ==========================================
-// STUDENT CALENDAR HOOKS
-// ==========================================
+// Student Calendar
 
-export const useAcademicCalendars = () => {
-  return useQuery({
-    queryKey: ["academicCalendars"],
-    queryFn: getAcademicCalendarsAPI,
-  });
-};
+export const useAcademicCalendars = () =>
+  useQuery({ queryKey: calendarKeys.all, queryFn: getAcademicCalendarsAPI, ...CALENDAR_CACHE });
 
-export const useCurrentAcademicCalendar = () => {
-  return useQuery({
-    queryKey: ["academicCalendar", "current"],
-    queryFn: getCurrentAcademicCalendarAPI,
-  });
-};
+export const useCurrentAcademicCalendar = () =>
+  useQuery({ queryKey: calendarKeys.current, queryFn: getCurrentAcademicCalendarAPI, ...CALENDAR_CACHE });
 
-export const useUpcomingAcademicEvents = () => {
-  return useQuery({
-    queryKey: ["academicEvents", "upcoming"],
-    queryFn: getUpcomingAcademicEventsAPI,
-  });
-};
+export const useUpcomingAcademicEvents = () =>
+  useQuery({ queryKey: calendarKeys.upcoming, queryFn: getUpcomingAcademicEventsAPI, ...CALENDAR_CACHE });
 
-// ==========================================
-// ADMIN CALENDAR HOOKS
-// ==========================================
+// Admin Calendar
 
-export const useAdminCalendars = (status?: CalendarStatus) => {
-  return useQuery({
-    queryKey: ["adminCalendars", status],
+export const useAdminCalendars = (status?: CalendarStatus) =>
+  useQuery({
+    queryKey: calendarKeys.admin(status),
     queryFn: () => getAdminCalendarsAPI(status),
   });
-};
 
-export const useCalendarDetails = (id?: string) => {
-  return useQuery({
-    queryKey: ["academicCalendar", id],
+export const useCalendarDetails = (id?: string) =>
+  useQuery({
+    queryKey: calendarKeys.detail(id ?? ""),
     queryFn: () => (id ? getCalendarByIdAPI(id) : null),
     enabled: !!id,
   });
-};
 
 export const useCreateCalendar = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateAcademicCalendarInput) =>
-      createAcademicCalendarAPI(data),
+    mutationFn: (data: CreateAcademicCalendarInput) => createAcademicCalendarAPI(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 };
 
 export const useUpdateCalendar = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateAcademicCalendarInput }) =>
       updateAcademicCalendarAPI(id, data),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendar", id] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 };
 
 export const useUpdateCalendarStatus = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: CalendarStatus }) =>
       updateCalendarStatusAPI(id, status),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendar", id] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendar", "current"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      qc.invalidateQueries({ queryKey: calendarKeys.current });
     },
   });
 };
 
 export const useDuplicateCalendar = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => duplicateAcademicCalendarAPI(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 };
 
 export const useDeleteCalendar = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteAcademicCalendarAPI(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendar", "current"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      qc.invalidateQueries({ queryKey: calendarKeys.current });
     },
   });
 };
 
 export const useCreateCalendarEvent = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ calendarId, data }: { calendarId: string; data: CreateEventInput }) =>
       createCalendarEventAPI(calendarId, data),
     onSuccess: (_, { calendarId }) => {
-      queryClient.invalidateQueries({ queryKey: ["academicCalendar", calendarId] });
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 };
 
 export const useUpdateCalendarEvent = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({
       calendarId,
@@ -189,46 +177,40 @@ export const useUpdateCalendarEvent = () => {
       data: UpdateEventInput;
     }) => updateCalendarEventAPI(calendarId, eventId, data),
     onSuccess: (_, { calendarId }) => {
-      queryClient.invalidateQueries({ queryKey: ["academicCalendar", calendarId] });
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 };
 
 export const useDeleteCalendarEvent = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ calendarId, eventId }: { calendarId: string; eventId: string }) =>
       deleteCalendarEventAPI(calendarId, eventId),
     onSuccess: (_, { calendarId }) => {
-      queryClient.invalidateQueries({ queryKey: ["academicCalendar", calendarId] });
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 };
 
 export const useImportCalendarCsv = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ calendarId, csvContent }: { calendarId: string; csvContent: string }) =>
       importCalendarCsvAPI(calendarId, csvContent),
     onSuccess: (_, { calendarId }) => {
-      queryClient.invalidateQueries({ queryKey: ["academicCalendar", calendarId] });
-      queryClient.invalidateQueries({ queryKey: ["adminCalendars"] });
-      queryClient.invalidateQueries({ queryKey: ["academicCalendars"] });
+      qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
+      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
+      qc.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 };
 
-// ==========================================
-// TEACHER DIRECTORY HOOKS
-// ==========================================
+// Teacher Directory
 
-export const useTeachersDirectory = () => {
-  return useQuery({
-    queryKey: ["teachersDirectory"],
-    queryFn: getTeachersDirectoryAPI,
-  });
-};
+export const useTeachersDirectory = () =>
+  useQuery({ queryKey: ["teachersDirectory"], queryFn: getTeachersDirectoryAPI });
