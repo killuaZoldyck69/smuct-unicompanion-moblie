@@ -24,7 +24,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
       accessibilityLabel={`Weather: ${Math.round(weather.current.temperature_2m)} degrees Celsius, ${currentWeatherDetails.label}`}
     >
       <View style={styles.weatherTopRow}>
-        {/* Left: Huge Temp & White Icon Block */}
+        {/* Left: Temp & Weather Icon Block */}
         <View style={styles.weatherTopLeft}>
           <Text style={styles.weatherHugeTemp}>
             {Math.round(weather.current.temperature_2m)}°
@@ -32,7 +32,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
           <View style={styles.weatherIconBlock}>
             <Feather
               name={currentWeatherDetails.icon as any}
-              size={32}
+              size={24}
               color="#0284c7"
             />
           </View>
@@ -70,9 +70,9 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
             </Text>
             <Feather
               name={getWeatherDetails(hour.code).icon as any}
-              size={20}
+              size={18}
               color="#ffffff"
-              style={{ marginVertical: 12 }}
+              style={{ marginVertical: 6 }}
             />
             <Text style={styles.weatherSmallTemp}>
               {Math.round(hour.temp)}°
@@ -88,8 +88,9 @@ const styles = StyleSheet.create({
   weatherWidget: {
     backgroundColor: "#131b2e",
     marginHorizontal: 20,
-    borderRadius: 32,
-    padding: 24,
+    borderRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     ...shadows.level1,
   },
   weatherTopRow: {
@@ -99,46 +100,47 @@ const styles = StyleSheet.create({
   },
   weatherTopLeft: { flexDirection: "row", alignItems: "center" },
   weatherHugeTemp: {
-    fontSize: 56,
+    fontSize: 42,
     fontWeight: "800",
     color: "#ffffff",
-    marginRight: 16,
+    marginRight: 12,
+    lineHeight: 48,
   },
   weatherIconBlock: {
     backgroundColor: "#ffffff",
-    width: 64,
-    height: 64,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },
   weatherTopRight: { alignItems: "flex-end", flex: 1 },
   weatherConditionText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#ffffff",
     fontWeight: "700",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   weatherSubText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#c6c6cd",
     fontWeight: "500",
-    marginBottom: 2,
+    marginBottom: 1,
   },
   weatherDivider: {
     height: 1,
     backgroundColor: "rgba(255,255,255,0.1)",
-    marginVertical: 24,
+    marginVertical: 14,
   },
-  weatherScroll: { gap: 24, paddingRight: 16 },
-  weatherHourCol: { alignItems: "center", minWidth: 44 },
+  weatherScroll: { gap: 18, paddingRight: 12 },
+  weatherHourCol: { alignItems: "center", minWidth: 40 },
   weatherSmallTime: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#c6c6cd",
     fontWeight: "600",
   },
   weatherSmallTemp: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#ffffff",
     fontWeight: "700",
   },

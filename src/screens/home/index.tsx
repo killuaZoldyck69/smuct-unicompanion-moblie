@@ -32,7 +32,7 @@ const QUICK_ACTIONS = [
   {
     id: "bus",
     title: "Bus Route",
-    icon: "truck",
+    assetIcon: require("@/assets/icons/bus.png"),
     route: "/bus-schedule",
     color: "#2563eb",
     bg: "#eff6ff",
@@ -40,7 +40,7 @@ const QUICK_ACTIONS = [
   {
     id: "exams",
     title: "Exams",
-    icon: "file-text",
+    assetIcon: require("@/assets/icons/exam-time.png"),
     route: "/exams",
     color: "#7c3aed",
     bg: "#f5f3ff",
@@ -48,7 +48,7 @@ const QUICK_ACTIONS = [
   {
     id: "blood",
     title: "Blood Aid",
-    icon: "droplet",
+    assetIcon: require("@/assets/icons/blood-bag.png"),
     route: "/(tabs)/blood",
     color: "#dc2626",
     bg: "#fef2f2",
@@ -56,7 +56,7 @@ const QUICK_ACTIONS = [
   {
     id: "calendar",
     title: "Calendar",
-    icon: "calendar",
+    assetIcon: require("@/assets/icons/calendar.png"),
     route: "/academic_calendar",
     color: "#059669",
     bg: "#ecfdf5",
@@ -142,13 +142,16 @@ export function Home() {
               <View
                 style={[styles.actionIconBox, { backgroundColor: action.bg }]}
               >
-                <Feather
-                  name={action.icon as any}
-                  size={24}
-                  color={action.color}
+                <Image
+                  source={action.assetIcon}
+                  style={styles.actionIconImage}
+                  resizeMode="contain"
                 />
               </View>
-              <Text style={[styles.actionText, { color: action.color }]}>
+              <Text
+                style={[styles.actionText, { color: action.color }]}
+                numberOfLines={1}
+              >
                 {action.title}
               </Text>
             </TouchableOpacity>
@@ -357,15 +360,19 @@ const styles = StyleSheet.create({
   },
   actionBtn: { alignItems: "center", width: "22%" },
   actionIconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
   },
+  actionIconImage: {
+    width: 32,
+    height: 32,
+  },
   actionText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
 
