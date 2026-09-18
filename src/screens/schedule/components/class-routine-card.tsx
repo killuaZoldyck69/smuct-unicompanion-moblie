@@ -11,6 +11,7 @@ import {
   isClassLiveNow,
   formatTimeDisplay,
 } from "../utils";
+import { LiveBeepDot } from "./live-beep-indicator";
 
 interface ClassRoutineCardProps {
   item: ClassRoutineItem;
@@ -18,6 +19,8 @@ interface ClassRoutineCardProps {
   isLast?: boolean;
   nextClassId?: string;
   onOpenNotice?: (item: ClassRoutineItem) => void;
+  sequenceNumber?: number;
+  totalInDay?: number;
 }
 
 export const ClassRoutineCard = React.memo(function ClassRoutineCard({
@@ -25,6 +28,8 @@ export const ClassRoutineCard = React.memo(function ClassRoutineCard({
   isToday,
   nextClassId,
   onOpenNotice,
+  sequenceNumber,
+  totalInDay,
 }: ClassRoutineCardProps) {
   const isLive = isClassLiveNow(item.day, item.startTime, item.endTime);
   const isNext = !isLive && isToday && nextClassId === item.id;
@@ -61,6 +66,32 @@ export const ClassRoutineCard = React.memo(function ClassRoutineCard({
       : `SEC ${item.section.trim().toUpperCase()}`
     : null;
 
+  // Format semester badge cleanly e.g. "6th Sem" or "SEM 6"
+  const formattedSemester = React.useMemo(() => {
+    if (item.semester === undefined || item.semester === null || item.semester === "") {
+      return null;
+    }
+    const str = String(item.semester).trim();
+    if (!str) return null;
+
+    if (/^sem/i.test(str)) {
+      return str.toUpperCase();
+    }
+
+    const num = parseInt(str, 10);
+    if (!isNaN(num) && num > 0) {
+      const j = num % 10;
+      const k = num % 100;
+      let suffix = "th";
+      if (j === 1 && k !== 11) suffix = "st";
+      else if (j === 2 && k !== 12) suffix = "nd";
+      else if (j === 3 && k !== 13) suffix = "rd";
+      return `${num}${suffix} Sem`;
+    }
+
+    return `${str} Sem`;
+  }, [item.semester]);
+
   // Format room label cleanly (reflecting room change if active)
   const displayRoom = isRoomChange && notice?.newRoom ? notice.newRoom : item.room;
   const formattedRoom = displayRoom
@@ -89,7 +120,9 @@ export const ClassRoutineCard = React.memo(function ClassRoutineCard({
       ]}
       accessible={true}
       accessibilityRole="summary"
-      accessibilityLabel={`${item.courseCode}, ${item.courseName}. From ${formattedStart} to ${formattedEnd}. Section: ${
+      accessibilityLabel={`${sequenceNumber ? `Class ${sequenceNumber} of ${totalInDay || 1}. ` : ""}${item.courseCode}, ${item.courseName}.${
+        formattedSemester ? ` Semester: ${formattedSemester}.` : ""
+      } From ${formattedStart} to ${formattedEnd}. Section: ${
         item.section || "Not specified"
       }. Teacher: ${item.teacherName || "Not specified"}. Location: ${formattedRoom}.${
         isCancelled ? " Notice: Class is cancelled." : ""
@@ -188,7 +221,7 @@ export const ClassRoutineCard = React.memo(function ClassRoutineCard({
             </View>
           ) : isLive ? (
             <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
+              <LiveBeepDot size={5.5} style={{ marginRight: 2 }} />
               <Text style={styles.liveBadgeText}>LIVE NOW</Text>
             </View>
           ) : isNext ? (
@@ -213,19 +246,6 @@ export const ClassRoutineCard = React.memo(function ClassRoutineCard({
               {item.courseCode}
             </Text>
           </View>
-
-          {/* Section Pill */}
-          {formattedSection && (
-            <View style={styles.sectionBadge}>
-              <Feather
-                name="layers"
-                size={10.5}
-                color="#6d28d9"
-                style={{ marginRight: 3.5 }}
-              />
-              <Text style={styles.sectionBadgeText}>{formattedSection}</Text>
-            </View>
-          )}
         </View>
 
         {/* Right Actions: Duration & Teacher/CR Notice Button */}
@@ -306,10 +326,38 @@ export const ClassRoutineCard = React.memo(function ClassRoutineCard({
         )}
       </View>
 
-      {/* Course Title */}
-      <Text style={styles.courseTitleText} numberOfLines={2}>
-        {item.courseName}
-      </Text>
+      {/* Course Title with Inline Semester & Section Badges */}
+      <View style={styles.courseTitleWrapper}>
+        <Text style={styles.courseTitleText} numberOfLines={2}>
+          {item.courseName}
+        </Text>
+        {(formattedSemester || formattedSection) && (
+          <View style={styles.courseMetaInline}>
+            {formattedSemester && (
+              <View style={styles.semesterBadge}>
+                <Feather
+                  name="award"
+                  size={10}
+                  color="#0284c7"
+                  style={{ marginRight: 3 }}
+                />
+                <Text style={styles.semesterBadgeText}>{formattedSemester}</Text>
+              </View>
+            )}
+            {formattedSection && (
+              <View style={styles.sectionBadge}>
+                <Feather
+                  name="layers"
+                  size={10}
+                  color="#6d28d9"
+                  style={{ marginRight: 3 }}
+                />
+                <Text style={styles.sectionBadgeText}>{formattedSection}</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
 
       {/* Footer Meta Row: Room & Teacher Name */}
       <View style={styles.footerRow}>
@@ -358,7 +406,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 12,
+    marginBottom: 0,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.06)",
     borderLeftWidth: 4,
@@ -479,13 +527,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#fecaca",
   },
-  liveDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: "#ef4444",
-    marginRight: 4,
-  },
+
   liveBadgeText: {
     fontFamily,
     fontSize: 9.5,
@@ -534,23 +576,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.4,
   },
-  sectionBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f3ff",
-    borderWidth: 1,
-    borderColor: "#ddd6fe",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  sectionBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#6d28d9",
-    letterSpacing: 0.3,
-  },
+
   rightHeaderActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -638,13 +664,61 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#6d28d9",
   },
+  courseTitleWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    rowGap: 5,
+    columnGap: 6,
+    marginBottom: 10,
+  },
   courseTitleText: {
     fontFamily,
     fontSize: 15,
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
     lineHeight: 20,
-    marginBottom: 10,
+    flexShrink: 1,
+  },
+  courseMetaInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    flexShrink: 0,
+  },
+  semesterBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f9ff",
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+    paddingHorizontal: 6.5,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  semesterBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#0284c7",
+    letterSpacing: 0.3,
+  },
+  sectionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f5f3ff",
+    borderWidth: 1,
+    borderColor: "#ddd6fe",
+    paddingHorizontal: 6.5,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  sectionBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#6d28d9",
+    letterSpacing: 0.3,
   },
   footerRow: {
     flexDirection: "row",

@@ -72,6 +72,88 @@ export const calculateDuration = (
   return null;
 };
 
+export interface ClassIntervalInfo {
+  diffMinutes: number;
+  label: string;
+  timeSpan: string;
+  isBackToBack: boolean;
+  isOverlap: boolean;
+}
+
+export const getEffectiveClassTimes = (
+  item: ClassRoutineItem
+): { startTime: string; endTime: string } => {
+  if (item.activeNotice?.type === "TIME_CHANGE" && item.activeNotice.newTime) {
+    const clean = item.activeNotice.newTime.replace(/^Now\s*/i, "").trim();
+    const parts = clean.split("-");
+    if (parts.length === 2) {
+      const s = parts[0].trim();
+      const e = parts[1].trim();
+      if (s && e) {
+        return { startTime: s, endTime: e };
+      }
+    }
+  }
+  return { startTime: item.startTime, endTime: item.endTime };
+};
+
+export const calculateClassInterval = (
+  prevItem: ClassRoutineItem,
+  nextItem: ClassRoutineItem
+): ClassIntervalInfo | null => {
+  const prevTimes = getEffectiveClassTimes(prevItem);
+  const nextTimes = getEffectiveClassTimes(nextItem);
+
+  const prevEndMin = timeToMinutes(prevTimes.endTime);
+  const nextStartMin = timeToMinutes(nextTimes.startTime);
+
+  if (!prevEndMin || !nextStartMin) return null;
+
+  const diffMinutes = nextStartMin - prevEndMin;
+  const timeSpan = `${formatTimeDisplay(prevTimes.endTime)} → ${formatTimeDisplay(nextTimes.startTime)}`;
+
+  if (diffMinutes === 0) {
+    return {
+      diffMinutes: 0,
+      label: "Back-to-back",
+      timeSpan,
+      isBackToBack: true,
+      isOverlap: false,
+    };
+  }
+
+  if (diffMinutes < 0) {
+    const overlap = Math.abs(diffMinutes);
+    return {
+      diffMinutes,
+      label: `Overlap (${overlap}m)`,
+      timeSpan,
+      isBackToBack: false,
+      isOverlap: true,
+    };
+  }
+
+  const hours = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+
+  let label = "";
+  if (hours > 0 && minutes > 0) {
+    label = `${hours}h ${minutes}m break`;
+  } else if (hours > 0) {
+    label = `${hours}h break`;
+  } else {
+    label = `${minutes} min break`;
+  }
+
+  return {
+    diffMinutes,
+    label,
+    timeSpan,
+    isBackToBack: false,
+    isOverlap: false,
+  };
+};
+
 export const isClassLiveNow = (
   day: string,
   startTime: string,
@@ -207,6 +289,7 @@ export const parseWeeklySchedule = (
       const hubTeacherName =
         teacherMember?.user?.name || teacherMember?.name || undefined;
       const hubSection = hub.section ? String(hub.section).trim() : undefined;
+      const hubSemester = hub.semesterNumber ?? hub.semester ?? undefined;
 
       let scheduleArray = hub.weeklyClassSchedule;
       if (typeof scheduleArray === "string") {
@@ -228,6 +311,8 @@ export const parseWeeklySchedule = (
           const sessionSection = session.section
             ? String(session.section).trim()
             : undefined;
+          const sessionSemester =
+            session.semesterNumber ?? session.semester ?? hubSemester;
 
           // Find active notice matching this day and not expired
           const now = new Date();
@@ -278,6 +363,7 @@ export const parseWeeklySchedule = (
             sortValue: startMin,
             teacherName: sessionTeacher || hubTeacherName,
             section: sessionSection || hubSection,
+            semester: sessionSemester,
             userRole: membership.role,
             activeNotice: mappedNotice,
           });

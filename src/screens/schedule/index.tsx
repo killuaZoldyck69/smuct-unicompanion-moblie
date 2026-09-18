@@ -14,10 +14,15 @@ import { useRouter } from "expo-router";
 
 import { useMyHubs } from "@/features/hubs/useHubs";
 import { BENTO_COLORS, fontFamily } from "./constants";
-import { parseWeeklySchedule, formatTimeDisplay } from "./utils";
+import {
+  parseWeeklySchedule,
+  formatTimeDisplay,
+  calculateClassInterval,
+} from "./utils";
 import { ScheduleDayFilters } from "./components/schedule-day-filters";
 import { ClassRoutineCard } from "./components/class-routine-card";
 import { ClassNoticeModal } from "./components/class-notice-modal";
+import { LiveNodeBeepRing } from "./components/live-beep-indicator";
 import { ClassRoutineItem } from "./constants";
 import {
   ScheduleSkeleton,
@@ -261,21 +266,161 @@ export function ScheduleScreen() {
                   </View>
                 </View>
 
-                {/* Cards Container */}
+                {/* Cards Container with Daily Streamline */}
                 <View style={styles.dayCardsContainer}>
-                  {section.data.map((item, idx) => (
-                    <ClassRoutineCard
-                      key={item.id}
-                      item={item}
-                      isToday={isToday}
-                      isLast={idx === section.data.length - 1}
-                      nextClassId={todayStats.nextClass?.id}
-                      onOpenNotice={(target) => {
-                        setNoticeModalItem(target);
-                        setIsNoticeModalVisible(true);
-                      }}
-                    />
-                  ))}
+                  {section.data.map((item, idx) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === section.data.length - 1;
+                    const sequenceNumber = idx + 1;
+                    const totalInDay = section.data.length;
+                    const nextItem = !isLast ? section.data[idx + 1] : null;
+                    const intervalInfo = nextItem
+                      ? calculateClassInterval(item, nextItem)
+                      : null;
+
+                    const isLive = item.id === todayStats.liveClass?.id;
+                    const isNext =
+                      !isLive && isToday && item.id === todayStats.nextClass?.id;
+                    const isCancelled = item.activeNotice?.type === "CANCELLED";
+
+                    return (
+                      <View key={item.id} style={styles.streamlineItemWrapper}>
+                        {/* Class Row: Streamline Rail + Card */}
+                        <View style={styles.streamlineRow}>
+                          {/* Streamline Track Column */}
+                          <View style={styles.streamlineRail}>
+                            {/* Vertical Line through node */}
+                            <View
+                              style={[
+                                styles.streamlineLine,
+                                isFirst && styles.streamlineLineFirst,
+                                isLast &&
+                                  totalInDay > 1 &&
+                                  styles.streamlineLineLast,
+                                totalInDay === 1 && styles.streamlineLineSingle,
+                              ]}
+                            />
+
+                            {/* Sequential Node */}
+                            <View
+                              style={[
+                                styles.streamlineNode,
+                                isLive && styles.streamlineNodeLive,
+                                isNext && styles.streamlineNodeNext,
+                                isCancelled && styles.streamlineNodeCancelled,
+                              ]}
+                            >
+                              {isLive && <LiveNodeBeepRing size={24} />}
+                              <Text
+                                style={[
+                                  styles.streamlineNodeText,
+                                  isCancelled &&
+                                    styles.streamlineNodeTextCancelled,
+                                ]}
+                              >
+                                {sequenceNumber}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Class Card */}
+                          <View style={styles.streamlineCardContent}>
+                            <ClassRoutineCard
+                              item={item}
+                              isToday={isToday}
+                              isLast={isLast}
+                              nextClassId={todayStats.nextClass?.id}
+                              sequenceNumber={sequenceNumber}
+                              totalInDay={totalInDay}
+                              onOpenNotice={(target) => {
+                                setNoticeModalItem(target);
+                                setIsNoticeModalVisible(true);
+                              }}
+                            />
+                          </View>
+                        </View>
+
+                        {/* Streamline Connector with Time Difference to Next Class */}
+                        {!isLast && (
+                          <View style={styles.streamlineConnectorRow}>
+                            {/* Streamline Connecting Line */}
+                            <View style={styles.streamlineRail}>
+                              <View style={styles.streamlineConnectorLine} />
+                              <View
+                                style={[
+                                  styles.streamlineConnectorDot,
+                                  intervalInfo?.isBackToBack &&
+                                    styles.streamlineConnectorDotBackToBack,
+                                ]}
+                              />
+                            </View>
+
+                            {/* Time Difference / Break Banner */}
+                            <View style={styles.streamlineBreakWrap}>
+                              <View
+                                style={[
+                                  styles.breakPill,
+                                  intervalInfo?.isBackToBack &&
+                                    styles.breakPillBackToBack,
+                                  intervalInfo?.isOverlap &&
+                                    styles.breakPillOverlap,
+                                ]}
+                              >
+                                <View
+                                  style={[
+                                    styles.breakIconCircle,
+                                    intervalInfo?.isBackToBack &&
+                                      styles.breakIconCircleBackToBack,
+                                    intervalInfo?.isOverlap &&
+                                      styles.breakIconCircleOverlap,
+                                  ]}
+                                >
+                                  <Feather
+                                    name={
+                                      intervalInfo?.isBackToBack
+                                        ? "zap"
+                                        : intervalInfo?.isOverlap
+                                          ? "alert-circle"
+                                          : "coffee"
+                                    }
+                                    size={11}
+                                    color={
+                                      intervalInfo?.isBackToBack
+                                        ? "#059669"
+                                        : intervalInfo?.isOverlap
+                                          ? "#dc2626"
+                                          : "#7c3aed"
+                                    }
+                                  />
+                                </View>
+
+                                <Text
+                                  style={[
+                                    styles.breakDurationText,
+                                    intervalInfo?.isBackToBack &&
+                                      styles.breakDurationTextBackToBack,
+                                    intervalInfo?.isOverlap &&
+                                      styles.breakDurationTextOverlap,
+                                  ]}
+                                >
+                                  {intervalInfo?.label || "Next Class"}
+                                </Text>
+
+                                {intervalInfo?.timeSpan && (
+                                  <>
+                                    <View style={styles.breakSeparatorDot} />
+                                    <Text style={styles.breakTimeSpanText}>
+                                      {intervalInfo.timeSpan}
+                                    </Text>
+                                  </>
+                                )}
+                              </View>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
                 </View>
               </View>
             );
@@ -545,6 +690,168 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   dayCardsContainer: {
-    marginTop: 2,
+    marginTop: 6,
+  },
+  streamlineItemWrapper: {
+    position: "relative",
+  },
+  streamlineRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  streamlineRail: {
+    width: 26,
+    alignItems: "center",
+    position: "relative",
+  },
+  streamlineLine: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: "#cbd5e1",
+    left: 12,
+  },
+  streamlineLineFirst: {
+    top: 14,
+  },
+  streamlineLineLast: {
+    bottom: undefined,
+    height: 26,
+  },
+  streamlineLineSingle: {
+    display: "none",
+  },
+  streamlineNode: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: BENTO_COLORS.deepNavy,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 14,
+    zIndex: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  streamlineNodeLive: {
+    backgroundColor: "#ef4444",
+    borderWidth: 2,
+    borderColor: "#fecaca",
+  },
+  streamlineNodeNext: {
+    backgroundColor: "#0284c7",
+    borderWidth: 2,
+    borderColor: "#bae6fd",
+  },
+  streamlineNodeCancelled: {
+    backgroundColor: "#fef2f2",
+    borderWidth: 1.5,
+    borderColor: "#f87171",
+  },
+  streamlineNodeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  streamlineNodeTextCancelled: {
+    color: "#dc2626",
+  },
+  streamlineCardContent: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  streamlineConnectorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 6,
+    minHeight: 32,
+  },
+  streamlineConnectorLine: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: "#cbd5e1",
+    left: 12,
+  },
+  streamlineConnectorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#94a3b8",
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
+    zIndex: 2,
+  },
+  streamlineConnectorDotBackToBack: {
+    backgroundColor: "#059669",
+  },
+  streamlineBreakWrap: {
+    flex: 1,
+    marginLeft: 8,
+    justifyContent: "center",
+  },
+  breakPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    gap: 5,
+  },
+  breakPillBackToBack: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+  },
+  breakPillOverlap: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+  },
+  breakIconCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#f3e8ff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  breakIconCircleBackToBack: {
+    backgroundColor: "#dcfce7",
+  },
+  breakIconCircleOverlap: {
+    backgroundColor: "#fee2e2",
+  },
+  breakDurationText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#6d28d9",
+  },
+  breakDurationTextBackToBack: {
+    color: "#059669",
+  },
+  breakDurationTextOverlap: {
+    color: "#dc2626",
+  },
+  breakSeparatorDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "#94a3b8",
+  },
+  breakTimeSpanText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#64748b",
   },
 });

@@ -137,6 +137,7 @@ export interface ClassRoutineItem {
   sortValue: number;
   teacherName?: string;
   section?: string;
+  semester?: number | string;
   userRole?: string;
   activeNotice?: ClassNoticeItem;
 }

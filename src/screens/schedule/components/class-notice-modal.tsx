@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   StatusBar,
+  Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -277,13 +278,17 @@ export function ClassNoticeModal({
         meetUrl: meetUrl.trim() || undefined,
       });
 
-      Toast.show({
-        type: "success",
-        text1: "Notice Published",
-        text2: "Students will now see this update on their schedule.",
-      });
-      onSuccess();
+      Keyboard.dismiss();
       onClose();
+      onSuccess();
+      setTimeout(() => {
+        Toast.show({
+          type: "success",
+          text1: "Notice Published",
+          text2: "Students will now see this update on their schedule.",
+          visibilityTime: 4000,
+        });
+      }, 100);
     } catch (err: any) {
       const errMsg = err?.response?.data?.message || err?.message || "Failed to publish notice";
       Toast.show({
@@ -306,14 +311,18 @@ export function ClassNoticeModal({
     setIsDeleting(true);
     try {
       await deleteClassNoticeAPI(item.hubId, item.activeNotice.id);
-      Toast.show({
-        type: "success",
-        text1: "Notice Cleared",
-        text2: "Class routine has returned to standard schedule.",
-      });
+      Keyboard.dismiss();
       setShowConfirmClear(false);
-      onSuccess();
       onClose();
+      onSuccess();
+      setTimeout(() => {
+        Toast.show({
+          type: "success",
+          text1: "Notice Cleared",
+          text2: "Class routine has returned to standard schedule.",
+          visibilityTime: 4000,
+        });
+      }, 100);
     } catch (err: any) {
       const errMsg =
         err?.response?.data?.message || err?.message || "Failed to clear notice";

@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily, TodayStats } from "../constants";
+import { LiveBeepDot } from "./live-beep-indicator";
 
 interface ScheduleHeroCardProps {
   stats: TodayStats;
@@ -29,7 +30,7 @@ export const ScheduleHeroCard = React.memo(function ScheduleHeroCard({
       <View style={styles.footer}>
         {liveClass ? (
           <View style={styles.liveChip}>
-            <View style={styles.liveDot} />
+            <LiveBeepDot size={5.5} style={{ marginRight: 3 }} />
             <Text style={styles.liveChipText} numberOfLines={1}>
               Live: {liveClass.courseCode} ({liveClass.room ? `Room ${liveClass.room}` : "TBA"})
             </Text>
@@ -146,13 +147,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.4)",
   },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#ef4444",
-    marginRight: 6,
-  },
+
   liveChipText: {
     fontFamily,
     fontSize: 11.5,
