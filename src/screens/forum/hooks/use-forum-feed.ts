@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useForumPosts } from "@/features/forum/useForum";
-import type { FilterType, ForumPostItem } from "../types";
+import type { FilterType, ForumPostItem, ForumCounts } from "../types";
 import { computeForumFeed } from "../utils";
 
 export function useForumFeed() {
@@ -12,7 +12,7 @@ export function useForumFeed() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data: posts, isLoading, refetch } = useForumPosts();
+  const { data: feedData, isLoading, isError, refetch } = useForumPosts();
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -24,13 +24,20 @@ export function useForumFeed() {
   }, [refetch]);
 
   const { filteredPosts, counts } = useMemo(() => {
-    return computeForumFeed(
-      posts as ForumPostItem[] | undefined,
+    const computed = computeForumFeed(
+      feedData?.posts,
       activeFilter,
       searchQuery,
       currentUserId,
     );
-  }, [posts, activeFilter, searchQuery, currentUserId]);
+
+    const mergedCounts: ForumCounts = feedData?.meta?.counts || computed.counts;
+
+    return {
+      filteredPosts: computed.filteredPosts,
+      counts: mergedCounts,
+    };
+  }, [feedData, activeFilter, searchQuery, currentUserId]);
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
@@ -46,6 +53,7 @@ export function useForumFeed() {
     isRefreshing,
     onRefresh,
     isLoading,
+    isError,
     filteredPosts,
     counts,
   };

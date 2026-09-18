@@ -172,7 +172,7 @@ export default function TabsLayout() {
 
       {/* 4. FORUM (Student & Teacher) / ADD TEACHER (Admin) */}
       <Tabs.Screen
-        name="forum"
+        name="forum/index"
         options={{
           title: "Forum",
           tabBarAccessibilityLabel: "Discussions forum tab",
@@ -181,6 +181,10 @@ export default function TabsLayout() {
             <TabIcon source={TAB_ICONS.group} focused={focused} />
           ),
         }}
+      />
+      <Tabs.Screen
+        name="forum/[id]"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
       />
       <Tabs.Screen
         name="admin_add_teacher"

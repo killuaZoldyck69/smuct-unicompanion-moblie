@@ -219,7 +219,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
   },
 
   // -------------------------------------------------------------
-  // Support & Aid (3 Features)
+  // Support & Aid (2 Features)
   // -------------------------------------------------------------
   {
     id: "blood_donation",
@@ -230,16 +230,6 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     fallbackIcon: "heart",
     roles: ["STUDENT", "TEACHER", "ADMIN"],
     route: "/(tabs)/blood" as Href,
-  },
-  {
-    id: "complaints",
-    title: "Complaint Box",
-    desc: "Report issues & feedback",
-    category: "SUPPORT",
-    assetIcon: require("@/assets/icons/complain.png"),
-    fallbackIcon: "alert-octagon",
-    roles: ["STUDENT", "TEACHER"],
-    route: "/complaints" as Href,
   },
   {
     id: "alumni",

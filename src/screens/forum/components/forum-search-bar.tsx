@@ -57,7 +57,9 @@ const styles = StyleSheet.create({
     borderRadius: BENTO_COLORS.pillRadius,
     paddingHorizontal: 16,
     height: 48,
-    marginBottom: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
   searchIcon: {
@@ -72,6 +74,9 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   clearBtn: {
-    padding: 4,
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

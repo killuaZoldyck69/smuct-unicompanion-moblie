@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
 import type { ForumPostItem } from "../types";
-import { timeAgo } from "../utils";
+import { timeAgo, getUserAcademicSubtitle, formatTimeOnly, isEdited } from "../utils";
 
 interface ForumCardProps {
   item: ForumPostItem;
@@ -15,27 +15,30 @@ export const ForumCard = memo(function ForumCard({
   onPress,
 }: ForumCardProps) {
   const isResolved = item.isResolved;
-  const replyCount = item._count?.responses || 0;
+  const replyCount = item._count?.responses || item.responses?.length || 0;
   const authorName = item.author?.name || "University Member";
   const authorInitial = authorName.charAt(0).toUpperCase() || "U";
   const formattedTime = timeAgo(item.createdAt);
+  const timeOnly = formatTimeOnly(item.createdAt);
+  const academicSubtitle = getUserAcademicSubtitle(item.author);
+  const postEdited = isEdited(item.createdAt, item.updatedAt);
 
   return (
     <TouchableOpacity
       style={[
-        styles.forumBentoCard,
-        isResolved && styles.forumBentoCardResolved,
+        styles.cardContainer,
+        isResolved && styles.cardContainerResolved,
       ]}
       onPress={() => onPress(item.id)}
-      activeOpacity={0.85}
+      activeOpacity={0.8}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`Post by ${authorName}: ${item.title}. ${
-        isResolved ? "Resolved." : "Needs help."
-      } ${replyCount} replies. Tap to view.`}
+      accessibilityLabel={`Discussion: ${item.title}. Asked by ${authorName}, ${academicSubtitle}. Posted ${formattedTime} at ${timeOnly}. Status: ${
+        isResolved ? "Resolved" : "Needs help"
+      }. ${replyCount} ${replyCount === 1 ? "reply" : "replies"}.`}
     >
-      <View style={styles.cardHeaderRow}>
-        <View style={styles.authorBox}>
+      <View style={styles.headerRow}>
+        <View style={styles.authorRow}>
           {item.author?.image ? (
             <Image
               source={{ uri: item.author.image }}
@@ -48,18 +51,20 @@ export const ForumCard = memo(function ForumCard({
               <Text style={styles.authorAvatarText}>{authorInitial}</Text>
             </View>
           )}
-          <View style={styles.authorInfoCol}>
-            <Text style={styles.authorNameText} numberOfLines={1}>
+          <View style={styles.authorMeta}>
+            <Text style={styles.authorName} numberOfLines={1}>
               {authorName}
             </Text>
-            <Text style={styles.timeAgoText}>{formattedTime}</Text>
+            <Text style={styles.authorSubtitle} numberOfLines={1}>
+              {academicSubtitle}
+            </Text>
           </View>
         </View>
 
         {isResolved ? (
           <View style={styles.resolvedBadge}>
             <Feather
-              name="check-circle"
+              name="check"
               size={11}
               color={BENTO_COLORS.emerald}
               style={styles.badgeIcon}
@@ -68,64 +73,75 @@ export const ForumCard = memo(function ForumCard({
           </View>
         ) : (
           <View style={styles.needsHelpBadge}>
+            <View style={styles.needsHelpDot} />
             <Text style={styles.needsHelpBadgeText}>NEEDS HELP</Text>
           </View>
         )}
       </View>
 
-      <Text style={styles.postTitleText} numberOfLines={2}>
+      <Text style={styles.titleText} numberOfLines={2}>
         {item.title}
       </Text>
 
-      <Text style={styles.postDescText} numberOfLines={2}>
-        {item.description}
-      </Text>
+      {item.description ? (
+        <Text style={styles.descriptionText} numberOfLines={2}>
+          {item.description}
+        </Text>
+      ) : null}
 
-      <View style={styles.cardDivider} />
+      <View style={styles.divider} />
 
-      <View style={styles.cardFooterRow}>
-        <View style={styles.replyCountPill}>
+      <View style={styles.footerRow}>
+        <View style={styles.replyPill}>
           <Feather
             name="message-square"
             size={12}
-            color={BENTO_COLORS.deepNavy}
+            color={BENTO_COLORS.primaryBlue}
             style={styles.replyIcon}
           />
-          <Text style={styles.replyCountPillText}>
+          <Text style={styles.replyPillText}>
             {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
           </Text>
         </View>
 
-        <View style={styles.cardActionCircle}>
+        <View style={styles.activityBox}>
           <Feather
-            name="arrow-up-right"
-            size={14}
-            color={BENTO_COLORS.deepNavy}
+            name="clock"
+            size={11}
+            color={BENTO_COLORS.subtleText}
+            style={styles.clockIcon}
           />
+          <Text style={styles.timeText}>
+            Posted {formattedTime} • {timeOnly}
+          </Text>
         </View>
+        {postEdited && (
+          <Text style={styles.editedBadge}>✎ Edited</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
 });
 
 const styles = StyleSheet.create({
-  forumBentoCard: {
+  cardContainer: {
     backgroundColor: BENTO_COLORS.white,
     borderRadius: BENTO_COLORS.cardRadius,
-    padding: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
-  forumBentoCardResolved: {
-    borderLeftWidth: 3,
-    borderLeftColor: "#10b981",
+  cardContainerResolved: {
+    borderColor: "rgba(16, 185, 129, 0.2)",
   },
-  cardHeaderRow: {
+  headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
-  authorBox: {
+  authorRow: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
@@ -136,12 +152,13 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     marginRight: 10,
+    backgroundColor: BENTO_COLORS.slateBg,
   },
   authorAvatarFallback: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#edf2f7",
+    backgroundColor: BENTO_COLORS.slateBg,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
@@ -149,19 +166,19 @@ const styles = StyleSheet.create({
   authorAvatarText: {
     fontFamily,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
   },
-  authorInfoCol: {
+  authorMeta: {
     flex: 1,
   },
-  authorNameText: {
+  authorName: {
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
   },
-  timeAgoText: {
+  authorSubtitle: {
     fontFamily,
     fontSize: 11,
     fontWeight: "500",
@@ -184,70 +201,91 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     color: BENTO_COLORS.emerald,
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
   needsHelpBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: BENTO_COLORS.skyBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
+    gap: 4,
+  },
+  needsHelpDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: BENTO_COLORS.sky,
   },
   needsHelpBadgeText: {
     fontFamily,
     fontSize: 10,
     fontWeight: "800",
     color: BENTO_COLORS.sky,
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
-  postTitleText: {
+  titleText: {
     fontFamily,
-    fontSize: 17,
-    fontWeight: "800",
+    fontSize: 16,
+    fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
-    lineHeight: 23,
+    lineHeight: 22,
     marginBottom: 6,
   },
-  postDescText: {
+  descriptionText: {
     fontFamily,
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "400",
     color: BENTO_COLORS.subtleText,
     lineHeight: 19,
-    marginBottom: 14,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
     marginBottom: 12,
   },
-  cardFooterRow: {
+  divider: {
+    height: 1,
+    backgroundColor: BENTO_COLORS.subtleBorder,
+    marginBottom: 10,
+  },
+  footerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  replyCountPill: {
+  replyPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
   },
   replyIcon: {
     marginRight: 5,
   },
-  replyCountPillText: {
+  replyPillText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
   },
-  cardActionCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#f1f5f9",
-    justifyContent: "center",
+  activityBox: {
+    flexDirection: "row",
     alignItems: "center",
+  },
+  clockIcon: {
+    marginRight: 4,
+  },
+  timeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+  },
+  editedBadge: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#92400e",
+    marginLeft: 6,
   },
 });

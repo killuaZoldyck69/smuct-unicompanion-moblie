@@ -18,6 +18,59 @@ export function timeAgo(dateString?: string): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+export function formatPostedTime(dateString?: string): string {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  const dateStr = date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return `${dateStr}, ${timeStr}`;
+}
+
+export function formatTimeOnly(dateString?: string): string {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+export function formatEditedTime(dateString?: string): string {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  const dateStr = date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateStr}, ${timeStr}`;
+}
+
+export function isEdited(createdAt?: string, updatedAt?: string): boolean {
+  if (!createdAt || !updatedAt) return false;
+  const created = new Date(createdAt).getTime();
+  const updated = new Date(updatedAt).getTime();
+  // Allow a 5-second grace window to ignore trivial DB differences
+  return updated - created > 5000;
+}
+
 export function sanitizeForumPost(input: {
   title: string;
   description: string;
@@ -100,3 +153,23 @@ export function computeForumFeed(
     },
   };
 }
+
+export function getUserAcademicSubtitle(author?: any): string {
+  if (!author) return "University Member";
+  if (author.studentProfile) {
+    const { department, currentSemester, section } = author.studentProfile;
+    const parts = [
+      department,
+      currentSemester ? `Sem ${currentSemester}` : null,
+      section ? `Sec ${section}` : null,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(" • ") : "Student";
+  }
+  if (author.teacherProfile) {
+    const { department, designation } = author.teacherProfile;
+    return [designation || "Faculty", department].filter(Boolean).join(" • ");
+  }
+  if (author.role === "ADMIN") return "Administrator";
+  return "University Member";
+}
+

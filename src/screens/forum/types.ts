@@ -2,16 +2,16 @@ import type {
   ForumPostItem,
   ForumAuthor,
   CreateForumPostInput,
+  UpdateForumPostInput,
+  CreateForumResponseInput,
+  ForumResponseItem,
+  ForumCounts,
+  ForumFeedResponse,
+  StudentProfile,
+  TeacherProfile,
 } from "@/features/forum/types";
 
 export type FilterType = "ALL" | "UNRESOLVED" | "RESOLVED" | "MY_POSTS";
-
-export interface ForumCounts {
-  total: number;
-  open: number;
-  resolved: number;
-  myPosts: number;
-}
 
 export interface ForumProps {
   embedded?: boolean;
@@ -23,4 +23,15 @@ export interface FilterOption {
   count: number;
 }
 
-export type { ForumPostItem, ForumAuthor, CreateForumPostInput };
+export type {
+  ForumPostItem,
+  ForumAuthor,
+  CreateForumPostInput,
+  UpdateForumPostInput,
+  CreateForumResponseInput,
+  ForumResponseItem,
+  ForumCounts,
+  ForumFeedResponse,
+  StudentProfile,
+  TeacherProfile,
+};

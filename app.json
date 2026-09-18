@@ -23,7 +23,8 @@
         "monochromeImage": "./src/assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.killuazoldyck.smuctunicompanionmobile"
+      "package": "com.killuazoldyck.smuctunicompanionmobile",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "androidStatusBar": {
       "barStyle": "dark-content",

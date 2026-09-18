@@ -1,51 +1,48 @@
 import api from "./api";
+import type {
+  ForumPostItem,
+  CreateForumPostInput,
+  UpdateForumPostInput,
+  CreateForumResponseInput,
+  ForumFeedResponse,
+  ForumFeedMeta,
+  ForumCounts,
+} from "@/features/forum/types";
 
-export interface ForumPostItem {
-  id: string;
-  title: string;
-  description: string;
-  isResolved: boolean;
-  createdAt: string;
-  authorId: string;
-  author?: {
-    id: string;
-    name: string;
-    image?: string | null;
-    role?: string;
-  };
-  _count?: {
-    responses: number;
-  };
-  responses?: any[];
-}
+export type {
+  ForumPostItem,
+  CreateForumPostInput,
+  UpdateForumPostInput,
+  CreateForumResponseInput,
+  ForumFeedResponse,
+  ForumFeedMeta,
+  ForumCounts,
+};
 
-export interface CreateForumPostInput {
-  title: string;
-  description: string;
-}
-
-export interface UpdateForumPostInput {
-  title?: string;
-  description?: string;
-}
-
-export interface CreateForumResponseInput {
-  content: string;
-}
-
-export const getForumPosts = async (params?: {
+export interface GetForumPostsParams {
   page?: number;
   limit?: number;
-  filter?: string;
+  filter?: "ALL" | "UNRESOLVED" | "RESOLVED" | "MY_POSTS";
   search?: string;
-}): Promise<ForumPostItem[]> => {
-  const res = await api.get("/forum", { params });
-  return res.data?.data || [];
+}
+
+export const getForumPosts = async (
+  params?: GetForumPostsParams,
+  signal?: AbortSignal,
+): Promise<ForumFeedResponse> => {
+  const res = await api.get("/forum", { params, signal });
+  return {
+    posts: res.data?.data || [],
+    meta: res.data?.meta,
+  };
 };
 export const getForumPostsAPI = getForumPosts;
 
-export const getSingleForumPost = async (id: string): Promise<ForumPostItem> => {
-  const res = await api.get(`/forum/${id}`);
+export const getSingleForumPost = async (
+  id: string,
+  signal?: AbortSignal,
+): Promise<ForumPostItem> => {
+  const res = await api.get(`/forum/${id}`, { signal });
   return res.data?.data;
 };
 export const getSingleForumPostAPI = getSingleForumPost;
@@ -81,7 +78,26 @@ export const createForumResponse = async (
   postId: string,
   data: CreateForumResponseInput,
 ) => {
-  const res = await api.post(`/forum/${postId}/responses`, data);
+  const res = await api.post(`/forum/${postId}/respond`, data);
   return res.data?.data;
 };
 export const createForumResponseAPI = createForumResponse;
+
+export const updateForumResponse = async (
+  postId: string,
+  responseId: string,
+  data: { content: string },
+) => {
+  const res = await api.patch(`/forum/${postId}/responses/${responseId}`, data);
+  return res.data?.data;
+};
+export const updateForumResponseAPI = updateForumResponse;
+
+export const deleteForumResponse = async (
+  postId: string,
+  responseId: string,
+) => {
+  const res = await api.delete(`/forum/${postId}/responses/${responseId}`);
+  return res.data?.data;
+};
+export const deleteForumResponseAPI = deleteForumResponse;

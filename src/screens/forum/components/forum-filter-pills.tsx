@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import {
   ScrollView,
   TouchableOpacity,
@@ -19,12 +19,15 @@ export const ForumFilterPills = memo(function ForumFilterPills({
   onSelectFilter,
   counts,
 }: ForumFilterPillsProps) {
-  const options: FilterOption[] = [
-    { key: "ALL", label: "All Posts", count: counts.total },
-    { key: "UNRESOLVED", label: "Needs Help", count: counts.open },
-    { key: "RESOLVED", label: "Resolved", count: counts.resolved },
-    { key: "MY_POSTS", label: "My Posts", count: counts.myPosts },
-  ];
+  const options = useMemo<FilterOption[]>(
+    () => [
+      { key: "ALL", label: "All Posts", count: counts.total },
+      { key: "UNRESOLVED", label: "Needs Help", count: counts.open },
+      { key: "RESOLVED", label: "Resolved", count: counts.resolved },
+      { key: "MY_POSTS", label: "My Posts", count: counts.myPosts },
+    ],
+    [counts.total, counts.open, counts.resolved, counts.myPosts],
+  );
 
   return (
     <ScrollView
@@ -42,6 +45,7 @@ export const ForumFilterPills = memo(function ForumFilterPills({
             activeOpacity={0.8}
             accessible={true}
             accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
             accessibilityLabel={`${item.label}, ${item.count} items`}
           >
             <Text
@@ -63,18 +67,25 @@ const styles = StyleSheet.create({
   filterPillsRow: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: 18,
-    paddingRight: 10,
+    marginBottom: 16,
+    paddingRight: 24,
+    paddingBottom: 4,
   },
   filterPill: {
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 8,
+    minHeight: 38,
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: BENTO_COLORS.pillRadius,
     backgroundColor: BENTO_COLORS.white,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
   filterPillActive: {
     backgroundColor: BENTO_COLORS.deepNavy,
+    borderColor: BENTO_COLORS.deepNavy,
   },
   filterPillText: {
     fontFamily,

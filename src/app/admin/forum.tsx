@@ -35,7 +35,8 @@ export default function AdminForumManageScreen() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // --- Fetch Data using Feature Hooks ---
-  const { data: posts, isLoading } = useForumPosts();
+  const { data: feedData, isLoading } = useForumPosts();
+  const posts = feedData?.posts;
   const resolveMutation = useResolveForumPost();
   const deleteMutation = useDeleteForumPost();
 

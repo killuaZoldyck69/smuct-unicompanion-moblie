@@ -18,34 +18,27 @@ import {
   fontFamily,
   MAX_TITLE_LENGTH,
   MAX_DESCRIPTION_LENGTH,
-} from "../constants";
-import { useComposePostForm } from "../hooks/use-compose-post-form";
+} from "../../constants";
 
-interface ForumComposeModalProps {
+interface DiscussionEditModalProps {
   visible: boolean;
+  form: { title: string; description: string };
+  onChangeTitle: (title: string) => void;
+  onChangeDescription: (description: string) => void;
+  onSave: () => void;
   onClose: () => void;
-  onSuccess?: () => void;
+  isSaving: boolean;
 }
 
-export const ForumComposeModal = memo(function ForumComposeModal({
+export const DiscussionEditModal = memo(function DiscussionEditModal({
   visible,
+  form,
+  onChangeTitle,
+  onChangeDescription,
+  onSave,
   onClose,
-  onSuccess,
-}: ForumComposeModalProps) {
-  const {
-    title,
-    setTitle,
-    description,
-    setDescription,
-    isSubmitting,
-    handleSubmit,
-  } = useComposePostForm({
-    onSuccess: () => {
-      onSuccess?.();
-      onClose();
-    },
-  });
-
+  isSaving,
+}: DiscussionEditModalProps) {
   return (
     <Modal
       visible={visible}
@@ -54,29 +47,27 @@ export const ForumComposeModal = memo(function ForumComposeModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.modalContainer} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.editModalContainer} edges={["top", "bottom"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.flexOne}
         >
-          <View style={styles.modalHeader}>
+          <View style={styles.editModalHeader}>
             <TouchableOpacity
               onPress={onClose}
               style={styles.modalCloseBtn}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Close compose modal"
-              activeOpacity={0.7}
+              accessibilityLabel="Cancel editing"
             >
               <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
             </TouchableOpacity>
-
-            <Text style={styles.modalHeaderTitle}>Ask a Question</Text>
+            <Text style={styles.editModalTitle}>Edit Question</Text>
             <View style={styles.headerSpacer} />
           </View>
 
           <ScrollView
-            contentContainerStyle={styles.modalScrollContent}
+            contentContainerStyle={styles.editModalContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -84,18 +75,16 @@ export const ForumComposeModal = memo(function ForumComposeModal({
               <View style={styles.labelRow}>
                 <Text style={styles.formLabel}>QUESTION TITLE</Text>
                 <Text style={styles.counterText}>
-                  {title.length}/{MAX_TITLE_LENGTH}
+                  {form.title.length}/{MAX_TITLE_LENGTH}
                 </Text>
               </View>
               <TextInput
                 style={styles.formInput}
-                placeholder="What do you need help with?"
-                placeholderTextColor={BENTO_COLORS.subtleText}
-                value={title}
-                onChangeText={setTitle}
+                value={form.title}
+                onChangeText={onChangeTitle}
                 maxLength={MAX_TITLE_LENGTH}
                 accessible={true}
-                accessibilityLabel="Question Title"
+                accessibilityLabel="Edit question title"
               />
             </View>
 
@@ -103,47 +92,34 @@ export const ForumComposeModal = memo(function ForumComposeModal({
               <View style={styles.labelRow}>
                 <Text style={styles.formLabel}>DETAILS & CONTEXT</Text>
                 <Text style={styles.counterText}>
-                  {description.length}/{MAX_DESCRIPTION_LENGTH}
+                  {form.description.length}/{MAX_DESCRIPTION_LENGTH}
                 </Text>
               </View>
               <TextInput
                 style={[styles.formInput, styles.formInputArea]}
-                placeholder="Describe your question, course details, or issue with specifics..."
-                placeholderTextColor={BENTO_COLORS.subtleText}
-                value={description}
-                onChangeText={setDescription}
-                maxLength={MAX_DESCRIPTION_LENGTH}
+                value={form.description}
+                onChangeText={onChangeDescription}
                 multiline={true}
                 textAlignVertical="top"
+                maxLength={MAX_DESCRIPTION_LENGTH}
                 accessible={true}
-                accessibilityLabel="Question Description"
+                accessibilityLabel="Edit question details"
               />
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.submitPostBtn,
-                isSubmitting && styles.submitBtnDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
+              style={styles.saveEditBtn}
+              onPress={onSave}
+              disabled={isSaving}
               activeOpacity={0.8}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Publish Question"
+              accessibilityLabel="Save question changes"
             >
-              {isSubmitting ? (
+              {isSaving ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <>
-                  <Feather
-                    name="send"
-                    size={16}
-                    color="#ffffff"
-                    style={styles.submitIcon}
-                  />
-                  <Text style={styles.submitPostBtnText}>Publish Question</Text>
-                </>
+                <Text style={styles.saveEditBtnText}>Save Changes</Text>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -157,28 +133,30 @@ const styles = StyleSheet.create({
   flexOne: {
     flex: 1,
   },
-  modalContainer: {
+  editModalContainer: {
     flex: 1,
     backgroundColor: BENTO_COLORS.background,
   },
-  modalHeader: {
+  editModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 14,
     backgroundColor: BENTO_COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
   modalCloseBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: BENTO_COLORS.slateBg,
     justifyContent: "center",
     alignItems: "center",
   },
-  modalHeaderTitle: {
+  editModalTitle: {
     fontFamily,
     fontSize: 16,
     fontWeight: "800",
@@ -187,7 +165,7 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 36,
   },
-  modalScrollContent: {
+  editModalContent: {
     padding: 20,
     paddingBottom: 40,
   },
@@ -205,47 +183,37 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     color: BENTO_COLORS.subtleText,
-    letterSpacing: 0.4,
+    letterSpacing: 0.6,
   },
   counterText: {
     fontFamily,
-    fontSize: 11,
-    color: BENTO_COLORS.subtleText,
+    fontSize: 10,
     fontWeight: "600",
+    color: BENTO_COLORS.subtleText,
   },
   formInput: {
     backgroundColor: BENTO_COLORS.white,
-    borderRadius: 16,
-    paddingHorizontal: 16,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     fontFamily,
     fontSize: 14,
-    fontWeight: "600",
     color: BENTO_COLORS.neutralText,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderColor: BENTO_COLORS.subtleBorder,
   },
   formInputArea: {
-    minHeight: 140,
-    paddingTop: 14,
+    minHeight: 120,
   },
-  submitPostBtn: {
-    flexDirection: "row",
+  saveEditBtn: {
+    backgroundColor: BENTO_COLORS.deepNavy,
+    borderRadius: BENTO_COLORS.pillRadius,
+    paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: BENTO_COLORS.deepNavy,
-    paddingVertical: 16,
-    borderRadius: BENTO_COLORS.pillRadius,
     marginTop: 10,
-    ...BENTO_COLORS.heroShadow,
   },
-  submitBtnDisabled: {
-    opacity: 0.7,
-  },
-  submitIcon: {
-    marginRight: 8,
-  },
-  submitPostBtnText: {
+  saveEditBtnText: {
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
