@@ -1,50 +1,39 @@
 import { useMemo } from "react";
+import { parseWeeklySchedule } from "@/screens/schedule/utils";
+import { ClassRoutineItem, TodayStats } from "@/screens/schedule/constants";
 
-export interface ClassSession {
-  id: string;
-  courseCode: string;
-  courseName: string;
-  startTime: string;
-  endTime: string;
-  room?: string;
+export type { ClassRoutineItem };
+
+export interface TodaysClassesResult {
+  classes: ClassRoutineItem[];
+  stats: TodayStats;
+  liveClass?: ClassRoutineItem;
+  nextClass?: ClassRoutineItem;
 }
 
-export const useTodaysClasses = (myHubs: any[] | undefined): ClassSession[] => {
+export const useTodaysClassesData = (
+  myHubs: any[] | null | undefined
+): TodaysClassesResult => {
   return useMemo(() => {
-    if (!myHubs || myHubs.length === 0) return [];
-    const todayStr = new Date().toLocaleDateString("en-US", {
-      weekday: "long",
-    });
-    const classesToday: ClassSession[] = [];
+    const { todayStats, scheduleSections } = parseWeeklySchedule(myHubs);
+    const todaySection = scheduleSections.find(
+      (sec) => sec.title === todayStats.weekday
+    );
+    const classes = todaySection ? todaySection.data : [];
 
-    myHubs.forEach((membership: any) => {
-      const hub = membership.hub;
-      if (!hub || hub.isArchived) return;
-
-      let scheduleArray = hub.weeklyClassSchedule;
-      if (typeof scheduleArray === "string") {
-        try {
-          scheduleArray = JSON.parse(scheduleArray);
-        } catch (e) {
-          scheduleArray = [];
-        }
-      }
-
-      if (Array.isArray(scheduleArray)) {
-        scheduleArray.forEach((session: any) => {
-          if (session.day === todayStr) {
-            classesToday.push({
-              id: `${hub.id}-${session.startTime}`,
-              courseCode: hub.courseCode,
-              courseName: hub.courseName,
-              startTime: session.startTime,
-              endTime: session.endTime,
-              room: session.room,
-            });
-          }
-        });
-      }
-    });
-    return classesToday;
+    return {
+      classes,
+      stats: todayStats,
+      liveClass: todayStats.liveClass,
+      nextClass: todayStats.nextClass,
+    };
   }, [myHubs]);
 };
+
+export const useTodaysClasses = (
+  myHubs: any[] | null | undefined
+): ClassRoutineItem[] => {
+  const data = useTodaysClassesData(myHubs);
+  return data.classes;
+};
+
