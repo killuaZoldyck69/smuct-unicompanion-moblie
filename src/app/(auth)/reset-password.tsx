@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -32,15 +33,28 @@ export default function ResetPasswordScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
+
   const handleResetPassword = async () => {
+    Keyboard.dismiss();
     if (!safeToken) {
       Toast.show({
         type: "error",
         text1: "Invalid Link",
         text2: "Please request a new password reset link.",
       });
+      return;
+    }
+
+    if (!newPassword || !confirmPassword) {
+      Toast.show({ type: "error", text1: "Please fill all fields" });
       return;
     }
 
@@ -68,6 +82,7 @@ export default function ResetPasswordScreen() {
 
       if (error) throw new Error(error.message);
 
+      Keyboard.dismiss();
       Toast.show({
         type: "success",
         text1: "Password reset successful!",

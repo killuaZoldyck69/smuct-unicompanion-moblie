@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   StatusBar,
   Image,
+  Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -36,7 +37,14 @@ export function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
+
   const handleRegister = async () => {
+    Keyboard.dismiss();
     if (!fullName || !email || !password || !confirmPassword) {
       Toast.show({ type: "error", text1: "Please fill all fields" });
       return;
@@ -57,6 +65,7 @@ export function Register() {
 
       if (error) throw new Error(error.message);
 
+      Keyboard.dismiss();
       Toast.show({
         type: "success",
         text1: "Account Created!",

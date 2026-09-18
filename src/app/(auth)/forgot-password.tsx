@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -25,7 +26,14 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
+
   const handleRequestReset = async () => {
+    Keyboard.dismiss();
     if (!email) {
       Toast.show({ type: "error", text1: "Please enter your email" });
       return;
@@ -41,6 +49,7 @@ export default function ForgotPasswordScreen() {
 
       if (error) throw new Error(error.message);
 
+      Keyboard.dismiss();
       Toast.show({
         type: "success",
         text1: "Email Sent!",

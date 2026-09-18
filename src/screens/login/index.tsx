@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Image,
   StatusBar,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -34,8 +35,16 @@ export function Login() {
   const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const passwordInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
     if (!email || !password) {
       Toast.show({ type: "error", text1: "Missing fields" });
       return;
@@ -97,6 +106,7 @@ export function Login() {
           : "STUDENT";
 
       if (userRole === "TEACHER" || userRole === "ADMIN") {
+        Keyboard.dismiss();
         Toast.show({ type: "success", text1: "Welcome back!" });
         router.replace("/(tabs)");
         return;
@@ -105,6 +115,7 @@ export function Login() {
       try {
         const studentProfile = await getStudentProfile();
 
+        Keyboard.dismiss();
         if (studentProfile) {
           Toast.show({ type: "success", text1: "Welcome back!" });
           router.replace("/(tabs)");
@@ -113,6 +124,7 @@ export function Login() {
         }
       } catch (profileError: any) {
         if (profileError.response && profileError.response.status === 404) {
+          Keyboard.dismiss();
           router.replace("/(auth)/onboard");
         } else {
           Toast.show({
@@ -158,6 +170,7 @@ export function Login() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.illustrationContainer}>
@@ -193,6 +206,9 @@ export function Login() {
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                blurOnSubmit={false}
                 onFocus={() => setIsEmailFocused(true)}
                 onBlur={() => setIsEmailFocused(false)}
                 accessible={true}
@@ -213,12 +229,15 @@ export function Login() {
                 style={styles.inputIcon}
               />
               <TextInput
+                ref={passwordInputRef}
                 style={styles.input}
                 placeholder="Password"
                 placeholderTextColor="#76777d"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
                 onFocus={() => setIsPasswordFocused(true)}
                 onBlur={() => setIsPasswordFocused(false)}
                 accessible={true}
