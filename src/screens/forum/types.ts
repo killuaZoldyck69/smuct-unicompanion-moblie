@@ -15,6 +15,9 @@ export type FilterType = "ALL" | "UNRESOLVED" | "RESOLVED" | "MY_POSTS";
 
 export interface ForumProps {
   embedded?: boolean;
+  isComposeVisible?: boolean;
+  onOpenCompose?: () => void;
+  onCloseCompose?: () => void;
 }
 
 export interface FilterOption {

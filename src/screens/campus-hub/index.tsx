@@ -4,13 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-import { useCurrentUser } from "@/hooks/use-current-user";
 import { Forum } from "@/screens/forum";
 import { LostFoundSection } from "./lost-found";
 import { MarketplaceSection } from "./marketplace";
@@ -38,7 +36,7 @@ interface CampusHubProps {
 
 export function CampusHub({ initialSection }: CampusHubProps) {
   const router = useRouter();
-  const { user: currentUser } = useCurrentUser();
+  const [isForumComposeVisible, setIsForumComposeVisible] = useState(false);
 
   const [activeSection, setActiveSection] = useState<HubSection>(() => {
     return initialSection || getCampusHubActiveSection();
@@ -66,32 +64,34 @@ export function CampusHub({ initialSection }: CampusHubProps) {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topNavBar}>
         <View style={styles.topNavLeft}>
-          {currentUser?.image ? (
-            <Image
-              source={{ uri: currentUser.image }}
-              style={styles.navAvatar}
-              accessible={true}
-              accessibilityLabel="Your avatar"
-            />
-          ) : (
-            <View style={styles.navAvatarFallback}>
-              <Text style={styles.navAvatarText}>
-                {currentUser?.name?.charAt(0) ?? "U"}
-              </Text>
-            </View>
-          )}
           <Text style={styles.navBrandTitle}>Campus Hub</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={() => router.push("/(tabs)/notices")}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="View notices"
-        >
-          <Feather name="bell" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
-        </TouchableOpacity>
+        <View style={styles.topNavRight}>
+          {activeSection === "FORUM" && (
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setIsForumComposeVisible(true)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Ask a question"
+              activeOpacity={0.7}
+            >
+              <Feather name="plus" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push("/(tabs)/notices")}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="View notices"
+            activeOpacity={0.7}
+          >
+            <Feather name="bell" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <SectionTabBar
@@ -100,7 +100,13 @@ export function CampusHub({ initialSection }: CampusHubProps) {
       />
 
       <View style={styles.sectionContent}>
-        {activeSection === "FORUM" && <Forum embedded={true} />}
+        {activeSection === "FORUM" && (
+          <Forum
+            embedded={true}
+            isComposeVisible={isForumComposeVisible}
+            onCloseCompose={() => setIsForumComposeVisible(false)}
+          />
+        )}
         {activeSection === "LOST_FOUND" && <LostFoundSection />}
         {activeSection === "MARKETPLACE" && <MarketplaceSection />}
         {activeSection === "COMPLAINTS" && <ComplaintsSection />}
@@ -126,33 +132,18 @@ const styles = StyleSheet.create({
   topNavLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
   },
-  navAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-  },
-  navAvatarFallback: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#e2e8f0",
-    justifyContent: "center",
+  topNavRight: {
+    flexDirection: "row",
     alignItems: "center",
-  },
-  navAvatarText: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.deepNavy,
+    gap: 8,
   },
   navBrandTitle: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
   },
   iconBtn: {
     width: 38,

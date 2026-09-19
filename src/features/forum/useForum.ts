@@ -1,4 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import {
   getForumPostsAPI,
   getSingleForumPostAPI,
@@ -21,14 +27,42 @@ import type {
 
 export const forumQueryKeys = {
   all: ["forumPosts"] as const,
-  feed: (params?: GetForumPostsParams) => ["forumPosts", params] as const,
-  detail: (id: string) => ["forumPost", id] as const,
+  feed: (params?: Record<string, any>) => ["forumPosts", "feed", params] as const,
+  detail: (id: string) => ["forumPost", "detail", id] as const,
+};
+
+export const useInfiniteForumPosts = (
+  params?: Omit<GetForumPostsParams, "page">,
+) => {
+  return useInfiniteQuery<ForumFeedResponse>({
+    queryKey: forumQueryKeys.feed(params),
+    queryFn: ({ pageParam = 1, signal }) =>
+      getForumPostsAPI(
+        {
+          ...params,
+          page: pageParam as number,
+        },
+        signal,
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const page = lastPage?.meta?.page ?? 1;
+      const totalPages = lastPage?.meta?.totalPages ?? 1;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    staleTime: 1000 * 60 * 2, // 2 minutes fresh cache
+    gcTime: 1000 * 60 * 10,   // 10 minutes memory cache
+    placeholderData: keepPreviousData,
+  });
 };
 
 export const useForumPosts = (params?: GetForumPostsParams) => {
   return useQuery<ForumFeedResponse>({
     queryKey: forumQueryKeys.feed(params),
     queryFn: ({ signal }) => getForumPostsAPI(params, signal),
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -37,6 +71,8 @@ export const useSingleForumPost = (id: string) => {
     queryKey: forumQueryKeys.detail(id),
     queryFn: ({ signal }) => getSingleForumPostAPI(id, signal),
     enabled: !!id,
+    staleTime: 1000 * 60 * 1, // 1 minute fresh cache
+    gcTime: 1000 * 60 * 10,   // 10 minutes memory cache
   });
 };
 
@@ -106,6 +142,7 @@ export const useUpdateForumResponse = (postId: string) => {
       content: string;
     }) => updateForumResponseAPI(postId, responseId, { content }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
       queryClient.invalidateQueries({ queryKey: forumQueryKeys.detail(postId) });
     },
   });

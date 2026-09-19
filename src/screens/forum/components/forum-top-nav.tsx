@@ -1,47 +1,49 @@
 import React, { memo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
 
 interface ForumTopNavProps {
   user?: { name?: string | null; image?: string | null } | null;
   onPressNotifications: () => void;
+  onPressCompose?: () => void;
 }
 
 export const ForumTopNav = memo(function ForumTopNav({
-  user,
   onPressNotifications,
+  onPressCompose,
 }: ForumTopNavProps) {
-  const initial = user?.name?.charAt(0)?.toUpperCase() || "U";
-
   return (
     <View style={styles.topNavBar}>
       <View style={styles.topNavLeft}>
-        {user?.image ? (
-          <Image
-            source={{ uri: user.image }}
-            style={styles.navAvatar}
-            accessible={true}
-            accessibilityLabel="Your profile avatar"
-          />
-        ) : (
-          <View style={styles.navAvatarFallback}>
-            <Text style={styles.navAvatarText}>{initial}</Text>
-          </View>
-        )}
         <Text style={styles.navBrandTitle}>UniCompanion</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.headerIconButton}
-        onPress={onPressNotifications}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel="View notices and notifications"
-        activeOpacity={0.7}
-      >
-        <Feather name="bell" size={18} color={BENTO_COLORS.deepNavy} />
-      </TouchableOpacity>
+      <View style={styles.topNavRight}>
+        {onPressCompose && (
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={onPressCompose}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Ask a question"
+            activeOpacity={0.7}
+          >
+            <Feather name="plus" size={20} color={BENTO_COLORS.deepNavy} />
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={styles.headerIconButton}
+          onPress={onPressNotifications}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="View notices and notifications"
+          activeOpacity={0.7}
+        >
+          <Feather name="bell" size={18} color={BENTO_COLORS.deepNavy} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 });
@@ -60,26 +62,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  navAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    marginRight: 10,
-  },
-  navAvatarFallback: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#e2e8f0",
-    justifyContent: "center",
+  topNavRight: {
+    flexDirection: "row",
     alignItems: "center",
-    marginRight: 10,
-  },
-  navAvatarText: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "800",
-    color: BENTO_COLORS.deepNavy,
+    gap: 8,
   },
   navBrandTitle: {
     fontFamily,

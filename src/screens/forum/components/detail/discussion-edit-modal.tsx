@@ -11,7 +11,7 @@ import {
   Platform,
   StyleSheet,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import {
   BENTO_COLORS,
@@ -39,6 +39,9 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
   onClose,
   isSaving,
 }: DiscussionEditModalProps) {
+  const insets = useSafeAreaInsets();
+  const canSave = form.title.trim().length > 0 && form.description.trim().length > 0;
+
   return (
     <Modal
       visible={visible}
@@ -47,9 +50,9 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.editModalContainer} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.editModalContainer} edges={["top"]}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.flexOne}
         >
           <View style={styles.editModalHeader}>
@@ -106,11 +109,21 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
                 accessibilityLabel="Edit question details"
               />
             </View>
+          </ScrollView>
 
+          <View
+            style={[
+              styles.editModalFooter,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
+          >
             <TouchableOpacity
-              style={styles.saveEditBtn}
+              style={[
+                styles.saveEditBtn,
+                (!canSave || isSaving) && styles.saveBtnDisabled,
+              ]}
               onPress={onSave}
-              disabled={isSaving}
+              disabled={!canSave || isSaving}
               activeOpacity={0.8}
               accessible={true}
               accessibilityRole="button"
@@ -122,7 +135,7 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
                 <Text style={styles.saveEditBtnText}>Save Changes</Text>
               )}
             </TouchableOpacity>
-          </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -205,17 +218,31 @@ const styles = StyleSheet.create({
   formInputArea: {
     minHeight: 120,
   },
+  editModalFooter: {
+    backgroundColor: BENTO_COLORS.white,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: BENTO_COLORS.subtleBorder,
+    ...BENTO_COLORS.shadow,
+  },
   saveEditBtn: {
     backgroundColor: BENTO_COLORS.deepNavy,
     borderRadius: BENTO_COLORS.pillRadius,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
+    ...BENTO_COLORS.heroShadow,
+  },
+  saveBtnDisabled: {
+    backgroundColor: "#94a3b8",
+    opacity: 0.65,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   saveEditBtnText: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
     color: "#ffffff",
   },

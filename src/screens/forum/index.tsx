@@ -1,18 +1,16 @@
 import React, { useState, useCallback } from "react";
 import {
   View,
-  Text,
   FlatList,
   RefreshControl,
-  TouchableOpacity,
+  ActivityIndicator,
   Platform,
   StyleSheet,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-import { BENTO_COLORS, fontFamily } from "./constants";
+import { BENTO_COLORS } from "./constants";
 import type { ForumProps, ForumPostItem } from "./types";
 import { useForumFeed } from "./hooks/use-forum-feed";
 import { ForumTopNav } from "./components/forum-top-nav";
@@ -25,10 +23,36 @@ import { ForumComposeModal } from "./components/forum-compose-modal";
 
 export type { ForumProps };
 
-export function Forum({ embedded = false }: ForumProps = {}) {
+export function Forum({
+  embedded = false,
+  isComposeVisible: externalIsComposeVisible,
+  onOpenCompose,
+  onCloseCompose,
+}: ForumProps = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [isComposeVisible, setIsComposeVisible] = useState(false);
+  const [internalIsComposeVisible, setInternalIsComposeVisible] = useState(false);
+
+  const isComposeVisible =
+    externalIsComposeVisible !== undefined
+      ? externalIsComposeVisible
+      : internalIsComposeVisible;
+
+  const handleOpenCompose = useCallback(() => {
+    if (onOpenCompose) {
+      onOpenCompose();
+    } else {
+      setInternalIsComposeVisible(true);
+    }
+  }, [onOpenCompose]);
+
+  const handleCloseCompose = useCallback(() => {
+    if (onCloseCompose) {
+      onCloseCompose();
+    } else {
+      setInternalIsComposeVisible(false);
+    }
+  }, [onCloseCompose]);
 
   const {
     currentUser,
@@ -42,6 +66,8 @@ export function Forum({ embedded = false }: ForumProps = {}) {
     isLoading,
     filteredPosts,
     counts,
+    loadMore,
+    isFetchingNextPage,
   } = useForumFeed();
 
   const handleCardPress = useCallback(
@@ -68,13 +94,6 @@ export function Forum({ embedded = false }: ForumProps = {}) {
 
   const renderHeader = useCallback(() => (
     <View style={styles.headerContainer}>
-      <View style={styles.headerTitlesContainer}>
-        <Text style={styles.screenTitle}>Campus Forum</Text>
-        <Text style={styles.screenSubtitle}>
-          Student Q&A & Community Discussions
-        </Text>
-      </View>
-
       <ForumSearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
@@ -88,6 +107,15 @@ export function Forum({ embedded = false }: ForumProps = {}) {
       />
     </View>
   ), [searchQuery, setSearchQuery, clearSearch, activeFilter, setActiveFilter, counts]);
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.listFooter}>
+        <ActivityIndicator size="small" color={BENTO_COLORS.deepNavy} />
+      </View>
+    );
+  }, [isFetchingNextPage]);
 
   const renderEmpty = useCallback(() => {
     if (isLoading) {
@@ -115,7 +143,6 @@ export function Forum({ embedded = false }: ForumProps = {}) {
     : { style: styles.safeContainer, edges: ["top" as const] };
 
   const bottomPadding = insets.bottom > 0 ? insets.bottom + 110 : 124;
-  const fabBottom = insets.bottom > 0 ? insets.bottom + 86 : 98;
 
   return (
     <ContainerComponent {...(containerProps as any)}>
@@ -123,6 +150,7 @@ export function Forum({ embedded = false }: ForumProps = {}) {
         <ForumTopNav
           user={currentUser}
           onPressNotifications={handleNotificationsPress}
+          onPressCompose={handleOpenCompose}
         />
       )}
 
@@ -131,8 +159,11 @@ export function Forum({ embedded = false }: ForumProps = {}) {
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         ItemSeparatorComponent={renderItemSeparator}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: bottomPadding },
@@ -152,20 +183,9 @@ export function Forum({ embedded = false }: ForumProps = {}) {
         }
       />
 
-      <TouchableOpacity
-        style={[styles.fabBtn, { bottom: fabBottom }]}
-        onPress={() => setIsComposeVisible(true)}
-        activeOpacity={0.85}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel="Ask a question"
-      >
-        <Feather name="plus" size={24} color="#ffffff" />
-      </TouchableOpacity>
-
       <ForumComposeModal
         visible={isComposeVisible}
-        onClose={() => setIsComposeVisible(false)}
+        onClose={handleCloseCompose}
         onSuccess={onRefresh}
       />
     </ContainerComponent>
@@ -183,37 +203,14 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingBottom: 2,
-  },
-  headerTitlesContainer: {
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  screenTitle: {
-    fontFamily,
-    fontSize: 24,
-    fontWeight: "800",
-    color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.4,
-  },
-  screenSubtitle: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "500",
-    color: BENTO_COLORS.subtleText,
     marginTop: 2,
   },
   itemSeparator: {
     height: 12,
   },
-  fabBtn: {
-    position: "absolute",
-    right: 20,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: BENTO_COLORS.deepNavy,
-    justifyContent: "center",
+  listFooter: {
+    paddingVertical: 16,
     alignItems: "center",
-    ...BENTO_COLORS.heroShadow,
+    justifyContent: "center",
   },
 });
