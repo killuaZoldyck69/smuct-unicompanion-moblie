@@ -231,10 +231,21 @@ export function useDiscussionDetail() {
   }, [composerText, isEditMode, editingResponse, updateResponseMutation, replyMutation]);
 
   // Enter inline edit mode for a response
-  const handleEditResponseInline = useCallback((response: ForumResponseItem) => {
-    setEditingResponse(response);
-    setComposerText(response.content);
-  }, []);
+  const handleEditResponseInline = useCallback(
+    (response: ForumResponseItem) => {
+      if (thread?.isResolved) {
+        Toast.show({
+          type: "info",
+          text1: "Discussion Resolved",
+          text2: "Responses cannot be edited on a resolved discussion.",
+        });
+        return;
+      }
+      setEditingResponse(response);
+      setComposerText(response.content);
+    },
+    [thread?.isResolved],
+  );
 
   // Cancel inline edit mode
   const handleCancelEdit = useCallback(() => {

@@ -6,13 +6,11 @@ import { BENTO_COLORS, fontFamily } from "../../constants";
 
 interface DiscussionHeaderProps {
   canManage: boolean;
-  onShare: () => void;
   onOverflowPress: () => void;
 }
 
 export const DiscussionHeader = memo(function DiscussionHeader({
   canManage,
-  onShare,
   onOverflowPress,
 }: DiscussionHeaderProps) {
   const router = useRouter();
@@ -31,33 +29,23 @@ export const DiscussionHeader = memo(function DiscussionHeader({
 
       <Text style={styles.headerTitle}>Discussion</Text>
 
-      <View style={styles.headerActionsRow}>
+      {canManage ? (
         <TouchableOpacity
-          onPress={onShare}
+          onPress={onOverflowPress}
           style={styles.headerBtn}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Share discussion"
+          accessibilityLabel="More discussion options"
         >
-          <Feather name="share-2" size={17} color={BENTO_COLORS.deepNavy} />
+          <Feather
+            name="more-vertical"
+            size={18}
+            color={BENTO_COLORS.deepNavy}
+          />
         </TouchableOpacity>
-
-        {canManage && (
-          <TouchableOpacity
-            onPress={onOverflowPress}
-            style={[styles.headerBtn, styles.headerBtnMargin]}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="More discussion options"
-          >
-            <Feather
-              name="more-vertical"
-              size={18}
-              color={BENTO_COLORS.deepNavy}
-            />
-          </TouchableOpacity>
-        )}
-      </View>
+      ) : (
+        <View style={styles.headerSpacer} />
+      )}
     </View>
   );
 });
@@ -83,17 +71,13 @@ const styles = StyleSheet.create({
     borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
-  headerBtnMargin: {
-    marginLeft: 8,
-  },
   headerTitle: {
     fontFamily,
     fontSize: 17,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
   },
-  headerActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  headerSpacer: {
+    width: 38,
   },
 });

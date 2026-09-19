@@ -16,6 +16,7 @@ interface DiscussionReplyItemProps {
   threadAuthorId?: string;
   currentUserId?: string;
   isAdmin?: boolean;
+  isResolved?: boolean;
   onResponderPress: (responder: ForumAuthor) => void;
   onEditPress?: (item: ForumResponseItem) => void;
   onDeletePress?: (item: ForumResponseItem) => void;
@@ -26,6 +27,7 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
   threadAuthorId,
   currentUserId,
   isAdmin,
+  isResolved,
   onResponderPress,
   onEditPress,
   onDeletePress,
@@ -37,7 +39,7 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
   const responderSubtitle = getUserAcademicSubtitle(item.responder);
   const isReplyAuthor = Boolean(threadAuthorId && item.responderId === threadAuthorId);
   const isMyReply = Boolean(currentUserId && item.responderId === currentUserId);
-  const canEdit = isMyReply;
+  const canEdit = isMyReply && !isResolved;
   const canDelete = Boolean(isMyReply || isAdmin);
   const canManageReply = canEdit || canDelete;
 

@@ -88,7 +88,6 @@ export function DiscussionDetailScreen() {
     setSelectedProfile,
     confirmModal,
     setConfirmModal,
-    handleShare,
     handleResolvePrompt,
     handleDeletePrompt,
     isDeleting,
@@ -110,6 +109,7 @@ export function DiscussionDetailScreen() {
         threadAuthorId={thread?.authorId}
         currentUserId={currentUserId}
         isAdmin={isAdmin}
+        isResolved={thread?.isResolved}
         onResponderPress={handleProfilePress}
         onEditPress={handleEditResponseInline}
         onDeletePress={handleDeleteResponsePrompt}
@@ -117,6 +117,7 @@ export function DiscussionDetailScreen() {
     ),
     [
       thread?.authorId,
+      thread?.isResolved,
       currentUserId,
       isAdmin,
       handleProfilePress,
@@ -182,7 +183,6 @@ export function DiscussionDetailScreen() {
       <SafeAreaView style={styles.flexOne} edges={["top"]}>
         <DiscussionHeader
           canManage={canManage}
-          onShare={handleShare}
           onOverflowPress={handleOverflowPress}
         />
 

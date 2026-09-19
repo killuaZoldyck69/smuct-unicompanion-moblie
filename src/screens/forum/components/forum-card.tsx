@@ -60,23 +60,6 @@ export const ForumCard = memo(function ForumCard({
             </Text>
           </View>
         </View>
-
-        {isResolved ? (
-          <View style={styles.resolvedBadge}>
-            <Feather
-              name="check"
-              size={11}
-              color={BENTO_COLORS.emerald}
-              style={styles.badgeIcon}
-            />
-            <Text style={styles.resolvedBadgeText}>RESOLVED</Text>
-          </View>
-        ) : (
-          <View style={styles.needsHelpBadge}>
-            <View style={styles.needsHelpDot} />
-            <Text style={styles.needsHelpBadgeText}>NEEDS HELP</Text>
-          </View>
-        )}
       </View>
 
       <Text style={styles.titleText} numberOfLines={2}>
@@ -89,10 +72,10 @@ export const ForumCard = memo(function ForumCard({
         </Text>
       ) : null}
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, isResolved && styles.dividerResolved]} />
 
       <View style={styles.footerRow}>
-        <View style={styles.replyPill}>
+        <View style={[styles.replyPill, isResolved && styles.replyPillResolved]}>
           <Feather
             name="message-square"
             size={12}
@@ -133,19 +116,18 @@ const styles = StyleSheet.create({
     ...BENTO_COLORS.shadow,
   },
   cardContainerResolved: {
-    borderColor: "rgba(16, 185, 129, 0.2)",
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 10,
   },
   authorRow: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    marginRight: 10,
   },
   authorAvatar: {
     width: 36,
@@ -185,46 +167,6 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
   },
-  resolvedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: BENTO_COLORS.emeraldBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BENTO_COLORS.pillRadius,
-  },
-  badgeIcon: {
-    marginRight: 4,
-  },
-  resolvedBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: BENTO_COLORS.emerald,
-    letterSpacing: 0.3,
-  },
-  needsHelpBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: BENTO_COLORS.skyBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BENTO_COLORS.pillRadius,
-    gap: 4,
-  },
-  needsHelpDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: BENTO_COLORS.sky,
-  },
-  needsHelpBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: BENTO_COLORS.sky,
-    letterSpacing: 0.3,
-  },
   titleText: {
     fontFamily,
     fontSize: 16,
@@ -246,6 +188,9 @@ const styles = StyleSheet.create({
     backgroundColor: BENTO_COLORS.subtleBorder,
     marginBottom: 10,
   },
+  dividerResolved: {
+    backgroundColor: "rgba(16, 185, 129, 0.16)",
+  },
   footerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -258,6 +203,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
+  },
+  replyPillResolved: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#dcfce7",
   },
   replyIcon: {
     marginRight: 5,

@@ -4,7 +4,6 @@ import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../../constants";
 import type { ForumPostItem, ForumAuthor } from "../../types";
 import {
-  timeAgo,
   getUserAcademicSubtitle,
   formatPostedTime,
   isEdited,
@@ -27,7 +26,6 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
   const authorName = thread.author?.name || "University Member";
   const authorInitial = authorName.charAt(0).toUpperCase() || "U";
   const authorSubtitle = getUserAcademicSubtitle(thread.author);
-  const postTime = timeAgo(thread.createdAt);
   const fullPostedTime = formatPostedTime(thread.createdAt);
   const threadEdited = isEdited(thread.createdAt, thread.updatedAt);
   const editedTime = threadEdited ? formatEditedTime(thread.updatedAt) : null;
@@ -35,30 +33,7 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.topRow}>
-          <View style={styles.categoryPill}>
-            <Text style={styles.categoryPillText}>DISCUSSION</Text>
-          </View>
-
-          {thread.isResolved ? (
-            <View style={styles.resolvedBadge}>
-              <Feather
-                name="check"
-                size={11}
-                color={BENTO_COLORS.emerald}
-                style={styles.badgeIcon}
-              />
-              <Text style={styles.resolvedBadgeText}>RESOLVED</Text>
-            </View>
-          ) : (
-            <View style={styles.needsHelpBadge}>
-              <View style={styles.needsHelpDot} />
-              <Text style={styles.needsHelpBadgeText}>NEEDS HELP</Text>
-            </View>
-          )}
-        </View>
-
+      <View style={[styles.card, thread.isResolved && styles.cardResolved]}>
         <Text style={styles.title}>{thread.title}</Text>
 
         <TouchableOpacity
@@ -94,7 +69,7 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
               {authorSubtitle}
             </Text>
             <Text style={styles.timestampText}>
-              Posted on {fullPostedTime} ({postTime})
+              Posted on {fullPostedTime}
             </Text>
             {editedTime && (
               <Text style={styles.editedText}>
@@ -104,7 +79,7 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
           </View>
         </TouchableOpacity>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, thread.isResolved && styles.dividerResolved]} />
 
         <Text style={styles.body}>{thread.description}</Text>
 
@@ -153,64 +128,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     ...BENTO_COLORS.shadow,
   },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  categoryPill: {
-    backgroundColor: BENTO_COLORS.slateBg,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: BENTO_COLORS.pillRadius,
-  },
-  categoryPillText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: BENTO_COLORS.deepNavy,
-    letterSpacing: 0.5,
-  },
-  resolvedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: BENTO_COLORS.emeraldBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BENTO_COLORS.pillRadius,
-  },
-  badgeIcon: {
-    marginRight: 4,
-  },
-  resolvedBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: BENTO_COLORS.emerald,
-    letterSpacing: 0.3,
-  },
-  needsHelpBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: BENTO_COLORS.skyBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BENTO_COLORS.pillRadius,
-    gap: 4,
-  },
-  needsHelpDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: BENTO_COLORS.sky,
-  },
-  needsHelpBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: BENTO_COLORS.sky,
-    letterSpacing: 0.3,
+  cardResolved: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
   },
   title: {
     fontFamily,
@@ -226,24 +146,24 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: BENTO_COLORS.slateBg,
-    marginRight: 10,
+    marginRight: 12,
   },
   avatarFallback: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: BENTO_COLORS.slateBg,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 12,
   },
   avatarText: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
   },
@@ -298,6 +218,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: BENTO_COLORS.subtleBorder,
     marginBottom: 14,
+  },
+  dividerResolved: {
+    backgroundColor: "rgba(16, 185, 129, 0.16)",
   },
   body: {
     fontFamily,

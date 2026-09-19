@@ -157,13 +157,7 @@ export function computeForumFeed(
 export function getUserAcademicSubtitle(author?: any): string {
   if (!author) return "University Member";
   if (author.studentProfile) {
-    const { department, currentSemester, section } = author.studentProfile;
-    const parts = [
-      department,
-      currentSemester ? `Sem ${currentSemester}` : null,
-      section ? `Sec ${section}` : null,
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(" • ") : "Student";
+    return author.studentProfile.department || "Student";
   }
   if (author.teacherProfile) {
     const { department, designation } = author.teacherProfile;
