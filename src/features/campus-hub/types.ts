@@ -1,11 +1,14 @@
 export type {
   LostFoundType,
   LostFoundStatus,
+  LostFoundClaimStatus,
   LostFoundCategory,
   LostFoundAuthor,
-  LostFoundComment,
+  LostFoundClaim,
   LostFoundPost,
   CreateLostFoundInput,
+  CreateClaimInput,
+  HandoverData,
 } from "@/services/lost-found-service";
 
 export type {

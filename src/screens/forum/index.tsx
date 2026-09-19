@@ -92,21 +92,7 @@ export function Forum({
     [handleCardPress],
   );
 
-  const renderHeader = useCallback(() => (
-    <View style={styles.headerContainer}>
-      <ForumSearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        onClear={clearSearch}
-      />
 
-      <ForumFilterPills
-        activeFilter={activeFilter}
-        onSelectFilter={setActiveFilter}
-        counts={counts}
-      />
-    </View>
-  ), [searchQuery, setSearchQuery, clearSearch, activeFilter, setActiveFilter, counts]);
 
   const renderFooter = useCallback(() => {
     if (!isFetchingNextPage) return null;
@@ -154,13 +140,29 @@ export function Forum({
         />
       )}
 
+      {/* Stable Search & Filter Bar placed outside FlatList to prevent unmounting/keyboard dismissal */}
+      <View style={styles.headerContainer}>
+        <ForumSearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onClear={clearSearch}
+        />
+
+        <ForumFilterPills
+          activeFilter={activeFilter}
+          onSelectFilter={setActiveFilter}
+          counts={counts}
+        />
+      </View>
+
       <FlatList
         data={filteredPosts}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         ItemSeparatorComponent={renderItemSeparator}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
@@ -202,8 +204,9 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   headerContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 2,
-    marginTop: 2,
   },
   itemSeparator: {
     height: 12,

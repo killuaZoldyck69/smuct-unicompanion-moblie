@@ -28,7 +28,7 @@ import type {
 export const forumQueryKeys = {
   all: ["forumPosts"] as const,
   feed: (params?: Record<string, any>) => ["forumPosts", "feed", params] as const,
-  detail: (id: string) => ["forumPost", "detail", id] as const,
+  detail: (id: string) => ["forumPosts", "detail", id] as const,
 };
 
 export const useInfiniteForumPosts = (

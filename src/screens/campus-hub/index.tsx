@@ -18,6 +18,7 @@ import {
   type HubSection,
 } from "./shared/section-tab-bar";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./shared/design-tokens";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   getCampusHubActiveSection,
   setCampusHubActiveSection,
@@ -36,7 +37,9 @@ interface CampusHubProps {
 
 export function CampusHub({ initialSection }: CampusHubProps) {
   const router = useRouter();
+  const { user: currentUser } = useCurrentUser();
   const [isForumComposeVisible, setIsForumComposeVisible] = useState(false);
+  const [isLostFoundComposeVisible, setIsLostFoundComposeVisible] = useState(false);
 
   const [activeSection, setActiveSection] = useState<HubSection>(() => {
     return initialSection || getCampusHubActiveSection();
@@ -60,6 +63,14 @@ export function CampusHub({ initialSection }: CampusHubProps) {
     setActiveSection(section);
   }, []);
 
+  const handleComposePress = useCallback(() => {
+    if (activeSection === "FORUM") {
+      setIsForumComposeVisible(true);
+    } else if (activeSection === "LOST_FOUND") {
+      setIsLostFoundComposeVisible(true);
+    }
+  }, [activeSection]);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topNavBar}>
@@ -68,13 +79,15 @@ export function CampusHub({ initialSection }: CampusHubProps) {
         </View>
 
         <View style={styles.topNavRight}>
-          {activeSection === "FORUM" && (
+          {(activeSection === "FORUM" || activeSection === "LOST_FOUND") && (
             <TouchableOpacity
               style={styles.iconBtn}
-              onPress={() => setIsForumComposeVisible(true)}
+              onPress={handleComposePress}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Ask a question"
+              accessibilityLabel={
+                activeSection === "FORUM" ? "Ask a question" : "Create Lost or Found post"
+              }
               activeOpacity={0.7}
             >
               <Feather name="plus" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
@@ -107,7 +120,12 @@ export function CampusHub({ initialSection }: CampusHubProps) {
             onCloseCompose={() => setIsForumComposeVisible(false)}
           />
         )}
-        {activeSection === "LOST_FOUND" && <LostFoundSection />}
+        {activeSection === "LOST_FOUND" && (
+          <LostFoundSection
+            isComposeVisible={isLostFoundComposeVisible}
+            onCloseCompose={() => setIsLostFoundComposeVisible(false)}
+          />
+        )}
         {activeSection === "MARKETPLACE" && <MarketplaceSection />}
         {activeSection === "COMPLAINTS" && <ComplaintsSection />}
       </View>

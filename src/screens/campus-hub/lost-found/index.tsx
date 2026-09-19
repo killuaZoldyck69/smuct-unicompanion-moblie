@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
+  FlatList,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -10,75 +11,155 @@ import {
   Image,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useInfiniteLostFoundFeed } from "@/features/campus-hub/useLostFound";
+import type {
+  LostFoundPost,
+  LostFoundType,
+  LostFoundStatus,
+  LostFoundCategory,
+  GetLostFoundFeedParams,
+} from "@/services/lost-found-service";
 import {
-  useLostFoundFeed,
-} from "@/features/campus-hub/useLostFound";
-import type { LostFoundPost, LostFoundType, LostFoundStatus } from "@/services/lost-found-service";
-import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../shared/design-tokens";
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  timeAgo,
+} from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
 import { ComposeLostFoundModal } from "./compose-modal";
+import {
+  TypeBadge,
+  StatusBadge,
+  CategoryBadge,
+} from "./components/status-badge";
+import {
+  FilterModal,
+  type TypeFilter,
+  type StatusFilter,
+} from "./components/filter-modal";
 
-type FilterTab = "ALL" | LostFoundType | "CLAIMED";
-
-interface FilterPill {
-  key: FilterTab;
-  label: string;
-}
-
-const FILTERS: FilterPill[] = [
-  { key: "ALL", label: "All" },
-  { key: "LOST", label: "Lost" },
-  { key: "FOUND", label: "Found" },
-  { key: "CLAIMED", label: "Claimed" },
-];
-
-function toStatusParam(tab: FilterTab): { type?: LostFoundType; status?: LostFoundStatus } {
-  if (tab === "LOST") return { type: "LOST", status: "ACTIVE" };
-  if (tab === "FOUND") return { type: "FOUND", status: "ACTIVE" };
-  if (tab === "CLAIMED") return { status: "CLAIMED" };
-  return {};
-}
+const CATEGORY_LABELS: Record<string, string> = {
+  ID_CARD: "ID Card",
+  ELECTRONICS: "Electronics",
+  KEYS: "Keys",
+  BOOKS: "Books",
+  CLOTHING: "Clothing",
+  OTHER: "Other",
+};
 
 const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
 
-export function LostFoundSection() {
+export interface LostFoundSectionProps {
+  isComposeVisible?: boolean;
+  onCloseCompose?: () => void;
+}
+
+export function LostFoundSection({
+  isComposeVisible: externalIsComposeVisible,
+  onCloseCompose: externalOnCloseCompose,
+}: LostFoundSectionProps = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user: currentUser } = useCurrentUser();
 
-  const [activeFilter, setActiveFilter] = useState<FilterTab>("ALL");
+  // Filters state
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [categoryFilter, setCategoryFilter] = useState<"ALL" | LostFoundCategory>("ALL");
+  const [myPostsOnly, setMyPostsOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isComposeVisible, setIsComposeVisible] = useState(false);
+  const [internalComposeVisible, setInternalComposeVisible] = useState(false);
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
 
-  const { data: posts, isLoading, isError, refetch } = useLostFoundFeed(
-    toStatusParam(activeFilter)
+  const activeFilterCount = useMemo(() => {
+    return (
+      (typeFilter !== "ALL" ? 1 : 0) +
+      (statusFilter !== "ALL" ? 1 : 0) +
+      (categoryFilter !== "ALL" ? 1 : 0) +
+      (myPostsOnly ? 1 : 0)
+    );
+  }, [typeFilter, statusFilter, categoryFilter, myPostsOnly]);
+
+  const resetAllFilters = useCallback(() => {
+    setTypeFilter("ALL");
+    setStatusFilter("ALL");
+    setCategoryFilter("ALL");
+    setMyPostsOnly(false);
+  }, []);
+
+  const handleApplyFilters = useCallback(
+    (filters: {
+      type: TypeFilter;
+      status: StatusFilter;
+      category: "ALL" | LostFoundCategory;
+      myPosts: boolean;
+    }) => {
+      setTypeFilter(filters.type);
+      setStatusFilter(filters.status);
+      setCategoryFilter(filters.category);
+      setMyPostsOnly(filters.myPosts);
+    },
+    []
   );
 
-  const filtered = useMemo<LostFoundPost[]>(() => {
-    const list = Array.isArray(posts) ? posts : [];
-    if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase();
-    return list.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.location.toLowerCase().includes(q)
-    );
-  }, [posts, searchQuery]);
+  // Debounce search query to relieve frontend and trigger server-side query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
-  const counts = useMemo(() => {
-    const all = Array.isArray(posts) ? posts : [];
+  const isComposeVisible =
+    externalIsComposeVisible !== undefined
+      ? externalIsComposeVisible
+      : internalComposeVisible;
+  const handleCloseCompose =
+    externalOnCloseCompose || (() => setInternalComposeVisible(false));
+
+  // Construct query parameters for server-side filtering & search
+  const queryParams = useMemo<GetLostFoundFeedParams>(() => {
+    const p: GetLostFoundFeedParams = {};
+
+    if (typeFilter !== "ALL") p.type = typeFilter;
+    if (statusFilter !== "ALL") p.status = statusFilter;
+    if (categoryFilter !== "ALL") p.category = categoryFilter;
+    if (myPostsOnly) p.myPosts = true;
+    if (debouncedSearch.length > 0) p.search = debouncedSearch;
+
+    return p;
+  }, [typeFilter, statusFilter, categoryFilter, myPostsOnly, debouncedSearch]);
+
+  // Infinite query for lazy loading
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteLostFoundFeed(queryParams);
+
+  // Flatten paginated posts
+  const posts = useMemo(() => {
+    if (!data?.pages) return [];
+    return data.pages.flatMap((page) => page.data);
+  }, [data]);
+
+  // Overall quick stats
+  const stats = useMemo(() => {
     return {
-      total: all.length,
-      lost: all.filter((p) => p.type === "LOST").length,
-      found: all.filter((p) => p.type === "FOUND").length,
+      activeLost: posts.filter((p) => p.type === "LOST" && p.status === "ACTIVE").length,
+      activeFound: posts.filter((p) => p.type === "FOUND" && p.status === "ACTIVE").length,
+      resolved: posts.filter((p) => p.status === "RESOLVED" || p.status === "CLAIMED").length,
     };
   }, [posts]);
 
@@ -91,6 +172,12 @@ export function LostFoundSection() {
     }
   }, [refetch]);
 
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const navigateToDetail = useCallback(
     (id: string) => {
       setCampusHubActiveSection("LOST_FOUND");
@@ -99,12 +186,116 @@ export function LostFoundSection() {
     [router]
   );
 
+  const toggleMyPosts = useCallback(() => {
+    if (!currentUser) {
+      Toast.show({ type: "info", text1: "Sign in to view your posts" });
+      return;
+    }
+    setMyPostsOnly((prev) => !prev);
+  }, [currentUser]);
+
+  const renderHeader = useCallback(() => {
+    return (
+      <View style={styles.statsBarContainer}>
+        {/* Compact Modern Stats Bar */}
+        <View style={styles.statsBar}>
+          <View style={styles.statsBarHeader}>
+            <View style={styles.statsBarTag}>
+              <Feather name="shield" size={12} color={ACCENT} />
+              <Text style={styles.statsBarTagText}>CAMPUS HUB LOST & FOUND</Text>
+            </View>
+            <Text style={styles.statsBarSub}>Verified Community Board</Text>
+          </View>
+          <View style={styles.statsBarRow}>
+            <View style={styles.statCell}>
+              <View style={[styles.statDot, { backgroundColor: CAMPUS_HUB_COLORS.lostRose }]} />
+              <Text style={styles.statCount}>{stats.activeLost}</Text>
+              <Text style={styles.statTitle}>Active Lost</Text>
+            </View>
+
+            <View style={styles.statDivider} />
+
+            <View style={styles.statCell}>
+              <View style={[styles.statDot, { backgroundColor: CAMPUS_HUB_COLORS.foundTeal }]} />
+              <Text style={styles.statCount}>{stats.activeFound}</Text>
+              <Text style={styles.statTitle}>Active Found</Text>
+            </View>
+
+            <View style={styles.statDivider} />
+
+            <View style={styles.statCell}>
+              <View style={[styles.statDot, { backgroundColor: CAMPUS_HUB_COLORS.resolvedGreen }]} />
+              <Text style={styles.statCount}>{stats.resolved}</Text>
+              <Text style={styles.statTitle}>Reunited</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }, [stats]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: LostFoundPost }) => (
+      <LostFoundCard
+        post={item}
+        currentUserId={currentUser?.id}
+        onPress={() => navigateToDetail(item.id)}
+      />
+    ),
+    [currentUser?.id, navigateToDetail]
+  );
+
+  const renderFooter = useCallback(() => {
+    if (isFetchingNextPage) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={ACCENT} />
+        </View>
+      );
+    }
+    if (posts.length > 5 && !hasNextPage) {
+      return (
+        <View style={styles.endNotice}>
+          <Text style={styles.endNoticeText}>You've reached the end of listings</Text>
+        </View>
+      );
+    }
+    return null;
+  }, [isFetchingNextPage, posts.length, hasNextPage]);
+
+  const renderEmpty = useCallback(() => {
+    if (isLoading) {
+      return (
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color={ACCENT} />
+        </View>
+      );
+    }
+    return (
+      <View style={styles.emptyCard}>
+        <Feather name="inbox" size={38} color={CAMPUS_HUB_COLORS.subtleText} />
+        <Text style={styles.stateTitle}>No listings found</Text>
+        <Text style={styles.stateSubtitle}>
+          {debouncedSearch
+            ? `No items matching "${debouncedSearch}".`
+            : "No items match your active filters. Try adjusting them or post a new item."}
+        </Text>
+      </View>
+    );
+  }, [isLoading, debouncedSearch]);
+
   if (isError) {
     return (
       <View style={styles.centerState}>
         <Feather name="alert-circle" size={36} color={CAMPUS_HUB_COLORS.dangerText} />
         <Text style={styles.stateTitle}>Could not load posts</Text>
-        <TouchableOpacity style={[styles.retryBtn, { backgroundColor: ACCENT }]} onPress={() => refetch()}>
+        <TouchableOpacity
+          style={[styles.retryBtn, { backgroundColor: ACCENT }]}
+          onPress={() => refetch()}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading lost and found posts"
+        >
           <Text style={styles.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -113,12 +304,151 @@ export function LostFoundSection() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView
+      {/* Fixed Search Bar + Filter Icon Row (Placed outside FlatList to prevent unmounting/keyboard dismissal) */}
+      <View style={styles.topSearchContainer}>
+        <View style={styles.searchFilterRow}>
+          <View style={styles.searchInputContainer}>
+            <Feather
+              name="search"
+              size={16}
+              color={CAMPUS_HUB_COLORS.subtleText}
+              style={{ marginRight: 8 }}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search lost & found by title or location..."
+              placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              accessible
+              accessibilityLabel="Search lost and found"
+              returnKeyType="search"
+              clearButtonMode="never"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery("")}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Clear search query"
+                style={styles.clearSearchBtn}
+              >
+                <Feather name="x-circle" size={16} color={CAMPUS_HUB_COLORS.subtleText} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Filter Modal Trigger Button */}
+          <TouchableOpacity
+            style={[
+              styles.filterIconButton,
+              activeFilterCount > 0 && styles.filterIconButtonActive,
+            ]}
+            onPress={() => setIsFilterModalVisible(true)}
+            activeOpacity={0.8}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`Filter listings. ${activeFilterCount} active filters`}
+          >
+            <Feather
+              name="sliders"
+              size={18}
+              color={activeFilterCount > 0 ? "#ffffff" : CAMPUS_HUB_COLORS.neutralText}
+            />
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Active Filter Chips Strip */}
+        {activeFilterCount > 0 && (
+          <View style={styles.activeChipsRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.activeChipsContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              {typeFilter !== "ALL" && (
+                <TouchableOpacity
+                  style={styles.activeChip}
+                  onPress={() => setTypeFilter("ALL")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.activeChipText}>
+                    {typeFilter === "LOST" ? "Lost" : "Found"}
+                  </Text>
+                  <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.lostFoundAccentText} />
+                </TouchableOpacity>
+              )}
+              {statusFilter !== "ALL" && (
+                <TouchableOpacity
+                  style={styles.activeChip}
+                  onPress={() => setStatusFilter("ALL")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.activeChipText}>
+                    {statusFilter === "ACTIVE" ? "Active" : "Resolved"}
+                  </Text>
+                  <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.lostFoundAccentText} />
+                </TouchableOpacity>
+              )}
+              {categoryFilter !== "ALL" && (
+                <TouchableOpacity
+                  style={styles.activeChip}
+                  onPress={() => setCategoryFilter("ALL")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.activeChipText}>
+                    {CATEGORY_LABELS[categoryFilter] || categoryFilter}
+                  </Text>
+                  <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.lostFoundAccentText} />
+                </TouchableOpacity>
+              )}
+              {myPostsOnly && (
+                <TouchableOpacity
+                  style={styles.activeChip}
+                  onPress={() => setMyPostsOnly(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.activeChipText}>My Posts</Text>
+                  <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.lostFoundAccentText} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.clearAllBtn}
+                onPress={resetAllFilters}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.clearAllText}>Clear All</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
+      </View>
+
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: insets.bottom + 130 },
+          { paddingBottom: insets.bottom + 110 },
         ]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={false}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -127,115 +457,25 @@ export function LostFoundSection() {
             tintColor={ACCENT}
           />
         }
-      >
-        <View style={styles.searchRow}>
-          <Feather name="search" size={16} color={CAMPUS_HUB_COLORS.subtleText} style={{ marginRight: 10 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by title, location..."
-            placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            accessible
-            accessibilityLabel="Search lost and found"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} accessible accessibilityRole="button" accessibilityLabel="Clear search">
-              <Feather name="x-circle" size={16} color={CAMPUS_HUB_COLORS.subtleText} />
-            </TouchableOpacity>
-          )}
-        </View>
+      />
 
-        <View style={styles.heroCard}>
-          <View style={styles.heroTopRow}>
-            <View style={[styles.heroPill, { backgroundColor: "rgba(245,158,11,0.18)" }]}>
-              <Text style={[styles.heroPillText, { color: "#fde68a" }]}>CAMPUS LOST & FOUND</Text>
-            </View>
-          </View>
-          <Text style={styles.heroTitle}>Help the Community</Text>
-          <Text style={styles.heroSubtitle}>
-            Post what you lost or found. Reunite items with their owners.
-          </Text>
-          <View style={styles.statsRow}>
-            {[
-              { label: "Total Posts", value: counts.total },
-              { label: "Lost", value: counts.lost },
-              { label: "Found", value: counts.found },
-            ].map((stat, i) => (
-              <React.Fragment key={stat.label}>
-                {i > 0 && <View style={styles.statDivider} />}
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{stat.value}</Text>
-                  <Text style={styles.statLabel}>{stat.label}</Text>
-                </View>
-              </React.Fragment>
-            ))}
-          </View>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            return (
-              <TouchableOpacity
-                key={f.key}
-                style={[styles.filterPill, active && { backgroundColor: ACCENT }]}
-                onPress={() => setActiveFilter(f.key)}
-                activeOpacity={0.8}
-                accessible
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={f.label}
-              >
-                <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {isLoading ? (
-          <View style={styles.centerState}>
-            <ActivityIndicator size="large" color={ACCENT} />
-          </View>
-        ) : filtered.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Feather name="search" size={36} color={CAMPUS_HUB_COLORS.subtleText} />
-            <Text style={styles.stateTitle}>Nothing here yet</Text>
-            <Text style={styles.stateSubtitle}>
-              {searchQuery ? `No results for "${searchQuery}"` : "Be the first to post!"}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.feed}>
-            {filtered.map((post) => (
-              <LostFoundCard key={post.id} post={post} onPress={() => navigateToDetail(post.id)} />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-
-      <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 100 }]}
-        onPress={() => {
-          if (!currentUser) return Toast.show({ type: "error", text1: "Please log in first." });
-          setIsComposeVisible(true);
-        }}
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel="Create Lost & Found post"
-      >
-        <Feather name="plus" size={24} color="#ffffff" />
-      </TouchableOpacity>
-
+      {/* Post Creation Modal */}
       <ComposeLostFoundModal
         visible={isComposeVisible}
-        onClose={() => setIsComposeVisible(false)}
+        onClose={handleCloseCompose}
+        currentUser={currentUser}
+      />
+
+      {/* Filter Options Modal */}
+      <FilterModal
+        visible={isFilterModalVisible}
+        onClose={() => setIsFilterModalVisible(false)}
+        typeFilter={typeFilter}
+        statusFilter={statusFilter}
+        categoryFilter={categoryFilter}
+        myPostsOnly={myPostsOnly}
+        onApply={handleApplyFilters}
+        onReset={resetAllFilters}
         currentUser={currentUser}
       />
     </View>
@@ -245,69 +485,120 @@ export function LostFoundSection() {
 interface LostFoundCardProps {
   post: LostFoundPost;
   onPress: () => void;
+  currentUserId?: string;
 }
 
-const LostFoundCard = React.memo(function LostFoundCard({ post, onPress }: LostFoundCardProps) {
-  const isLost = post.type === "LOST";
-  const badgeBg = isLost ? CAMPUS_HUB_COLORS.dangerBg : CAMPUS_HUB_COLORS.marketplaceAccentLight;
-  const badgeColor = isLost ? CAMPUS_HUB_COLORS.dangerText : CAMPUS_HUB_COLORS.marketplaceAccentText;
+const LostFoundCard = React.memo(function LostFoundCard({
+  post,
+  onPress,
+  currentUserId,
+}: LostFoundCardProps) {
+  const isOwner = currentUserId === post.authorId;
+  const isResolved = post.status === "RESOLVED" || post.status === "CLAIMED";
+  const claimCount = post._count?.claims ?? 0;
+  const hasImage = Boolean(post.images?.[0]);
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isResolved && styles.cardResolved]}
       onPress={onPress}
       activeOpacity={0.85}
       accessible
       accessibilityRole="button"
-      accessibilityLabel={`${post.type === "LOST" ? "Lost" : "Found"}: ${post.title}`}
+      accessibilityLabel={`${post.type === "LOST" ? "Lost" : "Found"} item: ${post.title}. Location: ${post.location}.`}
     >
       <View style={styles.cardLeft}>
+        {/* Semantic Badges Row */}
         <View style={styles.cardTopRow}>
-          <View style={[styles.typeBadge, { backgroundColor: badgeBg }]}>
-            <Text style={[styles.typeBadgeText, { color: badgeColor }]}>
-              {isLost ? "LOST" : "FOUND"}
+          <TypeBadge type={post.type} />
+          {post.category && <CategoryBadge category={post.category} />}
+          {isResolved && <StatusBadge status="RESOLVED" />}
+        </View>
+
+        {/* Title & Description */}
+        <Text style={[styles.cardTitle, isResolved && styles.cardTitleResolved]} numberOfLines={2}>
+          {post.title}
+        </Text>
+
+        <Text style={styles.cardDesc} numberOfLines={2}>
+          {post.description}
+        </Text>
+
+        {/* Key Facts Row: Location */}
+        <View style={styles.cardFooter}>
+          <Feather name="map-pin" size={11} color={CAMPUS_HUB_COLORS.subtleText} />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {post.location}
+          </Text>
+        </View>
+
+        {/* Owner-only Claim notification badge */}
+        {isOwner && claimCount > 0 && !isResolved && (
+          <View style={styles.claimBadge}>
+            <Feather name="inbox" size={11} color="#0284c7" />
+            <Text style={styles.claimBadgeText}>
+              {claimCount} {claimCount === 1 ? "claim received" : "claims received"}
             </Text>
           </View>
-          {post.status === "CLAIMED" && (
-            <View style={[styles.typeBadge, { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight }]}>
-              <Text style={[styles.typeBadgeText, { color: CAMPUS_HUB_COLORS.marketplaceAccentText }]}>
-                CLAIMED
-              </Text>
+        )}
+      </View>
+
+      {/* Right Column: 84x84 Framed Thumbnail + Posted Time underneath */}
+      <View style={styles.cardRightCol}>
+        <View style={styles.thumbWrapper}>
+          {hasImage ? (
+            <Image source={{ uri: post.images[0] }} style={styles.cardThumb} />
+          ) : (
+            <View style={styles.thumbPlaceholder}>
+              <Feather
+                name={post.type === "LOST" ? "search" : "gift"}
+                size={22}
+                color={CAMPUS_HUB_COLORS.subtleText}
+              />
             </View>
           )}
         </View>
-        <Text style={styles.cardTitle} numberOfLines={2}>{post.title}</Text>
-        <Text style={styles.cardDesc} numberOfLines={2}>{post.description}</Text>
-        <View style={styles.cardFooter}>
-          <Feather name="map-pin" size={11} color={CAMPUS_HUB_COLORS.subtleText} />
-          <Text style={styles.locationText} numberOfLines={1}>{post.location}</Text>
-          <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
-        </View>
-        <View style={styles.commentCount}>
-          <Feather name="message-circle" size={12} color={CAMPUS_HUB_COLORS.subtleText} />
-          <Text style={styles.commentCountText}>{post._count?.comments ?? 0}</Text>
+
+        {/* Time directly under the card image */}
+        <View style={styles.imageTimeRow}>
+          <Feather name="clock" size={10} color={CAMPUS_HUB_COLORS.subtleText} />
+          <Text style={styles.imageTimeText} numberOfLines={1}>
+            {timeAgo(post.createdAt)}
+          </Text>
         </View>
       </View>
-      {post.images?.[0] && (
-        <Image source={{ uri: post.images[0] }} style={styles.cardImage} />
-      )}
     </TouchableOpacity>
   );
 });
 
 const styles = StyleSheet.create({
   scroll: {
-    paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingHorizontal: 16,
+    paddingTop: 0,
   },
-  searchRow: {
+  topSearchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  statsBarContainer: {
+    marginBottom: 12,
+  },
+  searchFilterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
+  searchInputContainer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     paddingHorizontal: 16,
-    height: 48,
-    marginBottom: 16,
+    height: 46,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   searchInput: {
@@ -317,105 +608,168 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.neutralText,
   },
-  heroCard: {
-    backgroundColor: "#78350f",
-    borderRadius: 26,
-    padding: 22,
-    marginBottom: 16,
-    ...CAMPUS_HUB_COLORS.heroShadow,
+  clearSearchBtn: {
+    padding: 4,
   },
-  heroTopRow: {
-    marginBottom: 10,
-  },
-  heroPill: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-  },
-  heroPillText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-  },
-  heroTitle: {
-    fontFamily,
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#ffffff",
-    letterSpacing: -0.4,
-    marginBottom: 4,
-  },
-  heroSubtitle: {
-    fontFamily,
-    fontSize: 13,
-    color: "rgba(255,255,255,0.72)",
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  statsRow: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.12)",
-    paddingTop: 12,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statValue: {
-    fontFamily,
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  statLabel: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.65)",
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    alignSelf: "center",
-  },
-  filterRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-    paddingRight: 10,
-  },
-  filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+  filterIconButton: {
+    width: 46,
+    height: 46,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: CAMPUS_HUB_COLORS.white,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
+    position: "relative",
   },
-  filterText: {
+  filterIconButtonActive: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  filterBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: CAMPUS_HUB_COLORS.dangerText,
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  filterBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  activeChipsRow: {
+    marginBottom: 12,
+  },
+  activeChipsContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  activeChipText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.neutralText,
+    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
   },
-  filterTextActive: {
-    color: CAMPUS_HUB_COLORS.white,
+  clearAllBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
-  feed: {
-    gap: 12,
+  clearAllText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.subtleText,
   },
-  card: {
+
+  // Compact Modern Stats Bar
+  statsBar: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
-    padding: 16,
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    ...CAMPUS_HUB_COLORS.shadow,
+  },
+  statsBarHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  statsBarTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  statsBarTagText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: ACCENT,
+    letterSpacing: 0.6,
+  },
+  statsBarSub: {
+    fontFamily,
+    fontSize: 11,
+    color: CAMPUS_HUB_COLORS.subtleText,
+    fontWeight: "500",
+  },
+  statsBarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  statCell: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 4,
+  },
+  statCount: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  statTitle: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.subtleText,
+    marginTop: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: CAMPUS_HUB_COLORS.subtleBorder,
+  },
+
+  // Cards
+  card: {
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: 20,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
+  },
+  cardResolved: {
+    backgroundColor: "#fcfdfd",
+    borderColor: "#e2e8f0",
   },
   cardLeft: {
     flex: 1,
@@ -423,19 +777,10 @@ const styles = StyleSheet.create({
   },
   cardTopRow: {
     flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 6,
-    marginBottom: 4,
-  },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-  },
-  typeBadgeText: {
-    fontFamily,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.4,
+    marginBottom: 2,
   },
   cardTitle: {
     fontFamily,
@@ -443,6 +788,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     lineHeight: 20,
+  },
+  cardTitleResolved: {
+    color: "#475569",
   },
   cardDesc: {
     fontFamily,
@@ -455,7 +803,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 6,
+    marginTop: 4,
   },
   locationText: {
     fontFamily,
@@ -464,41 +812,68 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
     flex: 1,
   },
-  timeText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "500",
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
-  commentCount: {
+  claimBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    backgroundColor: "#f0f9ff",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    alignSelf: "flex-start",
     marginTop: 4,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
   },
-  commentCountText: {
+  claimBadgeText: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#0369a1",
   },
-  cardImage: {
-    width: 76,
-    height: 76,
-    borderRadius: 14,
+
+  // Right Column: Thumbnail + Time underneath
+  cardRightCol: {
+    alignItems: "center",
+    width: 84,
+  },
+  thumbWrapper: {
+    width: 84,
+    height: 84,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+  },
+  cardThumb: {
+    width: "100%",
+    height: "100%",
     resizeMode: "cover",
   },
-  fab: {
-    position: "absolute",
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: ACCENT,
-    justifyContent: "center",
+  thumbPlaceholder: {
+    width: "100%",
+    height: "100%",
     alignItems: "center",
-    ...CAMPUS_HUB_COLORS.heroShadow,
+    justifyContent: "center",
   },
+  imageTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    marginTop: 6,
+    width: "100%",
+  },
+  imageTimeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+  },
+
+  // States & Loaders
   centerState: {
     alignItems: "center",
     paddingVertical: 60,
@@ -516,6 +891,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: CAMPUS_HUB_COLORS.subtleText,
     textAlign: "center",
+    paddingHorizontal: 20,
+    lineHeight: 18,
   },
   emptyCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
@@ -523,7 +900,24 @@ const styles = StyleSheet.create({
     padding: 34,
     alignItems: "center",
     gap: 8,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
+  },
+  footerLoader: {
+    paddingVertical: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  endNotice: {
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  endNoticeText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.subtleText,
   },
   retryBtn: {
     paddingHorizontal: 24,

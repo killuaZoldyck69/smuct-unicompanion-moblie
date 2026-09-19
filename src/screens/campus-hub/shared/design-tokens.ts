@@ -44,6 +44,23 @@ export const CAMPUS_HUB_COLORS = {
     shadowRadius: 24,
     elevation: 6,
   },
+  // Lost vs Found semantic tones
+  lostRose: "#e11d48",
+  lostRoseBg: "#fff1f2",
+  lostRoseText: "#be123c",
+  lostRoseBorder: "#fecdd3",
+
+  foundTeal: "#0d9488",
+  foundTealBg: "#f0fdfa",
+  foundTealText: "#0f766e",
+  foundTealBorder: "#99f6e4",
+
+  resolvedGreen: "#10b981",
+  resolvedGreenBg: "#ecfdf5",
+  resolvedGreenText: "#047857",
+  resolvedGreenBorder: "#a7f3d0",
+
+  surfaceMuted: "#f1f5f9",
 } as const;
 
 export const fontFamily = Platform.select({
@@ -69,3 +86,17 @@ export function timeAgo(dateString: string): string {
     month: "short",
   });
 }
+
+export function formatDateTime(dateString: string): string {
+  if (!dateString) return "";
+  const d = new Date(dateString);
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
