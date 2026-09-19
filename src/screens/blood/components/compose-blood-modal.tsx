@@ -10,8 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import {
   BENTO_COLORS,
@@ -38,210 +39,281 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
   onClose,
   isSubmitting,
 }: ComposeBloodModalProps) {
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const modalHeight = Math.round(windowHeight * 0.88);
+
+  const canSubmit =
+    form.patientName.trim().length > 0 &&
+    form.patientCondition.trim().length > 0 &&
+    form.location.trim().length > 0 &&
+    form.contactPhone.trim().length > 0;
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      transparent={true}
+      statusBarTranslucent={true}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <View style={styles.overlay}>
+        {/* Tap outside backdrop to dismiss */}
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+          accessible={false}
+        />
+
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ flex: 1 }}
+          style={styles.keyboardAvoid}
         >
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.closeBtn}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel blood request"
+          <View style={[styles.sheet, { height: modalHeight }]}>
+            {/* Drag Handle */}
+            <View style={styles.dragHandle} />
+
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.closeBtn}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel blood request"
+              >
+                <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>New Blood Request</Text>
+              <View style={{ width: 36 }} />
+            </View>
+
+            {/* Scrollable Form Content */}
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>New Blood Request</Text>
-            <View style={{ width: 36 }} />
+              {/* Patient Name */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>PATIENT FULL NAME</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={form.patientName}
+                  onChangeText={(text) =>
+                    onChangeForm((prev) => ({ ...prev, patientName: text }))
+                  }
+                  placeholder="e.g. Md. Shafiqul Islam"
+                  placeholderTextColor={BENTO_COLORS.subtleText}
+                  accessible={true}
+                  accessibilityLabel="Patient Name"
+                />
+              </View>
+
+              {/* Patient Condition */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>MEDICAL CONDITION / REASON</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={form.patientCondition}
+                  onChangeText={(text) =>
+                    onChangeForm((prev) => ({
+                      ...prev,
+                      patientCondition: text,
+                    }))
+                  }
+                  placeholder="e.g. Emergency Surgery, Dengue, Accident"
+                  placeholderTextColor={BENTO_COLORS.subtleText}
+                  accessible={true}
+                  accessibilityLabel="Patient Condition or Reason"
+                />
+              </View>
+
+              {/* Blood Group Selector */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>BLOOD GROUP NEEDED</Text>
+                <View style={styles.bloodGroupsGrid}>
+                  {BLOOD_GROUPS.map((bg) => {
+                    const isSelected = form.bloodGroup === bg.value;
+                    return (
+                      <TouchableOpacity
+                        key={bg.value}
+                        style={[
+                          styles.bloodGroupChip,
+                          isSelected && styles.bloodGroupChipActive,
+                        ]}
+                        onPress={() =>
+                          onChangeForm((prev) => ({
+                            ...prev,
+                            bloodGroup: bg.value,
+                          }))
+                        }
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Select blood group ${bg.label}`}
+                      >
+                        <Text
+                          style={[
+                            styles.bloodGroupChipText,
+                            isSelected && styles.bloodGroupChipTextActive,
+                          ]}
+                        >
+                          {bg.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Location / Hospital */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>HOSPITAL / LOCATION</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={form.location}
+                  onChangeText={(text) =>
+                    onChangeForm((prev) => ({ ...prev, location: text }))
+                  }
+                  placeholder="e.g. Uttara Adhunik Hospital, Ward 4"
+                  placeholderTextColor={BENTO_COLORS.subtleText}
+                  accessible={true}
+                  accessibilityLabel="Hospital or Location"
+                />
+              </View>
+
+              {/* Urgency Selector */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>URGENCY PRIORITY</Text>
+                <View style={styles.urgencyRow}>
+                  {URGENCY_LEVELS.map((level) => {
+                    const isSelected = form.urgency === level;
+                    return (
+                      <TouchableOpacity
+                        key={level}
+                        style={[
+                          styles.urgencyChip,
+                          isSelected && styles.urgencyChipActive,
+                        ]}
+                        onPress={() =>
+                          onChangeForm((prev) => ({ ...prev, urgency: level }))
+                        }
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Priority ${level}`}
+                      >
+                        <Text
+                          style={[
+                            styles.urgencyChipText,
+                            isSelected && styles.urgencyChipTextActive,
+                          ]}
+                        >
+                          {level}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Contact Phone */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>EMERGENCY CONTACT PHONE</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={form.contactPhone}
+                  onChangeText={(text) =>
+                    onChangeForm((prev) => ({ ...prev, contactPhone: text }))
+                  }
+                  placeholder="e.g. +880 1700-000000"
+                  placeholderTextColor={BENTO_COLORS.subtleText}
+                  keyboardType="phone-pad"
+                  accessible={true}
+                  accessibilityLabel="Emergency contact phone number"
+                />
+              </View>
+            </ScrollView>
+
+            {/* Bottom Docked Action Footer with Safe Area */}
+            <View
+              style={[
+                styles.modalFooter,
+                {
+                  paddingBottom:
+                    Math.max(insets.bottom, 16) +
+                    (Platform.OS === "android" ? 8 : 0),
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
+                ]}
+                onPress={onSubmit}
+                disabled={!canSubmit || isSubmitting}
+                activeOpacity={0.85}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Publish blood request"
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Feather
+                      name="droplet"
+                      size={16}
+                      color="#ffffff"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.submitBtnText}>
+                      Publish Blood Request
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Patient Name */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Patient Full Name</Text>
-              <TextInput
-                style={styles.formInput}
-                value={form.patientName}
-                onChangeText={(text) =>
-                  onChangeForm((prev) => ({ ...prev, patientName: text }))
-                }
-                placeholder="e.g. Md. Shafiqul Islam"
-                placeholderTextColor={BENTO_COLORS.subtleText}
-                accessible={true}
-                accessibilityLabel="Patient Name"
-              />
-            </View>
-
-            {/* Patient Condition */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Medical Condition / Reason</Text>
-              <TextInput
-                style={styles.formInput}
-                value={form.patientCondition}
-                onChangeText={(text) =>
-                  onChangeForm((prev) => ({ ...prev, patientCondition: text }))
-                }
-                placeholder="e.g. Emergency Surgery, Dengue, Accident"
-                placeholderTextColor={BENTO_COLORS.subtleText}
-                accessible={true}
-                accessibilityLabel="Patient Condition or Reason"
-              />
-            </View>
-
-            {/* Blood Group Selector (1-Tap Bento Chips) */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Blood Group Needed</Text>
-              <View style={styles.bloodGroupsGrid}>
-                {BLOOD_GROUPS.map((bg) => {
-                  const isSelected = form.bloodGroup === bg.value;
-                  return (
-                    <TouchableOpacity
-                      key={bg.value}
-                      style={[
-                        styles.bloodGroupChip,
-                        isSelected && styles.bloodGroupChipActive,
-                      ]}
-                      onPress={() =>
-                        onChangeForm((prev) => ({
-                          ...prev,
-                          bloodGroup: bg.value,
-                        }))
-                      }
-                      accessible={true}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Select blood group ${bg.label}`}
-                    >
-                      <Text
-                        style={[
-                          styles.bloodGroupChipText,
-                          isSelected && styles.bloodGroupChipTextActive,
-                        ]}
-                      >
-                        {bg.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Location / Hospital */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Hospital / Location</Text>
-              <TextInput
-                style={styles.formInput}
-                value={form.location}
-                onChangeText={(text) =>
-                  onChangeForm((prev) => ({ ...prev, location: text }))
-                }
-                placeholder="e.g. Uttara Adhunik Hospital, Ward 4"
-                placeholderTextColor={BENTO_COLORS.subtleText}
-                accessible={true}
-                accessibilityLabel="Hospital or Location"
-              />
-            </View>
-
-            {/* Urgency Selector */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Urgency Priority</Text>
-              <View style={styles.urgencyRow}>
-                {URGENCY_LEVELS.map((level) => {
-                  const isSelected = form.urgency === level;
-                  return (
-                    <TouchableOpacity
-                      key={level}
-                      style={[
-                        styles.urgencyChip,
-                        isSelected && styles.urgencyChipActive,
-                      ]}
-                      onPress={() =>
-                        onChangeForm((prev) => ({ ...prev, urgency: level }))
-                      }
-                      accessible={true}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Priority ${level}`}
-                    >
-                      <Text
-                        style={[
-                          styles.urgencyChipText,
-                          isSelected && styles.urgencyChipTextActive,
-                        ]}
-                      >
-                        {level}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Contact Phone */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Emergency Contact Phone</Text>
-              <TextInput
-                style={styles.formInput}
-                value={form.contactPhone}
-                onChangeText={(text) =>
-                  onChangeForm((prev) => ({ ...prev, contactPhone: text }))
-                }
-                placeholder="e.g. +880 1700-000000"
-                placeholderTextColor={BENTO_COLORS.subtleText}
-                keyboardType="phone-pad"
-                accessible={true}
-                accessibilityLabel="Emergency contact phone number"
-              />
-            </View>
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={styles.submitBtn}
-              onPress={onSubmit}
-              disabled={isSubmitting}
-              activeOpacity={0.85}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Publish blood request"
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text style={styles.submitBtnText}>Publish Blood Request</Text>
-              )}
-            </TouchableOpacity>
-          </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "flex-end",
+  },
+  keyboardAvoid: {
+    width: "100%",
+  },
+  sheet: {
     backgroundColor: BENTO_COLORS.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: "hidden",
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(0, 0, 0, 0.15)",
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 6,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: BENTO_COLORS.subtleBorder,
-    backgroundColor: BENTO_COLORS.background,
   },
   headerTitle: {
     fontFamily,
@@ -260,7 +332,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 24,
   },
   formGroup: {
     marginBottom: 18,
@@ -341,6 +413,13 @@ const styles = StyleSheet.create({
   urgencyChipTextActive: {
     color: "#ffffff",
   },
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: BENTO_COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: BENTO_COLORS.subtleBorder,
+  },
   submitBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -348,8 +427,10 @@ const styles = StyleSheet.create({
     backgroundColor: BENTO_COLORS.crimson,
     paddingVertical: 16,
     borderRadius: BENTO_COLORS.pillRadius,
-    marginTop: 10,
     ...BENTO_COLORS.heroShadow,
+  },
+  submitBtnDisabled: {
+    opacity: 0.5,
   },
   submitBtnText: {
     fontFamily,

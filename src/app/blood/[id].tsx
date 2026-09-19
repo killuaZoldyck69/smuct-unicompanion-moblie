@@ -73,13 +73,28 @@ export const format12HourTime = (dateString: string) => {
 
 const getUserSubtitle = (user: any) => {
   if (!user) return "";
-  if (user.studentProfile) {
-    return `${user.studentProfile.department} • Sem ${user.studentProfile.currentSemester}`;
+  if (user.studentProfile?.department) {
+    return user.studentProfile.department;
   }
-  if (user.teacherProfile) {
-    return `${user.teacherProfile.designation} • ${user.teacherProfile.department}`;
+  if (user.teacherProfile?.department) {
+    return user.teacherProfile.department;
   }
-  return "University Member";
+  return user.role || "University Member";
+};
+
+const formatBloodGroupSymbol = (group: string | undefined): string => {
+  if (!group) return "N/A";
+  const map: Record<string, string> = {
+    A_POSITIVE: "A+",
+    A_NEGATIVE: "A-",
+    B_POSITIVE: "B+",
+    B_NEGATIVE: "B-",
+    AB_POSITIVE: "AB+",
+    AB_NEGATIVE: "AB-",
+    O_POSITIVE: "O+",
+    O_NEGATIVE: "O-",
+  };
+  return map[group] || group.replace(/_/g, " ");
 };
 
 // ==================================================
@@ -94,6 +109,20 @@ export default function BloodThreadScreen() {
   const currentUser = session?.user as any;
 
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    confirmColor?: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    onConfirm: () => {},
+  });
 
   const { data: post, isLoading } = useQuery({
     queryKey: ["bloodThread", id],
@@ -110,7 +139,7 @@ export default function BloodThreadScreen() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bloodThread", id] });
-      queryClient.invalidateQueries({ queryKey: ["bloodPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["bloodFeed"] });
       Toast.show({
         type: "success",
         text1: "Volunteered Successfully!",
@@ -129,7 +158,7 @@ export default function BloodThreadScreen() {
     mutationFn: async () => await api.patch(`/blood/${id}/resolve`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bloodThread", id] });
-      queryClient.invalidateQueries({ queryKey: ["bloodPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["bloodFeed"] });
       Toast.show({ type: "success", text1: "Marked as Fulfilled" });
     },
   });
@@ -137,7 +166,7 @@ export default function BloodThreadScreen() {
   const deleteMutation = useMutation({
     mutationFn: async () => await api.delete(`/blood/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bloodPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["bloodFeed"] });
       Toast.show({ type: "info", text1: "Request Deleted" });
       router.back();
     },
@@ -145,21 +174,43 @@ export default function BloodThreadScreen() {
 
   const handleVolunteer = () => {
     if (!currentUser?.bloodGroup || !currentUser?.phoneNumber) {
-      Alert.alert(
-        "Profile Incomplete",
-        "You must add your Blood Group and Phone Number to your profile before you can volunteer.",
-        [{ text: "OK" }]
-      );
+      Toast.show({
+        type: "error",
+        text1: "Profile Incomplete",
+        text2: "Add your Blood Group and Phone Number to your profile before volunteering.",
+      });
       return;
     }
-    Alert.alert(
-      "Volunteer to Donate",
-      "Are you sure you want to volunteer? The patient's family will be able to see your contact number.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Confirm", onPress: () => respondMutation.mutate() },
-      ]
-    );
+    setConfirmModal({
+      visible: true,
+      title: "Volunteer to Donate",
+      message: "Are you sure you want to volunteer? The patient's family will be able to see your contact number.",
+      confirmText: "Yes, Volunteer",
+      confirmColor: "#059669",
+      onConfirm: () => respondMutation.mutate(),
+    });
+  };
+
+  const handleResolvePress = () => {
+    setConfirmModal({
+      visible: true,
+      title: "Mark as Fulfilled",
+      message: "Are you sure this blood request has been fulfilled? It will be marked as resolved for the campus community.",
+      confirmText: "Mark Fulfilled",
+      confirmColor: "#059669",
+      onConfirm: () => resolveMutation.mutate(),
+    });
+  };
+
+  const handleDeletePress = () => {
+    setConfirmModal({
+      visible: true,
+      title: "Delete Request",
+      message: "Are you sure you want to delete this emergency request? This action cannot be undone.",
+      confirmText: "Delete",
+      confirmColor: BENTO_COLORS.crimson,
+      onConfirm: () => deleteMutation.mutate(),
+    });
   };
 
   const handleCall = (phoneNumber?: string) => {
@@ -177,7 +228,8 @@ export default function BloodThreadScreen() {
     if (!post) return;
     try {
       const bg = post.bloodGroup.replace("_", " ");
-      const msg = `🩸 URGENT BLOOD NEEDED: ${bg}\n\nPatient: ${post.patientName}\nCondition: ${
+      const symbol = formatBloodGroupSymbol(post.bloodGroup);
+      const msg = `🩸 URGENT BLOOD NEEDED: ${symbol} (${bg})\n\nPatient: ${post.patientName}\nCondition: ${
         post.patientCondition || "Emergency"
       }\nHospital: ${post.location}\nEmergency Contact: ${
         post.contactPhone
@@ -205,16 +257,22 @@ export default function BloodThreadScreen() {
     );
   }
 
-  const isAuthor = currentUser?.id === post.authorId;
+  const isAuthor = currentUser?.id === post.authorId || currentUser?.role === "ADMIN";
   const hasVolunteered = post.responses?.some(
     (r: any) => r.responderId === currentUser?.id
   );
   const formattedBloodGroup = post.bloodGroup.replace("_", " ");
+  const bloodSymbol = formatBloodGroupSymbol(post.bloodGroup);
 
   const renderOriginalPost = () => (
     <View style={styles.postHeaderContainer}>
       {/* 1. HERO PATIENT & BLOOD GROUP BENTO CARD */}
-      <View style={styles.heroBentoCard}>
+      <View
+        style={[
+          styles.heroBentoCard,
+          post.isFulfilled && styles.heroBentoCardFulfilled,
+        ]}
+      >
         <View style={styles.heroTopRow}>
           <View style={styles.heroTagPill}>
             <Text style={styles.heroTagText}>EMERGENCY CASE</Text>
@@ -232,7 +290,12 @@ export default function BloodThreadScreen() {
         </View>
 
         {/* Big Blood Group Badge */}
-        <View style={styles.bloodBadgeHeroPill}>
+        <View
+          style={[
+            styles.bloodBadgeHeroPill,
+            post.isFulfilled && styles.bloodBadgeHeroPillFulfilled,
+          ]}
+        >
           <Feather
             name="droplet"
             size={16}
@@ -240,7 +303,7 @@ export default function BloodThreadScreen() {
             style={{ marginRight: 6 }}
           />
           <Text style={styles.bloodBadgeHeroText}>
-            {formattedBloodGroup}
+            {bloodSymbol} ({formattedBloodGroup})
           </Text>
         </View>
 
@@ -354,7 +417,7 @@ export default function BloodThreadScreen() {
             {!post.isFulfilled && (
               <TouchableOpacity
                 style={styles.actionBtnResolve}
-                onPress={() => resolveMutation.mutate()}
+                onPress={handleResolvePress}
                 accessible={true}
                 accessibilityRole="button"
                 accessibilityLabel="Mark request as fulfilled"
@@ -370,20 +433,7 @@ export default function BloodThreadScreen() {
             )}
             <TouchableOpacity
               style={styles.actionBtnDelete}
-              onPress={() => {
-                Alert.alert(
-                  "Delete Request",
-                  "Are you sure you want to delete this blood request?",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Delete",
-                      style: "destructive",
-                      onPress: () => deleteMutation.mutate(),
-                    },
-                  ]
-                );
-              }}
+              onPress={handleDeletePress}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Delete blood request"
@@ -678,6 +728,81 @@ export default function BloodThreadScreen() {
                 </TouchableOpacity>
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* BENTO ACTION CONFIRMATION MODAL */}
+      <Modal
+        visible={confirmModal.visible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() =>
+          setConfirmModal((prev) => ({ ...prev, visible: false }))
+        }
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalCard}>
+            <View
+              style={[
+                styles.confirmIconBox,
+                {
+                  backgroundColor:
+                    confirmModal.confirmColor === BENTO_COLORS.crimson
+                      ? "#fff1f2"
+                      : "#ecfdf5",
+                },
+              ]}
+            >
+              <Feather
+                name={
+                  confirmModal.confirmColor === BENTO_COLORS.crimson
+                    ? "trash-2"
+                    : "check-circle"
+                }
+                size={26}
+                color={
+                  confirmModal.confirmColor === BENTO_COLORS.crimson
+                    ? BENTO_COLORS.crimson
+                    : "#059669"
+                }
+              />
+            </View>
+            <Text style={styles.confirmModalTitle}>{confirmModal.title}</Text>
+            <Text style={styles.confirmModalMessage}>
+              {confirmModal.message}
+            </Text>
+
+            <View style={styles.confirmActionButtonsRow}>
+              <TouchableOpacity
+                style={styles.confirmCancelBtn}
+                onPress={() =>
+                  setConfirmModal((prev) => ({ ...prev, visible: false }))
+                }
+                activeOpacity={0.7}
+              >
+                <Text style={styles.confirmCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.confirmSubmitBtn,
+                  {
+                    backgroundColor:
+                      confirmModal.confirmColor || BENTO_COLORS.crimson,
+                  },
+                ]}
+                onPress={() => {
+                  setConfirmModal((prev) => ({ ...prev, visible: false }));
+                  confirmModal.onConfirm();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmSubmitBtnText}>
+                  {confirmModal.confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1274,5 +1399,85 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
+  },
+  heroBentoCardFulfilled: {
+    backgroundColor: "#064e3b",
+  },
+  bloodBadgeHeroPillFulfilled: {
+    backgroundColor: "#059669",
+  },
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  confirmModalCard: {
+    width: "100%",
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    ...BENTO_COLORS.heroShadow,
+  },
+  confirmIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  confirmModalTitle: {
+    fontFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  confirmModalMessage: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+    textAlign: "center",
+    lineHeight: 19,
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  confirmActionButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: BENTO_COLORS.pillRadius,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmCancelBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
+  },
+  confirmSubmitBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: BENTO_COLORS.pillRadius,
+    alignItems: "center",
+    justifyContent: "center",
+    ...BENTO_COLORS.shadow,
+  },
+  confirmSubmitBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ffffff",
   },
 });

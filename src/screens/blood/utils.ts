@@ -5,6 +5,36 @@ export const formatBloodGroup = (group: string | undefined): string => {
   return group.replace(/_/g, " ");
 };
 
+export const formatBloodGroupSymbol = (group: string | undefined): string => {
+  if (!group) return "N/A";
+  const map: Record<string, string> = {
+    A_POSITIVE: "A+",
+    A_NEGATIVE: "A-",
+    B_POSITIVE: "B+",
+    B_NEGATIVE: "B-",
+    AB_POSITIVE: "AB+",
+    AB_NEGATIVE: "AB-",
+    O_POSITIVE: "O+",
+    O_NEGATIVE: "O-",
+  };
+  return map[group] || group.replace(/_/g, " ");
+};
+
+export const getUserAcademicSubtitle = (author?: {
+  role?: string;
+  studentProfile?: { department?: string; program?: string } | null;
+  teacherProfile?: { department?: string; designation?: string } | null;
+}): string => {
+  if (!author) return "";
+  if (author.studentProfile?.department) {
+    return author.studentProfile.department;
+  }
+  if (author.teacherProfile?.department) {
+    return author.teacherProfile.department;
+  }
+  return author.role || "";
+};
+
 export const validateBloodPostInput = (
   form: NewBloodPostForm
 ): { isValid: boolean; error?: string } => {

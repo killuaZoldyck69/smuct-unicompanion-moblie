@@ -1,40 +1,38 @@
 import api from "./api";
+import type {
+  BloodAuthor,
+  BloodResponseItem,
+  BloodCounts,
+  BloodFeedMeta,
+  BloodFeedResponse,
+  GetBloodFeedParams,
+  BloodPostItem,
+  CreateBloodPostInput,
+  RespondBloodPostInput,
+} from "@/features/blood/types";
 
-export interface BloodPostItem {
-  id: string;
-  patientName: string;
-  patientCondition: string;
-  bloodGroup: string;
-  location: string;
-  urgency: string;
-  contactPhone: string;
-  isFulfilled: boolean;
-  createdAt: string;
-  authorId: string;
-  author?: {
-    id: string;
-    name: string;
-    image?: string | null;
-    phoneNumber?: string;
+export type {
+  BloodAuthor,
+  BloodResponseItem,
+  BloodCounts,
+  BloodFeedMeta,
+  BloodFeedResponse,
+  GetBloodFeedParams,
+  BloodPostItem,
+  CreateBloodPostInput,
+  RespondBloodPostInput,
+};
+
+export const getBloodFeedPaginated = async (
+  params?: GetBloodFeedParams,
+  signal?: AbortSignal,
+): Promise<BloodFeedResponse> => {
+  const res = await api.get("/blood", { params, signal });
+  return {
+    posts: res.data?.data || [],
+    meta: res.data?.meta,
   };
-  _count?: {
-    responses: number;
-  };
-  responses?: any[];
-}
-
-export interface CreateBloodPostInput {
-  patientName: string;
-  patientCondition: string;
-  bloodGroup: string;
-  location: string;
-  urgency: string;
-  contactPhone: string;
-}
-
-export interface RespondBloodPostInput {
-  message?: string;
-}
+};
 
 export const getBloodFeed = async (): Promise<BloodPostItem[]> => {
   const res = await api.get("/blood");
@@ -42,8 +40,11 @@ export const getBloodFeed = async (): Promise<BloodPostItem[]> => {
 };
 export const getBloodFeedAPI = getBloodFeed;
 
-export const getBloodPostById = async (id: string): Promise<BloodPostItem> => {
-  const res = await api.get(`/blood/${id}`);
+export const getBloodPostById = async (
+  id: string,
+  signal?: AbortSignal,
+): Promise<BloodPostItem> => {
+  const res = await api.get(`/blood/${id}`, { signal });
   return res.data?.data;
 };
 export const getBloodPostByIdAPI = getBloodPostById;

@@ -5,10 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ScrollView,
+  FlatList,
   RefreshControl,
   Alert,
   BackHandler,
+  ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -16,17 +18,26 @@ import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useBloodFeed, useCreateBloodPost } from "@/features/blood/useBlood";
+import {
+  useInfiniteBloodFeed,
+  useCreateBloodPost,
+} from "@/features/blood/useBlood";
+import { GetBloodFeedParams } from "@/services/blood-service";
 import {
   BENTO_COLORS,
-  BloodFilterType,
   fontFamily,
   NewBloodPostForm,
 } from "./constants";
-import { filterAndCountBloodPosts, validateBloodPostInput } from "./utils";
+import {
+  formatBloodGroupSymbol,
+  validateBloodPostInput,
+} from "./utils";
 import { BloodPostCard } from "./components/blood-post-card";
 import { BloodHeroCard } from "./components/blood-hero-card";
-import { BloodFilterPills } from "./components/blood-filter-pills";
+import {
+  BloodFilterModal,
+  BloodFilterState,
+} from "./components/blood-filter-modal";
 import { ComposeBloodModal } from "./components/compose-blood-modal";
 import {
   BloodSkeleton,
@@ -35,15 +46,34 @@ import {
 } from "./components/blood-states";
 
 export { BENTO_COLORS } from "./constants";
-export { formatBloodGroup } from "./utils";
+export { formatBloodGroup, formatBloodGroupSymbol } from "./utils";
+
+const DEFAULT_FILTERS: BloodFilterState = {
+  urgency: "ALL",
+  status: "ACTIVE",
+  bloodGroup: "ALL",
+  myPostsOnly: false,
+};
 
 export function Blood() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user: currentUser } = useCurrentUser();
 
-  const [activeFilter, setActiveFilter] = useState<BloodFilterType>("URGENT");
-  const [searchQuery, setSearchQuery] = useState("");
+  // Search & Filters state
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filters, setFilters] = useState<BloodFilterState>(DEFAULT_FILTERS);
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+
+  // Debounce search query to prevent keyboard auto-closing and reduce queries
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
   const [isComposeVisible, setIsComposeVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -56,8 +86,55 @@ export function Blood() {
     contactPhone: currentUser?.phoneNumber || "",
   });
 
-  const { data: posts, isLoading, isError, refetch } = useBloodFeed();
+  // Query parameters for server-side infinite pagination
+  const queryParams = useMemo<GetBloodFeedParams>(() => {
+    return {
+      limit: 15,
+      search: debouncedSearch.trim() || undefined,
+      bloodGroup: filters.bloodGroup !== "ALL" ? filters.bloodGroup : undefined,
+      urgency: filters.urgency !== "ALL" ? (filters.urgency as any) : undefined,
+      isFulfilled:
+        filters.status === "ACTIVE"
+          ? false
+          : filters.status === "FULFILLED"
+          ? true
+          : undefined,
+      myPosts: filters.myPostsOnly ? true : undefined,
+    };
+  }, [debouncedSearch, filters]);
+
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteBloodFeed(queryParams);
+
   const createPostMutation = useCreateBloodPost();
+
+  const posts = useMemo(() => {
+    return data?.pages.flatMap((page) => page.posts) ?? [];
+  }, [data]);
+
+  const counts = data?.pages[0]?.meta?.counts ?? {
+    total: 0,
+    active: 0,
+    urgent: 0,
+    fulfilled: 0,
+    myPosts: 0,
+  };
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.urgency !== "ALL") count++;
+    if (filters.status !== "ACTIVE") count++;
+    if (filters.bloodGroup !== "ALL") count++;
+    if (filters.myPostsOnly) count++;
+    return count;
+  }, [filters]);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -114,10 +191,6 @@ export function Blood() {
     });
   }, [newPost, createPostMutation, currentUser]);
 
-  const { filteredPosts, counts } = useMemo(() => {
-    return filterAndCountBloodPosts(posts, activeFilter, searchQuery);
-  }, [posts, activeFilter, searchQuery]);
-
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
@@ -135,8 +208,32 @@ export function Blood() {
     return () => sub.remove();
   }, [isComposeVisible]);
 
+  const handleApplyFilters = useCallback((newFilters: BloodFilterState) => {
+    setFilters(newFilters);
+    setIsFilterModalVisible(false);
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setFilters(DEFAULT_FILTERS);
+    setSearchInput("");
+    setDebouncedSearch("");
+    setIsFilterModalVisible(false);
+  }, []);
+
+  const renderFooter = useCallback(() => {
+    if (isFetchingNextPage) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={BENTO_COLORS.crimson} />
+        </View>
+      );
+    }
+    return <View style={{ height: Math.max(insets.bottom, 16) + 16 }} />;
+  }, [isFetchingNextPage, insets.bottom]);
+
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
+      {/* Top Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={handleBack}
@@ -166,40 +263,33 @@ export function Blood() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom > 0 ? insets.bottom + 120 : 132 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={[BENTO_COLORS.crimson]}
-            tintColor={BENTO_COLORS.crimson}
-          />
-        }
-      >
+      {/* Permanently Hoisted Search Bar & Filter Button (Prevents Keyboard Auto-Close) */}
+      <View style={styles.topControlsContainer}>
         <View style={styles.searchBarWrapper}>
           <Feather
             name="search"
             size={16}
             color={BENTO_COLORS.subtleText}
-            style={{ marginRight: 10 }}
+            style={{ marginRight: 8 }}
           />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by location, hospital, or blood group..."
+            placeholder="Search location, hospital, patient..."
             placeholderTextColor={BENTO_COLORS.subtleText}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+            value={searchInput}
+            onChangeText={setSearchInput}
             accessible={true}
             accessibilityLabel="Search blood requests"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
           />
-          {searchQuery.length > 0 && (
+          {searchInput.length > 0 && (
             <TouchableOpacity
-              onPress={() => setSearchQuery("")}
+              onPress={() => {
+                setSearchInput("");
+                setDebouncedSearch("");
+              }}
               style={{ padding: 4 }}
               accessible={true}
               accessibilityRole="button"
@@ -214,50 +304,182 @@ export function Blood() {
           )}
         </View>
 
-        <BloodHeroCard counts={counts} />
-
-        <BloodFilterPills
-          activeFilter={activeFilter}
-          onSelectFilter={setActiveFilter}
-          counts={counts}
-        />
-
-        {isLoading ? (
-          <BloodSkeleton />
-        ) : isError ? (
-          <BloodError onRetry={refetch} />
-        ) : filteredPosts.length === 0 ? (
-          <BloodEmpty
-            searchQuery={searchQuery}
-            activeFilter={activeFilter}
-            onReset={() => {
-              setActiveFilter("ALL");
-              setSearchQuery("");
-            }}
+        <TouchableOpacity
+          style={[
+            styles.filterIconButton,
+            activeFilterCount > 0 && styles.filterIconButtonActive,
+          ]}
+          onPress={() => setIsFilterModalVisible(true)}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Open filters modal, ${activeFilterCount} active filters`}
+          activeOpacity={0.8}
+        >
+          <Feather
+            name="sliders"
+            size={18}
+            color={
+              activeFilterCount > 0 ? "#ffffff" : BENTO_COLORS.neutralText
+            }
           />
-        ) : (
-          <View style={styles.cardsListContainer}>
-            {filteredPosts.map((item: any) => (
-              <BloodPostCard key={item.id} item={item} />
-            ))}
-          </View>
-        )}
-      </ScrollView>
+          {activeFilterCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity
-        style={[
-          styles.fabBtn,
-          { bottom: insets.bottom > 0 ? insets.bottom + 92 : 104 },
-        ]}
-        onPress={verifyProfileAndCompose}
-        activeOpacity={0.85}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel="Post blood request"
-      >
-        <Feather name="plus" size={24} color="#ffffff" />
-      </TouchableOpacity>
+      {/* Active Filter Chips Strip */}
+      {(activeFilterCount > 0 || debouncedSearch.length > 0) && (
+        <View style={styles.activeFiltersStripWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.activeFiltersScroll}
+          >
+            {debouncedSearch.length > 0 && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() => {
+                  setSearchInput("");
+                  setDebouncedSearch("");
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filterChipText}>
+                  "{debouncedSearch}"
+                </Text>
+                <Feather name="x" size={12} color={BENTO_COLORS.subtleText} />
+              </TouchableOpacity>
+            )}
 
+            {filters.status !== "ACTIVE" && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, status: "ACTIVE" }))
+                }
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filterChipText}>
+                  {filters.status === "ALL" ? "All Statuses" : "Fulfilled Only"}
+                </Text>
+                <Feather name="x" size={12} color={BENTO_COLORS.subtleText} />
+              </TouchableOpacity>
+            )}
+
+            {filters.urgency !== "ALL" && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, urgency: "ALL" }))
+                }
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filterChipText}>
+                  {filters.urgency} Urgency
+                </Text>
+                <Feather name="x" size={12} color={BENTO_COLORS.subtleText} />
+              </TouchableOpacity>
+            )}
+
+            {filters.bloodGroup !== "ALL" && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, bloodGroup: "ALL" }))
+                }
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filterChipText}>
+                  {formatBloodGroupSymbol(filters.bloodGroup)}
+                </Text>
+                <Feather name="x" size={12} color={BENTO_COLORS.subtleText} />
+              </TouchableOpacity>
+            )}
+
+            {filters.myPostsOnly && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, myPostsOnly: false }))
+                }
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filterChipText}>My Requests</Text>
+                <Feather name="x" size={12} color={BENTO_COLORS.subtleText} />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.clearAllChip}
+              onPress={handleResetFilters}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.clearAllChipText}>Reset All</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Virtualized Infinite Feed */}
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <BloodPostCard item={item} />}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        ListHeaderComponent={<BloodHeroCard counts={counts} />}
+        ListEmptyComponent={
+          isLoading ? (
+            <BloodSkeleton />
+          ) : isError ? (
+            <BloodError onRetry={refetch} />
+          ) : (
+            <BloodEmpty
+              searchQuery={debouncedSearch}
+              activeFilter={
+                filters.urgency === "High"
+                  ? "URGENT"
+                  : filters.status === "FULFILLED"
+                  ? "FULFILLED"
+                  : "ALL"
+              }
+              onReset={handleResetFilters}
+            />
+          )
+        }
+        ListFooterComponent={renderFooter}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[BENTO_COLORS.crimson]}
+            tintColor={BENTO_COLORS.crimson}
+          />
+        }
+      />
+
+      {/* Filter Modal */}
+      <BloodFilterModal
+        visible={isFilterModalVisible}
+        onClose={() => setIsFilterModalVisible(false)}
+        filters={filters}
+        onApply={handleApplyFilters}
+        onReset={handleResetFilters}
+        counts={counts}
+      />
+
+      {/* Compose Blood Modal */}
       <ComposeBloodModal
         visible={isComposeVisible}
         form={newPost}
@@ -281,7 +503,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 14,
+    paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
   },
   headerIconButton: {
@@ -310,20 +532,23 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.subtleText,
     marginTop: 2,
   },
-  scrollContent: {
+  topControlsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 10,
+    gap: 10,
+    marginBottom: 8,
   },
   searchBarWrapper: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: BENTO_COLORS.white,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: BENTO_COLORS.pillRadius,
+    height: 48,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
-    marginBottom: 16,
     ...BENTO_COLORS.shadow,
   },
   searchInput: {
@@ -333,18 +558,84 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.neutralText,
     padding: 0,
   },
-  cardsListContainer: {
-    marginBottom: 16,
+  filterIconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: BENTO_COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    position: "relative",
+    ...BENTO_COLORS.shadow,
   },
-  fabBtn: {
+  filterIconButtonActive: {
+    backgroundColor: BENTO_COLORS.deepNavy,
+    borderColor: BENTO_COLORS.deepNavy,
+  },
+  filterBadge: {
     position: "absolute",
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    top: -4,
+    right: -4,
     backgroundColor: BENTO_COLORS.crimson,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
+  },
+  filterBadgeText: {
+    fontFamily,
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  activeFiltersStripWrapper: {
+    marginBottom: 8,
+  },
+  activeFiltersScroll: {
+    paddingHorizontal: 20,
+    gap: 8,
+    alignItems: "center",
+  },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO_COLORS.white,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 6,
+    ...BENTO_COLORS.shadow,
+  },
+  filterChipText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: BENTO_COLORS.neutralText,
+  },
+  clearAllChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  clearAllChipText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.crimson,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  footerLoader: {
+    paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-    ...BENTO_COLORS.heroShadow,
   },
 });

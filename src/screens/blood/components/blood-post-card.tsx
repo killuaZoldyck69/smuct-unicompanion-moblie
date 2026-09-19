@@ -4,7 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { format12HourTime } from "@/utils/date-formatter";
 import { BENTO_COLORS, fontFamily } from "../constants";
-import { formatBloodGroup } from "../utils";
+import { formatBloodGroupSymbol, getUserAcademicSubtitle } from "../utils";
 
 interface BloodPostCardProps {
   item: any;
@@ -14,29 +14,36 @@ export const BloodPostCard = React.memo(function BloodPostCard({
   item,
 }: BloodPostCardProps) {
   const router = useRouter();
-  const formattedGroup = formatBloodGroup(item.bloodGroup);
+  const bloodSymbol = formatBloodGroupSymbol(item.bloodGroup);
   const isUrgent = item.urgency === "High" && !item.isFulfilled;
+  const isFulfilled = !!item.isFulfilled;
+  const authorSubtitle = getUserAcademicSubtitle(item.author);
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isFulfilled && styles.cardFulfilled]}
       onPress={() => router.push(`/blood/${item.id}`)}
       activeOpacity={0.85}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`Blood request for ${formattedGroup}, Patient: ${
+      accessibilityLabel={`Blood request for ${bloodSymbol}, Patient: ${
         item.patientName
       }, Location: ${item.location}. Tap to view details.`}
     >
       <View style={styles.headerRow}>
-        <View style={styles.bloodBadgePill}>
+        <View
+          style={[
+            styles.bloodBadgePill,
+            isFulfilled && styles.bloodBadgePillFulfilled,
+          ]}
+        >
           <Feather
             name="droplet"
             size={12}
             color="#ffffff"
             style={{ marginRight: 4 }}
           />
-          <Text style={styles.bloodBadgeText}>{formattedGroup}</Text>
+          <Text style={styles.bloodBadgeText}>{bloodSymbol}</Text>
         </View>
 
         <View style={styles.statusPillsRow}>
@@ -45,7 +52,7 @@ export const BloodPostCard = React.memo(function BloodPostCard({
               <View style={styles.pulseDot} />
               <Text style={styles.urgentChipText}>URGENT</Text>
             </View>
-          ) : item.isFulfilled ? (
+          ) : isFulfilled ? (
             <View style={styles.fulfilledChip}>
               <Text style={styles.fulfilledChipText}>FULFILLED</Text>
             </View>
@@ -97,19 +104,36 @@ export const BloodPostCard = React.memo(function BloodPostCard({
               </Text>
             </View>
           )}
-          <Text style={styles.authorNameText} numberOfLines={1}>
-            Posted by {item.author?.name?.split(" ")[0] || "Member"}
-          </Text>
+          <View style={styles.authorMetaBox}>
+            <Text style={styles.authorNameText} numberOfLines={1}>
+              {item.author?.name || "Member"}
+            </Text>
+            {authorSubtitle ? (
+              <Text style={styles.authorDeptText} numberOfLines={1}>
+                {authorSubtitle}
+              </Text>
+            ) : null}
+          </View>
         </View>
 
-        <View style={styles.donorsCountPill}>
+        <View
+          style={[
+            styles.donorsCountPill,
+            isFulfilled && styles.donorsCountPillFulfilled,
+          ]}
+        >
           <Feather
             name="users"
             size={11}
-            color={BENTO_COLORS.crimson}
+            color={isFulfilled ? "#059669" : BENTO_COLORS.crimson}
             style={{ marginRight: 4 }}
           />
-          <Text style={styles.donorsCountText}>
+          <Text
+            style={[
+              styles.donorsCountText,
+              isFulfilled && styles.donorsCountTextFulfilled,
+            ]}
+          >
             {item._count?.responses || 0} Volunteer
             {(item._count?.responses || 0) === 1 ? "" : "s"}
           </Text>
@@ -129,6 +153,10 @@ const styles = StyleSheet.create({
     borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
+  cardFulfilled: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -142,6 +170,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
+  },
+  bloodBadgePillFulfilled: {
+    backgroundColor: "#059669",
   },
   bloodBadgeText: {
     fontFamily,
@@ -178,7 +209,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   fulfilledChip: {
-    backgroundColor: "#ecfdf5",
+    backgroundColor: "#dcfce7",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: BENTO_COLORS.pillRadius,
@@ -237,30 +268,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   authorAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   authorAvatarFallback: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
   },
   authorAvatarText: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: BENTO_COLORS.subtleText,
+  },
+  authorMetaBox: {
+    flex: 1,
   },
   authorNameText: {
     fontFamily,
     fontSize: 12,
-    fontWeight: "600",
-    color: BENTO_COLORS.subtleText,
-    flex: 1,
+    fontWeight: "700",
+    color: BENTO_COLORS.neutralText,
+  },
+  authorDeptText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#64748b",
+    marginTop: 1,
   },
   donorsCountPill: {
     flexDirection: "row",
@@ -270,10 +310,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
   },
+  donorsCountPillFulfilled: {
+    backgroundColor: "#dcfce7",
+  },
   donorsCountText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: BENTO_COLORS.crimson,
+  },
+  donorsCountTextFulfilled: {
+    color: "#059669",
   },
 });
