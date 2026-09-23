@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { format12HourTime } from "@/utils/date-formatter";
+import { formatCardDateTime } from "@/utils/date-formatter";
 import { BENTO_COLORS, fontFamily } from "../constants";
 import { formatBloodGroupSymbol, getUserAcademicSubtitle } from "../utils";
 
@@ -18,124 +18,167 @@ export const BloodPostCard = React.memo(function BloodPostCard({
   const isUrgent = item.urgency === "High" && !item.isFulfilled;
   const isFulfilled = !!item.isFulfilled;
   const authorSubtitle = getUserAcademicSubtitle(item.author);
+  const volunteerCount = item._count?.responses ?? item.responses?.length ?? 0;
+  const bagsNeeded = item.bagsNeeded || 1;
 
   return (
     <TouchableOpacity
-      style={[styles.card, isFulfilled && styles.cardFulfilled]}
+      style={[
+        styles.card,
+        isUrgent && styles.cardUrgent,
+        isFulfilled && styles.cardFulfilled,
+      ]}
       onPress={() => router.push(`/blood/${item.id}`)}
-      activeOpacity={0.85}
+      activeOpacity={0.88}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`Blood request for ${bloodSymbol}, Patient: ${
-        item.patientName
-      }, Location: ${item.location}. Tap to view details.`}
+      accessibilityLabel={`Blood request for ${bloodSymbol}, ${bagsNeeded} ${
+        bagsNeeded === 1 ? "bag" : "bags"
+      } needed, Patient: ${item.patientName}, ${
+        item.patientCondition ? `Condition: ${item.patientCondition}, ` : ""
+      }Location: ${item.location}. Tap to view details.`}
     >
-      <View style={styles.headerRow}>
-        <View
-          style={[
-            styles.bloodBadgePill,
-            isFulfilled && styles.bloodBadgePillFulfilled,
-          ]}
-        >
-          <Feather
-            name="droplet"
-            size={12}
-            color="#ffffff"
-            style={{ marginRight: 4 }}
-          />
-          <Text style={styles.bloodBadgeText}>{bloodSymbol}</Text>
+      {/* 1. TOP METADATA ROW */}
+      <View style={styles.topRow}>
+        <View style={styles.topLeftGroup}>
+          <View
+            style={[
+              styles.bloodBadge,
+              isFulfilled
+                ? styles.bloodBadgeFulfilled
+                : isUrgent
+                ? styles.bloodBadgeUrgent
+                : styles.bloodBadgeNormal,
+            ]}
+          >
+            <Feather
+              name="droplet"
+              size={12}
+              color="#ffffff"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={styles.bloodBadgeText}>{bloodSymbol}</Text>
+          </View>
+
+          <View
+            style={[
+              styles.bagsBadge,
+              isFulfilled && styles.bagsBadgeFulfilled,
+            ]}
+          >
+            <Text
+              style={[
+                styles.bagsBadgeText,
+                isFulfilled && styles.bagsBadgeTextFulfilled,
+              ]}
+            >
+              {bagsNeeded} {bagsNeeded === 1 ? "Bag" : "Bags"}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.statusPillsRow}>
+        <View style={styles.topRightGroup}>
           {isUrgent ? (
-            <View style={styles.urgentChip}>
-              <View style={styles.pulseDot} />
-              <Text style={styles.urgentChipText}>URGENT</Text>
+            <View style={styles.urgentPill}>
+              <View style={styles.urgentDot} />
+              <Text style={styles.urgentPillText}>URGENT</Text>
             </View>
           ) : isFulfilled ? (
-            <View style={styles.fulfilledChip}>
-              <Text style={styles.fulfilledChipText}>FULFILLED</Text>
+            <View style={styles.fulfilledPill}>
+              <Feather
+                name="check"
+                size={11}
+                color="#059669"
+                style={{ marginRight: 3 }}
+              />
+              <Text style={styles.fulfilledPillText}>FULFILLED</Text>
             </View>
           ) : null}
 
-          <Text style={styles.timeText}>
-            {format12HourTime(item.createdAt)}
+          <Text style={styles.timestampText}>
+            {formatCardDateTime(item.createdAt)}
           </Text>
         </View>
       </View>
 
-      <Text style={styles.patientNameText} numberOfLines={1}>
-        Patient: {item.patientName}
-      </Text>
-
-      {item.patientCondition ? (
-        <Text style={styles.conditionText} numberOfLines={1}>
-          Condition: {item.patientCondition}
+      {/* 2. PATIENT INFORMATION */}
+      <View style={styles.patientSection}>
+        <Text style={styles.patientName} numberOfLines={1}>
+          {item.patientName}
         </Text>
-      ) : null}
+        {item.patientCondition ? (
+          <Text style={styles.conditionText} numberOfLines={1}>
+            {item.patientCondition}
+          </Text>
+        ) : null}
+      </View>
 
-      <View style={styles.locationPillRow}>
+      {/* 3. LOCATION */}
+      <View style={styles.locationRow}>
         <Feather
           name="map-pin"
-          size={12}
+          size={13}
           color={BENTO_COLORS.subtleText}
-          style={{ marginRight: 5 }}
+          style={styles.locationIcon}
         />
-        <Text style={styles.locationPillText} numberOfLines={1}>
+        <Text style={styles.locationText} numberOfLines={1}>
           {item.location}
         </Text>
       </View>
 
-      <View style={styles.cardDivider} />
+      {/* 4. SUBTLE DIVIDER */}
+      <View style={styles.divider} />
 
+      {/* 5. REQUESTER AREA & VOLUNTEER PARTICIPATION */}
       <View style={styles.footerRow}>
-        <View style={styles.authorBox}>
+        <View style={styles.authorSection}>
           {item.author?.image ? (
             <Image
               source={{ uri: item.author.image }}
               style={styles.authorAvatar}
               accessible={true}
-              accessibilityLabel={`${item.author.name || "Author"}'s avatar`}
+              accessibilityLabel={`${item.author.name || "Requester"}'s avatar`}
             />
           ) : (
             <View style={styles.authorAvatarFallback}>
-              <Text style={styles.authorAvatarText}>
-                {item.author?.name?.charAt(0) || "U"}
+              <Text style={styles.authorAvatarFallbackText}>
+                {item.author?.name?.trim()?.charAt(0)?.toUpperCase() || "U"}
               </Text>
             </View>
           )}
-          <View style={styles.authorMetaBox}>
-            <Text style={styles.authorNameText} numberOfLines={1}>
-              {item.author?.name || "Member"}
+
+          <View style={styles.authorMeta}>
+            <Text style={styles.authorName} numberOfLines={1}>
+              {item.author?.name || "Campus Member"}
             </Text>
             {authorSubtitle ? (
-              <Text style={styles.authorDeptText} numberOfLines={1}>
+              <Text style={styles.authorDept} numberOfLines={1}>
                 {authorSubtitle}
               </Text>
             ) : null}
           </View>
         </View>
 
+        {/* VOLUNTEER STATUS - Distinct from Urgent Red */}
         <View
           style={[
-            styles.donorsCountPill,
-            isFulfilled && styles.donorsCountPillFulfilled,
+            styles.volunteerPill,
+            isFulfilled && styles.volunteerPillFulfilled,
           ]}
         >
           <Feather
             name="users"
-            size={11}
-            color={isFulfilled ? "#059669" : BENTO_COLORS.crimson}
-            style={{ marginRight: 4 }}
+            size={12}
+            color={isFulfilled ? "#059669" : "#475569"}
+            style={{ marginRight: 5 }}
           />
           <Text
             style={[
-              styles.donorsCountText,
-              isFulfilled && styles.donorsCountTextFulfilled,
+              styles.volunteerPillText,
+              isFulfilled && styles.volunteerPillTextFulfilled,
             ]}
           >
-            {item._count?.responses || 0} Volunteer
-            {(item._count?.responses || 0) === 1 ? "" : "s"}
+            {volunteerCount} {volunteerCount === 1 ? "Volunteer" : "Volunteers"}
           </Text>
         </View>
       </View>
@@ -146,180 +189,236 @@ export const BloodPostCard = React.memo(function BloodPostCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: BENTO_COLORS.white,
-    borderRadius: BENTO_COLORS.cardRadius,
+    borderRadius: 22,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: "rgba(0, 0, 0, 0.05)",
     ...BENTO_COLORS.shadow,
   },
-  cardFulfilled: {
-    backgroundColor: "#f0fdf4",
-    borderColor: "#bbf7d0",
+  cardUrgent: {
+    borderColor: "rgba(190, 18, 60, 0.16)",
+    borderLeftWidth: 3.5,
+    borderLeftColor: BENTO_COLORS.crimson,
   },
-  headerRow: {
+  cardFulfilled: {
+    backgroundColor: "#fafdfb",
+    borderColor: "#bbf7d0",
+    borderLeftWidth: 3.5,
+    borderLeftColor: "#10b981",
+  },
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 14,
+    gap: 8,
   },
-  bloodBadgePill: {
+  topLeftGroup: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: BENTO_COLORS.crimson,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BENTO_COLORS.pillRadius,
+    gap: 6,
   },
-  bloodBadgePillFulfilled: {
+  bloodBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 10,
+  },
+  bloodBadgeNormal: {
+    backgroundColor: "#e11d48",
+  },
+  bloodBadgeUrgent: {
+    backgroundColor: BENTO_COLORS.crimson,
+  },
+  bloodBadgeFulfilled: {
     backgroundColor: "#059669",
   },
   bloodBadgeText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#ffffff",
     letterSpacing: 0.5,
   },
-  statusPillsRow: {
+  bagsBadge: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 8,
+    paddingVertical: 4.5,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+  },
+  bagsBadgeFulfilled: {
+    backgroundColor: "#dcfce7",
+    borderColor: "rgba(5, 150, 105, 0.15)",
+  },
+  bagsBadgeText: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
+  },
+  bagsBadgeTextFulfilled: {
+    color: "#059669",
+  },
+  topRightGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  urgentChip: {
+  urgentPill: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff1f2",
+    borderWidth: 1,
+    borderColor: "rgba(190, 18, 60, 0.15)",
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 3.5,
     borderRadius: BENTO_COLORS.pillRadius,
   },
-  pulseDot: {
+  urgentDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: BENTO_COLORS.crimson,
     marginRight: 5,
   },
-  urgentChipText: {
+  urgentPillText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "800",
     color: BENTO_COLORS.crimson,
     letterSpacing: 0.5,
   },
-  fulfilledChip: {
+  fulfilledPill: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#dcfce7",
+    borderWidth: 1,
+    borderColor: "rgba(5, 150, 105, 0.15)",
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 3.5,
     borderRadius: BENTO_COLORS.pillRadius,
   },
-  fulfilledChipText: {
+  fulfilledPillText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "800",
     color: "#059669",
     letterSpacing: 0.5,
   },
-  timeText: {
+  timestampText: {
     fontFamily,
-    fontSize: 11,
-    color: BENTO_COLORS.subtleText,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#94a3b8",
   },
-  patientNameText: {
+  patientSection: {
+    marginBottom: 8,
+  },
+  patientName: {
     fontFamily,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     color: BENTO_COLORS.neutralText,
-    marginBottom: 4,
+    letterSpacing: -0.2,
   },
   conditionText: {
     fontFamily,
-    fontSize: 13,
-    color: BENTO_COLORS.subtleText,
-    marginBottom: 8,
+    fontSize: 13.5,
+    fontWeight: "500",
+    color: "#475569",
+    marginTop: 3,
   },
-  locationPillRow: {
+  locationRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 2,
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  locationPillText: {
+  locationIcon: {
+    marginRight: 5,
+  },
+  locationText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: "500",
     color: BENTO_COLORS.subtleText,
     flex: 1,
   },
-  cardDivider: {
+  divider: {
     height: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.04)",
-    marginBottom: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    marginVertical: 14,
   },
   footerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  authorBox: {
+  authorSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 9,
     flex: 1,
+    marginRight: 10,
   },
   authorAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f1f5f9",
   },
   authorAvatarFallback: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
   },
-  authorAvatarText: {
+  authorAvatarFallbackText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-    color: BENTO_COLORS.subtleText,
+    color: "#475569",
   },
-  authorMetaBox: {
+  authorMeta: {
     flex: 1,
   },
-  authorNameText: {
+  authorName: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     color: BENTO_COLORS.neutralText,
   },
-  authorDeptText: {
+  authorDept: {
     fontFamily,
     fontSize: 11,
     fontWeight: "500",
     color: "#64748b",
     marginTop: 1,
   },
-  donorsCountPill: {
+  volunteerPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff1f2",
+    backgroundColor: "#f1f5f9",
     paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: BENTO_COLORS.pillRadius,
   },
-  donorsCountPillFulfilled: {
+  volunteerPillFulfilled: {
     backgroundColor: "#dcfce7",
   },
-  donorsCountText: {
+  volunteerPillText: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    color: BENTO_COLORS.crimson,
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#475569",
   },
-  donorsCountTextFulfilled: {
+  volunteerPillTextFulfilled: {
     color: "#059669",
   },
 });

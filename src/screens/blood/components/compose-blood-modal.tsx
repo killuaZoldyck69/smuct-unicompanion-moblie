@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   useWindowDimensions,
+  Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -41,13 +42,61 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
 }: ComposeBloodModalProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const modalHeight = Math.round(windowHeight * 0.88);
+  const initialScreenHeight = React.useRef(windowHeight).current;
+
+  // Track keyboard height to dynamically adjust modal height and prevent status bar overlap
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const isKeyboardOpen = keyboardHeight > 0;
+  const topSafeInset =
+    Math.max(insets.top, Platform.OS === "android" ? 28 : 20) + 8;
+
+  // Detect whether Android window was already resized by OS or needs manual offset
+  const availableSpaceAboveKeyboard =
+    isKeyboardOpen
+      ? windowHeight < initialScreenHeight - 100
+        ? windowHeight - topSafeInset // Window already resized by Android OS
+        : windowHeight - topSafeInset - keyboardHeight // Window was not resized, manual offset
+      : windowHeight - topSafeInset;
+
+  const defaultModalHeight = Math.round(
+    (isKeyboardOpen ? initialScreenHeight : windowHeight) * 0.88,
+  );
+
+  const sheetHeight = isKeyboardOpen
+    ? Math.max(availableSpaceAboveKeyboard, 280)
+    : Math.min(defaultModalHeight, windowHeight - topSafeInset);
 
   const canSubmit =
     form.patientName.trim().length > 0 &&
     form.patientCondition.trim().length > 0 &&
+    (form.bagsNeeded || 1) >= 1 &&
     form.location.trim().length > 0 &&
     form.contactPhone.trim().length > 0;
+
+  const handleClose = () => {
+    Keyboard.dismiss();
+    onClose();
+  };
 
   return (
     <Modal
@@ -55,14 +104,14 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
       animationType="slide"
       transparent={true}
       statusBarTranslucent={true}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { paddingTop: topSafeInset }]}>
         {/* Tap outside backdrop to dismiss */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
-          onPress={onClose}
+          onPress={handleClose}
           accessible={false}
         />
 
@@ -70,14 +119,14 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardAvoid}
         >
-          <View style={[styles.sheet, { height: modalHeight }]}>
+          <View style={[styles.sheet, { height: sheetHeight }]}>
             {/* Drag Handle */}
             <View style={styles.dragHandle} />
 
             {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity
-                onPress={onClose}
+                onPress={handleClose}
                 style={styles.closeBtn}
                 accessible={true}
                 accessibilityRole="button"
@@ -91,8 +140,10 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
 
             {/* Scrollable Form Content */}
             <ScrollView
+              style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               showsVerticalScrollIndicator={false}
             >
               {/* Patient Name */}
@@ -164,6 +215,113 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                       </TouchableOpacity>
                     );
                   })}
+                </View>
+              </View>
+
+              {/* Blood Bags Needed Selector */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>BLOOD BAGS NEEDED</Text>
+                <View style={styles.bagsSelectorRow}>
+                  <View style={styles.bagsStepperBox}>
+                    <TouchableOpacity
+                      style={[
+                        styles.stepperActionBtn,
+                        (form.bagsNeeded || 1) <= 1 &&
+                          styles.stepperActionBtnDisabled,
+                      ]}
+                      onPress={() =>
+                        onChangeForm((prev) => ({
+                          ...prev,
+                          bagsNeeded: Math.max(1, (prev.bagsNeeded || 1) - 1),
+                        }))
+                      }
+                      disabled={(form.bagsNeeded || 1) <= 1}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Decrease bag count"
+                    >
+                      <Feather
+                        name="minus"
+                        size={15}
+                        color={
+                          (form.bagsNeeded || 1) <= 1
+                            ? "#94a3b8"
+                            : BENTO_COLORS.deepNavy
+                        }
+                      />
+                    </TouchableOpacity>
+
+                    <View style={styles.stepperValueContainer}>
+                      <Text style={styles.stepperValueNumber}>
+                        {form.bagsNeeded || 1}
+                      </Text>
+                      <Text style={styles.stepperValueUnit}>
+                        {(form.bagsNeeded || 1) === 1 ? "Bag" : "Bags"}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.stepperActionBtn,
+                        (form.bagsNeeded || 1) >= 10 &&
+                          styles.stepperActionBtnDisabled,
+                      ]}
+                      onPress={() =>
+                        onChangeForm((prev) => ({
+                          ...prev,
+                          bagsNeeded: Math.min(10, (prev.bagsNeeded || 1) + 1),
+                        }))
+                      }
+                      disabled={(form.bagsNeeded || 1) >= 10}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Increase bag count"
+                    >
+                      <Feather
+                        name="plus"
+                        size={15}
+                        color={
+                          (form.bagsNeeded || 1) >= 10
+                            ? "#94a3b8"
+                            : BENTO_COLORS.deepNavy
+                        }
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Quick count presets */}
+                  <View style={styles.bagsPresetsRow}>
+                    {[1, 2, 3, 4].map((count) => {
+                      const isSelected = (form.bagsNeeded || 1) === count;
+                      return (
+                        <TouchableOpacity
+                          key={count}
+                          style={[
+                            styles.bagPresetChip,
+                            isSelected && styles.bagPresetChipActive,
+                          ]}
+                          onPress={() =>
+                            onChangeForm((prev) => ({
+                              ...prev,
+                              bagsNeeded: count,
+                            }))
+                          }
+                          accessible={true}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${count} bags`}
+                        >
+                          <Text
+                            style={[
+                              styles.bagPresetChipText,
+                              isSelected && styles.bagPresetChipTextActive,
+                            ]}
+                          >
+                            {count}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </View>
               </View>
 
@@ -240,9 +398,9 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
               style={[
                 styles.modalFooter,
                 {
-                  paddingBottom:
-                    Math.max(insets.bottom, 16) +
-                    (Platform.OS === "android" ? 8 : 0),
+                  paddingBottom: isKeyboardOpen
+                    ? 10
+                    : Math.max(insets.bottom, 16),
                 },
               ]}
             >
@@ -290,12 +448,18 @@ const styles = StyleSheet.create({
   },
   keyboardAvoid: {
     width: "100%",
+    maxHeight: "100%",
+    justifyContent: "flex-end",
   },
   sheet: {
     backgroundColor: BENTO_COLORS.background,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     overflow: "hidden",
+    maxHeight: "100%",
+  },
+  scrollView: {
+    flex: 1,
   },
   dragHandle: {
     width: 40,
@@ -386,6 +550,80 @@ const styles = StyleSheet.create({
   bloodGroupChipTextActive: {
     color: "#ffffff",
   },
+  bagsSelectorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  bagsStepperBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    ...BENTO_COLORS.shadow,
+  },
+  stepperActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperActionBtnDisabled: {
+    opacity: 0.35,
+  },
+  stepperValueContainer: {
+    paddingHorizontal: 12,
+    alignItems: "center",
+    minWidth: 58,
+  },
+  stepperValueNumber: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+  },
+  stepperValueUnit: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    color: BENTO_COLORS.subtleText,
+    marginTop: -1,
+  },
+  bagsPresetsRow: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+  },
+  bagPresetChip: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: BENTO_COLORS.white,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    ...BENTO_COLORS.shadow,
+  },
+  bagPresetChipActive: {
+    backgroundColor: BENTO_COLORS.crimson,
+    borderColor: BENTO_COLORS.crimson,
+  },
+  bagPresetChipText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    color: BENTO_COLORS.neutralText,
+  },
+  bagPresetChipTextActive: {
+    color: "#ffffff",
+  },
   urgencyRow: {
     flexDirection: "row",
     gap: 10,
@@ -415,7 +653,7 @@ const styles = StyleSheet.create({
   },
   modalFooter: {
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
     backgroundColor: BENTO_COLORS.white,
     borderTopWidth: 1,
     borderTopColor: BENTO_COLORS.subtleBorder,
@@ -425,9 +663,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: BENTO_COLORS.crimson,
-    paddingVertical: 16,
+    height: 48,
     borderRadius: BENTO_COLORS.pillRadius,
-    ...BENTO_COLORS.heroShadow,
+    ...BENTO_COLORS.shadow,
   },
   submitBtnDisabled: {
     opacity: 0.5,

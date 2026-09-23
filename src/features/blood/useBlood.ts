@@ -48,8 +48,9 @@ export const useInfiniteBloodFeed = (
       const totalPages = lastPage?.meta?.totalPages ?? 1;
       return page < totalPages ? page + 1 : undefined;
     },
-    staleTime: 1000 * 60 * 2, // 2 minutes fresh cache
-    gcTime: 1000 * 60 * 10, // 10 minutes memory cache
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 15,
+    refetchOnReconnect: "always",
     placeholderData: keepPreviousData,
   });
 };
@@ -59,18 +60,20 @@ export const useBloodFeed = () => {
     queryKey: bloodKeys.feed(),
     queryFn: () => getBloodFeedAPI(),
     staleTime: 1000 * 60 * 2,
-    gcTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 15,
+    refetchOnReconnect: "always",
     placeholderData: keepPreviousData,
   });
 };
 
-export const useBloodPostById = (id: string) => {
+export const useBloodPostById = (id?: string) => {
   return useQuery<BloodPostItem, Error>({
-    queryKey: bloodKeys.detail(id),
-    queryFn: ({ signal }) => getBloodPostByIdAPI(id, signal),
+    queryKey: bloodKeys.detail(id || ""),
+    queryFn: ({ signal }) => getBloodPostByIdAPI(id!, signal),
     enabled: !!id,
-    staleTime: 1000 * 60 * 1,
-    gcTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 15,
+    refetchOnReconnect: "always",
   });
 };
 
@@ -112,8 +115,8 @@ export const useDeleteBloodPost = () => {
   return useMutation({
     mutationFn: (id: string) => deleteBloodPostAPI(id),
     onSuccess: (_, id) => {
+      queryClient.removeQueries({ queryKey: bloodKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: bloodKeys.all });
-      queryClient.invalidateQueries({ queryKey: bloodKeys.detail(id) });
     },
   });
 };

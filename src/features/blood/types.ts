@@ -6,6 +6,8 @@ export interface BloodAuthor {
   bloodGroup?: string | null;
   role?: string;
   studentProfile?: {
+    studentId?: string | null;
+    batch?: string | null;
     department?: string | null;
     currentSemester?: string | number | null;
     section?: string | null;
@@ -13,6 +15,7 @@ export interface BloodAuthor {
   teacherProfile?: {
     department?: string | null;
     designation?: string | null;
+    officeRoom?: string | null;
   } | null;
 }
 
@@ -59,6 +62,7 @@ export interface BloodPostItem {
   patientName: string;
   patientCondition: string;
   bloodGroup: string;
+  bagsNeeded?: number;
   location: string;
   urgency: string;
   contactPhone: string;
@@ -76,6 +80,7 @@ export interface CreateBloodPostInput {
   patientName: string;
   patientCondition: string;
   bloodGroup: string;
+  bagsNeeded?: number;
   location: string;
   urgency: string;
   contactPhone: string;

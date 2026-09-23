@@ -76,3 +76,39 @@ export const formatFullDateTime = (dateString: string) => {
   const date = new Date(dateString);
   return `${formatDate(dateString)} at ${format12HourTime(dateString)}`;
 };
+
+export const formatCardDateTime = (dateString: string) => {
+  if (!dateString) return "";
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+
+    const now = new Date();
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
+
+    const timeStr = d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).toUpperCase();
+
+    if (isToday) {
+      return `Today, ${timeStr}`;
+    }
+
+    const isCurrentYear = d.getFullYear() === now.getFullYear();
+    const dateStr = d.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      ...(isCurrentYear ? {} : { year: "numeric" }),
+    });
+
+    return `${dateStr}, ${timeStr}`;
+  } catch (e) {
+    return dateString;
+  }
+};
+

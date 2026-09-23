@@ -44,6 +44,9 @@ export const validateBloodPostInput = (
   if (!form.patientCondition.trim()) {
     return { isValid: false, error: "Medical condition/reason is required." };
   }
+  if (!form.bagsNeeded || form.bagsNeeded < 1) {
+    return { isValid: false, error: "At least 1 bag of blood is required." };
+  }
   if (!form.location.trim()) {
     return { isValid: false, error: "Hospital / Location is required." };
   }

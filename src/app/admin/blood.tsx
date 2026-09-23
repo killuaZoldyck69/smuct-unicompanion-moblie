@@ -169,7 +169,7 @@ export default function AdminBloodManageScreen() {
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={styles.viewDetailsBtn}
-            onPress={() => router.push(`/blood/${item.id}`)}
+            onPress={() => router.push(`/blood/${item.id}?from=admin` as any)}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={`View blood request thread for ${item.patientName}`}

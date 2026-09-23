@@ -59,6 +59,7 @@ export interface NewBloodPostForm {
   patientName: string;
   patientCondition: string;
   bloodGroup: string;
+  bagsNeeded: number;
   location: string;
   urgency: string;
   contactPhone: string;

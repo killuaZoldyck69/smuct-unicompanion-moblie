@@ -11,6 +11,7 @@ import {
   BackHandler,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -23,6 +24,7 @@ import {
   useCreateBloodPost,
 } from "@/features/blood/useBlood";
 import { GetBloodFeedParams } from "@/services/blood-service";
+import type { BloodPostItem } from "@/features/blood/types";
 import {
   BENTO_COLORS,
   fontFamily,
@@ -81,6 +83,7 @@ export function Blood() {
     patientName: "",
     patientCondition: "",
     bloodGroup: "A_POSITIVE",
+    bagsNeeded: 1,
     location: "",
     urgency: "High",
     contactPhone: currentUser?.phoneNumber || "",
@@ -176,6 +179,7 @@ export function Blood() {
           patientName: "",
           patientCondition: "",
           bloodGroup: "A_POSITIVE",
+          bagsNeeded: 1,
           location: "",
           urgency: "High",
           contactPhone: currentUser?.phoneNumber || "",
@@ -190,14 +194,6 @@ export function Blood() {
       },
     });
   }, [newPost, createPostMutation, currentUser]);
-
-  const handleBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(tabs)/home");
-    }
-  }, [router]);
 
   useEffect(() => {
     if (!isComposeVisible) return;
@@ -228,39 +224,45 @@ export function Blood() {
         </View>
       );
     }
-    return <View style={{ height: Math.max(insets.bottom, 16) + 16 }} />;
-  }, [isFetchingNextPage, insets.bottom]);
+    return null;
+  }, [isFetchingNextPage]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: BloodPostItem }) => <BloodPostCard item={item} />,
+    [],
+  );
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
       {/* Top Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.headerIconButton}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          activeOpacity={0.7}
-        >
-          <Feather name="arrow-left" size={22} color={BENTO_COLORS.deepNavy} />
-        </TouchableOpacity>
-
         <View style={styles.headerTitlesContainer}>
           <Text style={styles.screenTitle}>Blood Bank Hub</Text>
-          <Text style={styles.screenSubtitle}>Emergency Donor Network</Text>
         </View>
 
-        <TouchableOpacity
-          onPress={verifyProfileAndCompose}
-          style={styles.headerIconButton}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Request blood donation"
-          activeOpacity={0.7}
-        >
-          <Feather name="plus" size={20} color={BENTO_COLORS.crimson} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={verifyProfileAndCompose}
+            style={styles.headerIconButton}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Request blood donation"
+            activeOpacity={0.7}
+          >
+            <Feather name="plus" size={20} color={BENTO_COLORS.crimson} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/notices")}
+            style={styles.headerIconButton}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="View notices and notifications"
+            activeOpacity={0.7}
+          >
+            <Feather name="bell" size={19} color={BENTO_COLORS.deepNavy} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Permanently Hoisted Search Bar & Filter Button (Prevents Keyboard Auto-Close) */}
@@ -427,12 +429,51 @@ export function Blood() {
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <BloodPostCard item={item} />}
-        contentContainerStyle={styles.listContent}
+        renderItem={renderItem}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom + 120 : 130 },
+        ]}
         showsVerticalScrollIndicator={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === "android"}
+        updateCellsBatchingPeriod={50}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        ListHeaderComponent={<BloodHeroCard counts={counts} />}
+        ListHeaderComponent={
+          <BloodHeroCard
+            counts={counts}
+            selectedFilter={filters.status}
+            onPressStat={(type) => {
+              if (type === "ALL") {
+                setFilters((prev) => ({
+                  ...prev,
+                  status: "ALL",
+                  urgency: "ALL",
+                }));
+              } else if (type === "ACTIVE") {
+                setFilters((prev) => ({
+                  ...prev,
+                  urgency: "ALL",
+                  status: "ACTIVE",
+                }));
+              } else if (type === "FULFILLED") {
+                setFilters((prev) => ({
+                  ...prev,
+                  status: "FULFILLED",
+                }));
+              } else if (type === "URGENT") {
+                setFilters((prev) => ({
+                  ...prev,
+                  urgency: "High",
+                  status: "ACTIVE",
+                }));
+              }
+            }}
+          />
+        }
         ListEmptyComponent={
           isLoading ? (
             <BloodSkeleton />
@@ -469,25 +510,29 @@ export function Blood() {
         }
       />
 
-      {/* Filter Modal */}
-      <BloodFilterModal
-        visible={isFilterModalVisible}
-        onClose={() => setIsFilterModalVisible(false)}
-        filters={filters}
-        onApply={handleApplyFilters}
-        onReset={handleResetFilters}
-        counts={counts}
-      />
+      {/* Lazily mounted Filter Modal */}
+      {isFilterModalVisible && (
+        <BloodFilterModal
+          visible={isFilterModalVisible}
+          onClose={() => setIsFilterModalVisible(false)}
+          filters={filters}
+          onApply={handleApplyFilters}
+          onReset={handleResetFilters}
+          counts={counts}
+        />
+      )}
 
-      {/* Compose Blood Modal */}
-      <ComposeBloodModal
-        visible={isComposeVisible}
-        form={newPost}
-        onChangeForm={setNewPost}
-        onSubmit={handlePost}
-        onClose={() => setIsComposeVisible(false)}
-        isSubmitting={createPostMutation.isPending}
-      />
+      {/* Lazily mounted Compose Blood Modal */}
+      {isComposeVisible && (
+        <ComposeBloodModal
+          visible={isComposeVisible}
+          form={newPost}
+          onChangeForm={setNewPost}
+          onSubmit={handlePost}
+          onClose={() => setIsComposeVisible(false)}
+          isSubmitting={createPostMutation.isPending}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -518,19 +563,19 @@ const styles = StyleSheet.create({
     ...BENTO_COLORS.shadow,
   },
   headerTitlesContainer: {
+    alignItems: "flex-start",
+  },
+  headerActions: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 10,
   },
   screenTitle: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-  },
-  screenSubtitle: {
-    fontFamily,
-    fontSize: 11,
-    color: BENTO_COLORS.subtleText,
-    marginTop: 2,
+    letterSpacing: -0.5,
   },
   topControlsContainer: {
     flexDirection: "row",
