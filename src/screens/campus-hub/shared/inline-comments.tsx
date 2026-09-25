@@ -8,6 +8,8 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Keyboard,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -83,13 +85,13 @@ export const InlineComments = React.memo(function InlineComments({
           <View style={styles.emptyIconCircle}>
             <Feather
               name="message-square"
-              size={24}
+              size={18}
               color={CAMPUS_HUB_COLORS.subtleText}
             />
           </View>
           <Text style={styles.emptyTitle}>No comments yet</Text>
           <Text style={styles.emptySubtext}>
-            Be the first to share details or help out.
+            Be the first to ask or share.
           </Text>
         </View>
       ) : (
@@ -335,12 +337,33 @@ export const CommentInputBar = React.memo(function CommentInputBar({
   inputRef,
 }: CommentInputBarProps) {
   const insets = useSafeAreaInsets();
+  const [isKeyboardVisible, setIsKeyboardVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const canSend = Boolean(text.trim()) && !isSubmitting;
 
-  // Accurately calculate system navigation bar padding:
-  // On devices with 3-button navigation, insets.bottom is typically 0, so we apply 20px padding.
-  // On devices with gesture navigation, insets.bottom is ~20-34px, so we add 8px extra breathing room.
-  const bottomPadding = insets.bottom > 0 ? insets.bottom + 8 : 20;
+  // Accurately calculate bottom padding:
+  // When keyboard is visible, keep it tight (8px) above keyboard.
+  // When keyboard is closed, respect safe area insets for gesture/3-button navigation.
+  const bottomPadding = isKeyboardVisible
+    ? 8
+    : insets.bottom > 0
+    ? insets.bottom + 8
+    : 16;
 
   return (
     <View
@@ -471,17 +494,17 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 28,
+    paddingVertical: 18,
     paddingHorizontal: 16,
   },
   emptyIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#f8fafc",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: "#f1f5f9",
   },

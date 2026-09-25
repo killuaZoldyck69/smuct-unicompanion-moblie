@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  View,
   Text,
   FlatList,
   ActivityIndicator,
@@ -11,10 +10,7 @@ import {
   StyleSheet,
   Keyboard,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 import { BENTO_COLORS, fontFamily } from "./constants";
@@ -31,7 +27,6 @@ import { ForumOptionsModal } from "./components/forum-options-modal";
 import { ForumConfirmModal } from "./components/forum-confirm-modal";
 
 export function DiscussionDetailScreen() {
-  const insets = useSafeAreaInsets();
   const [keyboardBehavior, setKeyboardBehavior] = useState<
     "height" | "padding" | undefined
   >(undefined);

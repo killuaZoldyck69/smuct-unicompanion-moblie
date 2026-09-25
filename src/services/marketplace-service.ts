@@ -1,9 +1,11 @@
 import api from "./api";
 
+// ---------------------------------------------------------------------------
+// Domain types
+// ---------------------------------------------------------------------------
 export type ListingType = "SELLING" | "BUYING";
 export type ListingStatus = "ACTIVE" | "SOLD" | "CLOSED";
 export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
-
 export type MarketplaceCategory =
   | "TEXTBOOKS"
   | "ELECTRONICS"
@@ -57,8 +59,30 @@ export interface MarketplacePost {
   authorId: string;
   author: MarketplaceAuthor;
   createdAt: string;
+  updatedAt?: string;
   _count?: { comments: number };
   comments?: MarketplaceComment[];
+}
+
+// ---------------------------------------------------------------------------
+// Paginated response envelope
+// ---------------------------------------------------------------------------
+export interface PaginatedFeedResponse {
+  items: MarketplacePost[];
+  nextCursor: string | null;
+  total: number;
+}
+
+// ---------------------------------------------------------------------------
+// Input types
+// ---------------------------------------------------------------------------
+export interface FeedQueryParams {
+  type?: ListingType;
+  status?: ListingStatus;
+  category?: MarketplaceCategory;
+  search?: string;
+  limit?: number;
+  cursor?: string;
 }
 
 export interface CreateMarketplaceInput {
@@ -77,14 +101,14 @@ export interface CreateCommentInput {
   parentId?: string | null;
 }
 
-export const getMarketplaceFeed = async (params?: {
-  type?: ListingType;
-  status?: ListingStatus;
-  search?: string;
-  category?: MarketplaceCategory;
-}): Promise<MarketplacePost[]> => {
+// ---------------------------------------------------------------------------
+// API functions
+// ---------------------------------------------------------------------------
+export const getMarketplaceFeed = async (
+  params?: FeedQueryParams
+): Promise<PaginatedFeedResponse> => {
   const res = await api.get("/marketplace", { params });
-  return res.data?.data ?? [];
+  return res.data?.data ?? { items: [], nextCursor: null, total: 0 };
 };
 
 export const getMarketplacePostById = async (
@@ -101,6 +125,14 @@ export const createMarketplacePost = async (
   return res.data?.data;
 };
 
+export const updateMarketplacePost = async (
+  id: string,
+  data: Partial<CreateMarketplaceInput>
+): Promise<MarketplacePost> => {
+  const res = await api.patch(`/marketplace/${id}`, data);
+  return res.data?.data;
+};
+
 export const deleteMarketplacePost = async (id: string): Promise<void> => {
   await api.delete(`/marketplace/${id}`);
 };
@@ -109,6 +141,14 @@ export const markMarketplaceSold = async (
   id: string
 ): Promise<MarketplacePost> => {
   const res = await api.patch(`/marketplace/${id}/sold`);
+  return res.data?.data;
+};
+
+export const updateMarketplaceStatus = async (
+  id: string,
+  status: ListingStatus
+): Promise<MarketplacePost> => {
+  const res = await api.patch(`/marketplace/${id}/status`, { status });
   return res.data?.data;
 };
 

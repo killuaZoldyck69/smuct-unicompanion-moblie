@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderRadius: 12,
     paddingHorizontal: 16,
     height: 46,
     borderWidth: 1,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   filterIconButton: {
     width: 46,
     height: 46,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderRadius: 12,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
     justifyContent: "center",

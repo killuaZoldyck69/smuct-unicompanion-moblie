@@ -1,14 +1,20 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useEffect,
+} from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  Image,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -16,67 +22,130 @@ import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useMarketplaceFeed } from "@/features/campus-hub/useMarketplace";
-import type { MarketplacePost, ListingType, MarketplaceCategory } from "@/services/marketplace-service";
-import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../shared/design-tokens";
+import {
+  useMarketplaceFeed,
+  flattenFeedPages,
+} from "@/features/campus-hub/useMarketplace";
+import type {
+  MarketplacePost,
+  ListingType,
+  ListingStatus,
+  MarketplaceCategory,
+  FeedQueryParams,
+} from "@/services/marketplace-service";
+import { CAMPUS_HUB_COLORS, fontFamily } from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
 import { ComposeMarketplaceModal } from "./compose-modal";
+import { MarketplaceHero } from "./components/marketplace-hero";
+import {
+  MarketplaceFilterModal,
+  type MarketplaceTypeFilter,
+  type MarketplaceStatusFilter,
+  type MarketplaceCategoryFilter,
+} from "./components/marketplace-filter-modal";
+import { ListingCard } from "./components/listing-card";
+import { MarketplaceSkeleton } from "./components/marketplace-skeleton";
 
-type FilterTab = "ALL" | ListingType | "SOLD";
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
+const SEARCH_DEBOUNCE_MS = 400;
 
-interface FilterPill {
-  key: FilterTab;
-  label: string;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface MarketplaceSectionProps {
+  isComposeVisible?: boolean;
+  onOpenCompose?: () => void;
+  onCloseCompose?: () => void;
 }
 
-const FILTERS: FilterPill[] = [
-  { key: "ALL", label: "All Listings" },
-  { key: "SELLING", label: "For Sale" },
-  { key: "BUYING", label: "Looking to Buy" },
-  { key: "SOLD", label: "Sold" },
-];
-
-const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
-
-export function MarketplaceSection() {
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+export function MarketplaceSection({
+  isComposeVisible: externalIsComposeVisible,
+  onOpenCompose: externalOnOpenCompose,
+  onCloseCompose: externalOnCloseCompose,
+}: MarketplaceSectionProps = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { user: currentUser } = useCurrentUser();
 
-  const [activeFilter, setActiveFilter] = useState<FilterTab>("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isComposeVisible, setIsComposeVisible] = useState(false);
+  // --- Filter state ---
+  const [typeFilter, setTypeFilter] = useState<MarketplaceTypeFilter>("ALL");
+  const [statusFilter, setStatusFilter] = useState<MarketplaceStatusFilter>("ALL");
+  const [categoryFilter, setCategoryFilter] = useState<MarketplaceCategoryFilter>("ALL");
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  const queryParams = useMemo(() => {
-    if (activeFilter === "SOLD") return { status: "SOLD" as const };
-    if (activeFilter === "SELLING") return { type: "SELLING" as ListingType };
-    if (activeFilter === "BUYING") return { type: "BUYING" as ListingType };
-    return {};
-  }, [activeFilter]);
+  // --- Search with debounce ---
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data: posts, isLoading, isError, refetch } = useMarketplaceFeed(queryParams);
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchInput(text);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(text.trim());
+    }, SEARCH_DEBOUNCE_MS);
+  }, []);
 
-  const filtered = useMemo<MarketplacePost[]>(() => {
-    const list = Array.isArray(posts) ? posts : [];
-    if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase();
-    return list.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
-    );
-  }, [posts, searchQuery]);
-
-  const counts = useMemo(() => {
-    const all = Array.isArray(posts) ? posts : [];
-    return {
-      total: all.length,
-      selling: all.filter((p) => p.type === "SELLING").length,
-      buying: all.filter((p) => p.type === "BUYING").length,
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [posts]);
+  }, []);
 
+  // --- Compose modal state ---
+  const [internalComposeVisible, setInternalComposeVisible] = useState(false);
+  const isComposeVisible =
+    externalIsComposeVisible !== undefined
+      ? externalIsComposeVisible
+      : internalComposeVisible;
+
+  // --- Responsive card width ---
+  const cardWidth = useMemo(() => {
+    const horizontalPadding = 40;
+    const gap = 12;
+    return Math.floor((windowWidth - horizontalPadding - gap) / 2);
+  }, [windowWidth]);
+
+  // --- Derived query params (server-side filtering) ---
+  const feedParams = useMemo((): Omit<FeedQueryParams, "cursor" | "limit"> => {
+    const params: Omit<FeedQueryParams, "cursor" | "limit"> = {};
+    if (typeFilter !== "ALL") params.type = typeFilter as ListingType;
+    if (statusFilter !== "ALL") params.status = statusFilter as ListingStatus;
+    if (categoryFilter !== "ALL") params.category = categoryFilter as MarketplaceCategory;
+    if (debouncedSearch) params.search = debouncedSearch;
+    return params;
+  }, [typeFilter, statusFilter, categoryFilter, debouncedSearch]);
+
+  const activeFilterCount =
+    (typeFilter !== "ALL" ? 1 : 0) +
+    (statusFilter !== "ALL" ? 1 : 0) +
+    (categoryFilter !== "ALL" ? 1 : 0);
+
+  // --- Infinite query ---
+  const {
+    data,
+    isLoading,
+    isError,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useMarketplaceFeed(feedParams);
+
+  const posts = useMemo(() => flattenFeedPages(data), [data]);
+
+  const totalCount = data?.pages[0]?.total ?? 0;
+
+  // --- Pull-to-refresh ---
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -86,6 +155,14 @@ export function MarketplaceSection() {
     }
   }, [refetch]);
 
+  // --- Infinite scroll trigger ---
+  const onEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // --- Navigation ---
   const navigateToDetail = useCallback(
     (id: string) => {
       setCampusHubActiveSection("MARKETPLACE");
@@ -94,26 +171,265 @@ export function MarketplaceSection() {
     [router]
   );
 
+  // --- Filter handlers ---
+  const handleResetFilters = useCallback(() => {
+    setTypeFilter("ALL");
+    setStatusFilter("ALL");
+    setCategoryFilter("ALL");
+  }, []);
+
+  const handleApplyFilters = useCallback(
+    (filters: {
+      type: MarketplaceTypeFilter;
+      status: MarketplaceStatusFilter;
+      category: MarketplaceCategoryFilter;
+    }) => {
+      setTypeFilter(filters.type);
+      setStatusFilter(filters.status);
+      setCategoryFilter(filters.category);
+    },
+    []
+  );
+
+  // --- Compose handlers ---
+  const handleOpenCompose = useCallback(() => {
+    if (!currentUser) {
+      return Toast.show({ type: "error", text1: "Please log in first." });
+    }
+    externalOnOpenCompose ? externalOnOpenCompose() : setInternalComposeVisible(true);
+  }, [currentUser, externalOnOpenCompose]);
+
+  const handleCloseCompose = useCallback(() => {
+    externalOnCloseCompose ? externalOnCloseCompose() : setInternalComposeVisible(false);
+  }, [externalOnCloseCompose]);
+
+  // ---------------------------------------------------------------------------
+  // Render helpers
+  // ---------------------------------------------------------------------------
+  const renderItem = useCallback(
+    ({ item }: { item: MarketplacePost }) => (
+      <ListingCard
+        post={item}
+        cardWidth={cardWidth}
+        onPress={() => navigateToDetail(item.id)}
+      />
+    ),
+    [cardWidth, navigateToDetail]
+  );
+
+  const keyExtractor = useCallback((item: MarketplacePost) => item.id, []);
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={ACCENT} />
+      </View>
+    );
+  }, [isFetchingNextPage]);
+
+  const renderEmpty = useCallback(() => {
+    if (isLoading) return <MarketplaceSkeleton cardWidth={cardWidth} />;
+    return (
+      <View style={styles.emptyCard}>
+        <View style={styles.emptyIconCircle}>
+          <Feather
+            name="shopping-bag"
+            size={28}
+            color={CAMPUS_HUB_COLORS.marketplaceAccentText}
+          />
+        </View>
+        <Text style={styles.emptyTitle}>
+          {debouncedSearch ? "No matching listings" : "No listings yet"}
+        </Text>
+        <Text style={styles.emptySubtitle}>
+          {debouncedSearch
+            ? `No items found for "${debouncedSearch}". Try a different keyword.`
+            : "Be the first student to post something on campus."}
+        </Text>
+        {debouncedSearch ? (
+          <TouchableOpacity
+            style={styles.emptyActionBtn}
+            onPress={() => {
+              setSearchInput("");
+              setDebouncedSearch("");
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.emptyActionBtnText}>Clear Search</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.emptyActionBtn}
+            onPress={handleOpenCompose}
+            activeOpacity={0.8}
+          >
+            <Feather name="plus" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+            <Text style={styles.emptyActionBtnText}>Post a Listing</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }, [isLoading, debouncedSearch, cardWidth, handleOpenCompose]);
+
+  const ListHeader = useMemo(
+    () => (
+      <>
+        {/* Search & Filter Bar */}
+        <View style={styles.searchBarContainer}>
+          <View style={styles.searchInputBox}>
+            <Feather
+              name="search"
+              size={16}
+              color={CAMPUS_HUB_COLORS.subtleText}
+              style={{ marginRight: 10 }}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search textbooks, tech, dorm essentials..."
+              placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+              value={searchInput}
+              onChangeText={handleSearchChange}
+              accessible
+              accessibilityLabel="Search campus marketplace"
+              returnKeyType="search"
+            />
+            {searchInput.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchInput("");
+                  setDebouncedSearch("");
+                }}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather
+                  name="x-circle"
+                  size={16}
+                  color={CAMPUS_HUB_COLORS.subtleText}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
+            onPress={() => setIsFilterModalOpen(true)}
+            activeOpacity={0.8}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`Filter marketplace. ${activeFilterCount} active filters`}
+          >
+            <Feather
+              name="sliders"
+              size={18}
+              color={activeFilterCount > 0 ? "#ffffff" : CAMPUS_HUB_COLORS.deepNavy}
+            />
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Active Filter Chips */}
+        {activeFilterCount > 0 && (
+          <View style={styles.activeChipsRow}>
+            {typeFilter !== "ALL" && (
+              <FilterChip
+                label={typeFilter === "SELLING" ? "For Sale" : "Wanted"}
+                onRemove={() => setTypeFilter("ALL")}
+              />
+            )}
+            {statusFilter !== "ALL" && (
+              <FilterChip
+                label={statusFilter === "ACTIVE" ? "Available" : "Sold"}
+                onRemove={() => setStatusFilter("ALL")}
+              />
+            )}
+            {categoryFilter !== "ALL" && (
+              <FilterChip
+                label={
+                  categoryFilter.charAt(0) + categoryFilter.slice(1).toLowerCase()
+                }
+                onRemove={() => setCategoryFilter("ALL")}
+              />
+            )}
+            <TouchableOpacity onPress={handleResetFilters} style={styles.clearAllBtn}>
+              <Text style={styles.clearAllText}>Clear all</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Hero Stats Card */}
+        <MarketplaceHero
+          stats={{
+            total: totalCount,
+            selling: posts.filter((p) => p.type === "SELLING").length,
+            buying: posts.filter((p) => p.type === "BUYING").length,
+          }}
+        />
+      </>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      searchInput,
+      activeFilterCount,
+      typeFilter,
+      statusFilter,
+      categoryFilter,
+      totalCount,
+      posts,
+    ]
+  );
+
+  // --- Error state ---
   if (isError) {
     return (
       <View style={styles.centerState}>
-        <Feather name="alert-circle" size={36} color={CAMPUS_HUB_COLORS.dangerText} />
+        <View style={styles.errorIconWrap}>
+          <Feather name="alert-circle" size={32} color={CAMPUS_HUB_COLORS.dangerText} />
+        </View>
         <Text style={styles.stateTitle}>Could not load listings</Text>
-        <TouchableOpacity style={[styles.retryBtn, { backgroundColor: ACCENT }]} onPress={() => refetch()}>
-          <Text style={styles.retryBtnText}>Retry</Text>
+        <Text style={styles.stateSubtitle}>
+          There was an issue fetching marketplace items. Please check your connection.
+        </Text>
+        <TouchableOpacity
+          style={styles.retryBtn}
+          onPress={() => refetch()}
+          activeOpacity={0.8}
+        >
+          <Feather name="refresh-cw" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+          <Text style={styles.retryBtnText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView
+      <FlatList<MarketplacePost>
+        data={posts}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
         contentContainerStyle={[
-          styles.scroll,
-          { paddingBottom: insets.bottom + 130 },
+          styles.listContent,
+          { paddingBottom: insets.bottom + 80 },
         ]}
         showsVerticalScrollIndicator={false}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.4}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -122,207 +438,90 @@ export function MarketplaceSection() {
             tintColor={ACCENT}
           />
         }
-      >
-        <View style={styles.searchRow}>
-          <Feather name="search" size={16} color={CAMPUS_HUB_COLORS.subtleText} style={{ marginRight: 10 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search listings..."
-            placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            accessible
-            accessibilityLabel="Search marketplace"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} accessible accessibilityRole="button" accessibilityLabel="Clear search">
-              <Feather name="x-circle" size={16} color={CAMPUS_HUB_COLORS.subtleText} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.heroCard}>
-          <View style={[styles.heroPill, { backgroundColor: "rgba(16,185,129,0.2)" }]}>
-            <Text style={[styles.heroPillText, { color: "#6ee7b7" }]}>STUDENT MARKETPLACE</Text>
-          </View>
-          <Text style={styles.heroTitle}>Buy & Sell on Campus</Text>
-          <Text style={styles.heroSubtitle}>
-            Trade textbooks, electronics, and more with fellow students.
-          </Text>
-          <View style={styles.statsRow}>
-            {[
-              { label: "Total", value: counts.total },
-              { label: "For Sale", value: counts.selling },
-              { label: "Wanted", value: counts.buying },
-            ].map((stat, i) => (
-              <React.Fragment key={stat.label}>
-                {i > 0 && <View style={styles.statDivider} />}
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{stat.value}</Text>
-                  <Text style={styles.statLabel}>{stat.label}</Text>
-                </View>
-              </React.Fragment>
-            ))}
-          </View>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            return (
-              <TouchableOpacity
-                key={f.key}
-                style={[styles.filterPill, active && { backgroundColor: ACCENT }]}
-                onPress={() => setActiveFilter(f.key)}
-                activeOpacity={0.8}
-                accessible
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={f.label}
-              >
-                <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {isLoading ? (
-          <View style={styles.centerState}>
-            <ActivityIndicator size="large" color={ACCENT} />
-          </View>
-        ) : filtered.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Feather name="shopping-bag" size={36} color={CAMPUS_HUB_COLORS.subtleText} />
-            <Text style={styles.stateTitle}>No listings yet</Text>
-            <Text style={styles.stateSubtitle}>
-              {searchQuery ? `No results for "${searchQuery}"` : "Post something for sale!"}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.grid}>
-            {filtered.map((post) => (
-              <MarketplaceCard key={post.id} post={post} onPress={() => navigateToDetail(post.id)} />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-
-      <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 100 }]}
-        onPress={() => {
-          if (!currentUser) return Toast.show({ type: "error", text1: "Please log in first." });
-          setIsComposeVisible(true);
-        }}
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel="Create marketplace listing"
-      >
-        <Feather name="plus" size={24} color="#ffffff" />
-      </TouchableOpacity>
+        removeClippedSubviews
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={10}
+        getItemLayout={(_data, index) => ({
+          length: cardWidth + 12,
+          offset: (cardWidth + 12) * Math.floor(index / 2),
+          index,
+        })}
+      />
 
       <ComposeMarketplaceModal
         visible={isComposeVisible}
-        onClose={() => setIsComposeVisible(false)}
+        onClose={handleCloseCompose}
         currentUser={currentUser}
+      />
+
+      <MarketplaceFilterModal
+        visible={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        typeFilter={typeFilter}
+        statusFilter={statusFilter}
+        categoryFilter={categoryFilter}
+        onApply={handleApplyFilters}
+        onReset={handleResetFilters}
       />
     </View>
   );
 }
 
-interface MarketplaceCardProps {
-  post: MarketplacePost;
-  onPress: () => void;
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+interface FilterChipProps {
+  label: string;
+  onRemove: () => void;
 }
 
-const MarketplaceCard = React.memo(function MarketplaceCard({
-  post,
-  onPress,
-}: MarketplaceCardProps) {
-  const isSelling = post.type === "SELLING";
-  const isSold = post.status === "SOLD";
-
+function FilterChip({ label, onRemove }: FilterChipProps) {
   return (
-    <TouchableOpacity
-      style={[styles.card, isSold && styles.cardSold]}
-      onPress={onPress}
-      activeOpacity={0.85}
-      accessible
-      accessibilityRole="button"
-      accessibilityLabel={`${post.type === "SELLING" ? "Selling" : "Buying"}: ${post.title}${post.price ? `, ৳${post.price}` : ""}`}
-    >
-      {post.images?.[0] ? (
-        <Image source={{ uri: post.images[0] }} style={styles.cardImage} />
-      ) : (
-        <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-          <Feather name="image" size={24} color={CAMPUS_HUB_COLORS.subtleText} />
-        </View>
-      )}
-
-      {isSold && (
-        <View style={styles.soldOverlay}>
-          <Text style={styles.soldOverlayText}>SOLD</Text>
-        </View>
-      )}
-
-      <View style={styles.cardInfo}>
-        <View style={styles.cardTopRow}>
-          <View
-            style={[
-              styles.typeBadge,
-              {
-                backgroundColor: isSelling
-                  ? CAMPUS_HUB_COLORS.marketplaceAccentLight
-                  : CAMPUS_HUB_COLORS.lostFoundAccentLight,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.typeBadgeText,
-                {
-                  color: isSelling
-                    ? CAMPUS_HUB_COLORS.marketplaceAccentText
-                    : CAMPUS_HUB_COLORS.lostFoundAccentText,
-                },
-              ]}
-            >
-              {isSelling ? "SELLING" : "WANTED"}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.cardTitle} numberOfLines={2}>{post.title}</Text>
-        {post.price != null && (
-          <Text style={styles.priceText}>৳{post.price.toLocaleString()}</Text>
-        )}
-        <View style={styles.cardFooter}>
-          <Feather name="message-circle" size={11} color={CAMPUS_HUB_COLORS.subtleText} />
-          <Text style={styles.commentCountText}>{post._count?.comments ?? 0}</Text>
-          <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+    <View style={styles.activeChip}>
+      <Text style={styles.activeChipText}>{label}</Text>
+      <TouchableOpacity
+        onPress={onRemove}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+      >
+        <Feather
+          name="x"
+          size={13}
+          color={CAMPUS_HUB_COLORS.marketplaceAccentText}
+        />
+      </TouchableOpacity>
+    </View>
   );
-});
+}
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
-  scroll: {
+  listContent: {
     paddingHorizontal: 20,
     paddingTop: 4,
   },
-  searchRow: {
+  columnWrapper: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  searchBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+  searchInputBox: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    paddingHorizontal: 16,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     height: 48,
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.04)",
     ...CAMPUS_HUB_COLORS.shadow,
   },
   searchInput: {
@@ -332,205 +531,99 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.neutralText,
   },
-  heroCard: {
-    backgroundColor: "#064e3b",
-    borderRadius: 26,
-    padding: 22,
-    marginBottom: 16,
-    ...CAMPUS_HUB_COLORS.heroShadow,
+  filterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.04)",
+    ...CAMPUS_HUB_COLORS.shadow,
+    position: "relative",
   },
-  heroPill: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    marginBottom: 10,
+  filterBtnActive: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
   },
-  heroPillText: {
+  filterBadge: {
+    position: "absolute",
+    top: -3,
+    right: -3,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: CAMPUS_HUB_COLORS.dangerText,
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  filterBadgeText: {
     fontFamily,
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 0.8,
-  },
-  heroTitle: {
-    fontFamily,
-    fontSize: 22,
-    fontWeight: "800",
     color: "#ffffff",
-    letterSpacing: -0.4,
-    marginBottom: 4,
   },
-  heroSubtitle: {
-    fontFamily,
-    fontSize: 13,
-    color: "rgba(255,255,255,0.72)",
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  statsRow: {
+  activeChipsRow: {
     flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.12)",
-    paddingTop: 12,
-  },
-  statItem: {
-    flex: 1,
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
     alignItems: "center",
   },
-  statValue: {
-    fontFamily,
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  statLabel: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.65)",
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    alignSelf: "center",
-  },
-  filterRow: {
+  activeChip: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-    paddingRight: 10,
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#ecfdf5",
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.2)",
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
-  filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    ...CAMPUS_HUB_COLORS.shadow,
-  },
-  filterText: {
+  activeChipText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.neutralText,
+    color: CAMPUS_HUB_COLORS.marketplaceAccentText,
   },
-  filterTextActive: {
-    color: CAMPUS_HUB_COLORS.white,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  card: {
-    width: "47.5%",
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
-    overflow: "hidden",
-    ...CAMPUS_HUB_COLORS.shadow,
-  },
-  cardSold: {
-    opacity: 0.75,
-  },
-  cardImage: {
-    width: "100%",
-    height: 130,
-    resizeMode: "cover",
-  },
-  cardImagePlaceholder: {
-    backgroundColor: "#f1f5f9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  soldOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 130,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  soldOverlayText: {
-    fontFamily,
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#ffffff",
-    letterSpacing: 1,
-  },
-  cardInfo: {
-    padding: 12,
-    gap: 4,
-  },
-  cardTopRow: {
-    flexDirection: "row",
-  },
-  typeBadge: {
+  clearAllBtn: {
+    paddingVertical: 6,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
   },
-  typeBadgeText: {
+  clearAllText: {
     fontFamily,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-  },
-  cardTitle: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.deepNavy,
-    lineHeight: 18,
-  },
-  priceText: {
-    fontFamily,
-    fontSize: 14,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.marketplaceAccent,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 2,
-  },
-  commentCountText: {
-    fontFamily,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
   },
-  timeText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "500",
-    color: CAMPUS_HUB_COLORS.subtleText,
-    flex: 1,
-    textAlign: "right",
-  },
-  fab: {
-    position: "absolute",
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: ACCENT,
-    justifyContent: "center",
+  footerLoader: {
+    paddingVertical: 20,
     alignItems: "center",
-    ...CAMPUS_HUB_COLORS.heroShadow,
   },
   centerState: {
     alignItems: "center",
     paddingVertical: 60,
+    paddingHorizontal: 30,
     gap: 12,
+  },
+  errorIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
   },
   stateTitle: {
     fontFamily,
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     textAlign: "center",
   },
@@ -539,19 +632,65 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: CAMPUS_HUB_COLORS.subtleText,
     textAlign: "center",
+    lineHeight: 19,
   },
   emptyCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: CAMPUS_HUB_COLORS.cardRadius,
-    padding: 34,
+    padding: 36,
     alignItems: "center",
     gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.04)",
     ...CAMPUS_HUB_COLORS.shadow,
   },
-  retryBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  emptyTitle: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontFamily,
+    fontSize: 13,
+    color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+    lineHeight: 18,
+    maxWidth: 240,
+  },
+  emptyActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: ACCENT,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    marginTop: 12,
+  },
+  emptyActionBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    backgroundColor: ACCENT,
+    marginTop: 6,
   },
   retryBtnText: {
     fontFamily,

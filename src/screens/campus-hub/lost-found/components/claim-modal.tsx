@@ -11,7 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
@@ -39,6 +39,7 @@ export const ClaimModal = React.memo(function ClaimModal({
   post,
   onSuccess,
 }: ClaimModalProps) {
+  const insets = useSafeAreaInsets();
   const [message, setMessage] = useState("");
   const [answer, setAnswer] = useState("");
   const [localImages, setLocalImages] = useState<string[]>([]);
@@ -134,10 +135,13 @@ export const ClaimModal = React.memo(function ClaimModal({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      {/* edges=["top"] only — bottom inset applied manually to avoid the double-gap
+          that SafeAreaView produces inside a pageSheet modal on Android */}
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.flexFill}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
         >
           {/* Modal Header */}
           <View style={styles.header}>
@@ -151,9 +155,10 @@ export const ClaimModal = React.memo(function ClaimModal({
               <Feather name="x" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{claimActionTitle}</Text>
-            <View style={{ width: 36 }} />
+            <View style={styles.headerSpacer} />
           </View>
 
+          {/* Scrollable form content */}
           <ScrollView
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
@@ -251,12 +256,20 @@ export const ClaimModal = React.memo(function ClaimModal({
                 accent={ACCENT}
               />
             </View>
+          </ScrollView>
 
-            {/* Submit CTA Button */}
+          {/* Submit CTA — pinned outside ScrollView, always visible above keyboard */}
+          <View
+            style={[
+              styles.submitFooter,
+              { paddingBottom: Math.max(insets.bottom, 20) },
+            ]}
+          >
             <TouchableOpacity
-              style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]}
+              style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
               onPress={handleSubmit}
               disabled={isSubmitting}
+              activeOpacity={0.85}
               accessible
               accessibilityRole="button"
               accessibilityLabel="Submit claim"
@@ -265,12 +278,12 @@ export const ClaimModal = React.memo(function ClaimModal({
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
                 <>
-                  <Feather name="send" size={16} color="#ffffff" style={{ marginRight: 8 }} />
+                  <Feather name="send" size={16} color="#ffffff" style={styles.submitIcon} />
                   <Text style={styles.submitBtnText}>Submit Claim</Text>
                 </>
               )}
             </TouchableOpacity>
-          </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -282,6 +295,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: CAMPUS_HUB_COLORS.background,
   },
+  flexFill: {
+    flex: 1,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -289,13 +305,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    ...CAMPUS_HUB_COLORS.shadow,
+    borderBottomWidth: 1,
+    borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   headerTitle: {
     fontFamily,
     fontSize: 16,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  headerSpacer: {
+    width: 36,
   },
   closeBtn: {
     width: 36,
@@ -307,7 +327,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 16,
   },
   summaryCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
@@ -432,6 +452,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     lineHeight: 16,
   },
+  submitFooter: {
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
+  },
   submitBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -439,8 +466,13 @@ const styles = StyleSheet.create({
     backgroundColor: ACCENT,
     paddingVertical: 16,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    marginTop: 10,
     ...CAMPUS_HUB_COLORS.heroShadow,
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitIcon: {
+    marginRight: 8,
   },
   submitBtnText: {
     fontFamily,

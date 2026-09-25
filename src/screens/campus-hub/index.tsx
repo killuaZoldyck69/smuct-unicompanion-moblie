@@ -40,6 +40,7 @@ export function CampusHub({ initialSection }: CampusHubProps) {
   const { user: currentUser } = useCurrentUser();
   const [isForumComposeVisible, setIsForumComposeVisible] = useState(false);
   const [isLostFoundComposeVisible, setIsLostFoundComposeVisible] = useState(false);
+  const [isMarketplaceComposeVisible, setIsMarketplaceComposeVisible] = useState(false);
   const [isMemeComposeVisible, setIsMemeComposeVisible] = useState(false);
 
   const [activeSection, setActiveSection] = useState<HubSection>(() => {
@@ -69,6 +70,8 @@ export function CampusHub({ initialSection }: CampusHubProps) {
       setIsForumComposeVisible(true);
     } else if (activeSection === "LOST_FOUND") {
       setIsLostFoundComposeVisible(true);
+    } else if (activeSection === "MARKETPLACE") {
+      setIsMarketplaceComposeVisible(true);
     } else if (activeSection === "MEMES") {
       setIsMemeComposeVisible(true);
     }
@@ -82,26 +85,24 @@ export function CampusHub({ initialSection }: CampusHubProps) {
         </View>
 
         <View style={styles.topNavRight}>
-          {(activeSection === "FORUM" ||
-            activeSection === "LOST_FOUND" ||
-            activeSection === "MEMES") && (
-            <TouchableOpacity
-              style={styles.iconBtn}
-              onPress={handleComposePress}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={
-                activeSection === "FORUM"
-                  ? "Ask a question"
-                  : activeSection === "LOST_FOUND"
-                    ? "Create Lost or Found post"
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={handleComposePress}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={
+              activeSection === "FORUM"
+                ? "Ask a question"
+                : activeSection === "LOST_FOUND"
+                  ? "Create Lost or Found post"
+                  : activeSection === "MARKETPLACE"
+                    ? "Create marketplace listing"
                     : "Post a meme"
-              }
-              activeOpacity={0.7}
-            >
-              <Feather name="plus" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
-            </TouchableOpacity>
-          )}
+            }
+            activeOpacity={0.7}
+          >
+            <Feather name="plus" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.iconBtn}
@@ -135,7 +136,13 @@ export function CampusHub({ initialSection }: CampusHubProps) {
             onCloseCompose={() => setIsLostFoundComposeVisible(false)}
           />
         )}
-        {activeSection === "MARKETPLACE" && <MarketplaceSection />}
+        {activeSection === "MARKETPLACE" && (
+          <MarketplaceSection
+            isComposeVisible={isMarketplaceComposeVisible}
+            onOpenCompose={() => setIsMarketplaceComposeVisible(true)}
+            onCloseCompose={() => setIsMarketplaceComposeVisible(false)}
+          />
+        )}
         {activeSection === "MEMES" && (
           <MemesSection
             isComposeVisible={isMemeComposeVisible}

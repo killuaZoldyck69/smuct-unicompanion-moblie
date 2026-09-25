@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
-import { useCreateMarketplacePost } from "@/features/campus-hub/useMarketplace";
+import { useUpdateMarketplacePost } from "@/features/campus-hub/useMarketplace";
 import {
   uploadMultipleImages,
   CLOUDINARY_FOLDERS,
@@ -27,16 +27,15 @@ import type {
   ListingType,
   MarketplaceCategory,
   ItemCondition,
-  CreateMarketplaceInput,
+  MarketplacePost,
 } from "@/services/marketplace-service";
-import type { User } from "@/types/auth";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../shared/design-tokens";
 import { ImagePickerRow } from "../shared/image-picker-row";
 
-interface ComposeMarketplaceModalProps {
+interface EditMarketplaceModalProps {
   visible: boolean;
   onClose: () => void;
-  currentUser: User | null;
+  post: MarketplacePost;
 }
 
 const CATEGORIES: { key: MarketplaceCategory; label: string }[] = [
@@ -56,38 +55,15 @@ const CONDITIONS: { key: ItemCondition; label: string }[] = [
 
 const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
 
-interface FormState {
-  type: ListingType;
-  title: string;
-  description: string;
-  price: string;
-  category: MarketplaceCategory;
-  condition: ItemCondition;
-  contactPhone: string;
-  localImages: string[];
-}
-
-const INITIAL_FORM: FormState = {
-  type: "SELLING",
-  title: "",
-  description: "",
-  price: "",
-  category: "OTHER",
-  condition: "GOOD",
-  contactPhone: "",
-  localImages: [],
-};
-
-export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceModal({
+export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
   visible,
   onClose,
-  currentUser,
-}: ComposeMarketplaceModalProps) {
+  post,
+}: EditMarketplaceModalProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Listen to keyboard show/hide events to dynamically adapt modal height
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
@@ -105,7 +81,6 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
     };
   }, []);
 
-  // Compute responsive sheet height that NEVER exceeds the safe area below the status bar
   const defaultHeight = Math.round(windowHeight * 0.90);
   const maxAllowedWithKeyboard = windowHeight - keyboardHeight - Math.max(insets.top, 24) - 12;
   const sheetHeight =
@@ -113,26 +88,47 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
       ? Math.max(280, Math.min(defaultHeight, maxAllowedWithKeyboard))
       : Math.min(defaultHeight, windowHeight - Math.max(insets.top, 24) - 16);
 
-  const [form, setForm] = useState<FormState>({
-    ...INITIAL_FORM,
-    contactPhone: currentUser?.phoneNumber ?? "",
+  const [form, setForm] = useState({
+    type: post.type,
+    title: post.title,
+    description: post.description,
+    price: post.price != null ? String(post.price) : "",
+    category: post.category,
+    condition: post.condition || "GOOD",
+    contactPhone: post.contactPhone || "",
+    images: post.images || [],
   });
-  const [isUploading, setIsUploading] = useState(false);
 
-  const createMutation = useCreateMarketplacePost();
-  const isSubmitting = isUploading || createMutation.isPending;
+  // Re-sync form when post changes or modal opens
+  useEffect(() => {
+    if (visible) {
+      setForm({
+        type: post.type,
+        title: post.title,
+        description: post.description,
+        price: post.price != null ? String(post.price) : "",
+        category: post.category,
+        condition: post.condition || "GOOD",
+        contactPhone: post.contactPhone || "",
+        images: post.images || [],
+      });
+    }
+  }, [visible, post]);
+
+  const [isUploading, setIsUploading] = useState(false);
+  const updateMutation = useUpdateMarketplacePost();
+  const isSubmitting = isUploading || updateMutation.isPending;
 
   const update = useCallback(
-    <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
       setForm((prev) => ({ ...prev, [key]: value })),
     []
   );
 
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
-    setForm({ ...INITIAL_FORM, contactPhone: currentUser?.phoneNumber ?? "" });
     onClose();
-  }, [onClose, currentUser]);
+  }, [onClose]);
 
   const canSubmit =
     form.title.trim().length > 0 &&
@@ -147,15 +143,22 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
       return Toast.show({ type: "error", text1: "Description is required." });
     }
 
-    let imageUrls: string[] = [];
-    if (form.localImages.length > 0) {
+    let finalImages: string[] = [];
+
+    // Separate existing remote URLs from newly selected local file URIs
+    const existingRemote = form.images.filter((img) => img.startsWith("http"));
+    const newlyAdded = form.images.filter((img) => !img.startsWith("http"));
+
+    finalImages = [...existingRemote];
+
+    if (newlyAdded.length > 0) {
       setIsUploading(true);
       try {
         const results = await uploadMultipleImages(
-          form.localImages,
+          newlyAdded,
           CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE
         );
-        imageUrls = results.map((r) => r.secureUrl);
+        finalImages = [...finalImages, ...results.map((r) => r.secureUrl)];
       } catch {
         setIsUploading(false);
         return Toast.show({
@@ -169,32 +172,38 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
 
     const priceNum = form.price.trim() ? parseFloat(form.price) : null;
 
-    const payload: CreateMarketplaceInput = {
-      type: form.type,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      price: priceNum,
-      category: form.category,
-      condition: form.type === "SELLING" ? form.condition : null,
-      images: imageUrls,
-      contactPhone: form.contactPhone.trim() || null,
-    };
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        Toast.show({ type: "success", text1: "Listing published to campus!" });
-        handleClose();
+    updateMutation.mutate(
+      {
+        id: post.id,
+        data: {
+          type: form.type,
+          title: form.title.trim(),
+          description: form.description.trim(),
+          price: priceNum,
+          category: form.category,
+          condition: form.type === "SELLING" ? form.condition : null,
+          images: finalImages,
+          contactPhone: form.contactPhone.trim() || null,
+        },
       },
-      onError: (err: any) =>
-        Toast.show({
-          type: "error",
-          text1: "Failed to publish listing",
-          text2: err.message ?? "Please try again.",
-        }),
-    });
-  }, [form, createMutation, handleClose]);
+      {
+        onSuccess: () => {
+          Toast.show({ type: "success", text1: "Listing updated successfully!" });
+          handleClose();
+        },
+        onError: (err: any) =>
+          Toast.show({
+            type: "error",
+            text1: "Failed to update listing",
+            text2: err.message ?? "Please try again.",
+          }),
+      }
+    );
+  }, [form, post.id, updateMutation, handleClose]);
 
   const isSelling = form.type === "SELLING";
+
+  if (!visible) return null;
 
   return (
     <Modal
@@ -210,7 +219,6 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
         translucent={true}
       />
       <View style={styles.overlay}>
-        {/* Tap outside backdrop to dismiss */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -233,12 +241,12 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                 style={styles.closeBtn}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Close compose modal"
+                accessibilityLabel="Close edit modal"
                 activeOpacity={0.7}
               >
                 <Feather name="x" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>New Campus Listing</Text>
+              <Text style={styles.headerTitle}>Edit Listing</Text>
               <View style={{ width: 36 }} />
             </View>
 
@@ -249,7 +257,7 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              {/* Bento Section 1: Listing Intent / Type */}
+              {/* Type Switcher */}
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionHeader}>LISTING TYPE</Text>
                 <View style={styles.typeRow}>
@@ -260,9 +268,6 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                     ]}
                     onPress={() => update("type", "SELLING")}
                     activeOpacity={0.8}
-                    accessible={true}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: isSelling }}
                   >
                     <View
                       style={[
@@ -289,7 +294,7 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                       >
                         I'm Selling
                       </Text>
-                      <Text style={styles.typeBtnSub}>Offer an item to classmates</Text>
+                      <Text style={styles.typeBtnSub}>Offer item for sale</Text>
                     </View>
                   </TouchableOpacity>
 
@@ -300,9 +305,6 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                     ]}
                     onPress={() => update("type", "BUYING")}
                     activeOpacity={0.8}
-                    accessible={true}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: !isSelling }}
                   >
                     <View
                       style={[
@@ -329,13 +331,13 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                       >
                         Looking to Buy
                       </Text>
-                      <Text style={styles.typeBtnSub}>Request an item you need</Text>
+                      <Text style={styles.typeBtnSub}>Request an item</Text>
                     </View>
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Bento Section 2: Item Details */}
+              {/* Item Details */}
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionHeader}>ITEM DETAILS</Text>
 
@@ -345,13 +347,11 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                   </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. Calculus 8th Edition, Scientific Calculator"
+                    placeholder="Item title"
                     placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                     value={form.title}
                     onChangeText={(v) => update("title", v)}
                     maxLength={100}
-                    accessible={true}
-                    accessibilityLabel="Item title"
                   />
                 </View>
 
@@ -363,15 +363,9 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                       return (
                         <TouchableOpacity
                           key={cat.key}
-                          style={[
-                            styles.chip,
-                            isSelected && styles.chipActive,
-                          ]}
+                          style={[styles.chip, isSelected && styles.chipActive]}
                           onPress={() => update("category", cat.key)}
                           activeOpacity={0.8}
-                          accessible={true}
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: isSelected }}
                         >
                           <Text
                             style={[
@@ -396,15 +390,9 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                         return (
                           <TouchableOpacity
                             key={cond.key}
-                            style={[
-                              styles.chip,
-                              isSelected && styles.chipActive,
-                            ]}
+                            style={[styles.chip, isSelected && styles.chipActive]}
                             onPress={() => update("condition", cond.key)}
                             activeOpacity={0.8}
-                            accessible={true}
-                            accessibilityRole="radio"
-                            accessibilityState={{ checked: isSelected }}
                           >
                             <Text
                               style={[
@@ -422,14 +410,12 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                 )}
               </View>
 
-              {/* Bento Section 3: Pricing & Description */}
+              {/* Price & Description */}
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionHeader}>PRICE & DESCRIPTION</Text>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>
-                    PRICE (BDT) <Text style={styles.optional}>— Optional</Text>
-                  </Text>
+                  <Text style={styles.label}>PRICE (BDT) — Optional</Text>
                   <View style={styles.priceInputWrapper}>
                     <View style={styles.currencyPrefix}>
                       <Text style={styles.currencySymbol}>৳</Text>
@@ -441,8 +427,6 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                       value={form.price}
                       onChangeText={(v) => update("price", v.replace(/[^0-9.]/g, ""))}
                       keyboardType="numeric"
-                      accessible={true}
-                      accessibilityLabel="Price in Bangladeshi Taka"
                     />
                   </View>
                 </View>
@@ -453,26 +437,22 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                   </Text>
                   <TextInput
                     style={[styles.input, styles.textArea]}
-                    placeholder="Mention condition details, edition, included accessories, or pickup location on campus..."
+                    placeholder="Item details..."
                     placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                     value={form.description}
                     onChangeText={(v) => update("description", v)}
                     multiline={true}
                     textAlignVertical="top"
-                    accessible={true}
-                    accessibilityLabel="Item description"
                   />
                 </View>
               </View>
 
-              {/* Bento Section 4: Contact & Photos */}
+              {/* Contact & Photos */}
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionHeader}>CONTACT & PHOTOS</Text>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>
-                    CONTACT PHONE / WHATSAPP <Text style={styles.optional}>— Optional</Text>
-                  </Text>
+                  <Text style={styles.label}>CONTACT PHONE / WHATSAPP</Text>
                   <View style={styles.phoneInputWrapper}>
                     <Feather
                       name="phone"
@@ -482,27 +462,25 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                     />
                     <TextInput
                       style={styles.phoneInput}
-                      placeholder="e.g. 01700000000"
+                      placeholder="Phone or WhatsApp"
                       placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                       value={form.contactPhone}
                       onChangeText={(v) => update("contactPhone", v)}
                       keyboardType="phone-pad"
-                      accessible={true}
-                      accessibilityLabel="Contact phone or WhatsApp number"
                     />
                   </View>
                 </View>
 
                 <ImagePickerRow
-                  images={form.localImages}
-                  onImagesChange={(imgs) => update("localImages", imgs)}
+                  images={form.images}
+                  onImagesChange={(imgs) => update("images", imgs)}
                   maxImages={6}
                   accent={ACCENT}
                 />
               </View>
             </ScrollView>
 
-            {/* Bottom Docked Action Footer with Safe Area */}
+            {/* Bottom Docked Footer */}
             <View
               style={[
                 styles.modalFooter,
@@ -520,23 +498,16 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
                 onPress={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
                 activeOpacity={0.85}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Publish listing to campus marketplace"
               >
                 {isSubmitting ? (
                   <View style={styles.submittingRow}>
                     <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
-                    <Text style={styles.submitBtnText}>
-                      {isUploading ? "Uploading photos..." : "Publishing listing..."}
-                    </Text>
+                    <Text style={styles.submitBtnText}>Saving changes...</Text>
                   </View>
                 ) : (
                   <>
-                    <Feather name="send" size={16} color="#ffffff" style={{ marginRight: 8 }} />
-                    <Text style={styles.submitBtnText}>
-                      {isSelling ? "Publish For Sale" : "Publish Buying Request"}
-                    </Text>
+                    <Feather name="check" size={16} color="#ffffff" style={{ marginRight: 8 }} />
+                    <Text style={styles.submitBtnText}>Save Changes</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -687,12 +658,6 @@ const styles = StyleSheet.create({
   },
   required: {
     color: CAMPUS_HUB_COLORS.dangerText,
-  },
-  optional: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "500",
-    color: CAMPUS_HUB_COLORS.subtleText,
   },
   input: {
     backgroundColor: "#f8fafc",
