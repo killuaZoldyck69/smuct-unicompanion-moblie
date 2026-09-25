@@ -160,6 +160,17 @@ export const addMarketplaceComment = async (
   return res.data?.data;
 };
 
+export const updateMarketplaceComment = async (
+  postId: string,
+  commentId: string,
+  content: string
+): Promise<MarketplaceComment> => {
+  const res = await api.patch(`/marketplace/${postId}/comments/${commentId}`, {
+    content,
+  });
+  return res.data?.data;
+};
+
 export const deleteMarketplaceComment = async (
   postId: string,
   commentId: string

@@ -18,6 +18,7 @@ import {
   Platform,
   TextInput,
   StyleSheet,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -31,12 +32,14 @@ import {
   useMarkMarketplaceSold,
   useAddMarketplaceComment,
   useDeleteMarketplaceComment,
+  useUpdateMarketplaceComment,
 } from "@/features/campus-hub/useMarketplace";
 import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
 import {
   InlineComments,
   CommentInputBar,
   type ReplyTarget,
+  type Comment,
 } from "@/screens/campus-hub/shared/inline-comments";
 import {
   AuthorDetailsModal,
@@ -109,8 +112,34 @@ export function MarketplaceDetailScreen() {
   // Comment state
   const [commentText, setCommentText] = useState("");
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [editingComment, setEditingComment] = useState<Comment | null>(null);
+  const isEditMode = editingComment !== null;
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Dynamic keyboard avoiding behavior to prevent stale offset on Android dismiss
+  const [keyboardBehavior, setKeyboardBehavior] = useState<
+    "height" | "padding" | undefined
+  >(undefined);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => {
+        setKeyboardBehavior(Platform.OS === "ios" ? "padding" : "height");
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        setKeyboardBehavior(undefined);
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Consolidated modal visibility
   const [modals, dispatchModal] = useReducer(modalReducer, initialModalState);
@@ -130,6 +159,7 @@ export function MarketplaceDetailScreen() {
   const deleteMutation = useDeleteMarketplacePost();
   const soldMutation = useMarkMarketplaceSold();
   const addCommentMutation = useAddMarketplaceComment(id);
+  const updateCommentMutation = useUpdateMarketplaceComment(id);
   const deleteCommentMutation = useDeleteMarketplaceComment(id);
 
   // ---------------------------------------------------------------------------
@@ -180,11 +210,17 @@ export function MarketplaceDetailScreen() {
     });
   }, [router]);
 
+  const handleCancelEdit = useCallback(() => {
+    setEditingComment(null);
+    setCommentText("");
+  }, []);
+
   // Android hardware back — modal dismiss priority chain
   useEffect(() => {
     const onBackPress = () => {
       if (modals.imageViewer) { closeModal("imageViewer"); return true; }
       if (selectedAuthor) { setSelectedAuthor(null); return true; }
+      if (isEditMode) { handleCancelEdit(); return true; }
       if (replyTarget) { setReplyTarget(null); return true; }
       if (modals.delete) { closeModal("delete"); return true; }
       if (modals.sold) { closeModal("sold"); return true; }
@@ -194,7 +230,7 @@ export function MarketplaceDetailScreen() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [modals, selectedAuthor, replyTarget, handleBack, closeModal]);
+  }, [modals, selectedAuthor, isEditMode, replyTarget, handleCancelEdit, handleBack, closeModal]);
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -257,7 +293,21 @@ export function MarketplaceDetailScreen() {
 
   const handleStartReply = useCallback(
     (targetId: string, authorName: string) => {
+      setEditingComment(null);
       setReplyTarget({ id: targetId, authorName });
+      inputRef.current?.focus();
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    },
+    []
+  );
+
+  const handleStartEdit = useCallback(
+    (comment: Comment) => {
+      setReplyTarget(null);
+      setEditingComment(comment);
+      setCommentText(comment.content);
       inputRef.current?.focus();
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -269,10 +319,35 @@ export function MarketplaceDetailScreen() {
   const handleSendComment = useCallback(() => {
     const trimmed = commentText.trim();
     if (!trimmed) return;
+
+    if (isEditMode && editingComment) {
+      updateCommentMutation.mutate(
+        { commentId: editingComment.id, content: trimmed },
+        {
+          onSuccess: () => {
+            setEditingComment(null);
+            setCommentText("");
+            Toast.show({ type: "success", text1: "Comment updated" });
+          },
+          onError: () => {
+            Toast.show({ type: "error", text1: "Failed to update comment" });
+          },
+        }
+      );
+      return;
+    }
+
     handleAddComment(trimmed, replyTarget?.id);
     setCommentText("");
     setReplyTarget(null);
-  }, [commentText, replyTarget, handleAddComment]);
+  }, [
+    commentText,
+    isEditMode,
+    editingComment,
+    updateCommentMutation,
+    handleAddComment,
+    replyTarget?.id,
+  ]);
 
   const handleViewAuthor = useCallback((author: AuthorProfileModalData) => {
     setSelectedAuthor(author);
@@ -313,7 +388,7 @@ export function MarketplaceDetailScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={keyboardBehavior}
       keyboardVerticalOffset={0}
     >
       <SafeAreaView style={styles.flexFill} edges={["top"]}>
@@ -350,8 +425,10 @@ export function MarketplaceDetailScreen() {
           <InlineComments
             comments={comments as any}
             currentUserId={currentUser?.id}
+            listingAuthorId={post?.authorId}
             accent={ACCENT}
             onStartReply={handleStartReply}
+            onStartEdit={handleStartEdit}
             onDeleteComment={handleDeleteComment}
             onViewAuthorProfile={handleViewAuthor as any}
           />
@@ -360,10 +437,12 @@ export function MarketplaceDetailScreen() {
         <CommentInputBar
           replyTarget={replyTarget}
           onCancelReply={() => setReplyTarget(null)}
+          isEditMode={isEditMode}
+          onCancelEdit={handleCancelEdit}
           text={commentText}
           onChangeText={setCommentText}
           onSubmit={handleSendComment}
-          isSubmitting={addCommentMutation.isPending}
+          isSubmitting={addCommentMutation.isPending || updateCommentMutation.isPending}
           accent={ACCENT}
           inputRef={inputRef}
         />
@@ -430,7 +509,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingTop: 8,
-    paddingBottom: 36,
+    paddingBottom: 84,
   },
   center: {
     flex: 1,

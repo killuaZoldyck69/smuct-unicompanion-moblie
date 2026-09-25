@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ export interface Comment {
   id: string;
   content: string;
   createdAt: string;
+  updatedAt?: string;
   author: CommentAuthor;
   parentId?: string | null;
   replies?: Comment[];
@@ -36,20 +37,333 @@ export interface ReplyTarget {
   authorName: string;
 }
 
+function getAuthorAcademicSubtitle(author?: CommentAuthor): string | null {
+  if (!author) return null;
+  if (author.studentProfile?.department) {
+    return author.studentProfile.department;
+  }
+  if (author.teacherProfile?.department) {
+    return author.teacherProfile.department;
+  }
+  return null;
+}
+
+function isCommentEdited(createdAt?: string, updatedAt?: string): boolean {
+  if (!createdAt || !updatedAt) return false;
+  return new Date(updatedAt).getTime() - new Date(createdAt).getTime() > 1000;
+}
+
+// ---------------------------------------------------------------------------
+// Single Comment Card Component
+// ---------------------------------------------------------------------------
+interface InlineCommentCardProps {
+  comment: Comment;
+  currentUserId?: string;
+  listingAuthorId?: string;
+  accent: string;
+  onStartReply: (targetId: string, authorName: string) => void;
+  onStartEdit?: (comment: Comment) => void;
+  onDeleteComment: (comment: Comment) => void;
+  onViewAuthorProfile?: (author: CommentAuthor) => void;
+}
+
+const InlineCommentCard = memo(function InlineCommentCard({
+  comment,
+  currentUserId,
+  listingAuthorId,
+  accent,
+  onStartReply,
+  onStartEdit,
+  onDeleteComment,
+  onViewAuthorProfile,
+}: InlineCommentCardProps) {
+  const [isRepliesExpanded, setIsRepliesExpanded] = useState(false);
+  const replyCount = comment.replies?.length ?? 0;
+  const isOwn = comment.author.id === currentUserId;
+  const isListingAuthor = Boolean(listingAuthorId && comment.author.id === listingAuthorId);
+  const authorInitial = (comment.author.name ?? "U").charAt(0).toUpperCase();
+  const authorSubtitle = getAuthorAcademicSubtitle(comment.author);
+  const edited = isCommentEdited(comment.createdAt, comment.updatedAt);
+
+  return (
+    <View style={styles.commentCard}>
+      {/* Avatar on the left */}
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => onViewAuthorProfile?.(comment.author)}
+        disabled={!onViewAuthorProfile}
+      >
+        {comment.author.image ? (
+          <Image source={{ uri: comment.author.image }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarFallback}>
+            <Text style={styles.avatarFallbackText}>{authorInitial}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.commentContent}>
+        {/* Card Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.authorMetaCol}>
+            <View style={styles.nameRow}>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => onViewAuthorProfile?.(comment.author)}
+                disabled={!onViewAuthorProfile}
+              >
+                <Text style={styles.authorName} numberOfLines={1}>
+                  {comment.author.name}
+                </Text>
+              </TouchableOpacity>
+              {isListingAuthor && (
+                <View style={[styles.sellerBadge, { backgroundColor: `${accent}14` }]}>
+                  <Text style={[styles.sellerBadgeText, { color: accent }]}>Seller</Text>
+                </View>
+              )}
+            </View>
+            {authorSubtitle && (
+              <Text style={styles.academicSubtitle} numberOfLines={1}>
+                {authorSubtitle}
+              </Text>
+            )}
+          </View>
+
+          <Text style={styles.timeText}>{timeAgo(comment.createdAt)}</Text>
+        </View>
+
+        {/* Body Content */}
+        <Text style={styles.commentBody}>{comment.content}</Text>
+
+        {edited && <Text style={styles.editedLabel}>✎ Edited</Text>}
+
+      {/* Actions Row */}
+      <View style={styles.actionsRow}>
+        <View style={styles.leftActions}>
+          {/* 3. Reply with icon and text */}
+          <TouchableOpacity
+            style={[
+              styles.actionReplyBtn,
+              { backgroundColor: `${accent}10`, borderColor: `${accent}25` },
+            ]}
+            onPress={() => {
+              setIsRepliesExpanded(true);
+              onStartReply(comment.id, comment.author.name);
+            }}
+            activeOpacity={0.75}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Reply to ${comment.author.name}`}
+          >
+            <Feather name="corner-down-right" size={11.5} color={accent} />
+            <Text style={[styles.actionReplyText, { color: accent }]}>Reply</Text>
+          </TouchableOpacity>
+
+          {/* 4. View replies with icon, text and count number */}
+          {replyCount > 0 && (
+            <TouchableOpacity
+              style={styles.toggleRepliesBtn}
+              onPress={() => setIsRepliesExpanded((v) => !v)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isRepliesExpanded
+                  ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
+                  : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
+              }
+            >
+              <View style={[styles.toggleRepliesLine, { backgroundColor: `${accent}40` }]} />
+              <Feather
+                name={isRepliesExpanded ? 'chevron-up' : 'chevron-down'}
+                size={11.5}
+                color={accent}
+              />
+              <Text style={[styles.toggleRepliesText, { color: accent }]}>
+                {isRepliesExpanded
+                  ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
+                  : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {isOwn && (
+          <View style={styles.rightActions}>
+            {/* 1. Edit (just icon) */}
+            {onStartEdit && (
+              <TouchableOpacity
+                style={[
+                  styles.actionIconBtn,
+                  { backgroundColor: `${accent}12`, borderColor: `${accent}25` },
+                ]}
+                onPress={() => onStartEdit(comment)}
+                activeOpacity={0.75}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Edit comment"
+              >
+                <Feather name="edit-2" size={12.5} color={accent} />
+              </TouchableOpacity>
+            )}
+
+            {/* 2. Delete (just icon) */}
+            <TouchableOpacity
+              style={[styles.actionIconBtn, styles.actionIconBtnDanger]}
+              onPress={() => onDeleteComment(comment)}
+              activeOpacity={0.75}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Delete comment"
+            >
+              <Feather name="trash-2" size={12.5} color={CAMPUS_HUB_COLORS.dangerText} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+{/* Collapsable Nested Replies */}
+      {replyCount > 0 && isRepliesExpanded && (
+        <View style={styles.repliesBlock}>
+          {(comment.replies || []).map((reply) => {
+            const isReplyOwn = reply.author.id === currentUserId;
+            const isReplySeller = Boolean(listingAuthorId && reply.author.id === listingAuthorId);
+            const replyInitial = (reply.author.name ?? "U").charAt(0).toUpperCase();
+            const replySubtitle = getAuthorAcademicSubtitle(reply.author);
+            const replyEdited = isCommentEdited(reply.createdAt, reply.updatedAt);
+
+            return (
+              <View key={reply.id} style={[styles.replyRow, { borderLeftColor: `${accent}25` }]}>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => onViewAuthorProfile?.(reply.author)}
+                  disabled={!onViewAuthorProfile}
+                >
+                  {reply.author.image ? (
+                    <Image source={{ uri: reply.author.image }} style={styles.replyAvatarSmall} />
+                  ) : (
+                    <View style={styles.replyAvatarFallbackSmall}>
+                      <Text style={styles.replyAvatarTextSmall}>{replyInitial}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.replyContentSmall}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.authorMetaCol}>
+                      <View style={styles.nameRow}>
+                        <TouchableOpacity
+                          activeOpacity={0.75}
+                          onPress={() => onViewAuthorProfile?.(reply.author)}
+                          disabled={!onViewAuthorProfile}
+                        >
+                          <Text style={styles.replyNameSmall} numberOfLines={1}>
+                            {reply.author.name}
+                          </Text>
+                        </TouchableOpacity>
+                        {isReplySeller && (
+                          <View style={[styles.sellerBadge, { backgroundColor: `${accent}14` }]}>
+                            <Text style={[styles.sellerBadgeText, { color: accent }]}>Seller</Text>
+                          </View>
+                        )}
+                      </View>
+                      {replySubtitle && (
+                        <Text style={styles.academicSubtitle} numberOfLines={1}>
+                          {replySubtitle}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.timeText}>{timeAgo(reply.createdAt)}</Text>
+                  </View>
+
+                  <Text style={styles.replyBodySmall}>{reply.content}</Text>
+
+                  {replyEdited && <Text style={styles.editedLabel}>✎ Edited</Text>}
+
+                  <View style={styles.actionsRow}>
+                    <View style={styles.leftActions}>
+                      {/* 3. Reply with icon and text */}
+                      <TouchableOpacity
+                        style={[
+                          styles.actionReplyBtn,
+                          { backgroundColor: `${accent}10`, borderColor: `${accent}25` },
+                        ]}
+                        onPress={() => onStartReply(comment.id, reply.author.name)}
+                        activeOpacity={0.75}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Reply to ${reply.author.name}`}
+                      >
+                        <Feather name="corner-down-right" size={11} color={accent} />
+                        <Text style={[styles.actionReplyText, { color: accent }]}>Reply</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {isReplyOwn && (
+                      <View style={styles.rightActions}>
+                        {/* 1. Edit (just icon) */}
+                        {onStartEdit && (
+                          <TouchableOpacity
+                            style={[
+                              styles.actionIconBtn,
+                              { backgroundColor: `${accent}12`, borderColor: `${accent}25` },
+                            ]}
+                            onPress={() => onStartEdit(reply)}
+                            activeOpacity={0.75}
+                            accessible={true}
+                            accessibilityRole="button"
+                            accessibilityLabel="Edit reply"
+                          >
+                            <Feather name="edit-2" size={12} color={accent} />
+                          </TouchableOpacity>
+                        )}
+
+                        {/* 2. Delete (just icon) */}
+                        <TouchableOpacity
+                          style={[styles.actionIconBtn, styles.actionIconBtnDanger]}
+                          onPress={() => onDeleteComment(reply)}
+                          activeOpacity={0.75}
+                          accessible={true}
+                          accessibilityRole="button"
+                          accessibilityLabel="Delete reply"
+                        >
+                          <Feather name="trash-2" size={12} color={CAMPUS_HUB_COLORS.dangerText} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+      </View>
+    </View>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Main Inline Comments Component
+// ---------------------------------------------------------------------------
 interface InlineCommentsProps {
   comments: Comment[];
   currentUserId?: string;
+  listingAuthorId?: string;
   accent?: string;
   onStartReply: (targetId: string, authorName: string) => void;
+  onStartEdit?: (comment: Comment) => void;
   onDeleteComment: (commentId: string) => void;
   onViewAuthorProfile?: (author: CommentAuthor) => void;
 }
 
-export const InlineComments = React.memo(function InlineComments({
+export const InlineComments = memo(function InlineComments({
   comments,
   currentUserId,
+  listingAuthorId,
   accent = CAMPUS_HUB_COLORS.deepNavy,
   onStartReply,
+  onStartEdit,
   onDeleteComment,
   onViewAuthorProfile,
 }: InlineCommentsProps) {
@@ -65,7 +379,7 @@ export const InlineComments = React.memo(function InlineComments({
   };
 
   return (
-    <View style={styles.sectionContainer}>
+    <View style={styles.outerContainer}>
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleRow}>
@@ -91,233 +405,38 @@ export const InlineComments = React.memo(function InlineComments({
           </View>
           <Text style={styles.emptyTitle}>No comments yet</Text>
           <Text style={styles.emptySubtext}>
-            Be the first to ask or share.
+            Be the first to ask or share about this listing.
           </Text>
         </View>
       ) : (
-        <View style={styles.commentsList}>
-          {comments.map((comment) => {
-            const isOwn = comment.author.id === currentUserId;
-            const initial = (comment.author.name ?? "U").charAt(0).toUpperCase();
-
-            return (
-              <View key={comment.id} style={styles.threadContainer}>
-                {/* Main Comment */}
-                <View style={styles.commentRow}>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => onViewAuthorProfile?.(comment.author)}
-                    disabled={!onViewAuthorProfile}
-                  >
-                    {comment.author.image ? (
-                      <Image
-                        source={{ uri: comment.author.image }}
-                        style={styles.avatar}
-                      />
-                    ) : (
-                      <View style={styles.avatarFallback}>
-                        <Text style={styles.avatarFallbackText}>{initial}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  <View style={styles.bubbleCol}>
-                    <View style={styles.commentBubble}>
-                      <View style={styles.bubbleHeader}>
-                        <TouchableOpacity
-                          activeOpacity={0.7}
-                          onPress={() => onViewAuthorProfile?.(comment.author)}
-                          disabled={!onViewAuthorProfile}
-                        >
-                          <Text style={styles.authorName} numberOfLines={1}>
-                            {comment.author.name}
-                          </Text>
-                        </TouchableOpacity>
-                        <Text style={styles.timeText}>
-                          {timeAgo(comment.createdAt)}
-                        </Text>
-                      </View>
-                      <Text style={styles.content}>{comment.content}</Text>
-                    </View>
-
-                    <View style={styles.actionsRow}>
-                      <TouchableOpacity
-                        onPress={() =>
-                          onStartReply(comment.id, comment.author.name)
-                        }
-                        style={styles.actionBtn}
-                        accessible={true}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Reply to ${comment.author.name}`}
-                      >
-                        <Feather
-                          name="corner-down-right"
-                          size={13}
-                          color={accent}
-                        />
-                        <Text style={[styles.actionBtnText, { color: accent }]}>
-                          Reply
-                        </Text>
-                      </TouchableOpacity>
-
-                      {isOwn && (
-                        <TouchableOpacity
-                          onPress={() => handleDeletePrompt(comment)}
-                          style={styles.actionBtn}
-                          accessible={true}
-                          accessibilityRole="button"
-                          accessibilityLabel="Delete comment"
-                        >
-                          <Feather
-                            name="trash-2"
-                            size={13}
-                            color={CAMPUS_HUB_COLORS.dangerText}
-                          />
-                          <Text
-                            style={[
-                              styles.actionBtnText,
-                              { color: CAMPUS_HUB_COLORS.dangerText },
-                            ]}
-                          >
-                            Delete
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                </View>
-
-                {/* Nested Replies */}
-                {comment.replies && comment.replies.length > 0 && (
-                  <View style={styles.repliesBlock}>
-                    {comment.replies.map((reply) => {
-                      const isReplyOwn = reply.author.id === currentUserId;
-                      const replyInitial = (reply.author.name ?? "U")
-                        .charAt(0)
-                        .toUpperCase();
-
-                      return (
-                        <View key={reply.id} style={styles.replyRow}>
-                          <TouchableOpacity
-                            activeOpacity={0.7}
-                            onPress={() => onViewAuthorProfile?.(reply.author)}
-                            disabled={!onViewAuthorProfile}
-                          >
-                            {reply.author.image ? (
-                              <Image
-                                source={{ uri: reply.author.image }}
-                                style={styles.replyAvatar}
-                              />
-                            ) : (
-                              <View style={styles.replyAvatarFallback}>
-                                <Text style={styles.replyAvatarFallbackText}>
-                                  {replyInitial}
-                                </Text>
-                              </View>
-                            )}
-                          </TouchableOpacity>
-
-                          <View style={styles.bubbleCol}>
-                            <View
-                              style={[
-                                styles.commentBubble,
-                                styles.replyBubble,
-                              ]}
-                            >
-                              <View style={styles.bubbleHeader}>
-                                <TouchableOpacity
-                                  activeOpacity={0.7}
-                                  onPress={() =>
-                                    onViewAuthorProfile?.(reply.author)
-                                  }
-                                  disabled={!onViewAuthorProfile}
-                                >
-                                  <Text
-                                    style={styles.replyAuthorName}
-                                    numberOfLines={1}
-                                  >
-                                    {reply.author.name}
-                                  </Text>
-                                </TouchableOpacity>
-                                <Text style={styles.timeText}>
-                                  {timeAgo(reply.createdAt)}
-                                </Text>
-                              </View>
-                              <Text style={styles.content}>
-                                {reply.content}
-                              </Text>
-                            </View>
-
-                            <View style={styles.actionsRow}>
-                              <TouchableOpacity
-                                onPress={() =>
-                                  onStartReply(
-                                    comment.id,
-                                    reply.author.name
-                                  )
-                                }
-                                style={styles.actionBtn}
-                                accessible={true}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Reply to ${reply.author.name}`}
-                              >
-                                <Feather
-                                  name="corner-down-right"
-                                  size={13}
-                                  color={accent}
-                                />
-                                <Text
-                                  style={[
-                                    styles.actionBtnText,
-                                    { color: accent },
-                                  ]}
-                                >
-                                  Reply
-                                </Text>
-                              </TouchableOpacity>
-
-                              {isReplyOwn && (
-                                <TouchableOpacity
-                                  onPress={() => handleDeletePrompt(reply)}
-                                  style={styles.actionBtn}
-                                  accessible={true}
-                                  accessibilityRole="button"
-                                  accessibilityLabel="Delete reply"
-                                >
-                                  <Feather
-                                    name="trash-2"
-                                    size={13}
-                                    color={CAMPUS_HUB_COLORS.dangerText}
-                                  />
-                                  <Text
-                                    style={[
-                                      styles.actionBtnText,
-                                      { color: CAMPUS_HUB_COLORS.dangerText },
-                                    ]}
-                                  >
-                                    Delete
-                                  </Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            );
-          })}
+        <View style={styles.cardsList}>
+          {comments.map((comment) => (
+            <InlineCommentCard
+              key={comment.id}
+              comment={comment}
+              currentUserId={currentUserId}
+              listingAuthorId={listingAuthorId}
+              accent={accent}
+              onStartReply={onStartReply}
+              onStartEdit={onStartEdit}
+              onDeleteComment={handleDeletePrompt}
+              onViewAuthorProfile={onViewAuthorProfile}
+            />
+          ))}
         </View>
       )}
     </View>
   );
 });
 
+// ---------------------------------------------------------------------------
+// Comment Input Bar Component
+// ---------------------------------------------------------------------------
 interface CommentInputBarProps {
   replyTarget: ReplyTarget | null;
   onCancelReply: () => void;
+  isEditMode?: boolean;
+  onCancelEdit?: () => void;
   text: string;
   onChangeText: (text: string) => void;
   onSubmit: () => void;
@@ -326,9 +445,11 @@ interface CommentInputBarProps {
   inputRef?: React.RefObject<TextInput | null>;
 }
 
-export const CommentInputBar = React.memo(function CommentInputBar({
+export const CommentInputBar = memo(function CommentInputBar({
   replyTarget,
   onCancelReply,
+  isEditMode = false,
+  onCancelEdit,
   text,
   onChangeText,
   onSubmit,
@@ -337,9 +458,9 @@ export const CommentInputBar = React.memo(function CommentInputBar({
   inputRef,
 }: CommentInputBarProps) {
   const insets = useSafeAreaInsets();
-  const [isKeyboardVisible, setIsKeyboardVisible] = React.useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
       () => setIsKeyboardVisible(true)
@@ -354,16 +475,20 @@ export const CommentInputBar = React.memo(function CommentInputBar({
     };
   }, []);
 
-  const canSend = Boolean(text.trim()) && !isSubmitting;
+  useEffect(() => {
+    if (isEditMode || replyTarget) {
+      setTimeout(() => inputRef?.current?.focus(), 100);
+    }
+  }, [isEditMode, replyTarget, inputRef]);
 
-  // Accurately calculate bottom padding:
-  // When keyboard is visible, keep it tight (8px) above keyboard.
-  // When keyboard is closed, respect safe area insets for gesture/3-button navigation.
-  const bottomPadding = isKeyboardVisible
-    ? 8
-    : insets.bottom > 0
-    ? insets.bottom + 8
-    : 16;
+  const canSend = Boolean(text.trim()) && !isSubmitting;
+  const bottomPadding = isKeyboardVisible ? 6 : Math.max(insets.bottom, 8);
+
+  const placeholderText = isEditMode
+    ? "Edit your comment..."
+    : replyTarget
+    ? `Reply to @${replyTarget.authorName}...`
+    : "Write a comment...";
 
   return (
     <View
@@ -372,12 +497,46 @@ export const CommentInputBar = React.memo(function CommentInputBar({
         { paddingBottom: bottomPadding },
       ]}
     >
+      {/* Editing banner */}
+      {isEditMode && (
+        <View style={styles.editBanner}>
+          <View style={styles.bannerLeft}>
+            <Feather
+              name="edit-2"
+              size={12}
+              color="#92400e"
+              style={styles.bannerIcon}
+            />
+            <Text style={styles.editBannerText}>Editing comment</Text>
+          </View>
+          <TouchableOpacity
+            onPress={onCancelEdit}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel edit"
+          >
+            <Text style={styles.editCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Replying banner */}
-      {replyTarget && (
-        <View style={styles.replyingBanner}>
-          <View style={styles.replyingLeft}>
-            <Feather name="corner-down-right" size={13} color={accent} />
-            <Text style={styles.replyingText}>
+      {!isEditMode && replyTarget && (
+        <View
+          style={[
+            styles.replyingBanner,
+            { borderColor: `${accent}30`, backgroundColor: `${accent}0c` },
+          ]}
+        >
+          <View style={styles.bannerLeft}>
+            <Feather
+              name="corner-down-right"
+              size={13}
+              color={accent}
+              style={styles.bannerIcon}
+            />
+            <Text style={[styles.replyingText, { color: accent }]}>
               Replying to{" "}
               <Text style={{ fontWeight: "800", color: accent }}>
                 @{replyTarget.authorName}
@@ -387,11 +546,12 @@ export const CommentInputBar = React.memo(function CommentInputBar({
           <TouchableOpacity
             onPress={onCancelReply}
             style={styles.cancelReplyBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Cancel reply"
           >
-            <Feather name="x" size={15} color={CAMPUS_HUB_COLORS.subtleText} />
+            <Feather name="x" size={14} color={CAMPUS_HUB_COLORS.subtleText} />
           </TouchableOpacity>
         </View>
       )}
@@ -401,11 +561,7 @@ export const CommentInputBar = React.memo(function CommentInputBar({
         <TextInput
           ref={inputRef}
           style={styles.input}
-          placeholder={
-            replyTarget
-              ? `Reply to @${replyTarget.authorName}...`
-              : "Write a comment..."
-          }
+          placeholder={placeholderText}
           placeholderTextColor="#94a3b8"
           value={text}
           onChangeText={onChangeText}
@@ -423,13 +579,13 @@ export const CommentInputBar = React.memo(function CommentInputBar({
           disabled={!canSend}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Send comment"
+          accessibilityLabel={isEditMode ? "Save edit" : "Send comment"}
         >
           {isSubmitting ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
             <Feather
-              name="send"
+              name={isEditMode ? "check" : "send"}
               size={16}
               color={canSend ? "#ffffff" : "#94a3b8"}
             />
@@ -440,26 +596,17 @@ export const CommentInputBar = React.memo(function CommentInputBar({
   );
 });
 
+// ---------------------------------------------------------------------------
+// Stylesheet
+// ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
-  sectionContainer: {
+  outerContainer: {
     marginHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 20,
-    backgroundColor: "#ffffff",
-    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
-    ...CAMPUS_HUB_COLORS.shadow,
+    marginTop: 6,
+    marginBottom: 24,
   },
   sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-    marginBottom: 14,
+    marginBottom: 12,
   },
   sectionTitleRow: {
     flexDirection: "row",
@@ -469,7 +616,7 @@ const styles = StyleSheet.create({
   sectionIconBadge: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -480,33 +627,37 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
   counterPill: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
   },
   counterPillText: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
     color: CAMPUS_HUB_COLORS.subtleText,
   },
   emptyCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
+    padding: 24,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+    ...CAMPUS_HUB_COLORS.shadow,
   },
   emptyIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#f8fafc",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: "#e2e8f0",
   },
   emptyTitle: {
     fontFamily,
@@ -520,65 +671,58 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: CAMPUS_HUB_COLORS.subtleText,
     textAlign: "center",
-    lineHeight: 17,
+    lineHeight: 18,
   },
-  commentsList: {
-    gap: 16,
-  },
-  threadContainer: {
-    gap: 12,
-  },
-  commentRow: {
-    flexDirection: "row",
+  cardsList: {
     gap: 10,
+  },
+  commentCard: {
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
+    ...CAMPUS_HUB_COLORS.shadow,
+  },
+  commentContent: {
+    flex: 1,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "flex-start",
+    marginBottom: 6,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginTop: 2,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    marginRight: 10,
   },
   avatarFallback: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#f1f5f9",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
+    marginRight: 10,
   },
   avatarFallbackText: {
     fontFamily,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
-  bubbleCol: {
+  authorMetaCol: {
     flex: 1,
+    marginRight: 8,
   },
-  commentBubble: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 18,
-    borderTopLeftRadius: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  replyBubble: {
-    backgroundColor: "#f1f5f9",
-    borderColor: "#e2e8f0",
-  },
-  bubbleHeader: {
+  nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
   },
   authorName: {
     fontFamily,
@@ -586,134 +730,241 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
-  replyAuthorName: {
+  sellerBadge: {
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+  },
+  sellerBadgeText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  academicSubtitle: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "500",
+    color: CAMPUS_HUB_COLORS.subtleText,
+    marginTop: 1,
   },
   timeText: {
     fontFamily,
     fontSize: 11,
+    fontWeight: "400",
     color: CAMPUS_HUB_COLORS.subtleText,
   },
-  content: {
+  commentBody: {
     fontFamily,
     fontSize: 13,
+    fontWeight: "400",
+    color: CAMPUS_HUB_COLORS.neutralText,
     lineHeight: 19,
-    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  editedLabel: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "500",
+    color: "#92400e",
+    marginTop: 4,
   },
   actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 18,
-    marginTop: 6,
-    marginLeft: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
   },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 3,
+  leftActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
   },
-  actionBtnText: {
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+    marginLeft: 6,
+  },
+  actionReplyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4.5,
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderWidth: 1,
+  },
+  actionReplyText: {
     fontFamily,
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  actionIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  actionIconBtnDanger: {
+    backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
+    borderColor: 'rgba(190, 18, 60, 0.15)',
+  },
+  toggleRepliesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 28,
+    paddingHorizontal: 4,
+    gap: 4.5,
+  },
+  toggleRepliesLine: {
+    width: 12,
+    height: 1.5,
+    borderRadius: 1,
+  },
+  toggleRepliesText: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: '700',
   },
   repliesBlock: {
-    marginLeft: 22,
-    paddingLeft: 14,
-    borderLeftWidth: 2,
-    borderLeftColor: "#cbd5e1",
-    gap: 12,
-    marginTop: 2,
+    marginTop: 10,
+    paddingTop: 2,
   },
   replyRow: {
     flexDirection: "row",
-    gap: 8,
-    alignItems: "flex-start",
+    marginTop: 8,
+    paddingLeft: 10,
+    borderLeftWidth: 2,
   },
-  replyAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    marginTop: 2,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+  replyAvatarSmall: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    marginRight: 8,
   },
-  replyAvatarFallback: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#f1f5f9",
+  replyAvatarFallbackSmall: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+    marginRight: 8,
   },
-  replyAvatarFallbackText: {
+  replyAvatarTextSmall: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 10,
+    fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  replyContentSmall: {
+    flex: 1,
+  },
+  replyNameSmall: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  replyBodySmall: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "400",
+    color: CAMPUS_HUB_COLORS.neutralText,
+    lineHeight: 18,
   },
   inputBarWrapper: {
     backgroundColor: "#ffffff",
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    borderTopColor: "rgba(0, 0, 0, 0.06)",
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 10,
-    elevation: 10,
+    elevation: 8,
+  },
+  editBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fef3c7",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 6,
+  },
+  bannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
+  },
+  bannerIcon: {
+    marginRight: 2,
+  },
+  editBannerText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#92400e",
+    flex: 1,
+  },
+  editCancelText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.dangerText,
   },
   replyingBanner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    marginBottom: 8,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 6,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  replyingLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
   },
   replyingText: {
     fontFamily,
     fontSize: 12,
-    color: CAMPUS_HUB_COLORS.subtleText,
+    fontWeight: "500",
+    flex: 1,
   },
   cancelReplyBtn: {
-    padding: 3,
+    padding: 2,
   },
   inputRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+    alignItems: "flex-end",
+    gap: 8,
   },
   input: {
     flex: 1,
     fontFamily,
-    fontSize: 13,
-    color: CAMPUS_HUB_COLORS.deepNavy,
-    backgroundColor: "#f8fafc",
+    fontSize: 14,
+    color: CAMPUS_HUB_COLORS.neutralText,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "rgba(0, 0, 0, 0.08)",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingTop: Platform.OS === "android" ? 10 : 12,
+    paddingBottom: Platform.OS === "android" ? 10 : 12,
     minHeight: 44,
     maxHeight: 120,
+    textAlignVertical: "center",
   },
   sendBtn: {
     width: 44,
@@ -721,11 +972,10 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    ...CAMPUS_HUB_COLORS.shadow,
   },
   sendBtnDisabled: {
-    backgroundColor: "#f1f5f9",
-    shadowOpacity: 0,
-    elevation: 0,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
   },
 });

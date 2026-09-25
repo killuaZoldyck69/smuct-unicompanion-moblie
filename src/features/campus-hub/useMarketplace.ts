@@ -14,6 +14,7 @@ import {
   markMarketplaceSold,
   updateMarketplaceStatus,
   addMarketplaceComment,
+  updateMarketplaceComment,
   deleteMarketplaceComment,
   type CreateMarketplaceInput,
   type CreateCommentInput,
@@ -136,6 +137,22 @@ export const useAddMarketplaceComment = (postId: string) => {
         typeof input === "string" ? { content: input } : input;
       return addMarketplaceComment(postId, payload);
     },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: marketplaceKeys.post(postId) });
+    },
+  });
+};
+
+export const useUpdateMarketplaceComment = (postId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      commentId,
+      content,
+    }: {
+      commentId: string;
+      content: string;
+    }) => updateMarketplaceComment(postId, commentId, content),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: marketplaceKeys.post(postId) });
     },

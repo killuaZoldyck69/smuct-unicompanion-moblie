@@ -34,7 +34,6 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
   onEditPress,
   onDeletePress,
 }: DiscussionReplyItemProps) {
-  const [actionsVisible, setActionsVisible] = useState(false);
   const [isRepliesExpanded, setIsRepliesExpanded] = useState(false);
   const replyCount = item.replies?.length ?? 0;
 
@@ -95,22 +94,6 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
             <Text style={styles.replyTime}>
               {replyTime} • {replyTimeOnly}
             </Text>
-            {canManageReply && (
-              <TouchableOpacity
-                onPress={() => setActionsVisible((v) => !v)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Response options"
-                style={styles.moreBtn}
-              >
-                <Feather
-                  name={actionsVisible ? "chevron-up" : "more-horizontal"}
-                  size={15}
-                  color={BENTO_COLORS.subtleText}
-                />
-              </TouchableOpacity>
-            )}
           </View>
         </View>
 
@@ -122,106 +105,98 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
 
         {/* Action Row */}
         {((!isResolved && onStartReply) ||
-          (actionsVisible && canManageReply) ||
-          replyCount > 0) && (
+          replyCount > 0 ||
+          (canManageReply && (canEdit || canDelete))) && (
           <View style={styles.actionsRow}>
-            {!isResolved && onStartReply && (
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => {
-                  setIsRepliesExpanded(true);
-                  onStartReply(item.id, responderName);
-                }}
-                activeOpacity={0.75}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={`Reply to ${responderName}`}
-              >
-                <Feather
-                  name="corner-down-right"
-                  size={12}
-                  color={BENTO_COLORS.primaryBlue}
-                />
-                <Text style={styles.actionBtnText}>Reply</Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.leftActions}>
+              {/* 3. Reply with icon and text */}
+              {!isResolved && onStartReply && (
+                <TouchableOpacity
+                  style={styles.actionReplyBtn}
+                  onPress={() => {
+                    setIsRepliesExpanded(true);
+                    onStartReply(item.id, responderName);
+                  }}
+                  activeOpacity={0.75}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Reply to ${responderName}`}
+                >
+                  <Feather
+                    name="corner-down-right"
+                    size={12}
+                    color={BENTO_COLORS.primaryBlue}
+                  />
+                  <Text style={styles.actionReplyText}>Reply</Text>
+                </TouchableOpacity>
+              )}
 
-            {/* View replies button beside the right side of the Reply button */}
-            {replyCount > 0 && (
-              <TouchableOpacity
-                style={styles.toggleRepliesBtn}
-                onPress={() => setIsRepliesExpanded((v) => !v)}
-                activeOpacity={0.7}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  isRepliesExpanded
-                    ? `Hide ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
-                    : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
-                }
-              >
-                <View style={styles.toggleRepliesLine} />
-                <Feather
-                  name={isRepliesExpanded ? "chevron-up" : "chevron-down"}
-                  size={12}
-                  color={BENTO_COLORS.primaryBlue}
-                />
-                <Text style={styles.toggleRepliesText}>
-                  {isRepliesExpanded
-                    ? `Hide ${replyCount === 1 ? "reply" : "replies"}`
-                    : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
-                </Text>
-              </TouchableOpacity>
-            )}
+              {/* 4. View replies with icon, text and count number */}
+              {replyCount > 0 && (
+                <TouchableOpacity
+                  style={styles.toggleRepliesBtn}
+                  onPress={() => setIsRepliesExpanded((v) => !v)}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isRepliesExpanded
+                      ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
+                      : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
+                  }
+                >
+                  <View style={styles.toggleRepliesLine} />
+                  <Feather
+                    name={isRepliesExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={12}
+                    color={BENTO_COLORS.primaryBlue}
+                  />
+                  <Text style={styles.toggleRepliesText}>
+                    {isRepliesExpanded
+                      ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
+                      : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-            {actionsVisible && canManageReply && (
-              <>
+            {/* Right: Owner Actions */}
+            {canManageReply && (
+              <View style={styles.rightActions}>
+                {/* 1. Edit (just icon) */}
                 {canEdit && onEditPress && (
                   <TouchableOpacity
-                    style={styles.actionBtn}
-                    onPress={() => {
-                      setActionsVisible(false);
-                      onEditPress(item);
-                    }}
+                    style={styles.actionIconBtn}
+                    onPress={() => onEditPress(item)}
                     activeOpacity={0.75}
                     accessibilityRole="button"
                     accessibilityLabel="Edit response"
                   >
                     <Feather
                       name="edit-2"
-                      size={12}
+                      size={13}
                       color={BENTO_COLORS.primaryBlue}
                     />
-                    <Text style={styles.actionBtnText}>Edit</Text>
                   </TouchableOpacity>
                 )}
+
+                {/* 2. Delete (just icon) */}
                 {canDelete && onDeletePress && (
                   <TouchableOpacity
-                    style={[styles.actionBtn, styles.actionBtnDanger]}
-                    onPress={() => {
-                      setActionsVisible(false);
-                      onDeletePress(item);
-                    }}
+                    style={[styles.actionIconBtn, styles.actionIconBtnDanger]}
+                    onPress={() => onDeletePress(item)}
                     activeOpacity={0.75}
                     accessibilityRole="button"
                     accessibilityLabel="Delete response"
                   >
                     <Feather
                       name="trash-2"
-                      size={12}
+                      size={13}
                       color={BENTO_COLORS.danger}
                     />
-                    <Text
-                      style={[
-                        styles.actionBtnText,
-                        styles.actionBtnTextDanger,
-                      ]}
-                    >
-                      Delete
-                    </Text>
                   </TouchableOpacity>
                 )}
-              </>
+              </View>
             )}
           </View>
         )}
@@ -307,64 +282,68 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
                     )}
 
                     <View style={styles.actionsRow}>
-                      {!isResolved && onStartReply && (
-                        <TouchableOpacity
-                          style={styles.actionBtn}
-                          onPress={() =>
-                            onStartReply(item.id, replyResponderName)
-                          }
-                          activeOpacity={0.75}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Reply to ${replyResponderName}`}
-                        >
-                          <Feather
-                            name="corner-down-right"
-                            size={11}
-                            color={BENTO_COLORS.primaryBlue}
-                          />
-                          <Text style={styles.actionBtnText}>Reply</Text>
-                        </TouchableOpacity>
-                      )}
-
-                      {canEditReply && onEditPress && (
-                        <TouchableOpacity
-                          style={styles.actionBtn}
-                          onPress={() => onEditPress(reply)}
-                          activeOpacity={0.75}
-                          accessibilityRole="button"
-                          accessibilityLabel="Edit reply"
-                        >
-                          <Feather
-                            name="edit-2"
-                            size={11}
-                            color={BENTO_COLORS.primaryBlue}
-                          />
-                          <Text style={styles.actionBtnText}>Edit</Text>
-                        </TouchableOpacity>
-                      )}
-
-                      {canDeleteReply && onDeletePress && (
-                        <TouchableOpacity
-                          style={[styles.actionBtn, styles.actionBtnDanger]}
-                          onPress={() => onDeletePress(reply)}
-                          activeOpacity={0.75}
-                          accessibilityRole="button"
-                          accessibilityLabel="Delete reply"
-                        >
-                          <Feather
-                            name="trash-2"
-                            size={11}
-                            color={BENTO_COLORS.danger}
-                          />
-                          <Text
-                            style={[
-                              styles.actionBtnText,
-                              styles.actionBtnTextDanger,
-                            ]}
+                      <View style={styles.leftActions}>
+                        {/* 3. Reply with icon and text */}
+                        {!isResolved && onStartReply && (
+                          <TouchableOpacity
+                            style={styles.actionReplyBtn}
+                            onPress={() =>
+                              onStartReply(item.id, replyResponderName)
+                            }
+                            activeOpacity={0.75}
+                            accessible={true}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Reply to ${replyResponderName}`}
                           >
-                            Delete
-                          </Text>
-                        </TouchableOpacity>
+                            <Feather
+                              name="corner-down-right"
+                              size={11}
+                              color={BENTO_COLORS.primaryBlue}
+                            />
+                            <Text style={styles.actionReplyText}>Reply</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      {(canEditReply || canDeleteReply) && (
+                        <View style={styles.rightActions}>
+                          {/* 1. Edit (just icon) */}
+                          {canEditReply && onEditPress && (
+                            <TouchableOpacity
+                              style={styles.actionIconBtn}
+                              onPress={() => onEditPress(reply)}
+                              activeOpacity={0.75}
+                              accessibilityRole="button"
+                              accessibilityLabel="Edit reply"
+                            >
+                              <Feather
+                                name="edit-2"
+                                size={12}
+                                color={BENTO_COLORS.primaryBlue}
+                              />
+                            </TouchableOpacity>
+                          )}
+
+                          {/* 2. Delete (just icon) */}
+                          {canDeleteReply && onDeletePress && (
+                            <TouchableOpacity
+                              style={[
+                                styles.actionIconBtn,
+                                styles.actionIconBtnDanger,
+                              ]}
+                              onPress={() => onDeletePress(reply)}
+                              activeOpacity={0.75}
+                              accessibilityRole="button"
+                              accessibilityLabel="Delete reply"
+                            >
+                              <Feather
+                                name="trash-2"
+                                size={12}
+                                color={BENTO_COLORS.danger}
+                              />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       )}
                     </View>
                   </View>
@@ -482,38 +461,57 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: BENTO_COLORS.subtleBorder,
   },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+  leftActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 8,
+  },
+  actionReplyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
-    backgroundColor: "rgba(30, 58, 138, 0.06)",
+    backgroundColor: 'rgba(30, 58, 138, 0.05)',
     borderRadius: BENTO_COLORS.pillRadius,
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: "rgba(30, 58, 138, 0.12)",
+    borderColor: 'rgba(30, 58, 138, 0.1)',
   },
-  actionBtnDanger: {
-    backgroundColor: BENTO_COLORS.dangerBg,
-    borderColor: "rgba(190, 18, 60, 0.12)",
-  },
-  actionBtnText: {
+  actionReplyText: {
     fontFamily,
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: '700',
     color: BENTO_COLORS.primaryBlue,
   },
-  actionBtnTextDanger: {
-    color: BENTO_COLORS.danger,
+  actionIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(30, 58, 138, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(30, 58, 138, 0.08)',
+  },
+  actionIconBtnDanger: {
+    backgroundColor: BENTO_COLORS.dangerBg,
+    borderColor: 'rgba(190, 18, 60, 0.12)',
   },
   toggleRepliesBtn: {
     flexDirection: "row",

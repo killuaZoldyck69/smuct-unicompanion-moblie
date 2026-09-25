@@ -286,13 +286,15 @@ export function MarketplaceSection({
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search textbooks, tech, dorm essentials..."
+              placeholder="Search textbooks, tech, essentials..."
               placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
               value={searchInput}
               onChangeText={handleSearchChange}
               accessible
               accessibilityLabel="Search campus marketplace"
               returnKeyType="search"
+              numberOfLines={1}
+              multiline={false}
             />
             {searchInput.length > 0 && (
               <TouchableOpacity
@@ -530,6 +532,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.neutralText,
+    paddingVertical: 0,
   },
   filterBtn: {
     width: 48,
