@@ -16,7 +16,10 @@ import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
 import { useSubmitLostFoundClaim } from "@/features/campus-hub/useLostFound";
-import { uploadImageToCloudinary } from "@/services/cloudinary-service";
+import {
+  uploadImageToCloudinary,
+  CLOUDINARY_FOLDERS,
+} from "@/services/cloudinary-service";
 import type { LostFoundPost } from "@/services/lost-found-service";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
@@ -81,7 +84,7 @@ export const ClaimModal = React.memo(function ClaimModal({
       try {
         const uploadRes = await uploadImageToCloudinary(
           localImages[0],
-          "lost-found-proofs"
+          CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS
         );
         proofImageUrl = uploadRes.secureUrl;
       } catch (err: any) {

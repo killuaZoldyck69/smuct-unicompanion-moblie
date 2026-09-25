@@ -20,7 +20,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
-import { uploadImageToCloudinary } from "@/services/cloudinary-service";
+import {
+  uploadImageToCloudinary,
+  CLOUDINARY_FOLDERS,
+} from "@/services/cloudinary-service";
 import { useCreateMeme } from "@/features/campus-hub/useMemes";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 
@@ -128,7 +131,10 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
       setIsUploading(true);
 
       // 1. Upload to Cloudinary securely
-      const uploadRes = await uploadImageToCloudinary(imageUri, "memes");
+      const uploadRes = await uploadImageToCloudinary(
+        imageUri,
+        CLOUDINARY_FOLDERS.CAMPUS_HUB.MEMES
+      );
 
       // 2. Create Meme in backend
       createMemeMutation.mutate(

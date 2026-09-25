@@ -19,7 +19,10 @@ import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
 import { useCreateLostFoundPost } from "@/features/campus-hub/useLostFound";
-import { uploadMultipleImages } from "@/services/cloudinary-service";
+import {
+  uploadMultipleImages,
+  CLOUDINARY_FOLDERS,
+} from "@/services/cloudinary-service";
 import type {
   LostFoundType,
   LostFoundCategory,
@@ -143,7 +146,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
       try {
         const results = await uploadMultipleImages(
           form.localImages,
-          "lost-found",
+          CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
         );
         imageUrls = results.map((r) => r.secureUrl);
       } catch {

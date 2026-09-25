@@ -6,6 +6,35 @@ export interface CloudinaryUploadResult {
   publicId: string;
 }
 
+/**
+ * Standard project folder structure for Cloudinary media assets.
+ * Keeps all files under "smuct-unicompanion" organized by feature.
+ */
+export const CLOUDINARY_FOLDERS = {
+  PROJECT_ROOT: "smuct-unicompanion",
+  CAMPUS_HUB: {
+    ROOT: "smuct-unicompanion/campus-hub",
+    MEMES: "smuct-unicompanion/campus-hub/memes",
+    LOST_FOUND: "smuct-unicompanion/campus-hub/lost-found",
+    LOST_FOUND_CLAIMS: "smuct-unicompanion/campus-hub/lost-found/claims",
+    MARKETPLACE: "smuct-unicompanion/campus-hub/marketplace",
+    FORUM: "smuct-unicompanion/campus-hub/forum",
+  },
+  PROFILES: "smuct-unicompanion/profiles",
+  NOTICES: "smuct-unicompanion/notices",
+  BLOOD: "smuct-unicompanion/blood",
+  HUBS: "smuct-unicompanion/hubs",
+} as const;
+
+export type CloudinaryFolder =
+  | (typeof CLOUDINARY_FOLDERS.CAMPUS_HUB)[keyof typeof CLOUDINARY_FOLDERS.CAMPUS_HUB]
+  | typeof CLOUDINARY_FOLDERS.PROFILES
+  | typeof CLOUDINARY_FOLDERS.NOTICES
+  | typeof CLOUDINARY_FOLDERS.BLOOD
+  | typeof CLOUDINARY_FOLDERS.HUBS
+  | typeof CLOUDINARY_FOLDERS.PROJECT_ROOT
+  | (string & {});
+
 export function getMimeType(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase();
   switch (ext) {
@@ -52,7 +81,7 @@ export async function createSingleImageFormData(
  */
 export async function uploadImageToCloudinary(
   localUri: string,
-  folder: string = "unicompanion"
+  folder: CloudinaryFolder = CLOUDINARY_FOLDERS.PROJECT_ROOT
 ): Promise<CloudinaryUploadResult> {
   if (!localUri || typeof localUri !== "string" || !localUri.trim()) {
     throw new Error("Invalid image URI provided.");
@@ -83,7 +112,7 @@ export async function uploadImageToCloudinary(
  */
 export async function uploadMultipleImages(
   localUris: string[],
-  folder: string = "unicompanion"
+  folder: CloudinaryFolder = CLOUDINARY_FOLDERS.PROJECT_ROOT
 ): Promise<CloudinaryUploadResult[]> {
   if (!localUris || localUris.length === 0) {
     return [];

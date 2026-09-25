@@ -16,7 +16,10 @@ import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
 import { useCreateMarketplacePost } from "@/features/campus-hub/useMarketplace";
-import { uploadMultipleImages } from "@/services/cloudinary-service";
+import {
+  uploadMultipleImages,
+  CLOUDINARY_FOLDERS,
+} from "@/services/cloudinary-service";
 import type {
   ListingType,
   MarketplaceCategory,
@@ -109,7 +112,10 @@ export const ComposeMarketplaceModal = React.memo(function ComposeMarketplaceMod
     if (form.localImages.length > 0) {
       setIsUploading(true);
       try {
-        const results = await uploadMultipleImages(form.localImages, "marketplace");
+        const results = await uploadMultipleImages(
+          form.localImages,
+          CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE
+        );
         imageUrls = results.map((r) => r.secureUrl);
       } catch {
         setIsUploading(false);
