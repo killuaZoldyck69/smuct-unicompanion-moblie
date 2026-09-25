@@ -42,10 +42,12 @@ export interface ForumResponseItem {
   id: string;
   postId?: string;
   responderId?: string;
+  parentId?: string | null;
   content: string;
   createdAt: string;
   updatedAt?: string;
   responder: ForumAuthor;
+  replies?: ForumResponseItem[];
 }
 
 export interface ForumPostItem {
@@ -95,5 +97,6 @@ export interface UpdateForumPostInput {
 
 export interface CreateForumResponseInput {
   content: string;
+  parentId?: string | null;
 }
 

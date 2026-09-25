@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Keyboard,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -64,6 +65,10 @@ export function DiscussionDetailScreen() {
     composerText,
     setComposerText,
     isEditMode,
+    replyTarget,
+    handleStartReply,
+    handleCancelReply,
+    composerInputRef,
     isSubmittingComposer,
     handleComposerSubmit,
     handleEditResponseInline,
@@ -90,6 +95,19 @@ export function DiscussionDetailScreen() {
     isDeletingResponse,
   } = useDiscussionDetail();
 
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const backAction = () => {
+      if (replyTarget) {
+        handleCancelReply();
+        return true;
+      }
+      return false;
+    };
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
+    return () => backHandler.remove();
+  }, [replyTarget, handleCancelReply]);
+
   const handleProfilePress = useCallback(
     (profile: ForumAuthor) => {
       setSelectedProfile(profile);
@@ -106,6 +124,7 @@ export function DiscussionDetailScreen() {
         isAdmin={isAdmin}
         isResolved={thread?.isResolved}
         onResponderPress={handleProfilePress}
+        onStartReply={handleStartReply}
         onEditPress={handleEditResponseInline}
         onDeletePress={handleDeleteResponsePrompt}
       />
@@ -116,6 +135,7 @@ export function DiscussionDetailScreen() {
       currentUserId,
       isAdmin,
       handleProfilePress,
+      handleStartReply,
       handleEditResponseInline,
       handleDeleteResponsePrompt,
     ],
@@ -214,6 +234,9 @@ export function DiscussionDetailScreen() {
           isSubmitting={isSubmittingComposer}
           isEditMode={isEditMode}
           onCancelEdit={handleCancelEdit}
+          replyTarget={replyTarget}
+          onCancelReply={handleCancelReply}
+          inputRef={composerInputRef}
         />
       </SafeAreaView>
 

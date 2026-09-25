@@ -26,6 +26,11 @@ export interface FilterOption {
   count: number;
 }
 
+export interface ReplyTarget {
+  id: string;
+  authorName: string;
+}
+
 export type {
   ForumPostItem,
   ForumAuthor,

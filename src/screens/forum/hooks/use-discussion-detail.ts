@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Share, Keyboard } from "react-native";
+import { useState, useCallback, useRef } from "react";
+import { Share, Keyboard, TextInput } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
@@ -14,6 +14,7 @@ import {
   useDeleteForumResponse,
 } from "@/features/forum/useForum";
 import type { ForumAuthor, ForumResponseItem } from "@/features/forum/types";
+import type { ReplyTarget } from "../types";
 
 export interface ConfirmModalConfig {
   type: "danger" | "success";
@@ -38,6 +39,8 @@ export function useDiscussionDetail() {
   const [composerText, setComposerText] = useState("");
   const [editingResponse, setEditingResponse] = useState<ForumResponseItem | null>(null);
   const isEditMode = editingResponse !== null;
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const composerInputRef = useRef<TextInput>(null);
 
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -179,6 +182,25 @@ export function useDiscussionDetail() {
     );
   }, [editForm, editMutation]);
 
+  const handleStartReply = useCallback(
+    (targetId: string, authorName: string) => {
+      if (thread?.isResolved) return;
+      if (isEditMode) {
+        setEditingResponse(null);
+        setComposerText("");
+      }
+      setReplyTarget({ id: targetId, authorName });
+      setTimeout(() => {
+        composerInputRef.current?.focus();
+      }, 100);
+    },
+    [thread?.isResolved, isEditMode],
+  );
+
+  const handleCancelReply = useCallback(() => {
+    setReplyTarget(null);
+  }, []);
+
   // Submit handler — routes to new reply or response update based on edit mode
   const handleComposerSubmit = useCallback(() => {
     const cleanContent = composerText.trim();
@@ -208,14 +230,15 @@ export function useDiscussionDetail() {
       );
     } else {
       replyMutation.mutate(
-        { content: cleanContent },
+        { content: cleanContent, parentId: replyTarget?.id },
         {
           onSuccess: () => {
             setComposerText("");
+            setReplyTarget(null);
             Keyboard.dismiss();
             Toast.show({
               type: "success",
-              text1: "Reply Posted",
+              text1: replyTarget ? "Reply Posted" : "Reply Posted",
             });
           },
           onError: (err: any) => {
@@ -228,7 +251,14 @@ export function useDiscussionDetail() {
         },
       );
     }
-  }, [composerText, isEditMode, editingResponse, updateResponseMutation, replyMutation]);
+  }, [
+    composerText,
+    isEditMode,
+    editingResponse,
+    replyTarget,
+    updateResponseMutation,
+    replyMutation,
+  ]);
 
   // Enter inline edit mode for a response
   const handleEditResponseInline = useCallback(
@@ -241,6 +271,7 @@ export function useDiscussionDetail() {
         });
         return;
       }
+      setReplyTarget(null);
       setEditingResponse(response);
       setComposerText(response.content);
     },
@@ -251,6 +282,7 @@ export function useDiscussionDetail() {
   const handleCancelEdit = useCallback(() => {
     setEditingResponse(null);
     setComposerText("");
+    setReplyTarget(null);
     Keyboard.dismiss();
   }, []);
 
@@ -308,6 +340,10 @@ export function useDiscussionDetail() {
     composerText,
     setComposerText,
     isEditMode,
+    replyTarget,
+    handleStartReply,
+    handleCancelReply,
+    composerInputRef,
     isSubmittingComposer,
     handleComposerSubmit,
     handleEditResponseInline,

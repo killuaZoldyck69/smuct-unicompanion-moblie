@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: BENTO_COLORS.white,
-    borderRadius: BENTO_COLORS.pillRadius,
+    borderRadius: 12,
     paddingHorizontal: 16,
     height: 48,
     borderWidth: 1,
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   filterIconButton: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     backgroundColor: BENTO_COLORS.white,
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
