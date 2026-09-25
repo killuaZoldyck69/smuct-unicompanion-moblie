@@ -5,7 +5,6 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  Share,
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -17,7 +16,7 @@ interface MemeCardProps {
   currentUserId?: string;
   userRole?: string;
   onReact: (memeId: string, type: "LIKE" | "DISLIKE") => void;
-  onDelete: (memeId: string) => void;
+  onOptions: (meme: Meme) => void;
   onPreviewImage: (imageUrl: string, caption?: string | null, authorName?: string) => void;
   onViewProfile?: (author: any) => void;
   isReacting?: boolean;
@@ -28,7 +27,7 @@ export const MemeCard = React.memo(function MemeCard({
   currentUserId,
   userRole,
   onReact,
-  onDelete,
+  onOptions,
   onPreviewImage,
   onViewProfile,
   isReacting,
@@ -38,7 +37,7 @@ export const MemeCard = React.memo(function MemeCard({
 
   const isAuthor = currentUserId === meme.authorId;
   const isAdmin = userRole === "ADMIN";
-  const canDelete = isAuthor || isAdmin;
+  const canManage = isAuthor || isAdmin;
 
   const isLiked = meme.userReaction === "LIKE";
   const isDisliked = meme.userReaction === "DISLIKE";
@@ -56,6 +55,10 @@ export const MemeCard = React.memo(function MemeCard({
     meme.author?.teacherProfile?.department ||
     (meme.author?.role === "ADMIN" ? "Staff" : "Student");
 
+  const isEdited =
+    Boolean(meme.updatedAt && meme.createdAt) &&
+    new Date(meme.updatedAt).getTime() - new Date(meme.createdAt).getTime() > 1000;
+
   const handleLike = useCallback(() => {
     onReact(meme.id, "LIKE");
   }, [meme.id, onReact]);
@@ -64,31 +67,11 @@ export const MemeCard = React.memo(function MemeCard({
     onReact(meme.id, "DISLIKE");
   }, [meme.id, onReact]);
 
-  const handleDeletePress = useCallback(() => {
-    onDelete(meme.id);
-  }, [meme.id, onDelete]);
-
   const handleProfilePress = useCallback(() => {
     if (onViewProfile && meme.author) {
       onViewProfile(meme.author);
     }
   }, [onViewProfile, meme.author]);
-
-  const handleShare = useCallback(async () => {
-    try {
-      const shareMessage = meme.caption
-        ? `"${meme.caption}" - Check out this meme on SMUCT UniCompanion!\n${meme.imageUrl}`
-        : `Check out this meme on SMUCT UniCompanion!\n${meme.imageUrl}`;
-
-      await Share.share({
-        message: shareMessage,
-        url: meme.imageUrl,
-        title: "UniCompanion Meme",
-      });
-    } catch {
-      // user dismissed share dialog
-    }
-  }, [meme.caption, meme.imageUrl]);
 
   return (
     <View style={styles.card}>
@@ -127,22 +110,27 @@ export const MemeCard = React.memo(function MemeCard({
             </View>
             <View style={styles.subMetaRow}>
               <Text style={styles.authorSubText}>{authorSubtitle}</Text>
-              <Text style={styles.dotSeparator}>•</Text>
-              <Text style={styles.timeText}>{timeAgo(meme.createdAt)}</Text>
+              {isEdited && (
+                <>
+                  <Text style={styles.dotSeparator}>•</Text>
+                  <Text style={styles.editedText}>Edited</Text>
+                </>
+              )}
             </View>
           </View>
         </TouchableOpacity>
 
-        {canDelete && (
+        {canManage && (
           <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={handleDeletePress}
+            style={styles.moreBtn}
+            onPress={() => onOptions(meme)}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Delete meme"
+            accessibilityLabel="Meme options"
             activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Feather name="trash-2" size={16} color="#94a3b8" />
+            <Feather name="more-vertical" size={18} color="#64748b" />
           </TouchableOpacity>
         )}
       </View>
@@ -244,18 +232,11 @@ export const MemeCard = React.memo(function MemeCard({
           </TouchableOpacity>
         </View>
 
-        {/* Share Button */}
-        <TouchableOpacity
-          style={styles.shareBtn}
-          onPress={handleShare}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Share meme"
-          activeOpacity={0.7}
-        >
-          <Feather name="share-2" size={16} color="#64748b" />
-          <Text style={styles.shareText}>Share</Text>
-        </TouchableOpacity>
+        {/* Posted Timeline */}
+        <View style={styles.timelineRow}>
+          <Feather name="clock" size={12} color={CAMPUS_HUB_COLORS.subtleText} />
+          <Text style={styles.timeText}>{timeAgo(meme.createdAt)}</Text>
+        </View>
       </View>
     </View>
   );
@@ -350,13 +331,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: CAMPUS_HUB_COLORS.subtleText,
   },
-  deleteBtn: {
+  moreBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
     backgroundColor: "#f8fafc",
     alignItems: "center",
     justifyContent: "center",
+  },
+  editedText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#b45309",
   },
   captionText: {
     fontFamily,
@@ -448,17 +435,11 @@ const styles = StyleSheet.create({
   reactionCountDisliked: {
     color: "#be123c",
   },
-  shareBtn: {
+  timelineRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  shareText: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#64748b",
+    gap: 4.5,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
 });

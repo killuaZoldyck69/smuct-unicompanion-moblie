@@ -28,6 +28,8 @@ import { MemeCard } from "./components/meme-card";
 import { MemeComposeModal } from "./components/meme-compose-modal";
 import { MemeImageModal } from "./components/meme-image-modal";
 import { MemeDeleteModal } from "./components/meme-delete-modal";
+import { MemeOptionsModal } from "./components/meme-options-modal";
+import { MemeEditModal } from "./components/meme-edit-modal";
 
 const FILTER_TABS: { label: string; value: MemeFilter; icon: keyof typeof Feather.glyphMap }[] = [
   { label: "Latest", value: "latest", icon: "clock" },
@@ -56,6 +58,10 @@ export const MemesSection = React.memo(function MemesSection({
 
   // Author Profile modal state
   const [selectedAuthor, setSelectedAuthor] = useState<AuthorProfileModalData | null>(null);
+
+  // 3-Dot Options & Edit modal state
+  const [memeForOptions, setMemeForOptions] = useState<Meme | null>(null);
+  const [memeToEdit, setMemeToEdit] = useState<Meme | null>(null);
 
   // Custom Delete Confirmation modal state
   const [memeToDelete, setMemeToDelete] = useState<string | null>(null);
@@ -94,9 +100,21 @@ export const MemesSection = React.memo(function MemesSection({
     [reactMutation]
   );
 
-  const handleDeleteRequest = useCallback((memeId: string) => {
-    setMemeToDelete(memeId);
+  const handleOpenOptions = useCallback((meme: Meme) => {
+    setMemeForOptions(meme);
   }, []);
+
+  const handleEditFromOptions = useCallback(() => {
+    if (memeForOptions) {
+      setMemeToEdit(memeForOptions);
+    }
+  }, [memeForOptions]);
+
+  const handleDeleteFromOptions = useCallback(() => {
+    if (memeForOptions) {
+      setMemeToDelete(memeForOptions.id);
+    }
+  }, [memeForOptions]);
 
   const handleConfirmDelete = useCallback(() => {
     if (!memeToDelete) return;
@@ -150,12 +168,12 @@ export const MemesSection = React.memo(function MemesSection({
         currentUserId={user?.id}
         userRole={user?.role ?? undefined}
         onReact={handleReact}
-        onDelete={handleDeleteRequest}
+        onOptions={handleOpenOptions}
         onPreviewImage={handlePreviewImage}
         onViewProfile={handleViewProfile}
       />
     ),
-    [user?.id, user?.role, handleReact, handleDeleteRequest, handlePreviewImage, handleViewProfile]
+    [user?.id, user?.role, handleReact, handleOpenOptions, handlePreviewImage, handleViewProfile]
   );
 
   const renderListFooter = useCallback(() => {
@@ -296,6 +314,21 @@ export const MemesSection = React.memo(function MemesSection({
         visible={!!selectedAuthor}
         author={selectedAuthor}
         onClose={() => setSelectedAuthor(null)}
+      />
+
+      {/* 3-Dot Options Modal */}
+      <MemeOptionsModal
+        visible={!!memeForOptions}
+        onClose={() => setMemeForOptions(null)}
+        onEdit={handleEditFromOptions}
+        onDelete={handleDeleteFromOptions}
+      />
+
+      {/* Edit Meme Caption Modal */}
+      <MemeEditModal
+        visible={!!memeToEdit}
+        meme={memeToEdit}
+        onClose={() => setMemeToEdit(null)}
       />
 
       {/* Custom Delete Confirmation Modal */}

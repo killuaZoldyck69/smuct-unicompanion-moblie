@@ -10,10 +10,12 @@ import {
   getMemesFeed,
   getMemeById,
   createMeme,
+  updateMeme,
   reactToMeme,
   deleteMeme,
   type Meme,
   type CreateMemeInput,
+  type UpdateMemeInput,
   type MemeReactionType,
   type MemeFilter,
   type MemesFeedResponse,
@@ -60,6 +62,18 @@ export const useCreateMeme = () => {
     mutationFn: (data: CreateMemeInput) => createMeme(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: memeKeys.all });
+    },
+  });
+};
+
+export const useUpdateMeme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ memeId, data }: { memeId: string; data: UpdateMemeInput }) =>
+      updateMeme(memeId, data),
+    onSuccess: (updatedMeme) => {
+      queryClient.invalidateQueries({ queryKey: memeKeys.all });
+      queryClient.setQueryData(memeKeys.detail(updatedMeme.id), updatedMeme);
     },
   });
 };

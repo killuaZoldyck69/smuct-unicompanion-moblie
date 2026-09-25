@@ -98,6 +98,19 @@ export const createMeme = async (
   return res.data?.data;
 };
 
+export interface UpdateMemeInput {
+  caption?: string | null;
+  imageUrl?: string;
+}
+
+export const updateMeme = async (
+  id: string,
+  data: UpdateMemeInput
+): Promise<Meme> => {
+  const res = await api.patch(`/memes/${id}`, data);
+  return res.data?.data;
+};
+
 export const reactToMeme = async (
   memeId: string,
   type: MemeReactionType
