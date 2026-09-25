@@ -1,6 +1,7 @@
 import React from "react";
-import { ComplaintsScreen } from "@/screens/complaints";
+import { Redirect } from "expo-router";
 
 export default function ComplaintsRoute() {
-  return <ComplaintsScreen />;
+  return <Redirect href="/(tabs)/complaints" />;
 }
+

@@ -243,13 +243,13 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
   },
   {
     id: "complaints",
-    title: "Complaints Box",
-    desc: "Submit & track campus issues",
+    title: "My Complaints",
+    desc: "Track & submit personal grievances",
     category: "SUPPORT",
     assetIcon: require("@/assets/icons/complain.png"),
     fallbackIcon: "alert-circle",
     roles: ["STUDENT", "TEACHER"],
-    route: "/complaints" as Href,
+    route: "/(tabs)/complaints" as Href,
   },
 
   // -------------------------------------------------------------

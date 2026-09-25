@@ -216,6 +216,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="admin_calendar" options={{ href: null }} />
       <Tabs.Screen name="blood" options={{ href: null }} />
       <Tabs.Screen name="community" options={{ href: null }} />
+      <Tabs.Screen name="complaints" options={{ href: null }} />
       <Tabs.Screen name="my-schedule" options={{ href: null }} />
       <Tabs.Screen name="notices" options={{ href: null }} />
     </Tabs>
