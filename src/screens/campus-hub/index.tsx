@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 import { Forum } from "@/screens/forum";
 import { LostFoundSection } from "./lost-found";
 import { MarketplaceSection } from "./marketplace";
-import { ComplaintsSection } from "./complaints";
+import { MemesSection } from "./memes";
 import {
   SectionTabBar,
   type HubSection,
@@ -40,6 +40,7 @@ export function CampusHub({ initialSection }: CampusHubProps) {
   const { user: currentUser } = useCurrentUser();
   const [isForumComposeVisible, setIsForumComposeVisible] = useState(false);
   const [isLostFoundComposeVisible, setIsLostFoundComposeVisible] = useState(false);
+  const [isMemeComposeVisible, setIsMemeComposeVisible] = useState(false);
 
   const [activeSection, setActiveSection] = useState<HubSection>(() => {
     return initialSection || getCampusHubActiveSection();
@@ -68,6 +69,8 @@ export function CampusHub({ initialSection }: CampusHubProps) {
       setIsForumComposeVisible(true);
     } else if (activeSection === "LOST_FOUND") {
       setIsLostFoundComposeVisible(true);
+    } else if (activeSection === "MEMES") {
+      setIsMemeComposeVisible(true);
     }
   }, [activeSection]);
 
@@ -79,14 +82,20 @@ export function CampusHub({ initialSection }: CampusHubProps) {
         </View>
 
         <View style={styles.topNavRight}>
-          {(activeSection === "FORUM" || activeSection === "LOST_FOUND") && (
+          {(activeSection === "FORUM" ||
+            activeSection === "LOST_FOUND" ||
+            activeSection === "MEMES") && (
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={handleComposePress}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={
-                activeSection === "FORUM" ? "Ask a question" : "Create Lost or Found post"
+                activeSection === "FORUM"
+                  ? "Ask a question"
+                  : activeSection === "LOST_FOUND"
+                    ? "Create Lost or Found post"
+                    : "Post a meme"
               }
               activeOpacity={0.7}
             >
@@ -127,7 +136,12 @@ export function CampusHub({ initialSection }: CampusHubProps) {
           />
         )}
         {activeSection === "MARKETPLACE" && <MarketplaceSection />}
-        {activeSection === "COMPLAINTS" && <ComplaintsSection />}
+        {activeSection === "MEMES" && (
+          <MemesSection
+            isComposeVisible={isMemeComposeVisible}
+            onCloseCompose={() => setIsMemeComposeVisible(false)}
+          />
+        )}
       </View>
     </SafeAreaView>
   );

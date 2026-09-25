@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Platform,
   ActivityIndicator,
   useWindowDimensions,
+  Keyboard,
+  StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -72,7 +74,33 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
 }: ComposeLostFoundModalProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const modalHeight = Math.round(windowHeight * 0.85);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Listen to keyboard show/hide events to dynamically adapt modal height
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // Compute responsive sheet height that NEVER exceeds the safe area below the status bar
+  const defaultHeight = Math.round(windowHeight * 0.88);
+  const maxAllowedWithKeyboard = windowHeight - keyboardHeight - Math.max(insets.top, 24) - 12;
+  const sheetHeight =
+    keyboardHeight > 0
+      ? Math.max(280, Math.min(defaultHeight, maxAllowedWithKeyboard))
+      : Math.min(defaultHeight, windowHeight - Math.max(insets.top, 24) - 16);
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [isUploading, setIsUploading] = useState(false);
@@ -87,6 +115,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
   );
 
   const handleClose = useCallback(() => {
+    Keyboard.dismiss();
     setForm(INITIAL_FORM);
     onClose();
   }, [onClose]);
@@ -167,6 +196,11 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
       statusBarTranslucent={true}
       onRequestClose={handleClose}
     >
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={styles.overlay}>
         {/* Tap outside backdrop to dismiss */}
         <TouchableOpacity
@@ -180,7 +214,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardAvoid}
         >
-          <View style={[styles.sheet, { height: modalHeight }]}>
+          <View style={[styles.sheet, { height: sheetHeight }]}>
             {/* Drag Handle */}
             <View style={styles.dragHandle} />
 
@@ -206,6 +240,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
 
             {/* Scrollable Form Content */}
             <ScrollView
+              style={styles.scrollView}
               contentContainerStyle={styles.scroll}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
@@ -430,7 +465,10 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
             <View
               style={[
                 styles.modalFooter,
-                { paddingBottom: Math.max(insets.bottom, 16) },
+                {
+                  paddingBottom:
+                    keyboardHeight > 0 ? 14 : Math.max(insets.bottom, 16),
+                },
               ]}
             >
               <TouchableOpacity
@@ -470,7 +508,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(10, 15, 29, 0.65)",
     justifyContent: "flex-end",
   },
   keyboardAvoid: {
@@ -483,6 +521,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     overflow: "hidden",
     ...CAMPUS_HUB_COLORS.heroShadow,
+  },
+  scrollView: {
+    flex: 1,
   },
   dragHandle: {
     width: 40,

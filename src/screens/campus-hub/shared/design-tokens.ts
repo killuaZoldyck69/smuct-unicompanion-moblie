@@ -24,6 +24,10 @@ export const CAMPUS_HUB_COLORS = {
   complaintAccentLight: "#ede9fe",
   complaintAccentText: "#6d28d9",
 
+  memeAccent: "#ec4899",
+  memeAccentLight: "#fdf2f8",
+  memeAccentText: "#be185d",
+
   dangerText: "#be123c",
   dangerBg: "#ffe4e6",
 

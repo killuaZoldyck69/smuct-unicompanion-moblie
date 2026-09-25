@@ -241,6 +241,16 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     roles: ["STUDENT", "TEACHER", "ADMIN"],
     route: "/alumni" as Href,
   },
+  {
+    id: "complaints",
+    title: "Complaints Box",
+    desc: "Submit & track campus issues",
+    category: "SUPPORT",
+    assetIcon: require("@/assets/icons/complain.png"),
+    fallbackIcon: "alert-circle",
+    roles: ["STUDENT", "TEACHER"],
+    route: "/complaints" as Href,
+  },
 
   // -------------------------------------------------------------
   // Admin Management Controls (Admin Role Only)

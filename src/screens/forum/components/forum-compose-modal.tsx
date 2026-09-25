@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Platform,
   StyleSheet,
   useWindowDimensions,
+  Keyboard,
+  StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -35,7 +37,33 @@ export const ForumComposeModal = memo(function ForumComposeModal({
 }: ForumComposeModalProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const modalHeight = Math.round(windowHeight * 0.7);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Listen to keyboard show/hide events to dynamically adapt modal height
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // Compute responsive sheet height that NEVER exceeds the safe area below the status bar
+  const defaultHeight = Math.round(windowHeight * 0.78);
+  const maxAllowedWithKeyboard = windowHeight - keyboardHeight - Math.max(insets.top, 24) - 12;
+  const sheetHeight =
+    keyboardHeight > 0
+      ? Math.max(280, Math.min(defaultHeight, maxAllowedWithKeyboard))
+      : Math.min(defaultHeight, windowHeight - Math.max(insets.top, 24) - 16);
 
   const {
     title,
@@ -61,6 +89,11 @@ export const ForumComposeModal = memo(function ForumComposeModal({
       statusBarTranslucent={true}
       onRequestClose={onClose}
     >
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={styles.overlay}>
         {/* Backdrop tap to dismiss */}
         <TouchableOpacity
@@ -74,7 +107,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardAvoid}
         >
-          <View style={[styles.sheet, { height: modalHeight }]}>
+          <View style={[styles.sheet, { height: sheetHeight }]}>
             {/* Drag Handle */}
             <View style={styles.dragHandle} />
 
@@ -162,7 +195,10 @@ export const ForumComposeModal = memo(function ForumComposeModal({
             <View
               style={[
                 styles.modalFooter,
-                { paddingBottom: Math.max(insets.bottom, 16) },
+                {
+                  paddingBottom:
+                    keyboardHeight > 0 ? 14 : Math.max(insets.bottom, 16),
+                },
               ]}
             >
               <TouchableOpacity
@@ -204,7 +240,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(10, 15, 29, 0.65)",
     justifyContent: "flex-end",
   },
   keyboardAvoid: {
@@ -217,6 +253,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     overflow: "hidden",
     ...BENTO_COLORS.heroShadow,
+  },
+  scrollView: {
+    flex: 1,
   },
   dragHandle: {
     width: 40,

@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   useWindowDimensions,
   Keyboard,
+  StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -42,11 +43,9 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
 }: ComposeBloodModalProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const initialScreenHeight = React.useRef(windowHeight).current;
-
-  // Track keyboard height to dynamically adjust modal height and prevent status bar overlap
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  // Listen to keyboard show/hide events to dynamically adapt modal height
   useEffect(() => {
     const showEvent =
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -66,25 +65,14 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
     };
   }, []);
 
-  const isKeyboardOpen = keyboardHeight > 0;
-  const topSafeInset =
-    Math.max(insets.top, Platform.OS === "android" ? 28 : 20) + 8;
-
-  // Detect whether Android window was already resized by OS or needs manual offset
-  const availableSpaceAboveKeyboard =
-    isKeyboardOpen
-      ? windowHeight < initialScreenHeight - 100
-        ? windowHeight - topSafeInset // Window already resized by Android OS
-        : windowHeight - topSafeInset - keyboardHeight // Window was not resized, manual offset
-      : windowHeight - topSafeInset;
-
-  const defaultModalHeight = Math.round(
-    (isKeyboardOpen ? initialScreenHeight : windowHeight) * 0.88,
-  );
-
-  const sheetHeight = isKeyboardOpen
-    ? Math.max(availableSpaceAboveKeyboard, 280)
-    : Math.min(defaultModalHeight, windowHeight - topSafeInset);
+  // Compute responsive sheet height that NEVER exceeds the safe area below the status bar
+  const defaultHeight = Math.round(windowHeight * 0.88);
+  const maxAllowedWithKeyboard =
+    windowHeight - keyboardHeight - Math.max(insets.top, 24) - 12;
+  const sheetHeight =
+    keyboardHeight > 0
+      ? Math.max(280, Math.min(defaultHeight, maxAllowedWithKeyboard))
+      : Math.min(defaultHeight, windowHeight - Math.max(insets.top, 24) - 16);
 
   const canSubmit =
     form.patientName.trim().length > 0 &&
@@ -106,7 +94,12 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
       statusBarTranslucent={true}
       onRequestClose={handleClose}
     >
-      <View style={[styles.overlay, { paddingTop: topSafeInset }]}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <View style={styles.overlay}>
         {/* Tap outside backdrop to dismiss */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
@@ -398,9 +391,10 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
               style={[
                 styles.modalFooter,
                 {
-                  paddingBottom: isKeyboardOpen
-                    ? 10
-                    : Math.max(insets.bottom, 16),
+                  paddingBottom:
+                    keyboardHeight > 0
+                      ? 14
+                      : Math.max(insets.bottom, 16),
                 },
               ]}
             >
@@ -443,12 +437,11 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    backgroundColor: "rgba(10, 15, 29, 0.65)",
     justifyContent: "flex-end",
   },
   keyboardAvoid: {
     width: "100%",
-    maxHeight: "100%",
     justifyContent: "flex-end",
   },
   sheet: {

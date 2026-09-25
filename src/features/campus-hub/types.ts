@@ -23,3 +23,13 @@ export type {
 } from "@/services/marketplace-service";
 
 export type { CloudinaryUploadResult } from "@/services/cloudinary-service";
+
+export type {
+  Meme,
+  MemeAuthor,
+  MemeFilter,
+  MemeReactionType,
+  CreateMemeInput,
+  ReactMemeResult,
+  MemesFeedResponse,
+} from "@/services/meme-service";
