@@ -39,8 +39,9 @@ import { ImageViewerModal } from "@/screens/campus-hub/shared/image-viewer-modal
 import { setCampusHubActiveSection } from "@/screens/campus-hub";
 import { ClaimModal } from "@/screens/campus-hub/lost-found/components/claim-modal";
 import { HandoverCard } from "@/screens/campus-hub/lost-found/components/handover-card";
-import { OverflowMenuModal } from "@/screens/campus-hub/lost-found/components/overflow-menu-modal";
 import { AcceptConfirmationSheet } from "@/screens/campus-hub/lost-found/components/accept-confirmation-sheet";
+import { EditLostFoundModal } from "./edit-modal";
+import { LostFoundDeleteModal } from "./components/lost-found-delete-modal";
 import type { LostFoundClaim } from "@/services/lost-found-service";
 
 // Detail sub-components
@@ -55,6 +56,7 @@ import { LFMyClaimCard } from "./components/detail/lf-my-claim-card";
 // Constants
 // ---------------------------------------------------------------------------
 const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
+const EDIT_THRESHOLD_MS = 10_000;
 
 // ---------------------------------------------------------------------------
 // Modal state reducer
@@ -62,7 +64,8 @@ const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
 type ModalState = {
   imageViewer: boolean;
   claim: boolean;
-  overflow: boolean;
+  edit: boolean;
+  delete: boolean;
   acceptSheet: boolean;
 };
 
@@ -73,7 +76,8 @@ type ModalAction =
 const initialModalState: ModalState = {
   imageViewer: false,
   claim: false,
-  overflow: false,
+  edit: false,
+  delete: false,
   acceptSheet: false,
 };
 
@@ -140,6 +144,17 @@ export function LostFoundDetailScreen() {
   );
   const canDelete = isAuthor || isAdmin;
 
+  const isEdited = useMemo(
+    () =>
+      Boolean(
+        post?.updatedAt &&
+          post?.createdAt &&
+          new Date(post.updatedAt).getTime() - new Date(post.createdAt).getTime() >
+            EDIT_THRESHOLD_MS
+      ),
+    [post?.updatedAt, post?.createdAt]
+  );
+
   const claims = useMemo(() => claimsData ?? [], [claimsData]);
   const myClaim = useMemo(
     () => post?.myClaim ?? claims.find((c) => c.claimantId === currentUser?.id),
@@ -167,7 +182,8 @@ export function LostFoundDetailScreen() {
       if (modals.imageViewer) { closeModal("imageViewer"); return true; }
       if (selectedAuthor) { setSelectedAuthor(null); return true; }
       if (modals.claim) { closeModal("claim"); return true; }
-      if (modals.overflow) { closeModal("overflow"); return true; }
+      if (modals.edit) { closeModal("edit"); return true; }
+      if (modals.delete) { closeModal("delete"); return true; }
       if (modals.acceptSheet) { closeModal("acceptSheet"); return true; }
       handleBack();
       return true;
@@ -201,10 +217,18 @@ export function LostFoundDetailScreen() {
   // ---------------------------------------------------------------------------
   // Action handlers
   // ---------------------------------------------------------------------------
+  const handleEditPress = useCallback(() => {
+    openModal("edit");
+  }, [openModal]);
+
+  const handleDeletePress = useCallback(() => {
+    openModal("delete");
+  }, [openModal]);
+
   const handleConfirmDelete = useCallback(() => {
     deleteMutation.mutate(id, {
       onSuccess: () => {
-        closeModal("overflow");
+        closeModal("delete");
         Toast.show({ type: "info", text1: "Listing deleted" });
         handleBack();
       },
@@ -357,9 +381,7 @@ export function LostFoundDetailScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <LFDetailHeader
         isLost={isLost}
-        canDelete={canDelete}
         onBack={handleBack}
-        onOpenOverflow={() => openModal("overflow")}
       />
 
       <ScrollView
@@ -375,8 +397,11 @@ export function LostFoundDetailScreen() {
 
         <LFInfoCard
           post={post}
-          isAuthor={isAuthor}
+          isAuthor={canDelete}
+          isEdited={isEdited}
           onViewAuthor={handleViewAuthor}
+          onEdit={handleEditPress}
+          onDelete={handleDeletePress}
         />
 
         <LFPossibleMatches
@@ -445,16 +470,21 @@ export function LostFoundDetailScreen() {
       )}
 
       {/* Modals */}
-      <OverflowMenuModal
-        visible={modals.overflow}
-        onClose={() => closeModal("overflow")}
-        isAuthor={canDelete}
-        onDelete={handleConfirmDelete}
+      <EditLostFoundModal
+        visible={modals.edit}
+        onClose={() => closeModal("edit")}
+        post={post}
+      />
+
+      <LostFoundDeleteModal
+        visible={modals.delete}
+        isDeleting={deleteMutation.isPending}
         postTitle={post.title}
         postType={post.type}
         postLocation={post.location}
         postImage={post.images?.[0]}
-        isLoading={deleteMutation.isPending}
+        onConfirm={handleConfirmDelete}
+        onClose={() => closeModal("delete")}
       />
 
       <AcceptConfirmationSheet

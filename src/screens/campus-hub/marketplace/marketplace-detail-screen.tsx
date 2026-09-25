@@ -386,6 +386,10 @@ export function MarketplaceDetailScreen() {
       <MarketplaceDeleteModal
         visible={modals.delete}
         isDeleting={deleteMutation.isPending}
+        postTitle={post.title}
+        postPrice={post.price}
+        postType={post.type}
+        postImage={post.images?.[0]}
         onConfirm={handleConfirmDelete}
         onClose={() => closeModal("delete")}
       />

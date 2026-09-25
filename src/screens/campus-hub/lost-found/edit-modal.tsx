@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
-import { useCreateLostFoundPost } from "@/features/campus-hub/useLostFound";
+import { useUpdateLostFoundPost } from "@/features/campus-hub/useLostFound";
 import {
   uploadMultipleImages,
   CLOUDINARY_FOLDERS,
@@ -26,16 +26,16 @@ import {
 import type {
   LostFoundType,
   LostFoundCategory,
+  LostFoundPost,
   CreateLostFoundInput,
 } from "@/services/lost-found-service";
-import type { User } from "@/types/auth";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../shared/design-tokens";
 import { ImagePickerRow } from "../shared/image-picker-row";
 
-interface ComposeLostFoundModalProps {
+interface EditLostFoundModalProps {
   visible: boolean;
   onClose: () => void;
-  currentUser: User | null;
+  post: LostFoundPost;
 }
 
 const CATEGORIES: { key: LostFoundCategory; label: string }[] = [
@@ -55,31 +55,20 @@ interface FormState {
   description: string;
   category: LostFoundCategory;
   location: string;
-  localImages: string[];
+  images: string[];
   verificationQuestion: string;
   verificationAnswer: string;
 }
 
-const INITIAL_FORM: FormState = {
-  type: "LOST",
-  title: "",
-  description: "",
-  category: "OTHER",
-  location: "",
-  localImages: [],
-  verificationQuestion: "",
-  verificationAnswer: "",
-};
-
-export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
+export const EditLostFoundModal = React.memo(function EditLostFoundModal({
   visible,
   onClose,
-}: ComposeLostFoundModalProps) {
+  post,
+}: EditLostFoundModalProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Listen to keyboard show/hide events to dynamically adapt modal height
   useEffect(() => {
     const showEvent =
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -99,7 +88,6 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
     };
   }, []);
 
-  // Compute responsive sheet height that NEVER exceeds the safe area below the status bar
   const defaultHeight = Math.round(windowHeight * 0.88);
   const maxAllowedWithKeyboard =
     windowHeight - keyboardHeight - Math.max(insets.top, 24) - 12;
@@ -108,11 +96,35 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
       ? Math.max(280, Math.min(defaultHeight, maxAllowedWithKeyboard))
       : Math.min(defaultHeight, windowHeight - Math.max(insets.top, 24) - 16);
 
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [isUploading, setIsUploading] = useState(false);
+  const [form, setForm] = useState<FormState>({
+    type: post.type,
+    title: post.title,
+    description: post.description,
+    category: post.category,
+    location: post.location,
+    images: post.images || [],
+    verificationQuestion: post.verificationQuestion || "",
+    verificationAnswer: post.verificationAnswer || "",
+  });
 
-  const createMutation = useCreateLostFoundPost();
-  const isSubmitting = isUploading || createMutation.isPending;
+  useEffect(() => {
+    if (visible && post) {
+      setForm({
+        type: post.type,
+        title: post.title,
+        description: post.description,
+        category: post.category,
+        location: post.location,
+        images: post.images || [],
+        verificationQuestion: post.verificationQuestion || "",
+        verificationAnswer: post.verificationAnswer || "",
+      });
+    }
+  }, [visible, post]);
+
+  const [isUploading, setIsUploading] = useState(false);
+  const updateMutation = useUpdateLostFoundPost();
+  const isSubmitting = isUploading || updateMutation.isPending;
 
   const update = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -122,14 +134,14 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
 
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
-    setForm(INITIAL_FORM);
     onClose();
   }, [onClose]);
 
   const canSubmit =
     form.title.trim().length > 0 &&
     form.description.trim().length > 0 &&
-    form.location.trim().length > 0;
+    form.location.trim().length > 0 &&
+    !isSubmitting;
 
   const handleSubmit = useCallback(async () => {
     if (!form.title.trim()) {
@@ -142,16 +154,20 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
       return Toast.show({ type: "error", text1: "Location is required." });
     }
 
-    let imageUrls: string[] = [];
+    let finalImages: string[] = [];
+    const existingRemote = form.images.filter((img) => img.startsWith("http"));
+    const newlyAdded = form.images.filter((img) => !img.startsWith("http"));
 
-    if (form.localImages.length > 0) {
+    finalImages = [...existingRemote];
+
+    if (newlyAdded.length > 0) {
       setIsUploading(true);
       try {
         const results = await uploadMultipleImages(
-          form.localImages,
+          newlyAdded,
           CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
         );
-        imageUrls = results.map((r) => r.secureUrl);
+        finalImages = [...finalImages, ...results.map((r) => r.secureUrl)];
       } catch {
         setIsUploading(false);
         return Toast.show({
@@ -163,13 +179,13 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
       setIsUploading(false);
     }
 
-    const payload: CreateLostFoundInput = {
+    const payload: Partial<CreateLostFoundInput> = {
       type: form.type,
       title: form.title.trim(),
       description: form.description.trim(),
       category: form.category,
       location: form.location.trim(),
-      images: imageUrls,
+      images: finalImages,
       verificationQuestion:
         form.type === "FOUND" && form.verificationQuestion.trim()
           ? form.verificationQuestion.trim()
@@ -180,19 +196,22 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
           : null,
     };
 
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        Toast.show({ type: "success", text1: "Post published!" });
-        handleClose();
+    updateMutation.mutate(
+      { id: post.id, data: payload },
+      {
+        onSuccess: () => {
+          Toast.show({ type: "success", text1: "Post updated successfully!" });
+          handleClose();
+        },
+        onError: (err: any) =>
+          Toast.show({
+            type: "error",
+            text1: "Failed to update",
+            text2: err.message ?? "Please try again.",
+          }),
       },
-      onError: (err: any) =>
-        Toast.show({
-          type: "error",
-          text1: "Failed to publish",
-          text2: err.message ?? "Please try again.",
-        }),
-    });
-  }, [form, createMutation, handleClose]);
+    );
+  }, [form, post.id, updateMutation, handleClose]);
 
   return (
     <Modal
@@ -231,7 +250,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
                 style={styles.closeBtn}
                 accessible
                 accessibilityRole="button"
-                accessibilityLabel="Close compose modal"
+                accessibilityLabel="Close edit modal"
                 activeOpacity={0.7}
               >
                 <Feather
@@ -240,8 +259,8 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
                   color={CAMPUS_HUB_COLORS.deepNavy}
                 />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Lost & Found Post</Text>
-              <View style={{ width: 36 }} />
+              <Text style={styles.headerTitle}>Edit Lost & Found Post</Text>
+              <View style={styles.headerPlaceholder} />
             </View>
 
             {/* Scrollable Form Content */}
@@ -273,7 +292,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
                         ? CAMPUS_HUB_COLORS.dangerText
                         : CAMPUS_HUB_COLORS.subtleText
                     }
-                    style={{ marginRight: 6 }}
+                    style={styles.btnIconSpacing}
                   />
                   <Text
                     style={[
@@ -305,7 +324,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
                         ? CAMPUS_HUB_COLORS.marketplaceAccentText
                         : CAMPUS_HUB_COLORS.subtleText
                     }
-                    style={{ marginRight: 6 }}
+                    style={styles.btnIconSpacing}
                   />
                   <Text
                     style={[
@@ -384,7 +403,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
                             name="check"
                             size={12}
                             color="#ffffff"
-                            style={{ marginRight: 4 }}
+                            style={styles.chipCheckIcon}
                           />
                         )}
                         <Text
@@ -443,7 +462,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
                   />
 
                   <TextInput
-                    style={[styles.input, { marginTop: 8 }]}
+                    style={[styles.input, styles.secretInputMargin]}
                     placeholder="Expected answer (private, only visible to you)..."
                     placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                     value={form.verificationAnswer}
@@ -459,8 +478,8 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
               <View style={styles.formGroup}>
                 <Text style={styles.label}>PHOTOS (MAX 4)</Text>
                 <ImagePickerRow
-                  images={form.localImages}
-                  onImagesChange={(imgs) => update("localImages", imgs)}
+                  images={form.images}
+                  onImagesChange={(imgs) => update("images", imgs)}
                   maxImages={4}
                   accent={ACCENT}
                 />
@@ -487,19 +506,19 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
                 activeOpacity={0.8}
                 accessible
                 accessibilityRole="button"
-                accessibilityLabel="Publish post"
+                accessibilityLabel="Save post changes"
               >
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
                   <>
                     <Feather
-                      name="send"
+                      name="check"
                       size={16}
                       color="#ffffff"
-                      style={{ marginRight: 8 }}
+                      style={styles.submitIconSpacing}
                     />
-                    <Text style={styles.submitBtnText}>Publish Post</Text>
+                    <Text style={styles.submitBtnText}>Save Changes</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -538,16 +557,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.15)",
     alignSelf: "center",
     marginTop: 10,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 14,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
@@ -556,7 +573,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
-    letterSpacing: -0.3,
   },
   closeBtn: {
     width: 36,
@@ -566,33 +582,46 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  headerPlaceholder: {
+    width: 36,
+  },
+  btnIconSpacing: {
+    marginRight: 6,
+  },
+  chipCheckIcon: {
+    marginRight: 4,
+  },
+  secretInputMargin: {
+    marginTop: 8,
+  },
+  submitIconSpacing: {
+    marginRight: 8,
+  },
   scroll: {
     padding: 20,
+    gap: 18,
     paddingBottom: 24,
   },
   typeSegment: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
   },
   typeSegmentBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
+    paddingVertical: 10,
+    borderRadius: 11,
   },
   typeSegmentBtnLostActive: {
     backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
-    borderColor: CAMPUS_HUB_COLORS.dangerText,
   },
   typeSegmentBtnFoundActive: {
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
-    borderColor: CAMPUS_HUB_COLORS.marketplaceAccent,
   },
   typeSegmentText: {
     fontFamily,
@@ -602,47 +631,46 @@ const styles = StyleSheet.create({
   },
   typeSegmentTextLostActive: {
     color: CAMPUS_HUB_COLORS.dangerText,
+    fontWeight: "800",
   },
   typeSegmentTextFoundActive: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
+    fontWeight: "800",
   },
   formGroup: {
-    marginBottom: 18,
+    gap: 8,
   },
   labelRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
   },
   label: {
     fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.subtleText,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   counterText: {
     fontFamily,
     fontSize: 11,
-    fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
   },
   input: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     fontFamily,
     fontSize: 14,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.neutralText,
-    borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    color: CAMPUS_HUB_COLORS.deepNavy,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   textArea: {
-    minHeight: 96,
-    paddingTop: 12,
+    minHeight: 90,
+    paddingTop: 11,
   },
   chipRow: {
     flexDirection: "row",
@@ -652,12 +680,12 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: "transparent",
   },
   chipSelected: {
     backgroundColor: ACCENT,
@@ -667,18 +695,18 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.neutralText,
+    color: CAMPUS_HUB_COLORS.subtleText,
   },
   chipTextSelected: {
     color: "#ffffff",
+    fontWeight: "800",
   },
   verificationCard: {
     backgroundColor: "#f0f9ff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 18,
     borderWidth: 1,
     borderColor: "#bae6fd",
+    borderRadius: 16,
+    padding: 14,
     gap: 8,
   },
   verificationTitleRow: {
@@ -691,15 +719,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     color: "#0284c7",
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
   verificationHint: {
     fontFamily,
     fontSize: 12,
-    fontWeight: "500",
-    color: "#0284c7",
-    lineHeight: 16,
-    marginBottom: 4,
+    color: "#0369a1",
+    lineHeight: 17,
   },
   modalFooter: {
     paddingHorizontal: 20,
@@ -707,23 +733,22 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,
     borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
-    ...CAMPUS_HUB_COLORS.heroShadow,
   },
   submitBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ACCENT,
-    height: 50,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderRadius: 14,
+    paddingVertical: 14,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   submitBtnDisabled: {
-    opacity: 0.45,
+    opacity: 0.5,
   },
   submitBtnText: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
     color: "#ffffff",
   },

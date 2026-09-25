@@ -162,6 +162,14 @@ export const createLostFoundPost = async (
   return res.data?.data;
 };
 
+export const updateLostFoundPost = async (
+  id: string,
+  data: Partial<CreateLostFoundInput>
+): Promise<LostFoundPost> => {
+  const res = await api.patch(`/lost-found/${id}`, data);
+  return res.data?.data;
+};
+
 export const deleteLostFoundPost = async (id: string): Promise<void> => {
   await api.delete(`/lost-found/${id}`);
 };

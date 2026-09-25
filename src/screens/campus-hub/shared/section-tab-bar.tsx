@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
     marginHorizontal: 20,
     marginBottom: 14,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderRadius: 14,
     padding: 4,
     gap: 4,
     ...CAMPUS_HUB_COLORS.shadow,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -11,6 +11,7 @@ import {
   getLostFoundPostById,
   getPossibleMatches,
   createLostFoundPost,
+  updateLostFoundPost,
   deleteLostFoundPost,
   updateLostFoundStatus,
   getLostFoundClaims,
@@ -88,6 +89,23 @@ export const useCreateLostFoundPost = () => {
     mutationFn: (data: CreateLostFoundInput) => createLostFoundPost(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
+    },
+  });
+};
+
+export const useUpdateLostFoundPost = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<CreateLostFoundInput>;
+    }) => updateLostFoundPost(id, data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
+      queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(variables.id) });
     },
   });
 };

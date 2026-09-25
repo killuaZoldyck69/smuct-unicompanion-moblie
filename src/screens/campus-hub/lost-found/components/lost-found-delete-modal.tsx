@@ -11,32 +11,31 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
-import type { ListingType } from "@/services/marketplace-service";
+import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
 
-interface MarketplaceDeleteModalProps {
+interface LostFoundDeleteModalProps {
   visible: boolean;
   isDeleting: boolean;
-  postTitle?: string;
-  postPrice?: number | null;
-  postType?: ListingType;
+  postTitle: string;
+  postType?: "LOST" | "FOUND";
+  postLocation?: string;
   postImage?: string;
   onConfirm: () => void;
   onClose: () => void;
 }
 
-export const MarketplaceDeleteModal = React.memo(function MarketplaceDeleteModal({
+export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
   visible,
   isDeleting,
   postTitle,
-  postPrice,
-  postType = "SELLING",
+  postType = "LOST",
+  postLocation,
   postImage,
   onConfirm,
   onClose,
-}: MarketplaceDeleteModalProps) {
+}: LostFoundDeleteModalProps) {
   const insets = useSafeAreaInsets();
-  const isSelling = postType === "SELLING";
+  const isLost = postType === "LOST";
 
   if (!visible) return null;
 
@@ -71,71 +70,71 @@ export const MarketplaceDeleteModal = React.memo(function MarketplaceDeleteModal
               {/* Title & Description */}
               <Text style={styles.title}>Delete Listing?</Text>
               <Text style={styles.description}>
-                This listing will be permanently removed from the Campus Marketplace.
-                This action cannot be undone.
+                Are you sure you want to permanently delete this listing? All
+                attached claims and information will be removed. This action
+                cannot be undone.
               </Text>
 
-              {/* Optional Post Preview Card */}
-              {!!postTitle && (
-                <View style={styles.previewCard}>
-                  <View style={styles.previewThumbContainer}>
-                    {postImage ? (
-                      <Image
-                        source={{ uri: postImage }}
-                        style={styles.previewThumb}
-                        resizeMode="cover"
+              {/* Inset Post Preview Card */}
+              <View style={styles.previewCard}>
+                <View style={styles.previewThumbContainer}>
+                  {postImage ? (
+                    <Image
+                      source={{ uri: postImage }}
+                      style={styles.previewThumb}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.previewPlaceholder}>
+                      <Feather
+                        name={isLost ? "search" : "gift"}
+                        size={18}
+                        color={CAMPUS_HUB_COLORS.subtleText}
                       />
-                    ) : (
-                      <View style={styles.previewPlaceholder}>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.previewMeta}>
+                  <Text style={styles.previewTitle} numberOfLines={1}>
+                    {postTitle}
+                  </Text>
+                  <View style={styles.previewBadgeRow}>
+                    <View
+                      style={[
+                        styles.typeBadge,
+                        isLost ? styles.typeBadgeLost : styles.typeBadgeFound,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.typeBadgeText,
+                          isLost
+                            ? styles.typeBadgeTextLost
+                            : styles.typeBadgeTextFound,
+                        ]}
+                      >
+                        {isLost ? "LOST ITEM" : "FOUND ITEM"}
+                      </Text>
+                    </View>
+
+                    {!!postLocation && (
+                      <View style={styles.locationRow}>
                         <Feather
-                          name="shopping-bag"
-                          size={18}
+                          name="map-pin"
+                          size={11}
                           color={CAMPUS_HUB_COLORS.subtleText}
                         />
+                        <Text style={styles.locationText} numberOfLines={1}>
+                          {postLocation}
+                        </Text>
                       </View>
                     )}
                   </View>
-
-                  <View style={styles.previewMeta}>
-                    <Text style={styles.previewTitle} numberOfLines={1}>
-                      {postTitle}
-                    </Text>
-                    <View style={styles.previewBadgeRow}>
-                      <View
-                        style={[
-                          styles.typeBadge,
-                          isSelling
-                            ? styles.typeBadgeSelling
-                            : styles.typeBadgeWanted,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.typeBadgeText,
-                            isSelling
-                              ? styles.typeBadgeTextSelling
-                              : styles.typeBadgeTextWanted,
-                          ]}
-                        >
-                          {isSelling ? "SELLING" : "BUYING"}
-                        </Text>
-                      </View>
-
-                      {postPrice != null ? (
-                        <Text style={styles.priceText}>
-                          ৳{postPrice.toLocaleString()}
-                        </Text>
-                      ) : (
-                        <Text style={styles.priceNegotiableText}>
-                          {isSelling ? "Negotiable" : "Open"}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
                 </View>
-              )}
+              </View>
 
-              {/* Actions */}
+              {/* Actions Button Row */}
               <View style={styles.buttonRow}>
                 <TouchableOpacity
                   style={[styles.btn, styles.cancelBtn]}
@@ -286,13 +285,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
-  typeBadgeSelling: {
-    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
-    borderColor: "rgba(16, 185, 129, 0.25)",
+  typeBadgeLost: {
+    backgroundColor: CAMPUS_HUB_COLORS.lostRoseBg,
+    borderColor: CAMPUS_HUB_COLORS.lostRoseBorder,
   },
-  typeBadgeWanted: {
-    backgroundColor: "#eff6ff",
-    borderColor: "#bfdbfe",
+  typeBadgeFound: {
+    backgroundColor: CAMPUS_HUB_COLORS.foundTealBg,
+    borderColor: CAMPUS_HUB_COLORS.foundTealBorder,
   },
   typeBadgeText: {
     fontFamily,
@@ -300,22 +299,22 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.4,
   },
-  typeBadgeTextSelling: {
-    color: CAMPUS_HUB_COLORS.marketplaceAccentText,
+  typeBadgeTextLost: {
+    color: CAMPUS_HUB_COLORS.lostRoseText,
   },
-  typeBadgeTextWanted: {
-    color: "#2563eb",
+  typeBadgeTextFound: {
+    color: CAMPUS_HUB_COLORS.foundTealText,
   },
-  priceText: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.deepNavy,
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    flex: 1,
   },
-  priceNegotiableText: {
+  locationText: {
     fontFamily,
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "500",
     color: CAMPUS_HUB_COLORS.subtleText,
   },
   buttonRow: {

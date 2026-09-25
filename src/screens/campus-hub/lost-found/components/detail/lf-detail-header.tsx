@@ -5,46 +5,28 @@ import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/desig
 
 interface LFDetailHeaderProps {
   isLost: boolean;
-  canDelete: boolean;
   onBack: () => void;
-  onOpenOverflow: () => void;
 }
 
-export function LFDetailHeader({
-  isLost,
-  canDelete,
-  onBack,
-  onOpenOverflow,
-}: LFDetailHeaderProps) {
+export function LFDetailHeader({ isLost, onBack }: LFDetailHeaderProps) {
   return (
     <View style={styles.header}>
       <TouchableOpacity
         onPress={onBack}
         style={styles.iconBtn}
+        activeOpacity={0.7}
         accessible
         accessibilityRole="button"
         accessibilityLabel="Go back to Lost & Found feed"
       >
-        <Feather name="arrow-left" size={22} color={CAMPUS_HUB_COLORS.deepNavy} />
+        <Feather name="arrow-left" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
       </TouchableOpacity>
 
       <Text style={styles.title}>
         {isLost ? "Lost Item Listing" : "Found Item Listing"}
       </Text>
 
-      {canDelete ? (
-        <TouchableOpacity
-          onPress={onOpenOverflow}
-          style={styles.iconBtn}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel="Open listing options"
-        >
-          <Feather name="trash-2" size={20} color={CAMPUS_HUB_COLORS.dangerText} />
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.iconBtnPlaceholder} />
-      )}
+      <View style={styles.iconBtnPlaceholder} />
     </View>
   );
 }
@@ -67,13 +49,16 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
   iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
     alignItems: "center",
     justifyContent: "center",
   },
   iconBtnPlaceholder: {
-    width: 44,
+    width: 38,
   },
 });
