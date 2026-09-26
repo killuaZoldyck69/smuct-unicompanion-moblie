@@ -142,6 +142,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     paddingHorizontal: SPACING.xl, // 20px
-    rowGap: SPACING.md, // 12px
+    rowGap: SPACING.sm, // 8px — tighter to match smaller card footprint
   },
 });

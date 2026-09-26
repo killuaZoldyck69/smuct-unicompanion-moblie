@@ -10,6 +10,8 @@ import {
   fontFamily,
 } from "../constants";
 
+
+
 interface MenuItemCardProps {
   item: MenuItemConfig;
 }
@@ -25,44 +27,39 @@ export const MenuItemCard = React.memo(function MenuItemCard({
       style={styles.card}
       onPress={() => router.push(item.route)}
       activeOpacity={0.75}
-      accessible={true}
+      accessible
       accessibilityRole="button"
       accessibilityLabel={`${item.title}, ${theme.label}: ${item.desc}. Double tap to open.`}
     >
-      <View style={styles.iconContainer}>
-        <View
-          style={[
-            styles.iconBadge,
-            {
-              backgroundColor: theme.badgeBg,
-              borderColor: theme.badgeBorder,
-            },
-          ]}
-        >
-          {item.assetIcon ? (
-            <Image
-              source={item.assetIcon}
-              style={styles.iconImage}
-              resizeMode="contain"
-              accessible={false}
-            />
-          ) : (
-            <Feather
-              name={item.fallbackIcon}
-              size={22}
-              color={theme.accentText}
-            />
-          )}
-        </View>
+      {/* Icon Badge */}
+      <View
+        style={[
+          styles.iconBadge,
+          {
+            backgroundColor: theme.badgeBg,
+            borderColor: theme.badgeBorder,
+          },
+        ]}
+      >
+        {item.assetIcon ? (
+          <Image
+            source={item.assetIcon}
+            style={styles.iconImage}
+            resizeMode="contain"
+            accessible={false}
+          />
+        ) : (
+          <Feather name={item.fallbackIcon} size={20} color={theme.accentText} />
+        )}
       </View>
 
-      <View style={styles.titleContainer}>
-        <Text style={styles.title} numberOfLines={2}>
-          {item.title}
-        </Text>
-      </View>
+      {/* Title */}
+      <Text style={styles.title} numberOfLines={2}>
+        {item.title}
+      </Text>
 
-      <Text style={styles.desc} numberOfLines={2}>
+      {/* Description */}
+      <Text style={[styles.desc, { color: theme.accentText }]} numberOfLines={2}>
         {item.desc}
       </Text>
     </TouchableOpacity>
@@ -73,54 +70,44 @@ const styles = StyleSheet.create({
   card: {
     width: "48%",
     backgroundColor: BENTO_COLORS.white,
-    borderRadius: BENTO_COLORS.cardRadius,
-    paddingVertical: SPACING.lg, // 16px
-    paddingHorizontal: SPACING.md, // 12px
-    borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: SPACING.sm + 2,
+    borderWidth: 1,
     ...BENTO_COLORS.shadow,
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  iconContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING.md, // 12px
+    gap: 2,
   },
   iconBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+    marginBottom: 0,
   },
   iconImage: {
-    width: 32,
-    height: 32,
-  },
-  titleContainer: {
-    minHeight: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: SPACING.xs, // 4px
+    width: 26,
+    height: 26,
   },
   title: {
     fontFamily,
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.3,
-    lineHeight: 20,
+    letterSpacing: -0.2,
+    lineHeight: 17,                   // was 18
     textAlign: "center",
+    minHeight: 34,                    // was 36 — 2 lines × 17px
   },
   desc: {
     fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: "500",
-    color: BENTO_COLORS.subtleText,
-    lineHeight: 16,
-    minHeight: 32,
+    lineHeight: 14,
     textAlign: "center",
+    marginTop: -3,
   },
 });
