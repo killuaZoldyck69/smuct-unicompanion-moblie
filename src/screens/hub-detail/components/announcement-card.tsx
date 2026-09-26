@@ -18,7 +18,7 @@ const BENTO_COLORS = {
   white: "#ffffff",
   neutralText: "#191c1d",
   subtleText: "#64748b",
-  cardRadius: 24,
+  cardRadius: 16,
   pillRadius: 9999,
   shadow: {
     shadowColor: "#0f172a",

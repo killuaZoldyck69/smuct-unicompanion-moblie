@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import Toast from "react-native-toast-message";
 
 // Header
 import HubHeader from "./components/hub-header";
+import { getHubTheme } from "@/features/hubs/hub-themes";
 
 // 5 Bento Content Tabs
 import StreamTab from "./tabs/StreamTab";
@@ -89,7 +90,11 @@ export interface HubDetailProps {
 
 export function HubDetail({ hubId }: HubDetailProps) {
   const router = useRouter();
-  const searchParams = useLocalSearchParams<{ id?: string; tab?: string }>();
+  const searchParams = useLocalSearchParams<{
+    id?: string;
+    tab?: string;
+    colorIndex?: string;
+  }>();
 
   // Deep-linkable tab state
   const initialTab = (
@@ -114,6 +119,26 @@ export function HubDetail({ hubId }: HubDetailProps) {
   } = useHubDetails(hubId);
 
   const { data: myHubs } = useMyHubs();
+
+  // Resolve matching theme from Course Hubs card list
+  const hubTheme = useMemo(() => {
+    let colorIdx: string | number | null = null;
+    if (
+      searchParams.colorIndex !== undefined &&
+      searchParams.colorIndex !== null &&
+      !isNaN(Number(searchParams.colorIndex))
+    ) {
+      colorIdx = searchParams.colorIndex;
+    } else if (Array.isArray(myHubs)) {
+      const idx = myHubs.findIndex(
+        (m: any) => m.hubId === hubId || m.hub?.id === hubId,
+      );
+      if (idx !== -1) {
+        colorIdx = idx;
+      }
+    }
+    return getHubTheme(hubId, colorIdx);
+  }, [searchParams.colorIndex, myHubs, hubId]);
 
   // --- Mutations ---
   const updateHubMutation = useUpdateHub(hubId);
@@ -290,15 +315,18 @@ export function HubDetail({ hubId }: HubDetailProps) {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* 1. COMPACT BENTO COURSE HEADER */}
-      <HubHeader
-        hubDetails={hubDetails}
-        canManage={canManage}
-        canEditClassLink={canEditClassLink}
-        onOptionsPress={() => setIsHubOptionsVisible(true)}
-        onLiveClassPress={() => setIsEditClassLinkModalVisible(true)}
-        onEditClassLink={() => setIsEditClassLinkModalVisible(true)}
-        onBack={handleBack}
-      />
+      <View style={styles.headerWrapper}>
+        <HubHeader
+          hubDetails={hubDetails}
+          canManage={canManage}
+          canEditClassLink={canEditClassLink}
+          onOptionsPress={() => setIsHubOptionsVisible(true)}
+          onLiveClassPress={() => setIsEditClassLinkModalVisible(true)}
+          onEditClassLink={() => setIsEditClassLinkModalVisible(true)}
+          onBack={handleBack}
+          theme={hubTheme}
+        />
+      </View>
 
       {/* 2. THE 5 SOFT BENTO PRIMARY TABS */}
       <View style={styles.tabsWrapper}>
@@ -444,15 +472,24 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
+  // --- HEADER WRAPPER (ELEVATES SHADOW OVER TABS) ---
+  headerWrapper: {
+    zIndex: 20,
+    elevation: 6,
+  },
+
   // --- 5 TABS NAVIGATION ---
   tabsWrapper: {
     backgroundColor: BENTO_COLORS.background,
-    paddingVertical: 10,
+    paddingVertical: 4,
+    zIndex: 1,
   },
   tabsContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,
+    paddingVertical: 6,
     gap: 8,
+    alignItems: "center",
   },
   tabButton: {
     flexDirection: "row",
@@ -462,12 +499,21 @@ const styles = StyleSheet.create({
     borderRadius: BENTO_COLORS.pillRadius,
     backgroundColor: BENTO_COLORS.white,
     borderWidth: 1,
-    borderColor: BENTO_COLORS.border,
-    ...BENTO_COLORS.shadow,
+    borderColor: "rgba(19, 27, 46, 0.08)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
   },
   tabButtonActive: {
     backgroundColor: BENTO_COLORS.deepNavy,
     borderColor: BENTO_COLORS.deepNavy,
+    shadowColor: "#131b2e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tabText: {
     fontFamily,
@@ -482,5 +528,6 @@ const styles = StyleSheet.create({
   // --- CONTENT CONTAINER ---
   tabContentContainer: {
     flex: 1,
+    zIndex: 1,
   },
 });

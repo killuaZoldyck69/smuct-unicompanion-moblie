@@ -9,63 +9,12 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { CARD_THEMES } from "@/features/hubs/hub-themes";
 
 interface HubCardProps {
   item: any;
   index: number;
 }
-
-// 🎨 Expanded Soft Campus Bento Color Themes
-const CARD_THEMES = [
-  {
-    bg: "#d1fae5",
-    tagBg: "#ffffff",
-    caughtUpBg: "#a7f3d0",
-    caughtUpText: "#065f46",
-  }, // Mint
-  {
-    bg: "#fce7f3",
-    tagBg: "#ffffff",
-    caughtUpBg: "#fbcfe8",
-    caughtUpText: "#831843",
-  }, // Pink
-  {
-    bg: "#e0e7ff",
-    tagBg: "#ffffff",
-    caughtUpBg: "#c7d2fe",
-    caughtUpText: "#3730a3",
-  }, // Indigo
-  {
-    bg: "#fef08a",
-    tagBg: "#ffffff",
-    caughtUpBg: "#fde047",
-    caughtUpText: "#854d0e",
-  }, // Yellow
-  {
-    bg: "#e0f2fe",
-    tagBg: "#ffffff",
-    caughtUpBg: "#bae6fd",
-    caughtUpText: "#0369a1",
-  }, // Sky Blue
-  {
-    bg: "#ffedd5",
-    tagBg: "#ffffff",
-    caughtUpBg: "#fed7aa",
-    caughtUpText: "#9a3412",
-  }, // Peach
-  {
-    bg: "#f3e8ff",
-    tagBg: "#ffffff",
-    caughtUpBg: "#e9d5ff",
-    caughtUpText: "#581c87",
-  }, // Lavender
-  {
-    bg: "#ffe4e6",
-    tagBg: "#ffffff",
-    caughtUpBg: "#fecdd3",
-    caughtUpText: "#9f1239",
-  }, // Rose
-];
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -167,7 +116,12 @@ export default function HubCard({ item, index }: HubCardProps) {
     <TouchableOpacity
       style={[styles.card, { backgroundColor: theme.bg }]}
       activeOpacity={0.88}
-      onPress={() => router.push(`/hub/${hub.id}`)}
+      onPress={() =>
+        router.push({
+          pathname: "/hub/[id]",
+          params: { id: hub.id, colorIndex: String(index % CARD_THEMES.length) },
+        })
+      }
       accessible={true}
       accessibilityRole="button"
       accessibilityLabel={`Open Course Hub: ${hub.courseName || "Course"}, Code: ${hub.courseCode || ""}, taught by ${teacherName}`}

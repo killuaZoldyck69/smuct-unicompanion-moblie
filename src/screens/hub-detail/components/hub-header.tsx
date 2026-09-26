@@ -13,6 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-toast-message";
+import { HubCardTheme } from "@/features/hubs/hub-themes";
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -28,6 +29,7 @@ interface HubHeaderProps {
   onLiveClassPress?: () => void;
   onEditClassLink?: () => void;
   onBack?: () => void;
+  theme?: HubCardTheme;
 }
 
 const getOrdinal = (num?: number | string) => {
@@ -47,6 +49,7 @@ export default function HubHeader({
   onLiveClassPress,
   onEditClassLink,
   onBack,
+  theme,
 }: HubHeaderProps) {
   const router = useRouter();
 
@@ -127,7 +130,12 @@ export default function HubHeader({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        theme?.bg ? { backgroundColor: theme.bg } : null,
+      ]}
+    >
       {/* 1. Top Navigation Row: Back, Centered Course Title, Settings Button */}
       <View style={styles.topRow}>
         <TouchableOpacity
@@ -141,7 +149,7 @@ export default function HubHeader({
           <Feather name="arrow-left" size={18} color="#0f172a" />
         </TouchableOpacity>
 
-        <Text style={styles.courseTitle} numberOfLines={1}>
+        <Text style={styles.courseTitle}>
           {hubDetails?.courseName || "Course Name"}
         </Text>
 
@@ -157,11 +165,36 @@ export default function HubHeader({
         </TouchableOpacity>
       </View>
 
-      {/* 2. Metadata Pills: [Code] [Credits] [Semester] */}
+      {/* 2. Tag Row 1: [Course Code] [Semester] [Section] */}
       <View style={styles.pillsRow}>
         {hubDetails?.courseCode ? (
           <View style={styles.pill}>
             <Text style={styles.pillText}>{hubDetails.courseCode}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.pill}>
+          <Text style={styles.pillText}>{semesterDisplay}</Text>
+        </View>
+
+        {cleanSection ? (
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>Sec {cleanSection}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* 3. Tag Row 2: [Department] [Batch] [Course Credit] */}
+      <View style={[styles.pillsRow, styles.pillsRowSecond]}>
+        {hubDetails?.department ? (
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>{hubDetails.department}</Text>
+          </View>
+        ) : null}
+
+        {hubDetails?.batch ? (
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>Batch {hubDetails.batch}</Text>
           </View>
         ) : null}
 
@@ -170,25 +203,9 @@ export default function HubHeader({
             <Text style={styles.pillText}>{hubDetails.credit} Credits</Text>
           </View>
         ) : null}
-
-        <View style={styles.pill}>
-          <Text style={styles.pillText}>{semesterDisplay}</Text>
-        </View>
       </View>
 
-      {/* 3. Department & Batch / Section */}
-      <Text style={styles.subtitleText} numberOfLines={1}>
-        {hubDetails?.department || "General Department"}
-        {hubDetails?.batch
-          ? ` • Batch ${hubDetails.batch}${
-              cleanSection ? ` (Sec ${cleanSection})` : ""
-            }`
-          : cleanSection
-          ? ` • Sec ${cleanSection}`
-          : ""}
-      </Text>
-
-      {/* 4. Teacher Information */}
+      {/* 4. Instructor Information */}
       <View style={styles.instructorsRow}>
         <View style={styles.instructorCol}>
           {teacherImage ? (
@@ -201,10 +218,10 @@ export default function HubHeader({
             </View>
           )}
           <View style={styles.instructorTextWrapper}>
+            <Text style={styles.instructorRole}>INSTRUCTOR</Text>
             <Text style={styles.instructorName} numberOfLines={1}>
               {teacherName}
             </Text>
-            <Text style={styles.instructorRole}>Teacher</Text>
           </View>
         </View>
       </View>
@@ -316,17 +333,16 @@ export default function HubHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#d6f5e3", // Soft pastel mint background
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    backgroundColor: "#d6f5e3", // Soft pastel mint fallback
     paddingTop: 8,
-    paddingBottom: 14,
+    paddingBottom: 16,
     paddingHorizontal: 16,
+    zIndex: 20,
+    elevation: 6,
     shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 2,
   },
   topRow: {
     flexDirection: "row",
@@ -351,11 +367,12 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontFamily,
-    fontSize: 21,
+    fontSize: 20,
+    lineHeight: 26,
     fontWeight: "800",
     color: "#0f172a",
     marginHorizontal: 8,
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   pillsRow: {
     flexDirection: "row",
@@ -363,7 +380,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 5,
+  },
+  pillsRowSecond: {
+    marginBottom: 11,
   },
   pill: {
     backgroundColor: "#ffffff",
@@ -382,14 +402,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0f172a",
   },
-  subtitleText: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#334155",
-    textAlign: "center",
-    marginBottom: 8,
-  },
   instructorsRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -401,16 +413,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   avatarImg: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: "#ffffff",
     marginRight: 8,
   },
   avatarFallback: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: "#ffffff",
     justifyContent: "center",
     alignItems: "center",
@@ -425,17 +437,20 @@ const styles = StyleSheet.create({
   instructorTextWrapper: {
     justifyContent: "center",
   },
-  instructorName: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0f172a",
-  },
   instructorRole: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#475569",
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#64748b",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginBottom: 1,
+  },
+  instructorName: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: "#0f172a",
   },
   bentoRow: {
     flexDirection: "row",
