@@ -221,12 +221,7 @@ export const ComplaintComposeModal = React.memo(function ComplaintComposeModal({
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={[
-            styles.keyboardAvoid,
-            Platform.OS === "android" && keyboardHeight > 0 && {
-              paddingBottom: keyboardHeight,
-            },
-          ]}
+          style={styles.keyboardAvoid}
         >
           <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
             {/* Top Drag Handle */}
