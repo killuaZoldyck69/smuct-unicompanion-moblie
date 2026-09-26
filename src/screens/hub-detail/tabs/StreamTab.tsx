@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f172a",
     paddingHorizontal: 16,
     paddingVertical: 9,
-    borderRadius: 9999,
+    borderRadius: 10,
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f172a",
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 9999,
+    borderRadius: 10,
   },
   emptyActionText: {
     fontFamily,
