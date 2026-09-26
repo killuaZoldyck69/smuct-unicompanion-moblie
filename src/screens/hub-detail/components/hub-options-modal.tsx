@@ -8,27 +8,33 @@ import {
   Platform,
   Alert,
   ScrollView,
+  StatusBar,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 const BENTO = {
   canvas: "#f8fafc",
   card: "#ffffff",
-  navy: "#0f172a",
-  slate: "#64748b",
-  slateLight: "#94a3b8",
-  border: "rgba(15, 23, 42, 0.08)",
+  navy: "#131b2e",
+  slate: "#475569",
+  slateMuted: "#64748b",
+  border: "rgba(19, 27, 46, 0.08)",
+  borderSubtle: "rgba(19, 27, 46, 0.05)",
+  neutralSoft: "#f1f5f9",
+  pillRadius: 9999,
+  cardRadius: 16,
+
+  // Campus Bento Accent Tints
   blueSoft: "#eff6ff",
-  blueBorder: "#bfdbfe",
-  blueText: "#1d4ed8",
-  purpleSoft: "#faf5ff",
-  purpleBorder: "#e9d5ff",
-  purpleText: "#7e22ce",
+  blueIcon: "#2563eb",
+  purpleSoft: "#f5f3ff",
+  purpleIcon: "#7c3aed",
   amberSoft: "#fffbeb",
-  amberBorder: "#fde68a",
-  amberText: "#b45309",
-  roseSoft: "#fff1f2",
-  roseBorder: "#fecdd3",
+  amberIcon: "#d97706",
+  roseSoft: "#fff5f5",
+  roseIconBg: "#fee2e2",
+  roseBorder: "rgba(225, 29, 72, 0.16)",
   roseText: "#e11d48",
 };
 
@@ -62,6 +68,8 @@ export default function HubOptionsModal({
   onLeaveHub,
   onViewMembers,
 }: Props) {
+  const insets = useSafeAreaInsets();
+
   // Show delete option only to lead teachers (or managers if isTeacher isn't explicitly passed)
   const canDelete = isTeacher !== undefined ? isTeacher : canManage;
 
@@ -81,7 +89,7 @@ export default function HubOptionsModal({
     } else {
       Alert.alert(title, message, [
         { text: "Cancel", style: "cancel" },
-        { text: "Archive", style: "default", onPress: onArchiveHub },
+        { text: "Archive Hub", style: "default", onPress: onArchiveHub },
       ]);
     }
   };
@@ -132,15 +140,42 @@ export default function HubOptionsModal({
     <Modal
       visible={isVisible}
       animationType="fade"
-      transparent
+      transparent={true}
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <View style={styles.overlay} accessibilityViewIsModal={true}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <View
+        style={[
+          styles.overlay,
+          {
+            paddingTop: Math.max(insets.top + 16, 24),
+            paddingBottom: Math.max(insets.bottom + 16, 24),
+            paddingLeft: Math.max(insets.left + 16, 16),
+            paddingRight: Math.max(insets.right + 16, 16),
+          },
+        ]}
+        accessibilityViewIsModal={true}
+      >
+        {/* Backdrop tap to close */}
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+          accessible={false}
+        />
+
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.modalHeader}>
-            <View>
-              <Text style={styles.headerSubtitle}>COURSE HUB MENU</Text>
+            <View style={styles.headerLeftGroup}>
+              <View style={styles.pillTag}>
+                <Text style={styles.pillTagText}>COURSE HUB</Text>
+              </View>
               <Text style={styles.headerTitle}>Hub Options</Text>
             </View>
 
@@ -152,203 +187,154 @@ export default function HubOptionsModal({
               accessibilityRole="button"
               accessibilityLabel="Close Hub Options"
             >
-              <Feather name="x" size={18} color={BENTO.slate} />
+              <Feather name="x" size={16} color={BENTO.slateMuted} />
             </TouchableOpacity>
           </View>
 
           <ScrollView
             contentContainerStyle={styles.scrollBody}
             showsVerticalScrollIndicator={false}
+            bounces={false}
           >
-            {/* Section 1: Navigation & Management */}
+            {/* Section 1: Actions & Navigation Bento Tiles */}
             <View style={styles.sectionBlock}>
               <Text style={styles.sectionLabel}>ACTIONS & NAVIGATION</Text>
 
-              <View style={styles.optionsList}>
+              <View style={styles.bentoStack}>
                 {/* 1. See Members */}
                 <TouchableOpacity
-                  style={styles.optionCard}
+                  style={styles.bentoTile}
                   onPress={onViewMembers}
-                  activeOpacity={0.75}
+                  activeOpacity={0.7}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="See All Members"
                 >
                   <View
                     style={[
-                      styles.iconCircle,
+                      styles.iconBox,
                       { backgroundColor: BENTO.blueSoft },
                     ]}
                   >
-                    <Feather name="users" size={16} color={BENTO.blueText} />
+                    <Feather name="users" size={17} color={BENTO.blueIcon} />
                   </View>
-                  <View style={styles.optionTextCol}>
-                    <Text style={styles.optionTitle}>See All Members</Text>
-                    <Text style={styles.optionSubtitle}>
-                      View students, faculty & class representatives
-                    </Text>
-                  </View>
-                  <Feather
-                    name="chevron-right"
-                    size={16}
-                    color={BENTO.slateLight}
-                  />
+                  <Text style={styles.tileTitle}>See All Members</Text>
                 </TouchableOpacity>
 
                 {/* 2. Edit Hub Info */}
                 {canManage && (
                   <TouchableOpacity
-                    style={styles.optionCard}
+                    style={styles.bentoTile}
                     onPress={onEditHub}
-                    activeOpacity={0.75}
+                    activeOpacity={0.7}
                     accessible={true}
                     accessibilityRole="button"
                     accessibilityLabel="Update Course Hub Info"
                   >
                     <View
                       style={[
-                        styles.iconCircle,
+                        styles.iconBox,
                         { backgroundColor: BENTO.purpleSoft },
                       ]}
                     >
                       <Feather
                         name="edit-3"
-                        size={16}
-                        color={BENTO.purpleText}
+                        size={17}
+                        color={BENTO.purpleIcon}
                       />
                     </View>
-                    <View style={styles.optionTextCol}>
-                      <Text style={styles.optionTitle}>
-                        Update Course Hub Info
-                      </Text>
-                      <Text style={styles.optionSubtitle}>
-                        Edit routine, rooms, Google Meet link & cohort
-                      </Text>
-                    </View>
-                    <Feather
-                      name="chevron-right"
-                      size={16}
-                      color={BENTO.slateLight}
-                    />
+                    <Text style={styles.tileTitle}>Update Course Hub Info</Text>
                   </TouchableOpacity>
                 )}
 
                 {/* 3. Archive Hub */}
                 {canManage && (
                   <TouchableOpacity
-                    style={styles.optionCard}
+                    style={styles.bentoTile}
                     onPress={handleArchive}
-                    activeOpacity={0.75}
+                    activeOpacity={0.7}
                     accessible={true}
                     accessibilityRole="button"
                     accessibilityLabel="Archive Course Hub"
                   >
                     <View
                       style={[
-                        styles.iconCircle,
+                        styles.iconBox,
                         { backgroundColor: BENTO.amberSoft },
                       ]}
                     >
                       <Feather
                         name="archive"
-                        size={16}
-                        color={BENTO.amberText}
+                        size={17}
+                        color={BENTO.amberIcon}
                       />
                     </View>
-                    <View style={styles.optionTextCol}>
-                      <Text style={styles.optionTitle}>Archive Course Hub</Text>
-                      <Text style={styles.optionSubtitle}>
-                        Lock hub as read-only after term ends
-                      </Text>
-                    </View>
-                    <Feather
-                      name="chevron-right"
-                      size={16}
-                      color={BENTO.slateLight}
-                    />
+                    <Text style={styles.tileTitle}>Archive Course Hub</Text>
                   </TouchableOpacity>
                 )}
               </View>
             </View>
 
-            {/* Section 2: Danger Zone */}
+            {/* Section 2: Danger Zone Bento Tiles */}
             <View style={styles.sectionBlock}>
-              <Text style={styles.sectionLabel}>DANGER ZONE</Text>
+              <Text style={[styles.sectionLabel, styles.dangerSectionLabel]}>
+                DANGER ZONE
+              </Text>
 
-              <View style={styles.optionsList}>
-                {/* Delete Hub (Only Lead Teacher / Manager) */}
-                {canDelete && (
-                  <TouchableOpacity
-                    style={[styles.optionCard, styles.dangerCard]}
-                    onPress={handleDelete}
-                    activeOpacity={0.75}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete Course Hub"
-                  >
-                    <View
-                      style={[
-                        styles.iconCircle,
-                        { backgroundColor: "#ffffff" },
-                      ]}
-                    >
-                      <Feather
-                        name="trash-2"
-                        size={16}
-                        color={BENTO.roseText}
-                      />
-                    </View>
-                    <View style={styles.optionTextCol}>
-                      <Text style={[styles.optionTitle, { color: BENTO.roseText }]}>
-                        Delete Course Hub
-                      </Text>
-                      <Text style={styles.dangerSubtitle}>
-                        Permanently destroy this hub and all student submissions
-                      </Text>
-                    </View>
-                    <Feather
-                      name="chevron-right"
-                      size={16}
-                      color={BENTO.roseText}
-                    />
-                  </TouchableOpacity>
-                )}
-
+              <View style={styles.bentoStack}>
                 {/* Leave Hub */}
                 <TouchableOpacity
-                  style={[styles.optionCard, styles.dangerCard]}
+                  style={[styles.bentoTile, styles.dangerBentoTile]}
                   onPress={handleLeave}
-                  activeOpacity={0.75}
+                  activeOpacity={0.7}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Leave Hub"
                 >
                   <View
                     style={[
-                      styles.iconCircle,
-                      { backgroundColor: "#ffffff" },
+                      styles.iconBox,
+                      { backgroundColor: BENTO.roseIconBg },
                     ]}
                   >
                     <Feather
                       name="log-out"
-                      size={16}
+                      size={17}
                       color={BENTO.roseText}
                     />
                   </View>
-                  <View style={styles.optionTextCol}>
-                    <Text style={[styles.optionTitle, { color: BENTO.roseText }]}>
-                      Leave Hub
-                    </Text>
-                    <Text style={styles.dangerSubtitle}>
-                      Exit this course hub and revoke your membership
-                    </Text>
-                  </View>
-                  <Feather
-                    name="chevron-right"
-                    size={16}
-                    color={BENTO.roseText}
-                  />
+                  <Text style={[styles.tileTitle, styles.dangerTileTitle]}>
+                    Leave Course Hub
+                  </Text>
                 </TouchableOpacity>
+
+                {/* Delete Hub (Only Lead Teacher / Manager) */}
+                {canDelete && (
+                  <TouchableOpacity
+                    style={[styles.bentoTile, styles.dangerBentoTile]}
+                    onPress={handleDelete}
+                    activeOpacity={0.7}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete Course Hub"
+                  >
+                    <View
+                      style={[
+                        styles.iconBox,
+                        { backgroundColor: BENTO.roseIconBg },
+                      ]}
+                    >
+                      <Feather
+                        name="trash-2"
+                        size={17}
+                        color={BENTO.roseText}
+                      />
+                    </View>
+                    <Text style={[styles.tileTitle, styles.dangerTileTitle]}>
+                      Delete Course Hub
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -373,23 +359,22 @@ export default function HubOptionsModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    backgroundColor: "rgba(19, 27, 46, 0.6)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 18,
   },
   modalContent: {
-    backgroundColor: "#ffffff",
+    backgroundColor: BENTO.card,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: BENTO.border,
-    maxWidth: 440,
+    maxWidth: 400,
     width: "100%",
     maxHeight: "88%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 16 },
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.12,
-    shadowRadius: 32,
+    shadowRadius: 28,
     elevation: 8,
     overflow: "hidden",
   },
@@ -397,108 +382,111 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingHorizontal: 18,
+    paddingTop: 16,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: BENTO.border,
+    borderBottomColor: BENTO.borderSubtle,
+    backgroundColor: "#ffffff",
   },
-  headerSubtitle: {
+  headerLeftGroup: {
+    flex: 1,
+  },
+  pillTag: {
+    alignSelf: "flex-start",
+    backgroundColor: BENTO.neutralSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BENTO.pillRadius,
+    marginBottom: 4,
+  },
+  pillTagText: {
     fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: BENTO.slate,
-    letterSpacing: 0.6,
-    marginBottom: 2,
+    fontSize: 9,
+    fontWeight: "700",
+    color: BENTO.slateMuted,
+    letterSpacing: 0.7,
   },
   headerTitle: {
     fontFamily,
     fontSize: 17,
     fontWeight: "800",
     color: BENTO.navy,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: BENTO.canvas,
-    borderWidth: 1,
-    borderColor: BENTO.border,
+    backgroundColor: BENTO.neutralSoft,
     alignItems: "center",
     justifyContent: "center",
   },
 
   scrollBody: {
-    padding: 18,
-    paddingBottom: 22,
+    padding: 16,
+    paddingBottom: 18,
   },
 
   sectionBlock: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sectionLabel: {
     fontFamily,
     fontSize: 10,
-    fontWeight: "800",
-    color: BENTO.slate,
-    letterSpacing: 0.5,
+    fontWeight: "700",
+    color: BENTO.slateMuted,
+    letterSpacing: 0.6,
     marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  dangerSectionLabel: {
+    color: BENTO.roseText,
   },
 
-  optionsList: {
+  bentoStack: {
     gap: 8,
   },
-  optionCard: {
+
+  bentoTile: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
+    backgroundColor: BENTO.canvas,
+    borderRadius: BENTO.cardRadius,
     borderWidth: 1,
-    borderColor: BENTO.border,
-    padding: 12,
+    borderColor: BENTO.borderSubtle,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  iconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  dangerBentoTile: {
+    backgroundColor: BENTO.roseSoft,
+    borderColor: BENTO.roseBorder,
+  },
+
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  optionTextCol: {
-    flex: 1,
-  },
-  optionTitle: {
+
+  tileTitle: {
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: BENTO.navy,
-    marginBottom: 2,
+    letterSpacing: -0.1,
+    flex: 1,
   },
-  optionSubtitle: {
-    fontFamily,
-    fontSize: 11,
-    color: BENTO.slate,
-    lineHeight: 15,
-  },
-
-  dangerCard: {
-    backgroundColor: BENTO.roseSoft,
-    borderColor: BENTO.roseBorder,
-  },
-  dangerSubtitle: {
-    fontFamily,
-    fontSize: 11,
-    color: "#9f1239",
-    lineHeight: 14,
+  dangerTileTitle: {
+    color: BENTO.roseText,
   },
 
   closeActionBtn: {
-    backgroundColor: BENTO.canvas,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BENTO.border,
+    backgroundColor: BENTO.neutralSoft,
+    borderRadius: BENTO.pillRadius,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -511,3 +499,4 @@ const styles = StyleSheet.create({
     color: BENTO.slate,
   },
 });
+
