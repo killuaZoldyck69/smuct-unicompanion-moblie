@@ -18,6 +18,8 @@ import {
   removeMemberAPI,
   getAssessmentsAPI,
   createAssessmentAPI,
+  updateAssessmentAPI,
+  deleteAssessmentAPI,
   getAssessmentSubmissionsAPI,
   submitAssessmentAPI,
   gradeSubmissionAPI,
@@ -32,11 +34,17 @@ import {
   replyDiscussionAPI,
   getReviewsAPI,
   submitReviewAPI,
+  updateReviewSettingsAPI,
+  updateAnnouncementAPI,
+  deleteAnnouncementAPI,
+  deleteResourceAPI,
+  toggleLiveClassAPI,
 } from "@/services/hub-service";
 import {
   CreateHubInput,
   UpdateHubInput,
   CreateAssessmentInput,
+  SubmitAssessmentInput,
   CreateResourceInput,
   CreateAnnouncementInput,
   CreateDiscussionInput,
@@ -186,6 +194,29 @@ export const useCreateAssessment = (hubId: string) => {
   });
 };
 
+export const useUpdateAssessment = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assessmentId, payload }: { assessmentId: string; payload: any }) =>
+      updateAssessmentAPI(hubId, assessmentId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assessments", hubId] });
+      queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+    },
+  });
+};
+
+export const useDeleteAssessment = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assessmentId: string) => deleteAssessmentAPI(hubId, assessmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assessments", hubId] });
+      queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+    },
+  });
+};
+
 export const useAssessmentSubmissions = (assessmentId: string) => {
   return useQuery({
     queryKey: ["submissions", assessmentId],
@@ -197,7 +228,8 @@ export const useAssessmentSubmissions = (assessmentId: string) => {
 export const useSubmitAssessment = (hubId: string, assessmentId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (submittedUrl: string) => submitAssessmentAPI(assessmentId, submittedUrl),
+    mutationFn: (payload: string | SubmitAssessmentInput) =>
+      submitAssessmentAPI(assessmentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assessments", hubId] });
       queryClient.invalidateQueries({ queryKey: ["submissions", assessmentId] });
@@ -208,8 +240,15 @@ export const useSubmitAssessment = (hubId: string, assessmentId: string) => {
 export const useGradeSubmission = (assessmentId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ submissionId, marks }: { submissionId: string; marks: number }) =>
-      gradeSubmissionAPI(submissionId, marks),
+    mutationFn: ({
+      submissionId,
+      marks,
+      feedback,
+    }: {
+      submissionId: string;
+      marks: number;
+      feedback?: string;
+    }) => gradeSubmissionAPI(submissionId, marks, feedback),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["submissions", assessmentId] });
     },
@@ -228,10 +267,13 @@ export const useBulkGrade = (assessmentId: string) => {
 };
 
 // --- Resources Hooks ---
-export const useResources = (hubId: string) => {
+export const useResources = (
+  hubId: string,
+  filters?: { isStudentNote?: boolean; category?: string },
+) => {
   return useQuery({
-    queryKey: ["resources", hubId],
-    queryFn: () => getResourcesAPI(hubId),
+    queryKey: ["resources", hubId, filters?.isStudentNote, filters?.category],
+    queryFn: () => getResourcesAPI(hubId, filters),
     enabled: !!hubId,
   });
 };
@@ -240,6 +282,16 @@ export const useCreateResource = (hubId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateResourceInput) => createResourceAPI(hubId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resources", hubId] });
+    },
+  });
+};
+
+export const useDeleteResource = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (resourceId: string) => deleteResourceAPI(hubId, resourceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resources", hubId] });
     },
@@ -259,6 +311,33 @@ export const useCreateAnnouncement = (hubId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateAnnouncementInput) => createAnnouncementAPI(hubId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
+    },
+  });
+};
+
+export const useUpdateAnnouncement = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      announcementId,
+      data,
+    }: {
+      announcementId: string;
+      data: Partial<CreateAnnouncementInput>;
+    }) => updateAnnouncementAPI(hubId, announcementId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
+    },
+  });
+};
+
+export const useDeleteAnnouncement = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (announcementId: string) =>
+      deleteAnnouncementAPI(hubId, announcementId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
     },
@@ -320,6 +399,30 @@ export const useSubmitReview = (hubId: string) => {
     mutationFn: (data: SubmitReviewInput) => submitReviewAPI(hubId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reviews", hubId] });
+    },
+  });
+};
+
+export const useUpdateReviewSettings = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { isReviewOpen: boolean; reviewQuestions: string[] }) =>
+      updateReviewSettingsAPI(hubId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", hubId] });
+      queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
+    },
+  });
+};
+
+export const useToggleLiveClass = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ isLive, meetUrl }: { isLive: boolean; meetUrl?: string }) =>
+      toggleLiveClassAPI(hubId, isLive, meetUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
+      queryClient.invalidateQueries({ queryKey: ["myHubs"] });
     },
   });
 };

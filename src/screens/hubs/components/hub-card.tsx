@@ -77,11 +77,13 @@ export default function HubCard({ item, index }: HubCardProps) {
   const theme = CARD_THEMES[index % CARD_THEMES.length];
 
   const teacherMember = hub.members?.find((m: any) => m.role === "TEACHER");
+  const crMember = hub.members?.find((m: any) => m.role === "CR");
   const teacherName =
     teacherMember?.user?.name ||
     hub.teacher?.name ||
-    (hub.members?.length ? hub.members[0]?.user?.name : "Assigning...");
-  const memberCount = hub._count?.members || 1;
+    (hub.members?.length ? hub.members[0]?.user?.name : "Faculty");
+  const crName = crMember?.user?.name || null;
+  const memberCount = hub._count?.members || hub.members?.length || 1;
   const nextAssessment = hub.assessments?.[0] || null;
 
   // Real-time Countdown Logic
@@ -100,8 +102,8 @@ export default function HubCard({ item, index }: HubCardProps) {
       const d = Math.floor(diff / (1000 * 60 * 60 * 24));
       const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
 
-      if (d > 0) setTimeLeft(d === 1 ? "1 Day Left" : `${d} Days Left`);
-      else setTimeLeft(`${h}h Left`);
+      if (d > 0) setTimeLeft(d === 1 ? "1d left" : `${d}d left`);
+      else setTimeLeft(`${h}h left`);
     };
 
     calculateTime();
@@ -112,218 +114,308 @@ export default function HubCard({ item, index }: HubCardProps) {
   return (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: theme.bg }]}
-      activeOpacity={0.9}
+      activeOpacity={0.88}
       onPress={() => router.push(`/hub/${hub.id}`)}
       accessible={true}
-      accessibilityRole="link"
-      accessibilityLabel={`Course Hub: ${hub.courseName}, Code: ${hub.courseCode}, ${memberCount} students, taught by ${teacherName}`}
+      accessibilityRole="button"
+      accessibilityLabel={`Open Course Hub: ${hub.courseName}, Code: ${hub.courseCode}, ${memberCount} students, taught by ${teacherName}`}
     >
-      {/* 1. TITLE ROW */}
-      <View style={styles.cardHeader}>
-        <Text style={styles.courseName} numberOfLines={1}>
-          {hub.courseName}
-        </Text>
-        <View style={styles.menuIcon}>
-          <Feather name="arrow-up-right" size={20} color="#131b2e" />
+      {/* 1. TOP STATUS & BADGES ROW */}
+      <View style={styles.topStatusRow}>
+        <View style={styles.leftBadges}>
+          <View style={[styles.pillBadge, { backgroundColor: theme.tagBg }]}>
+            <Text style={styles.codeText}>{hub.courseCode}</Text>
+          </View>
+          {hub.credit !== undefined && hub.credit !== null && (
+            <View style={[styles.pillBadge, { backgroundColor: "rgba(255,255,255,0.7)" }]}>
+              <Text style={styles.creditText}>{hub.credit} Cr</Text>
+            </View>
+          )}
+          {hub.isClassLive && (
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE CLASS</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.rightAction}>
+          {role && role !== "STUDENT" && (
+            <View style={[styles.rolePill, { backgroundColor: theme.tagBg }]}>
+              <Text style={styles.roleText}>{role}</Text>
+            </View>
+          )}
+          <View style={styles.enterIconBox}>
+            <Feather name="arrow-up-right" size={18} color="#131b2e" />
+          </View>
         </View>
       </View>
 
-      {/* 2. TAGS ROW */}
-      <View style={styles.tagsRow}>
-        <View style={[styles.pillBadge, { backgroundColor: theme.tagBg }]}>
-          <Text style={styles.pillText}>{hub.courseCode}</Text>
+      {/* 2. COURSE TITLE */}
+      <Text style={styles.courseName} numberOfLines={2}>
+        {hub.courseName}
+      </Text>
+
+      {/* 3. METADATA SUBTITLE (Dept • Semester • Batch) */}
+      <Text style={styles.departmentSubtitle} numberOfLines={1}>
+        {hub.department || "Academic Department"}
+        {hub.semesterNumber ? ` • ${getOrdinalSuffix(hub.semesterNumber)} Sem` : ""}
+        {hub.batch ? ` • Batch ${hub.batch}` : ""}
+      </Text>
+
+      {/* 4. PEOPLE & STATS ROW */}
+      <View style={styles.peopleRow}>
+        <View style={styles.metaCol}>
+          <View style={styles.metaItem}>
+            <Feather name="user-check" size={14} color="#334155" style={styles.metaIcon} />
+            <Text style={styles.metaPersonText} numberOfLines={1}>
+              {teacherName}
+            </Text>
+          </View>
+          {crName && (
+            <View style={[styles.metaItem, { marginTop: 4 }]}>
+              <Feather name="shield" size={13} color="#475569" style={styles.metaIcon} />
+              <Text style={styles.metaCrText} numberOfLines={1}>
+                CR: {crName}
+              </Text>
+            </View>
+          )}
         </View>
-        {role !== "STUDENT" && (
-          <View style={[styles.pillBadge, { backgroundColor: theme.tagBg }]}>
-            <Text style={styles.pillText}>{role}</Text>
+
+        <View style={styles.metaItemRight}>
+          <Feather name="users" size={14} color="#334155" style={styles.metaIcon} />
+          <Text style={styles.metaStatText}>{memberCount} Students</Text>
+        </View>
+      </View>
+
+      {/* 5. FOOTER TASK / STATUS PILL */}
+      <View style={styles.footerRow}>
+        {nextAssessment ? (
+          <View style={styles.taskPillActive}>
+            <Feather
+              name="alert-circle"
+              size={15}
+              color="#DC2626"
+              style={styles.taskIcon}
+            />
+            <Text style={styles.taskTitle} numberOfLines={1}>
+              {nextAssessment.title}
+            </Text>
+            <View style={styles.taskBadge}>
+              <Text style={styles.taskBadgeText}>{timeLeft}</Text>
+            </View>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.taskPillCaughtUp,
+              { backgroundColor: theme.caughtUpBg },
+            ]}
+          >
+            <Feather
+              name="check-circle"
+              size={15}
+              color={theme.caughtUpText}
+              style={styles.taskIcon}
+            />
+            <Text
+              style={[styles.taskTitleCaughtUp, { color: theme.caughtUpText }]}
+            >
+              All caught up
+            </Text>
           </View>
         )}
       </View>
-
-      {/* 3. META GRID */}
-      <View style={styles.metaGrid}>
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Feather
-              name="user"
-              size={16}
-              color="#45464d"
-              style={styles.metaIcon}
-            />
-            <Text style={styles.metaText} numberOfLines={1}>
-              {teacherName.includes("Dr.") || teacherName.includes("Prof.")
-                ? teacherName
-                : `Prof. ${teacherName.split(" ").pop()}`}
-            </Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Feather
-              name="users"
-              size={16}
-              color="#45464d"
-              style={styles.metaIcon}
-            />
-            <Text style={styles.metaText}>{memberCount} Students</Text>
-          </View>
-        </View>
-
-        <View style={[styles.metaRow, { marginTop: 12 }]}>
-          <View style={styles.metaItem}>
-            <Feather
-              name="calendar"
-              size={16}
-              color="#45464d"
-              style={styles.metaIcon}
-            />
-            <Text style={styles.metaText}>
-              {getOrdinalSuffix(hub.semesterNumber)} Semester
-            </Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Feather
-              name="briefcase"
-              size={16}
-              color="#45464d"
-              style={styles.metaIcon}
-            />
-            <Text style={styles.metaText}>{hub.department || "Dept"}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* 4. FOOTER PILL (Task vs Caught up) */}
-      {nextAssessment ? (
-        <View style={styles.taskPillActive}>
-          <Feather
-            name="clipboard"
-            size={16}
-            color="#DC2626"
-            style={styles.taskIcon}
-          />
-          <Text style={styles.taskTitle} numberOfLines={1}>
-            {nextAssessment.title}
-          </Text>
-          <View style={styles.taskBadge}>
-            <Text style={styles.taskBadgeText}>{timeLeft}</Text>
-          </View>
-        </View>
-      ) : (
-        <View
-          style={[
-            styles.taskPillCaughtUp,
-            { backgroundColor: theme.caughtUpBg },
-          ]}
-        >
-          <Feather
-            name="check-circle"
-            size={16}
-            color={theme.caughtUpText}
-            style={styles.taskIcon}
-          />
-          <Text
-            style={[styles.taskTitleCaughtUp, { color: theme.caughtUpText }]}
-          >
-            All caught up
-          </Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 }
 
 // --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
+// --- ISOLATED NEW DESIGN THEME (Soft Campus Bento) ---
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 32, // Exaggerated roundness
-    padding: 24,
+    borderRadius: 28,
+    padding: 22,
     marginBottom: 16,
-    shadowColor: "#000",
+    shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 16,
-    elevation: 1,
+    elevation: 2,
   },
 
-  // Header
-  cardHeader: {
+  // 1. Top status row
+  topStatusRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
-  courseName: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#131b2e",
-    paddingRight: 16,
-  },
-  menuIcon: { padding: 4 },
-
-  // Tags
-  tagsRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
-  pillBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 },
-  pillText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#131b2e",
-    textTransform: "uppercase",
-  },
-
-  // Meta Grid
-  metaGrid: { marginBottom: 20 },
-  metaRow: { flexDirection: "row", alignItems: "center" },
-  metaItem: {
+  leftBadges: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+    flex: 1,
+  },
+  pillBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9999,
+  },
+  codeText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#0f172a",
+    letterSpacing: 0.3,
+  },
+  creditText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fee2e2",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    gap: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#ef4444",
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#b91c1c",
+    letterSpacing: 0.5,
+  },
+  rightAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  rolePill: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  roleText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  enterIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // 2. Title & Subtitle
+  courseName: {
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#0f172a",
+    lineHeight: 25,
+    marginBottom: 4,
+  },
+  departmentSubtitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 14,
+  },
+
+  // 3. People & Stats
+  peopleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    backgroundColor: "rgba(255, 255, 255, 0.45)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    marginBottom: 14,
+  },
+  metaCol: {
     flex: 1,
     paddingRight: 8,
   },
-  metaIcon: { marginRight: 8 },
-  metaText: {
-    fontSize: 14,
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  metaIcon: {
+    marginRight: 6,
+  },
+  metaPersonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  metaCrText: {
+    fontSize: 12,
     fontWeight: "600",
-    color: "#131b2e",
+    color: "#475569",
+  },
+  metaItemRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  metaStatText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1e293b",
   },
 
-  // Footer Pills
+  // 4. Footer Tasks
+  footerRow: {},
   taskPillActive: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
     borderRadius: 9999,
     paddingVertical: 8,
-    paddingLeft: 16,
+    paddingLeft: 14,
     paddingRight: 8,
+    gap: 8,
   },
-  taskIcon: { marginRight: 8 },
+  taskIcon: {},
   taskTitle: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#131b2e",
+    color: "#0f172a",
   },
   taskBadge: {
-    backgroundColor: "#DC2626", // Red badge
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: "#ef4444",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 9999,
   },
   taskBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     color: "#ffffff",
   },
-
   taskPillCaughtUp: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 9999,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    gap: 8,
   },
   taskTitleCaughtUp: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
 });

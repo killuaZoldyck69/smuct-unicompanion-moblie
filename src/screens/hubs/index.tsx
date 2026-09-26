@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,10 +11,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useMyHubs, useJoinHub, useCreateHub } from "@/features/hubs/useHubs";
@@ -29,16 +32,54 @@ type HubTab = "ACTIVE" | "ARCHIVED";
 
 export function Hubs() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const params = useLocalSearchParams<{
+    status?: string;
+    search?: string;
+    semester?: string;
+  }>();
 
   // States
-  const [activeTab, setActiveTab] = useState<HubTab>("ACTIVE");
+  const [activeTab, setActiveTab] = useState<HubTab>(
+    params.status?.toUpperCase() === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
+  );
+  const [searchQuery, setSearchQuery] = useState(params.search || "");
+  const [selectedSemester, setSelectedSemester] = useState<string>(
+    params.semester || "ALL",
+  );
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
 
+  // Sync with params if they change externally
+  useEffect(() => {
+    if (params.status && (params.status.toUpperCase() === "ACTIVE" || params.status.toUpperCase() === "ARCHIVED")) {
+      setActiveTab(params.status.toUpperCase() as HubTab);
+    }
+    if (params.search !== undefined) {
+      setSearchQuery(params.search);
+    }
+    if (params.semester !== undefined) {
+      setSelectedSemester(params.semester);
+    }
+  }, [params.status, params.search, params.semester]);
+
+  // Sync state back to router params
+  const updateRouteParams = (updates: {
+    status?: string;
+    search?: string;
+    semester?: string;
+  }) => {
+    router.setParams({
+      status: updates.status ?? (activeTab === "ARCHIVED" ? "archived" : "active"),
+      search: updates.search !== undefined ? updates.search : (searchQuery || undefined),
+      semester: (updates.semester ?? selectedSemester) !== "ALL" ? (updates.semester ?? selectedSemester) : undefined,
+    } as any);
+  };
+
   // --- Fetch Auth & Profile Data ---
-  const { data: session, isPending: isSessionPending } =
-    authClient.useSession();
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
   const user = session?.user as
     | {
         id: string;
@@ -71,7 +112,7 @@ export function Hubs() {
       }
     : null;
 
-  const { data: myHubs, isLoading: isLoadingHubs } = useMyHubs();
+  const { data: myHubs, isLoading: isLoadingHubs, isRefetching } = useMyHubs();
 
   const canCreateHub =
     currentUser?.role === "TEACHER" ||
@@ -79,9 +120,51 @@ export function Hubs() {
   const isLoadingScreen =
     isSessionPending || isLoadingHubs || isLoadingStudent || isLoadingTeacher;
 
-  const activeHubs = myHubs?.filter((item: any) => !item.hub.isArchived) || [];
-  const archivedHubs = myHubs?.filter((item: any) => item.hub.isArchived) || [];
-  const displayedHubs = activeTab === "ACTIVE" ? activeHubs : archivedHubs;
+  // Filter hubs
+  const displayedHubs = useMemo(() => {
+    if (!Array.isArray(myHubs)) return [];
+
+    let list = myHubs.filter((item: any) =>
+      activeTab === "ACTIVE" ? !item.hub?.isArchived : item.hub?.isArchived,
+    );
+
+    // Search filter (Course Name, Course Code, Teacher)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter((item: any) => {
+        const name = (item.hub?.courseName || "").toLowerCase();
+        const code = (item.hub?.courseCode || "").toLowerCase();
+        const dept = (item.hub?.department || "").toLowerCase();
+        const teacher = (item.hub?.teacher?.name || "").toLowerCase();
+        return (
+          name.includes(q) ||
+          code.includes(q) ||
+          dept.includes(q) ||
+          teacher.includes(q)
+        );
+      });
+    }
+
+    // Semester filter
+    if (selectedSemester !== "ALL") {
+      const semNum = parseInt(selectedSemester, 10);
+      if (!isNaN(semNum)) {
+        list = list.filter((item: any) => item.hub?.semesterNumber === semNum);
+      }
+    }
+
+    return list;
+  }, [myHubs, activeTab, searchQuery, selectedSemester]);
+
+  // Extract unique available semesters for quick pills
+  const availableSemesters = useMemo(() => {
+    if (!Array.isArray(myHubs)) return [];
+    const s = new Set<number>();
+    myHubs.forEach((m: any) => {
+      if (m.hub?.semesterNumber) s.add(m.hub.semesterNumber);
+    });
+    return Array.from(s).sort((a, b) => a - b);
+  }, [myHubs]);
 
   const joinHubMutation = useJoinHub();
   const createHubMutation = useCreateHub();
@@ -159,6 +242,37 @@ export function Hubs() {
         </View>
       </View>
 
+      {/* Search Bar */}
+      <View style={styles.searchWrapper}>
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={17} color="#64748b" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search courses, codes, faculty..."
+            placeholderTextColor="#94a3b8"
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              updateRouteParams({ search: text || undefined });
+            }}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                updateRouteParams({ search: undefined });
+              }}
+              style={styles.clearSearchBtn}
+            >
+              <Feather name="x-circle" size={16} color="#94a3b8" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Tabs & Quick Filters */}
       <View style={styles.tabsWrapper}>
         <View style={styles.tabsContainer}>
           {(["ACTIVE", "ARCHIVED"] as HubTab[]).map((tab) => {
@@ -167,7 +281,10 @@ export function Hubs() {
               <TouchableOpacity
                 key={tab}
                 style={[styles.tabButton, isActive && styles.tabButtonActive]}
-                onPress={() => setActiveTab(tab)}
+                onPress={() => {
+                  setActiveTab(tab);
+                  updateRouteParams({ status: tab.toLowerCase() });
+                }}
                 accessible={true}
                 accessibilityRole="tab"
                 accessibilityLabel={
@@ -183,6 +300,58 @@ export function Hubs() {
             );
           })}
         </View>
+
+        {/* Semester Filter Pills */}
+        {availableSemesters.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterPillsContainer}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterPill,
+                selectedSemester === "ALL" && styles.filterPillActive,
+              ]}
+              onPress={() => {
+                setSelectedSemester("ALL");
+                updateRouteParams({ semester: undefined });
+              }}
+            >
+              <Text
+                style={[
+                  styles.filterPillText,
+                  selectedSemester === "ALL" && styles.filterPillTextActive,
+                ]}
+              >
+                All Semesters
+              </Text>
+            </TouchableOpacity>
+            {availableSemesters.map((sem) => (
+              <TouchableOpacity
+                key={sem}
+                style={[
+                  styles.filterPill,
+                  selectedSemester === String(sem) && styles.filterPillActive,
+                ]}
+                onPress={() => {
+                  const val = String(sem);
+                  setSelectedSemester(val);
+                  updateRouteParams({ semester: val });
+                }}
+              >
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    selectedSemester === String(sem) && styles.filterPillTextActive,
+                  ]}
+                >
+                  {sem}th Sem
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {isLoadingScreen ? (
@@ -205,21 +374,37 @@ export function Hubs() {
       ) : displayedHubs.length === 0 ? (
         <View style={styles.centerContainer}>
           <Feather
-            name="archive"
+            name="search"
             size={48}
             color="#c6c6cd"
             style={{ marginBottom: 16 }}
           />
           <Text style={styles.emptyTitle}>
-            {activeTab === "ACTIVE"
+            {searchQuery || selectedSemester !== "ALL"
+              ? "No Matching Courses"
+              : activeTab === "ACTIVE"
               ? "No Active Classes"
               : "No Archived Classes"}
           </Text>
           <Text style={styles.emptySubtitle}>
-            {activeTab === "ACTIVE"
+            {searchQuery || selectedSemester !== "ALL"
+              ? "Try adjusting your search query or semester filters."
+              : activeTab === "ACTIVE"
               ? "All your classes are currently in the archive."
               : "You don't have any past classes archived."}
           </Text>
+          {(searchQuery || selectedSemester !== "ALL") && (
+            <TouchableOpacity
+              style={styles.clearFiltersBtn}
+              onPress={() => {
+                setSearchQuery("");
+                setSelectedSemester("ALL");
+                updateRouteParams({ search: undefined, semester: undefined });
+              }}
+            >
+              <Text style={styles.clearFiltersText}>Clear Filters</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
@@ -233,6 +418,15 @@ export function Hubs() {
             { paddingBottom: insets.bottom + 120 },
           ]}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => {
+                queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+              }}
+              tintColor="#131b2e"
+            />
+          }
         />
       )}
 
@@ -367,6 +561,39 @@ const styles = StyleSheet.create({
     color: "#131b2e",
   },
 
+  // Search Bar
+  searchWrapper: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 9999,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === "ios" ? 10 : 6,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.08)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  clearSearchBtn: {
+    padding: 4,
+  },
+
   // Custom Tabs
   tabsWrapper: { paddingHorizontal: 20, marginBottom: 16 },
   tabsContainer: {
@@ -396,6 +623,33 @@ const styles = StyleSheet.create({
   },
   tabTextActive: { color: "#131b2e", fontWeight: "800" },
 
+  // Filter Pills
+  filterPillsContainer: {
+    flexDirection: "row",
+    gap: 8,
+    paddingTop: 12,
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 9999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.08)",
+  },
+  filterPillActive: {
+    backgroundColor: "#131b2e",
+    borderColor: "#131b2e",
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  filterPillTextActive: {
+    color: "#ffffff",
+  },
+
   // Layouts
   centerContainer: {
     flex: 1,
@@ -413,6 +667,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#76777d",
     textAlign: "center",
+    marginBottom: 12,
+  },
+  clearFiltersBtn: {
+    backgroundColor: "#e2e8f0",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    marginTop: 8,
+  },
+  clearFiltersText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#131b2e",
   },
   listContent: { paddingHorizontal: 20, paddingTop: 8 },
 

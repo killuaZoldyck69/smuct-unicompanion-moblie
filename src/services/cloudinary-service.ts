@@ -159,3 +159,109 @@ export async function uploadMultipleImages(
     publicId: item.publicId ?? "",
   }));
 }
+
+export interface CloudinaryDocumentUploadResult {
+  secureUrl: string;
+  publicId: string;
+  name: string;
+  size?: number;
+  type?: string;
+}
+
+/**
+ * Uploads a single document or generic file to Cloudinary securely via the backend API.
+ */
+export async function uploadFileToCloudinary(
+  localUri: string,
+  filename?: string,
+  mimeType?: string,
+  folder: CloudinaryFolder = CLOUDINARY_FOLDERS.HUBS
+): Promise<CloudinaryDocumentUploadResult> {
+  if (!localUri || typeof localUri !== "string" || !localUri.trim()) {
+    throw new Error("Invalid file URI provided.");
+  }
+
+  const name = filename || localUri.split("/").pop() || `file-${Date.now()}`;
+  const type = mimeType || "application/octet-stream";
+
+  const formData = new FormData();
+  if (Platform.OS === "web") {
+    const res = await fetch(localUri);
+    const blob = await res.blob();
+    formData.append("file", blob, name);
+  } else {
+    formData.append("file", {
+      uri: localUri,
+      name,
+      type,
+    } as any);
+  }
+  formData.append("folder", folder);
+
+  const response = await api.post("/upload/file", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  const data = response.data?.data;
+  if (!data?.secureUrl) {
+    throw new Error(response.data?.message ?? "File upload failed");
+  }
+
+  return {
+    secureUrl: data.secureUrl,
+    publicId: data.publicId ?? "",
+    name: data.originalName || name,
+    size: data.size,
+    type: data.format || type,
+  };
+}
+
+/**
+ * Uploads multiple files (documents or images) to Cloudinary via backend.
+ */
+export async function uploadMultipleFilesToCloudinary(
+  files: { uri: string; name?: string; mimeType?: string; size?: number }[],
+  folder: CloudinaryFolder = CLOUDINARY_FOLDERS.HUBS
+): Promise<CloudinaryDocumentUploadResult[]> {
+  if (!files || files.length === 0) return [];
+
+  const formData = new FormData();
+  for (const f of files) {
+    const name = f.name || f.uri.split("/").pop() || `file-${Date.now()}`;
+    const type = f.mimeType || "application/octet-stream";
+
+    if (Platform.OS === "web") {
+      const res = await fetch(f.uri);
+      const blob = await res.blob();
+      formData.append("files", blob, name);
+    } else {
+      formData.append("files", {
+        uri: f.uri,
+        name,
+        type,
+      } as any);
+    }
+  }
+  formData.append("folder", folder);
+
+  const response = await api.post("/upload/files", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  const list = response.data?.data;
+  if (!Array.isArray(list)) {
+    throw new Error(response.data?.message ?? "Multiple file upload failed");
+  }
+
+  return list.map((item: any, idx: number) => ({
+    secureUrl: item.secureUrl,
+    publicId: item.publicId ?? "",
+    name: item.originalName || files[idx]?.name || "file",
+    size: item.size || files[idx]?.size,
+    type: item.format || files[idx]?.mimeType,
+  }));
+}

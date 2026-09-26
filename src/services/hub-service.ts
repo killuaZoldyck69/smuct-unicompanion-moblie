@@ -51,16 +51,42 @@ export interface UpdateHubInput {
   isClassLive?: boolean;
 }
 
+export interface AttachmentItem {
+  name: string;
+  url: string;
+  size?: number;
+  type?: string;
+  publicId?: string;
+}
+
+export interface LinkItem {
+  title: string;
+  url: string;
+}
+
 export interface CreateAssessmentInput {
   title: string;
   description?: string;
   type: "ASSIGNMENT" | "QUIZ" | "PRESENTATION" | string;
   submissionType?: "ONLINE" | "HAND" | string;
   deadline: string | Date;
+  startDate?: string | Date;
   totalMarks: number;
+  status?: string;
+  attachments?: AttachmentItem[];
+  links?: LinkItem[];
 }
 
 export type UpdateAssessmentInput = Partial<CreateAssessmentInput>;
+
+export interface SubmitAssessmentInput {
+  submittedUrl?: string;
+  content?: string;
+  attachments?: AttachmentItem[];
+  links?: LinkItem[];
+  status?: string;
+  isLate?: boolean;
+}
 
 export interface CreateResourceInput {
   title: string;
@@ -68,8 +94,11 @@ export interface CreateResourceInput {
   fileUrl?: string;
   driveUrl?: string;
   fileType?: string;
+  fileSize?: number;
   category?: string;
   isStudentNote?: boolean;
+  attachments?: AttachmentItem[];
+  links?: LinkItem[];
 }
 
 export interface CreateAnnouncementInput {
@@ -77,6 +106,8 @@ export interface CreateAnnouncementInput {
   content: string;
   attachedLinkUrl?: string;
   attachedLinkTitle?: string;
+  attachments?: AttachmentItem[];
+  links?: LinkItem[];
 }
 
 export interface CreateDiscussionInput {
@@ -261,11 +292,10 @@ export const getAssessmentSubmissionsAPI = getAssessmentSubmissions;
 
 export const submitAssessment = async (
   assessmentId: string,
-  submittedUrl: string,
+  payload: string | SubmitAssessmentInput,
 ) => {
-  const res = await api.post(`/hubs/assessments/${assessmentId}/submit`, {
-    submittedUrl,
-  });
+  const body = typeof payload === "string" ? { submittedUrl: payload } : payload;
+  const res = await api.post(`/hubs/assessments/${assessmentId}/submit`, body);
   return res.data?.data;
 };
 export const submitAssessmentAPI = submitAssessment;
@@ -273,9 +303,11 @@ export const submitAssessmentAPI = submitAssessment;
 export const gradeSubmission = async (
   submissionId: string,
   marks: number,
+  feedback?: string,
 ) => {
   const res = await api.patch(`/hubs/assessments/submissions/${submissionId}/grade`, {
     marks,
+    feedback,
   });
   return res.data?.data;
 };
@@ -294,8 +326,15 @@ export const bulkGrade = async (
 export const bulkGradeAPI = bulkGrade;
 
 // Resources
-export const getResources = async (hubId: string) => {
-  const res = await api.get(`/hubs/${hubId}/resources`);
+export const getResources = async (
+  hubId: string,
+  filters?: { isStudentNote?: boolean; category?: string },
+) => {
+  const params: Record<string, any> = {};
+  if (filters?.isStudentNote !== undefined) params.isStudentNote = filters.isStudentNote;
+  if (filters?.category && filters.category !== "ALL") params.category = filters.category;
+
+  const res = await api.get(`/hubs/${hubId}/resources`, { params });
   return res.data?.data || [];
 };
 export const getResourcesAPI = getResources;
@@ -308,6 +347,12 @@ export const createResource = async (
   return res.data?.data;
 };
 export const createResourceAPI = createResource;
+
+export const deleteResource = async (hubId: string, resourceId: string) => {
+  const res = await api.delete(`/hubs/${hubId}/resources/${resourceId}`);
+  return res.data?.data;
+};
+export const deleteResourceAPI = deleteResource;
 
 // Announcements & Discussions
 export const getAnnouncements = async (hubId: string) => {
@@ -324,6 +369,30 @@ export const createAnnouncement = async (
   return res.data?.data;
 };
 export const createAnnouncementAPI = createAnnouncement;
+
+export const updateAnnouncement = async (
+  hubId: string,
+  announcementId: string,
+  data: Partial<CreateAnnouncementInput>,
+) => {
+  const res = await api.patch(
+    `/hubs/${hubId}/announcements/${announcementId}`,
+    data,
+  );
+  return res.data?.data;
+};
+export const updateAnnouncementAPI = updateAnnouncement;
+
+export const deleteAnnouncement = async (
+  hubId: string,
+  announcementId: string,
+) => {
+  const res = await api.delete(
+    `/hubs/${hubId}/announcements/${announcementId}`,
+  );
+  return res.data?.data;
+};
+export const deleteAnnouncementAPI = deleteAnnouncement;
 
 export const addAnnouncementComment = async (
   hubId: string,
@@ -372,6 +441,15 @@ export const getReviews = async (hubId: string) => {
   return res.data?.data || { reviews: [], totalReviews: 0, averageRating: 0 };
 };
 export const getReviewsAPI = getReviews;
+
+export const updateReviewSettings = async (
+  hubId: string,
+  data: { isReviewOpen: boolean; reviewQuestions: string[] },
+) => {
+  const res = await api.patch(`/hubs/${hubId}/review-settings`, data);
+  return res.data?.data;
+};
+export const updateReviewSettingsAPI = updateReviewSettings;
 
 export const submitReview = async (
   hubId: string,
