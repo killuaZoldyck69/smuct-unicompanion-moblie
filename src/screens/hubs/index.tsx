@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
-  ScrollView,
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +23,7 @@ import { useMyHubs, useJoinHub, useCreateHub } from "@/features/hubs/useHubs";
 import { getStudentProfile } from "@/services/student-service";
 import { getTeacherProfile } from "@/services/teacher-service";
 import CreateHubModal from "./components/create-hub-modal";
+import { HubsSettingsModal } from "./components/hubs-settings-modal";
 import HubCard from "./components/hub-card";
 import { authClient } from "@/services/auth-client";
 import { PROFILE_CACHE_CONFIG } from "@/screens/profile/constants";
@@ -36,45 +36,33 @@ export function Hubs() {
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{
     status?: string;
-    search?: string;
-    semester?: string;
   }>();
 
   // States
   const [activeTab, setActiveTab] = useState<HubTab>(
     params.status?.toUpperCase() === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
   );
-  const [searchQuery, setSearchQuery] = useState(params.search || "");
-  const [selectedSemester, setSelectedSemester] = useState<string>(
-    params.semester || "ALL",
-  );
+  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
 
   // Sync with params if they change externally
   useEffect(() => {
-    if (params.status && (params.status.toUpperCase() === "ACTIVE" || params.status.toUpperCase() === "ARCHIVED")) {
+    if (
+      params.status &&
+      (params.status.toUpperCase() === "ACTIVE" ||
+        params.status.toUpperCase() === "ARCHIVED")
+    ) {
       setActiveTab(params.status.toUpperCase() as HubTab);
     }
-    if (params.search !== undefined) {
-      setSearchQuery(params.search);
-    }
-    if (params.semester !== undefined) {
-      setSelectedSemester(params.semester);
-    }
-  }, [params.status, params.search, params.semester]);
+  }, [params.status]);
 
   // Sync state back to router params
-  const updateRouteParams = (updates: {
-    status?: string;
-    search?: string;
-    semester?: string;
-  }) => {
+  const updateRouteParams = (updates: { status?: string }) => {
     router.setParams({
-      status: updates.status ?? (activeTab === "ARCHIVED" ? "archived" : "active"),
-      search: updates.search !== undefined ? updates.search : (searchQuery || undefined),
-      semester: (updates.semester ?? selectedSemester) !== "ALL" ? (updates.semester ?? selectedSemester) : undefined,
+      status:
+        updates.status ?? (activeTab === "ARCHIVED" ? "archived" : "active"),
     } as any);
   };
 
@@ -120,51 +108,29 @@ export function Hubs() {
   const isLoadingScreen =
     isSessionPending || isLoadingHubs || isLoadingStudent || isLoadingTeacher;
 
+  // Count active and archived hubs
+  const { activeCount, archivedCount } = useMemo(() => {
+    if (!Array.isArray(myHubs)) return { activeCount: 0, archivedCount: 0 };
+    let active = 0;
+    let archived = 0;
+    for (const item of myHubs) {
+      if (item.hub?.isArchived) {
+        archived++;
+      } else {
+        active++;
+      }
+    }
+    return { activeCount: active, archivedCount: archived };
+  }, [myHubs]);
+
   // Filter hubs
   const displayedHubs = useMemo(() => {
     if (!Array.isArray(myHubs)) return [];
 
-    let list = myHubs.filter((item: any) =>
+    return myHubs.filter((item: any) =>
       activeTab === "ACTIVE" ? !item.hub?.isArchived : item.hub?.isArchived,
     );
-
-    // Search filter (Course Name, Course Code, Teacher)
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter((item: any) => {
-        const name = (item.hub?.courseName || "").toLowerCase();
-        const code = (item.hub?.courseCode || "").toLowerCase();
-        const dept = (item.hub?.department || "").toLowerCase();
-        const teacher = (item.hub?.teacher?.name || "").toLowerCase();
-        return (
-          name.includes(q) ||
-          code.includes(q) ||
-          dept.includes(q) ||
-          teacher.includes(q)
-        );
-      });
-    }
-
-    // Semester filter
-    if (selectedSemester !== "ALL") {
-      const semNum = parseInt(selectedSemester, 10);
-      if (!isNaN(semNum)) {
-        list = list.filter((item: any) => item.hub?.semesterNumber === semNum);
-      }
-    }
-
-    return list;
-  }, [myHubs, activeTab, searchQuery, selectedSemester]);
-
-  // Extract unique available semesters for quick pills
-  const availableSemesters = useMemo(() => {
-    if (!Array.isArray(myHubs)) return [];
-    const s = new Set<number>();
-    myHubs.forEach((m: any) => {
-      if (m.hub?.semesterNumber) s.add(m.hub.semesterNumber);
-    });
-    return Array.from(s).sort((a, b) => a - b);
-  }, [myHubs]);
+  }, [myHubs, activeTab]);
 
   const joinHubMutation = useJoinHub();
   const createHubMutation = useCreateHub();
@@ -204,79 +170,40 @@ export function Hubs() {
       />
 
       <View style={styles.header}>
-        <Text style={styles.pageTitle}>Course Hubs</Text>
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={styles.btnDark}
-            onPress={() => setIsJoinModalVisible(true)}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Join a Course Hub"
-          >
-            <Feather
-              name="plus"
-              size={18}
-              color="#ffffff"
-              style={styles.btnIcon}
-            />
-            <Text style={styles.btnTextWhite}>Join Hub</Text>
-          </TouchableOpacity>
-
-          {canCreateHub && (
+        <View style={styles.headerTopRow}>
+          <Text style={styles.pageTitle}>Course Hubs</Text>
+          <View style={styles.headerIconsGroup}>
             <TouchableOpacity
-              style={styles.btnLight}
-              onPress={() => setIsCreateModalVisible(true)}
+              style={styles.headerIconButton}
+              onPress={() => router.push("/(tabs)/notices")}
+              activeOpacity={0.7}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Create a new Course Hub"
+              accessibilityLabel="View notices and notifications"
             >
-              <Feather
-                name="edit-2"
-                size={16}
-                color="#131b2e"
-                style={styles.btnIcon}
-              />
-              <Text style={styles.btnTextDark}>Create Hub</Text>
+              <Feather name="bell" size={18} color="#131b2e" />
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchWrapper}>
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={17} color="#64748b" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search courses, codes, faculty..."
-            placeholderTextColor="#94a3b8"
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              updateRouteParams({ search: text || undefined });
-            }}
-            returnKeyType="search"
-            clearButtonMode="while-editing"
-          />
-          {searchQuery.length > 0 && (
             <TouchableOpacity
-              onPress={() => {
-                setSearchQuery("");
-                updateRouteParams({ search: undefined });
-              }}
-              style={styles.clearSearchBtn}
+              style={styles.headerIconButton}
+              onPress={() => setIsSettingsModalVisible(true)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Course Hub options and settings"
             >
-              <Feather name="x-circle" size={16} color="#94a3b8" />
+              <Feather name="settings" size={18} color="#131b2e" />
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       </View>
 
-      {/* Tabs & Quick Filters */}
+      {/* Tabs */}
       <View style={styles.tabsWrapper}>
         <View style={styles.tabsContainer}>
           {(["ACTIVE", "ARCHIVED"] as HubTab[]).map((tab) => {
             const isActive = activeTab === tab;
+            const count = tab === "ACTIVE" ? activeCount : archivedCount;
             return (
               <TouchableOpacity
                 key={tab}
@@ -288,7 +215,9 @@ export function Hubs() {
                 accessible={true}
                 accessibilityRole="tab"
                 accessibilityLabel={
-                  tab === "ACTIVE" ? "Active Classes tab" : "Archived Classes tab"
+                  tab === "ACTIVE"
+                    ? `Active Classes tab, ${count} classes`
+                    : `Archived Classes tab, ${count} classes`
                 }
               >
                 <Text
@@ -296,62 +225,22 @@ export function Hubs() {
                 >
                   {tab === "ACTIVE" ? "Active Classes" : "Archived"}
                 </Text>
+                <View
+                  style={[styles.tabBadge, isActive && styles.tabBadgeActive]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      isActive && styles.tabBadgeTextActive,
+                    ]}
+                  >
+                    {count}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
         </View>
-
-        {/* Semester Filter Pills */}
-        {availableSemesters.length > 1 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterPillsContainer}
-          >
-            <TouchableOpacity
-              style={[
-                styles.filterPill,
-                selectedSemester === "ALL" && styles.filterPillActive,
-              ]}
-              onPress={() => {
-                setSelectedSemester("ALL");
-                updateRouteParams({ semester: undefined });
-              }}
-            >
-              <Text
-                style={[
-                  styles.filterPillText,
-                  selectedSemester === "ALL" && styles.filterPillTextActive,
-                ]}
-              >
-                All Semesters
-              </Text>
-            </TouchableOpacity>
-            {availableSemesters.map((sem) => (
-              <TouchableOpacity
-                key={sem}
-                style={[
-                  styles.filterPill,
-                  selectedSemester === String(sem) && styles.filterPillActive,
-                ]}
-                onPress={() => {
-                  const val = String(sem);
-                  setSelectedSemester(val);
-                  updateRouteParams({ semester: val });
-                }}
-              >
-                <Text
-                  style={[
-                    styles.filterPillText,
-                    selectedSemester === String(sem) && styles.filterPillTextActive,
-                  ]}
-                >
-                  {sem}th Sem
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
       </View>
 
       {isLoadingScreen ? (
@@ -374,37 +263,21 @@ export function Hubs() {
       ) : displayedHubs.length === 0 ? (
         <View style={styles.centerContainer}>
           <Feather
-            name="search"
-            size={48}
-            color="#c6c6cd"
-            style={{ marginBottom: 16 }}
+            name="layers"
+            size={44}
+            color="#cbd5e1"
+            style={{ marginBottom: 14 }}
           />
           <Text style={styles.emptyTitle}>
-            {searchQuery || selectedSemester !== "ALL"
-              ? "No Matching Courses"
-              : activeTab === "ACTIVE"
+            {activeTab === "ACTIVE"
               ? "No Active Classes"
               : "No Archived Classes"}
           </Text>
           <Text style={styles.emptySubtitle}>
-            {searchQuery || selectedSemester !== "ALL"
-              ? "Try adjusting your search query or semester filters."
-              : activeTab === "ACTIVE"
+            {activeTab === "ACTIVE"
               ? "All your classes are currently in the archive."
               : "You don't have any past classes archived."}
           </Text>
-          {(searchQuery || selectedSemester !== "ALL") && (
-            <TouchableOpacity
-              style={styles.clearFiltersBtn}
-              onPress={() => {
-                setSearchQuery("");
-                setSelectedSemester("ALL");
-                updateRouteParams({ search: undefined, semester: undefined });
-              }}
-            >
-              <Text style={styles.clearFiltersText}>Clear Filters</Text>
-            </TouchableOpacity>
-          )}
         </View>
       ) : (
         <FlatList
@@ -504,6 +377,20 @@ export function Hubs() {
         isPending={createHubMutation.isPending}
         currentUser={currentUser}
       />
+
+      <HubsSettingsModal
+        isVisible={isSettingsModalVisible}
+        onClose={() => setIsSettingsModalVisible(false)}
+        canCreateHub={canCreateHub}
+        onJoinHub={() => {
+          setIsSettingsModalVisible(false);
+          setIsJoinModalVisible(true);
+        }}
+        onCreateHub={() => {
+          setIsSettingsModalVisible(false);
+          setIsCreateModalVisible(true);
+        }}
+      />
     </View>
   );
 }
@@ -512,141 +399,103 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f7f9fb" },
 
   // Header & Buttons
-  header: { paddingHorizontal: 20, paddingTop: 16, marginBottom: 20 },
+  header: { paddingHorizontal: 20, paddingTop: 16, marginBottom: 12 },
+  headerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   pageTitle: {
     fontFamily: Platform.select({
       ios: "Plus Jakarta Sans",
       android: "sans-serif",
       default: "sans-serif",
     }),
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "800",
     color: "#131b2e",
-    letterSpacing: -0.5,
-    marginBottom: 16,
+    letterSpacing: -0.4,
   },
-  actionRow: { flexDirection: "row", gap: 12 },
-  btnDark: {
-    flex: 1,
+  headerIconsGroup: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#131b2e",
-    paddingVertical: 14,
-    borderRadius: 9999,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    gap: 10,
   },
-  btnLight: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#d0e4ff",
-    paddingVertical: 14,
-    borderRadius: 9999,
-  },
-  btnIcon: { marginRight: 8 },
-  btnTextWhite: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  btnTextDark: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#131b2e",
-  },
-
-  // Search Bar
-  searchWrapper: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "#ffffff",
-    borderRadius: 9999,
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === "ios" ? 10 : 6,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(15, 23, 42, 0.08)",
+    borderColor: "rgba(19, 27, 46, 0.08)",
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0f172a",
-  },
-  clearSearchBtn: {
-    padding: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
 
   // Custom Tabs
   tabsWrapper: { paddingHorizontal: 20, marginBottom: 16 },
   tabsContainer: {
     flexDirection: "row",
-    backgroundColor: "#f2f4f6",
-    borderRadius: 9999,
+    backgroundColor: "#ebeef2",
+    borderRadius: 14,
     padding: 4,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
+    flexDirection: "row",
+    paddingVertical: 9,
     alignItems: "center",
-    borderRadius: 9999,
+    justifyContent: "center",
+    borderRadius: 10,
+    gap: 7,
   },
   tabButtonActive: {
     backgroundColor: "#ffffff",
-    shadowColor: "#000",
+    shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     elevation: 2,
   },
   tabText: {
-    fontSize: 14,
+    fontFamily: Platform.select({
+      ios: "Plus Jakarta Sans",
+      android: "sans-serif",
+      default: "sans-serif",
+    }),
+    fontSize: 13.5,
     fontWeight: "600",
-    color: "#45464d",
+    color: "#64748b",
   },
   tabTextActive: { color: "#131b2e", fontWeight: "800" },
-
-  // Filter Pills
-  filterPillsContainer: {
-    flexDirection: "row",
-    gap: 8,
-    paddingTop: 12,
+  tabBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: "rgba(19, 27, 46, 0.06)",
+    minWidth: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "rgba(15, 23, 42, 0.08)",
-  },
-  filterPillActive: {
+  tabBadgeActive: {
     backgroundColor: "#131b2e",
-    borderColor: "#131b2e",
   },
-  filterPillText: {
-    fontSize: 12,
+  tabBadgeText: {
+    fontFamily: Platform.select({
+      ios: "Plus Jakarta Sans",
+      android: "sans-serif",
+      default: "sans-serif",
+    }),
+    fontSize: 11.5,
     fontWeight: "700",
-    color: "#475569",
+    color: "#64748b",
   },
-  filterPillTextActive: {
+  tabBadgeTextActive: {
     color: "#ffffff",
   },
 
@@ -668,18 +517,6 @@ const styles = StyleSheet.create({
     color: "#76777d",
     textAlign: "center",
     marginBottom: 12,
-  },
-  clearFiltersBtn: {
-    backgroundColor: "#e2e8f0",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 9999,
-    marginTop: 8,
-  },
-  clearFiltersText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#131b2e",
   },
   listContent: { paddingHorizontal: 20, paddingTop: 8 },
 
