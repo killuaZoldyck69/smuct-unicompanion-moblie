@@ -7,6 +7,7 @@ export interface StudentFormData {
   bloodGroup: string;
   currentSemester: string;
   section: string;
+  currentTerm: string;
   skills: string[];
   linkedInUrl: string;
   personalWebsiteUrl: string;
@@ -22,6 +23,7 @@ export function useStudentProfileForm(
     bloodGroup: "",
     currentSemester: "",
     section: "",
+    currentTerm: "",
     skills: [],
     linkedInUrl: "",
     personalWebsiteUrl: "",
@@ -34,6 +36,7 @@ export function useStudentProfileForm(
       bloodGroup: profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] || "" : "",
       currentSemester: profile.currentSemester ? String(profile.currentSemester) : "",
       section: profile.section || "",
+      currentTerm: profile.currentTerm || "",
       skills: profile.skills ? [...profile.skills] : [],
       linkedInUrl: profile.linkedInUrl || "",
       personalWebsiteUrl: profile.personalWebsiteUrl || "",
@@ -86,6 +89,11 @@ export function useStudentProfileForm(
     const cleanSection = formData.section.trim().toUpperCase().slice(0, 4);
     if (cleanSection !== (profile.section || "")) {
       payload.section = cleanSection;
+    }
+
+    const cleanTerm = formData.currentTerm.trim();
+    if (cleanTerm !== (profile.currentTerm || "")) {
+      payload.currentTerm = cleanTerm;
     }
 
     const digitsOnly = formData.currentSemester.replace(/\D/g, "");

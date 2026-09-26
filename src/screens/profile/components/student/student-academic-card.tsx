@@ -15,8 +15,10 @@ interface StudentAcademicCardProps {
   isEditing: boolean;
   currentSemester: string;
   section: string;
+  currentTerm: string;
   onChangeSemester: (val: string) => void;
   onChangeSection: (val: string) => void;
+  onChangeTerm: (val: string) => void;
 }
 
 export const StudentAcademicCard = React.memo(function StudentAcademicCard({
@@ -24,8 +26,10 @@ export const StudentAcademicCard = React.memo(function StudentAcademicCard({
   isEditing,
   currentSemester,
   section,
+  currentTerm,
   onChangeSemester,
   onChangeSection,
+  onChangeTerm,
 }: StudentAcademicCardProps) {
   const theme = SECTION_THEMES.ACADEMIC;
 
@@ -81,6 +85,33 @@ export const StudentAcademicCard = React.memo(function StudentAcademicCard({
             <Text style={styles.fieldValuePrimary}>
               {profile.program || "N/A"}
             </Text>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.fieldRow}>
+          <View style={styles.fieldIcon}>
+            <Feather name="calendar" size={14} color={theme.primaryText} />
+          </View>
+          <View style={styles.fieldContent}>
+            <Text style={styles.fieldLabel}>CURRENT TERM / OFFER</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.termEditInput}
+                value={currentTerm}
+                onChangeText={onChangeTerm}
+                placeholder="e.g. Fall 2026"
+                placeholderTextColor="#94a3b8"
+                autoCapitalize="words"
+                accessible={true}
+                accessibilityLabel="Current Term Input"
+              />
+            ) : (
+              <Text style={styles.fieldValuePrimary}>
+                {profile.currentTerm || "Fall 2026"}
+              </Text>
+            )}
           </View>
         </View>
       </View>
@@ -235,6 +266,19 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
+  },
+  termEditInput: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: PROFILE_COLORS.deepNavy,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.20)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 2,
   },
   divider: {
     height: 1,

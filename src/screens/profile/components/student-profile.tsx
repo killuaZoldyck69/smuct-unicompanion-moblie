@@ -131,8 +131,10 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
           isEditing={isEditing}
           currentSemester={formData.currentSemester}
           section={formData.section}
+          currentTerm={formData.currentTerm}
           onChangeSemester={(val) => updateField("currentSemester", val)}
           onChangeSection={(val) => updateField("section", val)}
+          onChangeTerm={(val) => updateField("currentTerm", val)}
         />
 
         <StudentSkillsCard

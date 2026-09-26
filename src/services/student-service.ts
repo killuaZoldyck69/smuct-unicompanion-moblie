@@ -14,6 +14,7 @@ export interface StudentProfileData {
   batch: string;
   currentSemester: number;
   section: string;
+  currentTerm?: string | null;
   isCR?: boolean;
   isTA?: boolean;
   skills?: string[];
@@ -35,6 +36,7 @@ export interface UpdateStudentProfileInput {
   batch?: string;
   currentSemester?: number;
   section?: string;
+  currentTerm?: string;
   bloodGroup?: string;
   skills?: string[];
   linkedInUrl?: string;
