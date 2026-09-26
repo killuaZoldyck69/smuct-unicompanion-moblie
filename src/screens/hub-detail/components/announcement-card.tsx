@@ -8,7 +8,6 @@ import {
   Linking,
   Image,
   Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -72,21 +71,8 @@ const AnnouncementCard = ({
   const canModify = isAuthor || canManage;
 
   const handleDelete = () => {
-    Alert.alert(
-      "Delete Announcement",
-      "Are you sure you want to delete this announcement? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => onDeletePress?.(item),
-        },
-      ],
-    );
+    onDeletePress?.(item);
   };
-
-  const authorRole = item.creator?.role || (item.creator?.studentProfile?.isCR ? "CR" : null);
 
   // Parse attachments
   const attachments: any[] = Array.isArray(item.attachments) ? item.attachments : [];
@@ -124,14 +110,7 @@ const AnnouncementCard = ({
             </View>
           )}
           <View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Text style={styles.userName}>{item.creator?.name || "Faculty"}</Text>
-              {authorRole && (
-                <View style={styles.rolePill}>
-                  <Text style={styles.rolePillText}>{authorRole}</Text>
-                </View>
-              )}
-            </View>
+            <Text style={styles.userName}>{item.creator?.name || "Faculty"}</Text>
             <View style={styles.dateRow}>
               <Feather
                 name="clock"
@@ -332,8 +311,6 @@ const AnnouncementCard = ({
           ) : (
             <View style={styles.commentsList}>
               {comments.map((c: any, index: number) => {
-                const commentAuthorRole =
-                  c.author?.role || (c.author?.studentProfile?.isCR ? "CR" : null);
                 return (
                   <View key={c.id || index} style={styles.commentRow}>
                     {c.author?.image ? (
@@ -350,11 +327,6 @@ const AnnouncementCard = ({
                         <Text style={styles.commentAuthorName} numberOfLines={1}>
                           {c.author?.name || "Student"}
                         </Text>
-                        {commentAuthorRole && (
-                          <View style={styles.commentRoleBadge}>
-                            <Text style={styles.commentRoleText}>{commentAuthorRole}</Text>
-                          </View>
-                        )}
                         <Text style={styles.commentTimestamp}>
                           {formatDateTime12h(c.createdAt)}
                         </Text>
@@ -423,19 +395,7 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.deepNavy,
     fontWeight: "800",
   },
-  rolePill: {
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 9999,
-  },
-  rolePillText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#475569",
-    textTransform: "uppercase",
-  },
+
   dateRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -615,18 +575,7 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.deepNavy,
     maxWidth: 120,
   },
-  commentRoleBadge: {
-    backgroundColor: "#e0f2fe",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 9999,
-  },
-  commentRoleText: {
-    fontFamily,
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#0369a1",
-  },
+
   commentTimestamp: {
     fontFamily,
     fontSize: 10,

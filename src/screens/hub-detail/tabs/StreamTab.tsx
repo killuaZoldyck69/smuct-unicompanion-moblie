@@ -16,6 +16,7 @@ import Toast from "react-native-toast-message";
 
 import AnnouncementCard from "../components/announcement-card";
 import CreateAnnouncementModal from "../components/create-announcement-modal";
+import DeleteAnnouncementModal from "../components/delete-announcement-modal";
 import {
   useAnnouncements,
   useCreateAnnouncement,
@@ -48,15 +49,19 @@ const fontFamily = Platform.select({
 interface StreamTabProps {
   hubId: string;
   canManage: boolean;
+  canPostAnnouncement?: boolean;
   currentUserId?: string;
 }
 
 export default function StreamTab({
   hubId,
   canManage,
+  canPostAnnouncement,
   currentUserId,
 }: StreamTabProps) {
   const queryClient = useQueryClient();
+
+  const canPost = canPostAnnouncement !== undefined ? canPostAnnouncement : canManage;
 
   const { data: announcements, isLoading, isRefetching } = useAnnouncements(hubId);
   const createMutation = useCreateAnnouncement(hubId);
@@ -66,8 +71,17 @@ export default function StreamTab({
 
   const [isComposerVisible, setIsComposerVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [deletingItem, setDeletingItem] = useState<any | null>(null);
 
   const handleCreateAnnouncement = (payload: any) => {
+    if (!canPost) {
+      Toast.show({
+        type: "error",
+        text1: "Permission Denied",
+        text2: "Only Teachers and student CRs can post announcements.",
+      });
+      return;
+    }
     createMutation.mutate(payload, {
       onSuccess: () => {
         setIsComposerVisible(false);
@@ -107,9 +121,11 @@ export default function StreamTab({
     );
   };
 
-  const handleDeleteAnnouncement = (item: any) => {
-    deleteMutation.mutate(item.id, {
+  const handleConfirmDelete = () => {
+    if (!deletingItem) return;
+    deleteMutation.mutate(deletingItem.id, {
       onSuccess: () => {
+        setDeletingItem(null);
         Toast.show({ type: "success", text1: "Announcement Deleted" });
       },
       onError: (err: any) => {
@@ -159,11 +175,11 @@ export default function StreamTab({
           </View>
           <Text style={styles.emptyTitle}>No Announcements Yet</Text>
           <Text style={styles.emptySubtitle}>
-            {canManage
+            {canPost
               ? "Keep students informed by posting lecture updates, notices, and routine changes."
               : "Faculty and CRs will broadcast urgent updates, schedule notices, and exam routines here."}
           </Text>
-          {canManage && (
+          {canPost && (
             <TouchableOpacity
               style={styles.emptyActionBtn}
               onPress={() => {
@@ -181,7 +197,7 @@ export default function StreamTab({
           data={announcementList}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
-            canManage ? (
+            canPost ? (
               <View style={styles.headerActionRow}>
                 <TouchableOpacity
                   style={styles.newAnnouncementBtn}
@@ -211,7 +227,7 @@ export default function StreamTab({
                 setEditingItem(ann);
                 setIsComposerVisible(true);
               }}
-              onDeletePress={handleDeleteAnnouncement}
+              onDeletePress={(ann) => setDeletingItem(ann)}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -238,6 +254,15 @@ export default function StreamTab({
         onSubmit={editingItem ? handleUpdateAnnouncement : handleCreateAnnouncement}
         isPending={createMutation.isPending || updateMutation.isPending}
         initialData={editingItem}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteAnnouncementModal
+        isVisible={!!deletingItem}
+        onClose={() => setDeletingItem(null)}
+        onConfirm={handleConfirmDelete}
+        announcementContent={deletingItem?.content}
+        isPending={deleteMutation.isPending}
       />
     </View>
   );

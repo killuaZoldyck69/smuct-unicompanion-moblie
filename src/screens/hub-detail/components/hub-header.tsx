@@ -23,8 +23,10 @@ const fontFamily = Platform.select({
 interface HubHeaderProps {
   hubDetails: any;
   canManage?: boolean;
+  canEditClassLink?: boolean;
   onOptionsPress: () => void;
   onLiveClassPress?: () => void;
+  onEditClassLink?: () => void;
   onBack?: () => void;
 }
 
@@ -40,8 +42,10 @@ const getOrdinal = (num?: number | string) => {
 export default function HubHeader({
   hubDetails,
   canManage,
+  canEditClassLink,
   onOptionsPress,
   onLiveClassPress,
+  onEditClassLink,
   onBack,
 }: HubHeaderProps) {
   const router = useRouter();
@@ -241,7 +245,7 @@ export default function HubHeader({
           </View>
         </View>
 
-        {/* Right Bento Card: Online Class + Share + Action Button */}
+        {/* Right Bento Card: Online Class + Edit + Share + Action Button */}
         <View style={styles.bentoCard}>
           <View style={styles.meetHeaderRow}>
             <View style={styles.meetTitleGroup}>
@@ -255,36 +259,51 @@ export default function HubHeader({
               </Text>
             </View>
 
-            {hubDetails?.meetUrl ? (
-              <TouchableOpacity
-                style={styles.meetShareBtn}
-                onPress={handleShareMeet}
-                activeOpacity={0.7}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Share online class link"
-              >
-                <Feather name="share-2" size={12} color="#0f172a" />
-              </TouchableOpacity>
-            ) : null}
+            <View style={styles.actionBtnGroup}>
+              {canEditClassLink && (
+                <TouchableOpacity
+                  style={styles.meetShareBtn}
+                  onPress={onEditClassLink || onLiveClassPress}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit class link"
+                >
+                  <Feather name="edit-2" size={11} color="#0f172a" />
+                </TouchableOpacity>
+              )}
+
+              {hubDetails?.meetUrl ? (
+                <TouchableOpacity
+                  style={styles.meetShareBtn}
+                  onPress={handleShareMeet}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share online class link"
+                >
+                  <Feather name="share-2" size={11} color="#0f172a" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
 
           <TouchableOpacity
             style={[
               styles.joinMeetingBtn,
               hubDetails?.isClassLive && { backgroundColor: "#16a34a" },
-              !hubDetails?.meetUrl && !canManage && { backgroundColor: "#94a3b8" },
+              !hubDetails?.meetUrl && !canEditClassLink && { backgroundColor: "#94a3b8" },
             ]}
-            onPress={handleJoinMeet}
+            onPress={hubDetails?.meetUrl ? handleJoinMeet : (onEditClassLink || onLiveClassPress)}
             activeOpacity={0.85}
-            disabled={!hubDetails?.meetUrl && !canManage}
+            disabled={!hubDetails?.meetUrl && !canEditClassLink}
           >
             <Text style={styles.joinMeetingBtnText}>
               {hubDetails?.isClassLive
                 ? "Join Live"
                 : hubDetails?.meetUrl
                 ? "Join Class"
-                : canManage
+                : canEditClassLink
                 ? "Set Link"
                 : "No Link"}
             </Text>

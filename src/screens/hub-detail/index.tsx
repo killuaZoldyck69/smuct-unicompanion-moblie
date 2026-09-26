@@ -27,6 +27,7 @@ import MembersTab from "./tabs/MembersTab";
 // Options & Management Modals
 import EditHubModal from "./components/edit-hub-modal";
 import HubOptionsModal from "./components/hub-options-modal";
+import EditClassLinkModal from "./components/edit-class-link-modal";
 
 import {
   useHubDetails,
@@ -37,6 +38,7 @@ import {
   useRemoveMember,
   useToggleLiveClass,
 } from "@/features/hubs/useHubs";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 // ==================================================
 // 1. SOFT CAMPUS BENTO DESIGN SYSTEM CONSTANTS
@@ -101,6 +103,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
   // Modals state
   const [isEditHubModalVisible, setIsEditHubModalVisible] = useState(false);
   const [isHubOptionsVisible, setIsHubOptionsVisible] = useState(false);
+  const [isEditClassLinkModalVisible, setIsEditClassLinkModalVisible] = useState(false);
 
   // --- Data Fetching ---
   const {
@@ -135,13 +138,32 @@ export function HubDetail({ hubId }: HubDetailProps) {
     router.setParams({ tab: tabId });
   };
 
+  const { user: currentUser, role: userGlobalRole } = useCurrentUser();
+
   // User membership & role resolution
   const myHubMembership = myHubs?.find(
     (m: any) => m.hubId === hubId || m.hub?.id === hubId
   );
-  const myRole = myHubMembership?.role || "STUDENT";
-  const myUserId = myHubMembership?.userId;
-  const canManage = ["TEACHER", "CR", "TA"].includes(myRole);
+  const myUserId = currentUser?.id || myHubMembership?.userId;
+
+  const memberFromDetails = hubDetails?.members?.find(
+    (m: any) => m.userId === myUserId || m.user?.id === myUserId
+  );
+
+  const myRole = memberFromDetails?.role || myHubMembership?.role || (userGlobalRole === "TEACHER" ? "TEACHER" : "STUDENT");
+
+  const isTeacher =
+    userGlobalRole === "TEACHER" ||
+    myRole === "TEACHER" ||
+    hubDetails?.teacherId === myUserId;
+
+  const isCR =
+    myRole === "CR" ||
+    (currentUser?.studentProfile as any)?.isCR === true;
+
+  const canPostAnnouncement = isTeacher || isCR;
+  const canEditClassLink = isTeacher || isCR;
+  const canManage = canPostAnnouncement || myRole === "TA";
 
   const handleBack = useCallback(() => {
     router.replace("/(tabs)/hubs");
@@ -167,6 +189,31 @@ export function HubDetail({ hubId }: HubDetailProps) {
         type: "error",
         text1: "Update Failed",
         text2: err?.response?.data?.message || err.message || "Could not update course hub",
+      });
+    }
+  };
+
+  const handleUpdateClassLink = async (meetUrl: string | null) => {
+    if (!canEditClassLink) {
+      Toast.show({
+        type: "error",
+        text1: "Permission Denied",
+        text2: "Only Teachers and student CRs can edit the class link.",
+      });
+      return;
+    }
+    try {
+      await updateHubMutation.mutateAsync({ meetUrl });
+      Toast.show({
+        type: "success",
+        text1: meetUrl ? "Class Link Saved!" : "Class Link Removed",
+      });
+      setIsEditClassLinkModalVisible(false);
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to Update Link",
+        text2: err?.response?.data?.message || err.message || "Could not update class link",
       });
     }
   };
@@ -246,8 +293,10 @@ export function HubDetail({ hubId }: HubDetailProps) {
       <HubHeader
         hubDetails={hubDetails}
         canManage={canManage}
+        canEditClassLink={canEditClassLink}
         onOptionsPress={() => setIsHubOptionsVisible(true)}
-        onLiveClassPress={() => setIsEditHubModalVisible(true)}
+        onLiveClassPress={() => setIsEditClassLinkModalVisible(true)}
+        onEditClassLink={() => setIsEditClassLinkModalVisible(true)}
         onBack={handleBack}
       />
 
@@ -292,6 +341,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
           <StreamTab
             hubId={hubId}
             canManage={canManage}
+            canPostAnnouncement={canPostAnnouncement}
             currentUserId={myUserId}
           />
         )}
@@ -337,6 +387,15 @@ export function HubDetail({ hubId }: HubDetailProps) {
       </View>
 
       {/* --- MODALS --- */}
+      <EditClassLinkModal
+        isVisible={isEditClassLinkModalVisible}
+        onClose={() => setIsEditClassLinkModalVisible(false)}
+        currentMeetUrl={hubDetails?.meetUrl}
+        courseName={hubDetails?.courseName}
+        onSave={handleUpdateClassLink}
+        isPending={updateHubMutation.isPending}
+      />
+
       <EditHubModal
         isVisible={isEditHubModalVisible}
         onClose={() => setIsEditHubModalVisible(false)}
