@@ -93,7 +93,7 @@ export default function TabsLayout() {
           marginHorizontal: 20,
           height: 72,
           backgroundColor: "#131b2e",
-          borderRadius: 36,
+          borderRadius: 20,
           borderTopWidth: 0,
           elevation: 10,
           shadowColor: "#000",
@@ -159,10 +159,7 @@ export default function TabsLayout() {
             >
               <Image
                 source={TAB_ICONS.menu}
-                style={[
-                  styles.centerIconImage,
-                  { opacity: focused ? 1 : 0.8 },
-                ]}
+                style={[styles.centerIconImage, { opacity: focused ? 1 : 0.8 }]}
                 resizeMode="contain"
               />
             </View>

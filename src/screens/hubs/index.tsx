@@ -67,7 +67,8 @@ export function Hubs() {
   };
 
   // --- Fetch Auth & Profile Data ---
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  const { data: session, isPending: isSessionPending } =
+    authClient.useSession();
   const user = session?.user as
     | {
         id: string;
@@ -399,7 +400,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f7f9fb" },
 
   // Header & Buttons
-  header: { paddingHorizontal: 20, paddingTop: 16, marginBottom: 12 },
+  header: { paddingHorizontal: 20, paddingTop: 8, marginBottom: 12 },
   headerTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -411,7 +412,7 @@ const styles = StyleSheet.create({
       android: "sans-serif",
       default: "sans-serif",
     }),
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
     color: "#131b2e",
     letterSpacing: -0.4,

@@ -1,10 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -13,10 +8,7 @@ import { Forum } from "@/screens/forum";
 import { LostFoundSection } from "./lost-found";
 import { MarketplaceSection } from "./marketplace";
 import { MemesSection } from "./memes";
-import {
-  SectionTabBar,
-  type HubSection,
-} from "./shared/section-tab-bar";
+import { SectionTabBar, type HubSection } from "./shared/section-tab-bar";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./shared/design-tokens";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
@@ -39,8 +31,10 @@ export function CampusHub({ initialSection }: CampusHubProps) {
   const router = useRouter();
   const { user: currentUser } = useCurrentUser();
   const [isForumComposeVisible, setIsForumComposeVisible] = useState(false);
-  const [isLostFoundComposeVisible, setIsLostFoundComposeVisible] = useState(false);
-  const [isMarketplaceComposeVisible, setIsMarketplaceComposeVisible] = useState(false);
+  const [isLostFoundComposeVisible, setIsLostFoundComposeVisible] =
+    useState(false);
+  const [isMarketplaceComposeVisible, setIsMarketplaceComposeVisible] =
+    useState(false);
   const [isMemeComposeVisible, setIsMemeComposeVisible] = useState(false);
 
   const [activeSection, setActiveSection] = useState<HubSection>(() => {
@@ -197,4 +191,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-

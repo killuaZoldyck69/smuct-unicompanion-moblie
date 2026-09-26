@@ -46,14 +46,18 @@ export const StudentHeader = React.memo(function StudentHeader({
           disabled={isUpdating}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel={isEditing ? "Save profile changes" : "Edit profile"}
+          accessibilityLabel={
+            isEditing ? "Save profile changes" : "Edit profile"
+          }
         >
           <Feather
             name={isEditing ? "check" : "edit-2"}
             size={15}
             color={isEditing ? "#ffffff" : PROFILE_COLORS.deepNavy}
           />
-          <Text style={[styles.topBtnText, isEditing && styles.saveBtnTextActive]}>
+          <Text
+            style={[styles.topBtnText, isEditing && styles.saveBtnTextActive]}
+          >
             {isUpdating ? "Saving..." : isEditing ? "Save" : "Edit Profile"}
           </Text>
         </TouchableOpacity>
@@ -73,7 +77,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontFamily,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
     color: PROFILE_COLORS.deepNavy,
     letterSpacing: -0.4,

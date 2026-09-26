@@ -68,7 +68,7 @@ export function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const { user, role: userRole } = useCurrentUser();
+  const { user } = useCurrentUser();
 
   // --- Fetch Data using Feature Hooks ---
   const { data: myHubs, isLoading: isLoadingHubs } = useMyHubs();
@@ -98,16 +98,7 @@ export function Home() {
       >
         {/* --- 1. HEADER GREETING --- */}
         <View style={styles.header}>
-          <View style={styles.headerTextCol}>
-            <Text style={styles.greetingText}>{getGreeting()}</Text>
-            <Text style={styles.nameText} numberOfLines={1}>
-              {user?.name || "Welcome Back!"}
-            </Text>
-            <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{userRole}</Text>
-            </View>
-          </View>
-
+          {/* Left: Avatar */}
           <TouchableOpacity
             onPress={() => router.push("/profile")}
             accessible={true}
@@ -128,6 +119,26 @@ export function Home() {
                 </Text>
               </View>
             )}
+          </TouchableOpacity>
+
+          {/* Centre: Greeting + Name */}
+          <View style={styles.headerTextCol}>
+            <Text style={styles.greetingText}>{getGreeting()}</Text>
+            <Text style={styles.nameText} numberOfLines={1}>
+              {user?.name || "Welcome Back!"}
+            </Text>
+          </View>
+
+          {/* Right: Notification Bell */}
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/notices")}
+            style={styles.notifBtn}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
+            <Feather name="bell" size={20} color="#131b2e" />
           </TouchableOpacity>
         </View>
 
@@ -253,52 +264,55 @@ const styles = StyleSheet.create({
   // Header
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingTop: 14,
+    paddingBottom: 20,
+    gap: 12,
   },
-  headerTextCol: { flex: 1, paddingRight: 16 },
+  headerTextCol: {
+    flex: 1,
+  },
   greetingText: {
-    fontSize: 16,
+    fontSize: 13,
     color: "#76777d",
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 1,
   },
   nameText: {
-    fontSize: 24,
+    fontSize: 20,
     color: "#131b2e",
     fontWeight: "800",
-    marginBottom: 8,
+    letterSpacing: -0.3,
   },
 
-  roleBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#d1fae5",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 9999,
-  },
-  roleText: {
-    fontSize: 10,
-    color: "#065f46",
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
+  notifBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(19, 27, 46, 0.08)",
+    shadowColor: "#131b2e",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
   },
 
-  avatarImage: { width: 56, height: 56, borderRadius: 28 },
+  avatarImage: { width: 46, height: 46, borderRadius: 23 },
   avatarFallback: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: "#131b2e",
     justifyContent: "center",
     alignItems: "center",
   },
   avatarFallbackText: {
-    fontSize: 24,
+    fontSize: 20,
     color: "#ffffff",
     fontWeight: "800",
   },
@@ -338,9 +352,9 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     color: "#131b2e",
-    fontWeight: "800",
+    fontWeight: "700",
   },
   seeAllText: {
     fontSize: 14,
@@ -354,7 +368,7 @@ const styles = StyleSheet.create({
   noticeContainerCard: {
     backgroundColor: "#ffffff",
     marginHorizontal: 20,
-    borderRadius: 32,
+    borderRadius: 18,
     padding: 12,
     ...shadows.level1,
   },
@@ -370,15 +384,15 @@ const styles = StyleSheet.create({
   },
   noticeTextCol: { flex: 1, paddingRight: 12 },
   noticeTitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#131b2e",
-    fontWeight: "800",
-    marginBottom: 4,
+    fontWeight: "600",
+    marginBottom: 3,
   },
   noticeDate: {
     fontSize: 12,
     color: "#76777d",
-    fontWeight: "500",
+    fontWeight: "400",
   },
 
   // --- EMPTY STATES ---

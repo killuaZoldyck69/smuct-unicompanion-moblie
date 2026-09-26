@@ -10,8 +10,6 @@ import {
   fontFamily,
 } from "../constants";
 
-
-
 interface MenuItemCardProps {
   item: MenuItemConfig;
 }
@@ -49,7 +47,11 @@ export const MenuItemCard = React.memo(function MenuItemCard({
             accessible={false}
           />
         ) : (
-          <Feather name={item.fallbackIcon} size={20} color={theme.accentText} />
+          <Feather
+            name={item.fallbackIcon}
+            size={20}
+            color={theme.accentText}
+          />
         )}
       </View>
 
@@ -59,7 +61,10 @@ export const MenuItemCard = React.memo(function MenuItemCard({
       </Text>
 
       {/* Description */}
-      <Text style={[styles.desc, { color: theme.accentText }]} numberOfLines={2}>
+      <Text
+        style={[styles.desc, { color: theme.accentText }]}
+        numberOfLines={2}
+      >
         {item.desc}
       </Text>
     </TouchableOpacity>
@@ -77,7 +82,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     ...BENTO_COLORS.shadow,
     alignItems: "center",
-    gap: 2,
+    gap: 5,
   },
   iconBadge: {
     width: 44,
@@ -86,7 +91,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    marginBottom: 0,
+    marginBottom: 5,
   },
   iconImage: {
     width: 26,
@@ -98,9 +103,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
     letterSpacing: -0.2,
-    lineHeight: 17,                   // was 18
+    lineHeight: 17, // was 18
     textAlign: "center",
-    minHeight: 34,                    // was 36 — 2 lines × 17px
+    minHeight: 34, // was 36 — 2 lines × 17px
   },
   desc: {
     fontFamily,
@@ -108,6 +113,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 14,
     textAlign: "center",
-    marginTop: -3,
+    marginTop: -10,
   },
 });

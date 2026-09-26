@@ -8,7 +8,10 @@ import {
   RefreshControl,
   Platform,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -56,10 +59,13 @@ export function ScheduleScreen() {
   }, []);
 
   // Auto-select today's day of week on initial load
-  const [selectedDayFilter, setSelectedDayFilter] = useState<string>(todayWeekday);
+  const [selectedDayFilter, setSelectedDayFilter] =
+    useState<string>(todayWeekday);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [noticeModalItem, setNoticeModalItem] = useState<ClassRoutineItem | null>(null);
-  const [isNoticeModalVisible, setIsNoticeModalVisible] = useState<boolean>(false);
+  const [noticeModalItem, setNoticeModalItem] =
+    useState<ClassRoutineItem | null>(null);
+  const [isNoticeModalVisible, setIsNoticeModalVisible] =
+    useState<boolean>(false);
 
   const { data: myHubs, isLoading, isError, refetch } = useMyHubs();
 
@@ -74,7 +80,7 @@ export function ScheduleScreen() {
 
   const { scheduleSections, todayStats } = useMemo(
     () => parseWeeklySchedule(myHubs),
-    [myHubs]
+    [myHubs],
   );
 
   const daysWithClasses = useMemo(() => {
@@ -106,7 +112,7 @@ export function ScheduleScreen() {
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
       {/* Header Bar */}
       <View style={styles.screenHeader}>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           onPress={handleBack}
           style={styles.headerIconButton}
           accessible={true}
@@ -115,7 +121,7 @@ export function ScheduleScreen() {
           activeOpacity={0.7}
         >
           <Feather name="arrow-left" size={22} color={BENTO_COLORS.deepNavy} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={styles.headerTitlesContainer}>
           <Text style={styles.screenTitle} numberOfLines={1}>
@@ -187,15 +193,13 @@ export function ScheduleScreen() {
                   : `${todayStats.totalClassesToday} classes scheduled today`}
             </Text>
             <Text style={styles.todaySummarySubtitle} numberOfLines={1}>
-              {todayStats.liveClass ? (
-                `Live now: ${todayStats.liveClass.courseCode} (${todayStats.liveClass.room ? `Room ${todayStats.liveClass.room}` : "Room TBA"})`
-              ) : todayStats.nextClass ? (
-                `Next: ${formatTimeDisplay(todayStats.nextClass.startTime)} · ${todayStats.nextClass.courseCode}`
-              ) : todayStats.totalClassesToday === 0 ? (
-                "Free day · Enjoy your time off"
-              ) : (
-                "All sessions completed for today"
-              )}
+              {todayStats.liveClass
+                ? `Live now: ${todayStats.liveClass.courseCode} (${todayStats.liveClass.room ? `Room ${todayStats.liveClass.room}` : "Room TBA"})`
+                : todayStats.nextClass
+                  ? `Next: ${formatTimeDisplay(todayStats.nextClass.startTime)} · ${todayStats.nextClass.courseCode}`
+                  : todayStats.totalClassesToday === 0
+                    ? "Free day · Enjoy your time off"
+                    : "All sessions completed for today"}
             </Text>
           </View>
 
@@ -280,7 +284,9 @@ export function ScheduleScreen() {
 
                     const isLive = item.id === todayStats.liveClass?.id;
                     const isNext =
-                      !isLive && isToday && item.id === todayStats.nextClass?.id;
+                      !isLive &&
+                      isToday &&
+                      item.id === todayStats.nextClass?.id;
                     const isCancelled = item.activeNotice?.type === "CANCELLED";
 
                     return (
@@ -452,7 +458,7 @@ const styles = StyleSheet.create({
   screenHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
     paddingTop: 12,
     paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
@@ -484,7 +490,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontFamily,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
     letterSpacing: -0.5,

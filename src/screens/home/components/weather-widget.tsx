@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   weatherWidget: {
     backgroundColor: "#131b2e",
     marginHorizontal: 20,
-    borderRadius: 24,
+    borderRadius: 18,
     paddingVertical: 16,
     paddingHorizontal: 20,
     ...shadows.level1,
