@@ -5,6 +5,7 @@ export interface ClassworkTabProps {
   hubDetails?: any;
   canManage: boolean;
   canSubmit?: boolean;
+  isTeacher?: boolean;
   currentUserId?: string;
 }
 

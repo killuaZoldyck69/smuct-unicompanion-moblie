@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import * as DocumentPicker from "expo-document-picker";
@@ -18,11 +20,10 @@ import {
   AssessmentSubmission,
   AssessmentAttachment,
 } from "./types";
+import { AssessmentResourcesSection } from "./AssessmentResourcesSection";
 import {
   formatDueDate,
   formatFileSize,
-  openSafeUrl,
-  isValidHttpUrl,
   ALLOWED_FILE_EXTENSIONS,
   MAX_FILE_SIZE_BYTES,
   MAX_FILE_COUNT,
@@ -35,6 +36,11 @@ const fontFamily = Platform.select({
   default: "sans-serif",
 });
 
+interface SubmissionLink {
+  title: string;
+  url: string;
+}
+
 interface StudentSubmissionViewProps {
   assessment: AssessmentData;
   typeConfig: AssessmentTypeConfig;
@@ -44,6 +50,7 @@ interface StudentSubmissionViewProps {
     submittedUrl?: string;
     content?: string;
     attachments?: AssessmentAttachment[];
+    links?: SubmissionLink[];
     status: "SUBMITTED" | "HAND_SUBMISSION";
     isLate?: boolean;
   }) => void;
@@ -51,19 +58,47 @@ interface StudentSubmissionViewProps {
 
 export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React.memo(
   ({ assessment, typeConfig, mySub, isSubmitting, onSubmit }) => {
-    // Mode State
-    const [submissionMethod, setSubmissionMethod] = useState<"ONLINE" | "OFFLINE">(
-      assessment.submissionType === "HAND" ? "OFFLINE" : "ONLINE"
-    );
+    const insets = useSafeAreaInsets();
 
-    // Inputs State
-    const [submissionUrl, setSubmissionUrl] = useState("");
-    const [linkInputText, setLinkInputText] = useState("");
-    const [showLinkInput, setShowLinkInput] = useState(false);
-    const [submissionContent, setSubmissionContent] = useState("");
-    const [showTextInput, setShowTextInput] = useState(false);
-    const [submissionAttachments, setSubmissionAttachments] = useState<AssessmentAttachment[]>([]);
-    const [isUploadingFile, setIsUploadingFile] = useState(false);
+    // Mode State: ONLINE vs OFFLINE
+    const [submissionMethod, setSubmissionMethod] = useState<"ONLINE" | "OFFLINE">("ONLINE");
+
+    // Submission Data State
+    const [files, setFiles] = useState<AssessmentAttachment[]>([]);
+    const [links, setLinks] = useState<SubmissionLink[]>([]);
+    const [noteContent, setNoteContent] = useState("");
+
+    // Drawers State
+    const [activeDrawer, setActiveDrawer] = useState<"LINK" | "TEXT" | null>(null);
+    const [tempLinkUrl, setTempLinkUrl] = useState("");
+    const [tempLinkTitle, setTempLinkTitle] = useState("");
+    const [tempNoteText, setTempNoteText] = useState("");
+    const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+
+    // Synchronize initial data from existing submission or assessment
+    useEffect(() => {
+      if (mySub) {
+        if (mySub.status === "HAND_SUBMISSION") {
+          setSubmissionMethod("OFFLINE");
+        } else {
+          setSubmissionMethod("ONLINE");
+        }
+
+        if (Array.isArray(mySub.attachments) && mySub.attachments.length > 0) {
+          setFiles(mySub.attachments);
+        }
+
+        if (mySub.submittedUrl) {
+          setLinks([{ title: "Submitted Link", url: mySub.submittedUrl }]);
+        }
+
+        if (mySub.content) {
+          setNoteContent(mySub.content);
+        }
+      } else if (assessment.submissionType === "HAND") {
+        setSubmissionMethod("OFFLINE");
+      }
+    }, [mySub, assessment.submissionType]);
 
     // Pick & Upload Files with Validation
     const handlePickFiles = async () => {
@@ -76,7 +111,7 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
         if (res.canceled || !res.assets || res.assets.length === 0) return;
 
         // 1. Check file count limit
-        if (submissionAttachments.length + res.assets.length > MAX_FILE_COUNT) {
+        if (files.length + res.assets.length > MAX_FILE_COUNT) {
           Toast.show({
             type: "error",
             text1: "File Limit Reached",
@@ -85,7 +120,7 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
           return;
         }
 
-        // 2. Validate individual files (size and extension)
+        // 2. Validate individual files
         const validAssets: any[] = [];
         for (const asset of res.assets) {
           if (asset.size && asset.size > MAX_FILE_SIZE_BYTES) {
@@ -112,7 +147,7 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
 
         if (validAssets.length === 0) return;
 
-        setIsUploadingFile(true);
+        setIsUploadingFiles(true);
         const uploaded = await uploadMultipleFilesToCloudinary(
           validAssets.map((asset) => ({
             uri: asset.uri,
@@ -122,7 +157,7 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
           }))
         );
 
-        setSubmissionAttachments((prev) => [
+        setFiles((prev) => [
           ...prev,
           ...uploaded.map((u) => ({
             name: u.name,
@@ -140,109 +175,155 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
           text2: err.message || "Failed to upload file",
         });
       } finally {
-        setIsUploadingFile(false);
+        setIsUploadingFiles(false);
       }
     };
 
-    const handleAddLink = () => {
-      const trimmed = linkInputText.trim();
-      if (!trimmed) return;
+    // Remove handlers
+    const handleRemoveFile = (idx: number) => {
+      setFiles((prev) => prev.filter((_, i) => i !== idx));
+    };
 
-      const safeUrl = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const handleRemoveLink = (idx: number) => {
+      setLinks((prev) => prev.filter((_, i) => i !== idx));
+    };
 
-      if (!isValidHttpUrl(safeUrl)) {
-        Toast.show({
-          type: "error",
-          text1: "Invalid URL",
-          text2: "Please enter a valid web link (e.g. Google Drive, GitHub).",
+    // Add Link
+    const handleSaveLink = () => {
+      if (!tempLinkUrl.trim()) return;
+      const formatted =
+        tempLinkUrl.startsWith("http://") || tempLinkUrl.startsWith("https://")
+          ? tempLinkUrl.trim()
+          : `https://${tempLinkUrl.trim()}`;
+
+      setLinks((prev) => [
+        ...prev,
+        {
+          title: tempLinkTitle.trim() || formatted,
+          url: formatted,
+        },
+      ]);
+      setTempLinkUrl("");
+      setTempLinkTitle("");
+      setActiveDrawer(null);
+    };
+
+    // Save Text Note
+    const handleSaveNote = () => {
+      setNoteContent(tempNoteText.trim());
+      setActiveDrawer(null);
+    };
+
+    // Open text drawer
+    const handleOpenTextDrawer = () => {
+      setTempNoteText(noteContent);
+      setActiveDrawer((prev) => (prev === "TEXT" ? null : "TEXT"));
+    };
+
+    // Submit Action
+    const handleFormSubmit = () => {
+      const isLate = Boolean(
+        assessment.deadline &&
+          new Date().getTime() > new Date(assessment.deadline).getTime()
+      );
+
+      if (submissionMethod === "OFFLINE") {
+        onSubmit({
+          status: "HAND_SUBMISSION",
+          isLate,
         });
         return;
       }
 
-      setSubmissionUrl(safeUrl);
-      setLinkInputText("");
-      setShowLinkInput(false);
-      Toast.show({ type: "success", text1: "Link Added" });
-    };
-
-    const handleFormSubmit = () => {
-      if (submissionMethod === "ONLINE") {
-        const hasUrl = Boolean(submissionUrl.trim());
-        const hasFiles = submissionAttachments.length > 0;
-        const hasText = Boolean(submissionContent.trim());
-
-        if (!hasUrl && !hasFiles && !hasText) {
-          Toast.show({
-            type: "error",
-            text1: "Submission Empty",
-            text2: "Please upload a file, add a link, or enter text to submit.",
-          });
-          return;
-        }
-      }
-
-      const isLate =
-        assessment.deadline &&
-        new Date().getTime() > new Date(assessment.deadline).getTime();
-
       onSubmit({
-        submittedUrl: submissionUrl.trim() || undefined,
-        content: submissionContent.trim() || undefined,
-        attachments: submissionAttachments.length > 0 ? submissionAttachments : undefined,
-        status: submissionMethod === "OFFLINE" ? "HAND_SUBMISSION" : "SUBMITTED",
-        isLate: Boolean(isLate),
+        submittedUrl: links.length > 0 ? links[0].url : undefined,
+        content: noteContent || undefined,
+        attachments: files.length > 0 ? files : undefined,
+        links: links.length > 0 ? links : undefined,
+        status: "SUBMITTED",
+        isLate,
       });
     };
 
     const isOnlineEmpty =
       submissionMethod === "ONLINE" &&
-      !submissionUrl &&
-      submissionAttachments.length === 0 &&
-      !submissionContent.trim();
+      files.length === 0 &&
+      links.length === 0 &&
+      !noteContent.trim();
+
+    const isSubmitDisabled = isSubmitting || isUploadingFiles || isOnlineEmpty;
+
+    const hasResources =
+      (Array.isArray(assessment.attachments) && assessment.attachments.length > 0) ||
+      (Array.isArray(assessment.links) && assessment.links.length > 0);
 
     return (
       <View style={styles.container}>
-        {/* TOP COMPACT HERO (IMAGE 2) */}
-        <View style={styles.topHeroCard}>
-          <View style={styles.heroTopRow}>
-            <View
-              style={[
-                styles.typeIconContainer,
-                {
-                  backgroundColor: typeConfig.iconBg,
-                  borderColor: typeConfig.iconBorder,
-                },
-              ]}
-            >
-              <Feather name={typeConfig.icon} size={20} color={typeConfig.iconColor} />
+        <ScrollView
+          contentContainerStyle={styles.scrollBody}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 1. TOP SUMMARY CARD (MATCHES USER SCREENSHOT) */}
+          <View style={styles.topHeroCard}>
+            <View style={styles.heroTopRow}>
+              <View
+                style={[
+                  styles.typeIconBox,
+                  {
+                    backgroundColor: typeConfig.iconBg,
+                    borderColor: typeConfig.iconBorder,
+                  },
+                ]}
+              >
+                <Feather name={typeConfig.icon} size={20} color={typeConfig.iconColor} />
+              </View>
+
+              <View
+                style={[
+                  styles.typeBadgePill,
+                  { backgroundColor: typeConfig.badgeBg },
+                ]}
+              >
+                <Text style={[styles.typeBadgeText, { color: typeConfig.badgeText }]}>
+                  {typeConfig.label}
+                </Text>
+              </View>
             </View>
 
-            <View style={[styles.typeBadgePill, { backgroundColor: typeConfig.badgeBg }]}>
-              <Text style={[styles.typeBadgeText, { color: typeConfig.badgeText }]}>
-                {typeConfig.label}
+            <Text style={styles.heroTitleText}>{assessment.title}</Text>
+
+            <View style={styles.heroMetaRow}>
+              <Text style={styles.metaLabelText}>Max Marks: </Text>
+              <Text style={styles.metaValueText}>{assessment.totalMarks}</Text>
+              <Text style={styles.metaDivider}>{"   |   "}</Text>
+              <Text style={styles.metaLabelText}>Due: </Text>
+              <Text style={styles.metaValueText}>
+                {formatDueDate(assessment.deadline)}
               </Text>
             </View>
+
+            {assessment.description ? (
+              <View style={styles.instructionsContainer}>
+                <Text style={styles.instructionsHeading}>Instructions:</Text>
+                <Text style={styles.instructionsBody}>{assessment.description}</Text>
+              </View>
+            ) : null}
           </View>
 
-          <Text style={styles.heroTitleText}>{assessment.title}</Text>
-          <Text style={styles.heroMetaText}>
-            Max Marks: {assessment.totalMarks} {"  "}|{"  "}Due:{" "}
-            {formatDueDate(assessment.deadline)}
-          </Text>
-
-          {/* Description & Reference Materials */}
-          {assessment.description ? (
-            <View style={styles.instructionsContainer}>
-              <Text style={styles.instructionsHeading}>Instructions:</Text>
-              <Text style={styles.instructionsBody}>{assessment.description}</Text>
+          {/* COURSEWORK RESOURCES & ATTACHMENTS (FROM TEACHER) */}
+          {hasResources && (
+            <View style={styles.resourcesWrapper}>
+              <AssessmentResourcesSection
+                attachments={assessment.attachments}
+                links={assessment.links}
+              />
             </View>
-          ) : null}
-        </View>
+          )}
 
-        {/* CURRENT SUBMISSION CARD (IF ALREADY SUBMITTED) */}
-        {mySub && (
-          <View style={styles.mySubmissionCard}>
-            <View style={styles.subStatusRow}>
+          {/* PREVIOUS SUBMISSION STATUS (IF ANY) */}
+          {mySub && (
+            <View style={styles.mySubmissionCard}>
               <View style={styles.subStatusBadge}>
                 <Feather
                   name="check-circle"
@@ -258,232 +339,308 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
                     : "Work Submitted"}
                 </Text>
               </View>
+              {mySub.feedback ? (
+                <View style={styles.feedbackBanner}>
+                  <Text style={styles.feedbackBannerTitle}>Feedback:</Text>
+                  <Text style={styles.feedbackBannerText}>{mySub.feedback}</Text>
+                </View>
+              ) : null}
             </View>
+          )}
 
-            {mySub.feedback ? (
-              <View style={styles.feedbackBanner}>
-                <Text style={styles.feedbackBannerTitle}>Instructor Feedback:</Text>
-                <Text style={styles.feedbackBannerText}>{mySub.feedback}</Text>
-              </View>
-            ) : null}
+          {/* 2. SECTION: SUBMISSION METHOD */}
+          <Text style={styles.sectionHeading}>Submission Method</Text>
 
-            {mySub.submittedUrl ? (
-              <TouchableOpacity
-                style={styles.subAttachmentLink}
-                onPress={() => openSafeUrl(mySub.submittedUrl)}
+          <View style={styles.radioGroupCard}>
+            {/* Option 1: Online */}
+            <TouchableOpacity
+              style={styles.radioOptionRow}
+              activeOpacity={0.8}
+              onPress={() => setSubmissionMethod("ONLINE")}
+            >
+              <View
+                style={[
+                  styles.radioOuter,
+                  submissionMethod === "ONLINE" && styles.radioOuterSelected,
+                ]}
               >
-                <Feather name="link-2" size={14} color="#2563eb" style={{ marginRight: 6 }} />
-                <Text style={styles.subAttachmentLinkText} numberOfLines={1}>
-                  {mySub.submittedUrl}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
+                {submissionMethod === "ONLINE" && <View style={styles.radioInner} />}
+              </View>
+              <View style={styles.radioTextCol}>
+                <Text style={styles.radioTitle}>Online (Files/Links/Text)</Text>
+                <Text style={styles.radioSubtitle}>Upload files or add links</Text>
+              </View>
+            </TouchableOpacity>
 
-            <Text style={styles.resubmitNotice}>
-              You can submit updated files or links below to replace your previous submission.
-            </Text>
+            <View style={styles.radioDivider} />
+
+            {/* Option 2: Offline */}
+            <TouchableOpacity
+              style={styles.radioOptionRow}
+              activeOpacity={0.8}
+              onPress={() => setSubmissionMethod("OFFLINE")}
+            >
+              <View
+                style={[
+                  styles.radioOuter,
+                  submissionMethod === "OFFLINE" && styles.radioOuterSelected,
+                ]}
+              >
+                {submissionMethod === "OFFLINE" && <View style={styles.radioInner} />}
+              </View>
+              <View style={styles.radioTextCol}>
+                <Text style={styles.radioTitle}>Offline</Text>
+                <Text style={styles.radioSubtitle}>Submit manually (e.g. in class)</Text>
+              </View>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* SECTION: SUBMISSION METHOD (IMAGE 2) */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Submission Method</Text>
-        </View>
+          {/* 3. SECTION: ADD YOUR SUBMISSION */}
+          {submissionMethod === "ONLINE" ? (
+            <View style={styles.addSubmissionSection}>
+              <Text style={styles.sectionHeading}>Add your submission</Text>
 
-        <View style={styles.radioGroupCard}>
-          {/* Option 1: Online */}
-          <TouchableOpacity
-            style={styles.radioOptionRow}
-            activeOpacity={0.8}
-            onPress={() => setSubmissionMethod("ONLINE")}
-          >
-            <View style={styles.radioOuter}>
-              {submissionMethod === "ONLINE" && <View style={styles.radioInner} />}
-            </View>
-            <View style={styles.radioTextCol}>
-              <Text style={styles.radioTitle}>Online (Files/Links/Text)</Text>
-              <Text style={styles.radioSubtitle}>Upload files or add links</Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.radioDivider} />
-
-          {/* Option 2: Offline */}
-          <TouchableOpacity
-            style={styles.radioOptionRow}
-            activeOpacity={0.8}
-            onPress={() => setSubmissionMethod("OFFLINE")}
-          >
-            <View style={styles.radioOuter}>
-              {submissionMethod === "OFFLINE" && <View style={styles.radioInner} />}
-            </View>
-            <View style={styles.radioTextCol}>
-              <Text style={styles.radioTitle}>Offline</Text>
-              <Text style={styles.radioSubtitle}>Submit manually (e.g. in class)</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* SECTION: ADD YOUR SUBMISSION (IMAGE 2) */}
-        {submissionMethod === "ONLINE" && (
-          <View style={styles.addSubmissionSection}>
-            <Text style={styles.sectionTitle}>Add your submission</Text>
-
-            {/* 3 Action Tab Buttons */}
-            <View style={styles.actionButtonsRow}>
-              {/* Button 1: Upload Files */}
-              <TouchableOpacity
-                style={styles.actionTabBtn}
-                activeOpacity={0.8}
-                onPress={handlePickFiles}
-                disabled={isUploadingFile}
-              >
-                {isUploadingFile ? (
-                  <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 6 }} />
-                ) : (
-                  <Feather name="cloud-snow" size={16} color="#2563eb" style={{ marginRight: 6 }} />
-                )}
-                <Text style={styles.actionTabBtnText}>
-                  {isUploadingFile ? "Uploading..." : "Upload Files"}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Button 2: Add Link */}
-              <TouchableOpacity
-                style={styles.actionTabBtn}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setShowLinkInput((prev) => !prev);
-                  setShowTextInput(false);
-                }}
-              >
-                <Feather name="link-2" size={16} color="#2563eb" style={{ marginRight: 6 }} />
-                <Text style={styles.actionTabBtnText}>Add Link</Text>
-              </TouchableOpacity>
-
-              {/* Button 3: Add Text */}
-              <TouchableOpacity
-                style={styles.actionTabBtn}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setShowTextInput((prev) => !prev);
-                  setShowLinkInput(false);
-                }}
-              >
-                <Feather name="file-text" size={16} color="#2563eb" style={{ marginRight: 6 }} />
-                <Text style={styles.actionTabBtnText}>Add Text</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Inline Link Input */}
-            {showLinkInput && (
-              <View style={styles.inlineInputBox}>
-                <TextInput
-                  style={styles.inlineTextInput}
-                  placeholder="https://drive.google.com/... or link"
-                  placeholderTextColor="#94a3b8"
-                  value={linkInputText}
-                  onChangeText={setLinkInputText}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <TouchableOpacity style={styles.inlineAddBtn} onPress={handleAddLink}>
-                  <Text style={styles.inlineAddBtnText}>Add</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Inline Text Input */}
-            {showTextInput && (
-              <View style={styles.inlineInputBox}>
-                <TextInput
-                  style={[styles.inlineTextInput, { height: 75, textAlignVertical: "top" }]}
-                  placeholder="Write your notes or answer text here..."
-                  placeholderTextColor="#94a3b8"
-                  value={submissionContent}
-                  onChangeText={setSubmissionContent}
-                  multiline
-                />
-              </View>
-            )}
-
-            {/* Attached Files List */}
-            {submissionAttachments.map((att, idx) => (
-              <View key={`att-${idx}`} style={styles.attachedCard}>
-                <View style={styles.fileIconBox}>
-                  <Feather name="file-text" size={18} color="#2563eb" />
-                </View>
-                <View style={styles.fileInfoCol}>
-                  <Text style={styles.fileNameText} numberOfLines={1}>
-                    {att.name}
-                  </Text>
-                  {att.size ? (
-                    <Text style={styles.fileSizeText}>{formatFileSize(att.size)}</Text>
-                  ) : null}
-                </View>
+              {/* 3 Action Tab Buttons */}
+              <View style={styles.actionButtonsRow}>
+                {/* Button 1: Upload Files */}
                 <TouchableOpacity
-                  style={styles.removeBtn}
+                  style={styles.actionTabBtn}
+                  activeOpacity={0.8}
+                  onPress={handlePickFiles}
+                  disabled={isUploadingFiles}
+                >
+                  {isUploadingFiles ? (
+                    <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 6 }} />
+                  ) : (
+                    <Feather name="upload-cloud" size={16} color="#2563eb" style={{ marginRight: 6 }} />
+                  )}
+                  <Text style={styles.actionTabBtnText}>
+                    {isUploadingFiles ? "Uploading..." : "Upload Files"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Button 2: Add Link */}
+                <TouchableOpacity
+                  style={[
+                    styles.actionTabBtn,
+                    activeDrawer === "LINK" && styles.actionTabBtnActive,
+                  ]}
+                  activeOpacity={0.8}
                   onPress={() =>
-                    setSubmissionAttachments((prev) => prev.filter((_, i) => i !== idx))
+                    setActiveDrawer((prev) => (prev === "LINK" ? null : "LINK"))
                   }
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Feather name="x" size={16} color="#64748b" />
+                  <Feather name="link-2" size={16} color="#2563eb" style={{ marginRight: 6 }} />
+                  <Text style={styles.actionTabBtnText}>Add Link</Text>
                 </TouchableOpacity>
-              </View>
-            ))}
 
-            {/* Attached Link Item */}
-            {submissionUrl ? (
-              <View style={styles.attachedCard}>
-                <View style={styles.fileIconBox}>
-                  <Feather name="link-2" size={18} color="#2563eb" />
-                </View>
-                <View style={styles.fileInfoCol}>
-                  <Text style={styles.fileNameText} numberOfLines={1}>
-                    {submissionUrl}
-                  </Text>
-                  <Text style={styles.fileSizeText}>Attached URL</Text>
-                </View>
+                {/* Button 3: Add Text */}
                 <TouchableOpacity
-                  style={styles.removeBtn}
-                  onPress={() => setSubmissionUrl("")}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={[
+                    styles.actionTabBtn,
+                    activeDrawer === "TEXT" && styles.actionTabBtnActive,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={handleOpenTextDrawer}
                 >
-                  <Feather name="x" size={16} color="#64748b" />
+                  <Feather name="file-text" size={16} color="#2563eb" style={{ marginRight: 6 }} />
+                  <Text style={styles.actionTabBtnText}>Add Text</Text>
                 </TouchableOpacity>
               </View>
-            ) : null}
 
-            {/* Helper Text (Image 2) */}
-            <View style={styles.helperTextContainer}>
-              <Text style={styles.helperText}>
-                You can upload up to 5 files (max 10MB each).
-              </Text>
-              <Text style={styles.helperText}>
-                Allowed types: pdf, doc, docx, zip, rar, jpg, png.
+              {/* Inline Link Drawer */}
+              {activeDrawer === "LINK" && (
+                <View style={styles.drawerCard}>
+                  <Text style={styles.drawerTitle}>Attach Web / Drive Link</Text>
+                  <TextInput
+                    style={styles.drawerInput}
+                    placeholder="https://drive.google.com/... or GitHub link"
+                    placeholderTextColor="#94a3b8"
+                    value={tempLinkUrl}
+                    onChangeText={setTempLinkUrl}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                  />
+                  <TextInput
+                    style={[styles.drawerInput, { marginTop: 8 }]}
+                    placeholder="Title (optional, e.g. Project Repository)"
+                    placeholderTextColor="#94a3b8"
+                    value={tempLinkTitle}
+                    onChangeText={setTempLinkTitle}
+                  />
+                  <View style={styles.drawerActions}>
+                    <TouchableOpacity
+                      style={styles.drawerCancelBtn}
+                      onPress={() => setActiveDrawer(null)}
+                    >
+                      <Text style={styles.drawerCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.drawerSaveBtn,
+                        !tempLinkUrl.trim() && { opacity: 0.5 },
+                      ]}
+                      disabled={!tempLinkUrl.trim()}
+                      onPress={handleSaveLink}
+                    >
+                      <Text style={styles.drawerSaveText}>Attach Link</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* Inline Text Drawer */}
+              {activeDrawer === "TEXT" && (
+                <View style={styles.drawerCard}>
+                  <Text style={styles.drawerTitle}>Submission Notes / Text</Text>
+                  <TextInput
+                    style={[styles.drawerInput, { height: 80, textAlignVertical: "top" }]}
+                    placeholder="Write your notes, submission summary, or answers here..."
+                    placeholderTextColor="#94a3b8"
+                    value={tempNoteText}
+                    onChangeText={setTempNoteText}
+                    multiline
+                  />
+                  <View style={styles.drawerActions}>
+                    <TouchableOpacity
+                      style={styles.drawerCancelBtn}
+                      onPress={() => setActiveDrawer(null)}
+                    >
+                      <Text style={styles.drawerCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.drawerSaveBtn}
+                      onPress={handleSaveNote}
+                    >
+                      <Text style={styles.drawerSaveText}>Save Note</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* Uploaded Files List */}
+              {files.map((file, idx) => (
+                <View key={`file-${idx}`} style={styles.itemCard}>
+                  <View style={styles.fileIconBox}>
+                    <Feather name="file-text" size={18} color="#2563eb" />
+                  </View>
+                  <View style={styles.fileInfoCol}>
+                    <Text style={styles.fileNameText} numberOfLines={1}>
+                      {file.name}
+                    </Text>
+                    {file.size ? (
+                      <Text style={styles.fileSizeText}>
+                        {formatFileSize(file.size)}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => handleRemoveFile(idx)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather name="x" size={16} color="#64748b" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {/* Attached Links List */}
+              {links.map((link, idx) => (
+                <View key={`link-${idx}`} style={styles.itemCard}>
+                  <View style={styles.fileIconBox}>
+                    <Feather name="link-2" size={18} color="#2563eb" />
+                  </View>
+                  <View style={styles.fileInfoCol}>
+                    <Text style={styles.fileNameText} numberOfLines={1}>
+                      {link.title || link.url}
+                    </Text>
+                    <Text style={styles.fileSizeText} numberOfLines={1}>
+                      {link.url}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => handleRemoveLink(idx)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather name="x" size={16} color="#64748b" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {/* Attached Note Preview */}
+              {noteContent ? (
+                <View style={styles.itemCard}>
+                  <View style={styles.fileIconBox}>
+                    <Feather name="edit-3" size={18} color="#2563eb" />
+                  </View>
+                  <View style={styles.fileInfoCol}>
+                    <Text style={styles.fileNameText} numberOfLines={1}>
+                      Text Submission Note
+                    </Text>
+                    <Text style={styles.fileSizeText} numberOfLines={2}>
+                      {noteContent}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => setNoteContent("")}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather name="x" size={16} color="#64748b" />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {/* Helper Text (Exactly from screenshot) */}
+              <View style={styles.helperTextContainer}>
+                <Text style={styles.helperText}>
+                  You can upload up to 5 files (max 10MB each).
+                </Text>
+                <Text style={styles.helperText}>
+                  Allowed types: pdf, doc, docx, zip, rar, jpg, png.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            /* Offline Mode Information Card */
+            <View style={styles.offlineNoticeCard}>
+              <View style={styles.offlineIconBox}>
+                <Feather name="clipboard" size={20} color="#0f172a" />
+              </View>
+              <Text style={styles.offlineTitle}>In-Class Physical Submission</Text>
+              <Text style={styles.offlineDesc}>
+                Submit your hardcopy / paper work directly to the teacher during class. Tap Submit below to declare your physical submission.
               </Text>
             </View>
-          </View>
-        )}
+          )}
 
-        <View style={{ height: 100 }} />
+          <View style={{ height: 40 }} />
+        </ScrollView>
 
-        {/* FIXED BOTTOM SUBMIT BUTTON (IMAGE 2) */}
-        <View style={styles.fixedBottomBar}>
+        {/* 4. FIXED BOTTOM SUBMIT BUTTON */}
+        <View
+          style={[
+            styles.fixedBottomBar,
+            { paddingBottom: Math.max(insets.bottom + 12, 20) },
+          ]}
+        >
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (isSubmitting || isOnlineEmpty) && styles.submitButtonDisabled,
+              isSubmitDisabled && styles.submitButtonDisabled,
             ]}
             onPress={handleFormSubmit}
-            disabled={isSubmitting || isOnlineEmpty}
+            disabled={isSubmitDisabled}
             activeOpacity={0.85}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
-              <Text style={styles.submitButtonText}>Submit</Text>
+              <Text style={styles.submitButtonText}>
+                {mySub ? "Resubmit" : "Submit"}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -494,9 +651,19 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 20,
+    flex: 1,
+    backgroundColor: "#f8fafc",
+  },
+  scrollBody: {
+    padding: 16,
+    paddingBottom: 24,
   },
   topHeroCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.06)",
     marginBottom: 16,
   },
   heroTopRow: {
@@ -505,10 +672,10 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  typeIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  typeIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -523,19 +690,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  resourcesWrapper: {
+    marginBottom: 16,
+  },
   heroTitleText: {
     fontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: "#0f172a",
-    lineHeight: 24,
+    letterSpacing: -0.3,
     marginBottom: 6,
   },
-  heroMetaText: {
+  heroMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 2,
+  },
+  metaLabelText: {
     fontFamily,
     fontSize: 13,
-    fontWeight: "600",
     color: "#64748b",
+  },
+  metaValueText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  metaDivider: {
+    fontFamily,
+    fontSize: 13,
+    color: "#cbd5e1",
   },
   instructionsContainer: {
     backgroundColor: "#f8fafc",
@@ -561,14 +747,10 @@ const styles = StyleSheet.create({
   mySubmissionCard: {
     backgroundColor: "#f0fdf4",
     borderRadius: 14,
-    padding: 14,
+    padding: 12,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: "#bbf7d0",
-  },
-  subStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
   },
   subStatusBadge: {
     flexDirection: "row",
@@ -598,69 +780,45 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     marginTop: 2,
   },
-  subAttachmentLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    padding: 8,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  subAttachmentLinkText: {
+  sectionHeading: {
     fontFamily,
-    fontSize: 12,
-    color: "#2563eb",
-    flex: 1,
-    fontWeight: "600",
-  },
-  resubmitNotice: {
-    fontFamily,
-    fontSize: 11,
-    color: "#64748b",
-    marginTop: 8,
-  },
-  sectionHeader: {
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontFamily,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
     color: "#0f172a",
     marginBottom: 10,
+    marginTop: 6,
   },
   radioGroupCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(15, 23, 42, 0.06)",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1.5,
+    borderColor: "rgba(15, 23, 42, 0.07)",
+    marginBottom: 16,
   },
   radioOptionRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
+    padding: 14,
   },
   radioOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: "#0f172a",
+    borderColor: "#cbd5e1",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  radioOuterSelected: {
+    borderColor: "#0f172a",
     backgroundColor: "#0f172a",
+  },
+  radioInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#ffffff",
   },
   radioTextCol: {
     flex: 1,
@@ -679,72 +837,100 @@ const styles = StyleSheet.create({
   },
   radioDivider: {
     height: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.04)",
-    marginVertical: 4,
+    backgroundColor: "rgba(15, 23, 42, 0.05)",
   },
   addSubmissionSection: {
-    marginTop: 20,
+    marginBottom: 16,
   },
   actionButtonsRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 14,
   },
   actionTabBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f0f9ff",
-    borderWidth: 1,
-    borderColor: "#bae6fd",
-    paddingVertical: 10,
+    backgroundColor: "#f0f7ff",
     borderRadius: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+  },
+  actionTabBtnActive: {
+    borderColor: "#2563eb",
+    backgroundColor: "#e0f2fe",
   },
   actionTabBtnText: {
     fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2563eb",
+  },
+  drawerCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    padding: 12,
+    marginBottom: 14,
+  },
+  drawerTitle: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#0284c7",
+    color: "#0f172a",
+    marginBottom: 8,
   },
-  inlineInputBox: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 10,
-  },
-  inlineTextInput: {
-    flex: 1,
+  drawerInput: {
     backgroundColor: "#f8fafc",
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
+    fontFamily,
     fontSize: 13,
     color: "#0f172a",
   },
-  inlineAddBtn: {
-    backgroundColor: "#0f172a",
-    paddingHorizontal: 14,
-    borderRadius: 10,
+  drawerActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 8,
+    marginTop: 10,
   },
-  inlineAddBtnText: {
+  drawerCancelBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  drawerCancelText: {
     fontFamily,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  drawerSaveBtn: {
+    backgroundColor: "#0f172a",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  drawerSaveText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
     color: "#ffffff",
   },
-  attachedCard: {
+  itemCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
     borderRadius: 14,
-    padding: 12,
     borderWidth: 1,
-    borderColor: "rgba(15, 23, 42, 0.06)",
+    borderColor: "rgba(15, 23, 42, 0.08)",
+    padding: 12,
     marginBottom: 8,
   },
   fileIconBox: {
@@ -758,6 +944,7 @@ const styles = StyleSheet.create({
   },
   fileInfoCol: {
     flex: 1,
+    marginRight: 8,
   },
   fileNameText: {
     fontFamily,
@@ -773,42 +960,72 @@ const styles = StyleSheet.create({
   },
   removeBtn: {
     padding: 6,
+    borderRadius: 6,
+    backgroundColor: "#f8fafc",
   },
   helperTextContainer: {
-    marginTop: 8,
-    gap: 2,
+    marginTop: 10,
+    paddingHorizontal: 4,
   },
   helperText: {
     fontFamily,
     fontSize: 11.5,
     color: "#64748b",
-    lineHeight: 16,
+    lineHeight: 18,
+  },
+  offlineNoticeCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.08)",
+    padding: 16,
+    alignItems: "center",
+    marginTop: 6,
+  },
+  offlineIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  offlineTitle: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0f172a",
+    marginBottom: 4,
+  },
+  offlineDesc: {
+    fontFamily,
+    fontSize: 12,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 18,
   },
   fixedBottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: -18,
-    right: -18,
     backgroundColor: "#ffffff",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
     borderTopWidth: 1,
     borderTopColor: "rgba(15, 23, 42, 0.06)",
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   submitButton: {
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#0f172a",
-    borderRadius: 9999,
-    paddingVertical: 15,
     alignItems: "center",
     justifyContent: "center",
   },
   submitButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: "#cbd5e1",
   },
   submitButtonText: {
     fontFamily,
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#ffffff",
   },
 });

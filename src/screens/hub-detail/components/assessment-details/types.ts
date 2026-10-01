@@ -22,7 +22,14 @@ export interface AssessmentSubmission {
     id: string;
     name: string;
     avatar?: string;
+    image?: string;
     studentId?: string;
+    studentProfile?: {
+      studentId?: string;
+      roll?: string;
+      regNo?: string;
+      department?: string;
+    };
   };
   submittedUrl?: string;
   content?: string;
@@ -76,6 +83,7 @@ export interface AssessmentDetailsModalProps {
   hubId: string;
   canManage: boolean;
   canSubmit?: boolean;
+  isTeacher?: boolean;
   currentUserId?: string;
   hubMembers?: any[];
   onEdit?: (item: AssessmentData) => void;

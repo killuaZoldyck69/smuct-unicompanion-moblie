@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -46,6 +47,7 @@ interface AssessmentDetailsContentProps {
   hubId: string;
   canManage: boolean;
   canSubmit?: boolean;
+  isTeacher?: boolean;
   currentUserId?: string;
   hubMembers?: any[];
   onEdit?: (item: AssessmentData) => void;
@@ -56,24 +58,34 @@ function AssessmentDetailsContent({
   onClose,
   assessment,
   hubId,
-  canManage,
+  canManage: _canManage,
   canSubmit = true,
+  isTeacher,
   currentUserId,
   hubMembers = [],
   onEdit,
   onDelete,
 }: AssessmentDetailsContentProps) {
-  // React Queries & Mutations
+  // Check if current user has the TEACHER role.
+  // CR and TA are treated as students for coursework submission and cannot view/grade peer submissions.
+  const isTeacherUser = Boolean(
+    isTeacher ||
+      hubMembers?.some(
+        (m: any) =>
+          (m.userId === currentUserId || m.id === currentUserId) &&
+          m.role === "TEACHER"
+      )
+  );
+
+  // React Queries & Mutations - Only teachers can fetch all student submissions
   const { data: serverSubmissions, isLoading: isLoadingSubmissions } =
-    useAssessmentSubmissions(assessment.id);
+    useAssessmentSubmissions(isTeacherUser ? assessment.id : "");
   const submitMutation = useSubmitAssessment(hubId, assessment.id);
   const gradeMutation = useGradeSubmission(assessment.id);
 
-  // Tab State
-  // Teacher/CR defaults to DETAILS; Students default to MY_SUBMISSION
-  const isTeacherOrCR = canManage;
-  const [activeTab, setActiveTab] = useState<"DETAILS" | "SUBMISSIONS" | "MY_SUBMISSION">(
-    isTeacherOrCR ? "DETAILS" : "MY_SUBMISSION"
+  // Tab State: Teachers default to DETAILS; CR, TA, and Students default to MY_SUBMISSION
+  const [activeTab, setActiveTab] = useState<"DETAILS" | "MY_SUBMISSION">(
+    isTeacherUser ? "DETAILS" : "MY_SUBMISSION"
   );
 
   // Grading Sheet Target State
@@ -137,10 +149,10 @@ function AssessmentDetailsContent({
 
   // Navigation title
   const appBarTitle = useMemo(() => {
-    if (activeTab === "SUBMISSIONS") return "Submissions";
-    if (isTeacherOrCR && activeTab === "DETAILS") return "Classwork Details";
+    if (!isTeacherUser) return "Submit Classwork";
+    if (activeTab === "DETAILS") return "Classwork Details";
     return "Submit Classwork";
-  }, [activeTab, isTeacherOrCR]);
+  }, [activeTab, isTeacherUser]);
 
   // Handlers
   const handleOpenGrading = useCallback(
@@ -189,10 +201,11 @@ function AssessmentDetailsContent({
       submittedUrl?: string;
       content?: string;
       attachments?: AssessmentAttachment[];
+      links?: { title: string; url: string }[];
       status: "SUBMITTED" | "HAND_SUBMISSION";
       isLate?: boolean;
     }) => {
-      submitMutation.mutate(payload, {
+      submitMutation.mutate(payload as any, {
         onSuccess: () => {
           Toast.show({ type: "success", text1: "Work Submitted Successfully!" });
         },
@@ -214,13 +227,7 @@ function AssessmentDetailsContent({
         <View style={styles.appBar}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => {
-              if (activeTab === "SUBMISSIONS") {
-                setActiveTab("DETAILS");
-              } else {
-                onClose();
-              }
-            }}
+            onPress={onClose}
             activeOpacity={0.7}
             accessible={true}
             accessibilityRole="button"
@@ -233,8 +240,8 @@ function AssessmentDetailsContent({
             {appBarTitle}
           </Text>
 
-          {/* Teacher/CR Management Controls */}
-          {isTeacherOrCR && (
+          {/* Teacher Only Management Controls */}
+          {isTeacherUser && (
             <View style={styles.headerActionsRow}>
               {canSubmit && (
                 <TouchableOpacity
@@ -259,7 +266,7 @@ function AssessmentDetailsContent({
                 </TouchableOpacity>
               )}
 
-              {onEdit && (
+              {activeTab === "DETAILS" && onEdit && (
                 <TouchableOpacity
                   style={styles.iconBtn}
                   onPress={() => onEdit(assessment)}
@@ -271,7 +278,7 @@ function AssessmentDetailsContent({
                 </TouchableOpacity>
               )}
 
-              {onDelete && (
+              {activeTab === "DETAILS" && onDelete && (
                 <TouchableOpacity
                   style={[styles.iconBtn, styles.deleteBtn]}
                   onPress={() => {
@@ -300,9 +307,9 @@ function AssessmentDetailsContent({
         </View>
 
         {/* ===================================================================== */}
-        {/* VIEW 1: TEACHER & CR CLASSWORK DETAILS OVERVIEW (IMAGE 1)           */}
+        {/* VIEW 1: TEACHER CLASSWORK DETAILS & INLINE SUBMISSIONS (UNIFIED)      */}
         {/* ===================================================================== */}
-        {isTeacherOrCR && activeTab === "DETAILS" && (
+        {isTeacherUser && activeTab === "DETAILS" && (
           <View style={{ flex: 1 }}>
             <ScrollView
               contentContainerStyle={styles.scrollContent}
@@ -325,43 +332,20 @@ function AssessmentDetailsContent({
                 submitted={totalSubmitted}
                 pending={pendingCount}
                 graded={gradedCount}
-                onViewAll={() => setActiveTab("SUBMISSIONS")}
               />
 
-              <View style={{ height: 100 }} />
-            </ScrollView>
+              {/* ALL SUBMISSIONS UNDER STATS */}
+              <View style={styles.submissionsSectionContainer}>
+                <TeacherSubmissionsList
+                  submissions={submissionsList}
+                  totalMarks={assessment.totalMarks}
+                  isLoading={isLoadingSubmissions}
+                  hubMembers={hubMembers}
+                  onOpenGrading={handleOpenGrading}
+                />
+              </View>
 
-            {/* FIXED BOTTOM VIEW SUBMISSIONS BUTTON (IMAGE 1) */}
-            <View style={styles.fixedBottomBar}>
-              <TouchableOpacity
-                style={styles.viewSubmissionsButton}
-                onPress={() => setActiveTab("SUBMISSIONS")}
-                activeOpacity={0.85}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="View Submissions"
-              >
-                <Text style={styles.viewSubmissionsButtonText}>View Submissions</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* ===================================================================== */}
-        {/* VIEW 2: TEACHER / CR SUBMISSIONS LIST & GRADING VIEW                 */}
-        {/* ===================================================================== */}
-        {isTeacherOrCR && activeTab === "SUBMISSIONS" && (
-          <View style={{ flex: 1 }}>
-            <ScrollView
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <TeacherSubmissionsList
-                submissions={submissionsList}
-                totalMarks={assessment.totalMarks}
-                isLoading={isLoadingSubmissions}
-                onOpenGrading={handleOpenGrading}
-              />
+              <View style={{ height: 40 }} />
             </ScrollView>
 
             {/* SECURE GRADING MODAL SHEET */}
@@ -378,13 +362,10 @@ function AssessmentDetailsContent({
         )}
 
         {/* ===================================================================== */}
-        {/* VIEW 3: STUDENT SUBMISSION SCREEN (IMAGE 2)                          */}
+        {/* VIEW 2: STUDENT SUBMISSION SCREEN (IMAGE 2)                          */}
         {/* ===================================================================== */}
-        {(!isTeacherOrCR || activeTab === "MY_SUBMISSION") && (
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
+        {(!isTeacherUser || activeTab === "MY_SUBMISSION") && (
+          <View style={{ flex: 1 }}>
             <StudentSubmissionView
               assessment={assessment}
               typeConfig={typeConfig}
@@ -392,7 +373,7 @@ function AssessmentDetailsContent({
               isSubmitting={submitMutation.isPending}
               onSubmit={handleStudentSubmit}
             />
-          </ScrollView>
+          </View>
         )}
       </SafeAreaView>
   );
@@ -402,7 +383,14 @@ export default function AssessmentDetailsModal(props: AssessmentDetailsModalProp
   const { isVisible, onClose, assessment } = props;
 
   return (
-    <Modal visible={isVisible} animationType="slide" transparent={false} onRequestClose={onClose}>
+    <Modal
+      visible={isVisible}
+      animationType="slide"
+      presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
+      statusBarTranslucent={true}
+      onRequestClose={onClose}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       {assessment ? <AssessmentDetailsContent {...props} assessment={assessment} /> : null}
     </Modal>
   );
@@ -471,28 +459,7 @@ const styles = StyleSheet.create({
     padding: 18,
     paddingBottom: 40,
   },
-  fixedBottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(15, 23, 42, 0.06)",
-  },
-  viewSubmissionsButton: {
-    backgroundColor: "#0f172a",
-    borderRadius: 9999,
-    paddingVertical: 15,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  viewSubmissionsButtonText: {
-    fontFamily,
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#ffffff",
+  submissionsSectionContainer: {
+    marginTop: 16,
   },
 });

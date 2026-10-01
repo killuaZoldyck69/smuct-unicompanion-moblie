@@ -8,7 +8,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { GradingStudentTarget } from "./types";
@@ -38,6 +42,7 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
   onClose,
   onSave,
 }) => {
+  const insets = useSafeAreaInsets();
   const [marksStr, setMarksStr] = useState("");
   const [feedback, setFeedback] = useState("");
 
@@ -88,76 +93,111 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
   };
 
   return (
-    <Modal visible={!!target} animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.sheetContainer}>
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <Text style={styles.titleText}>Grade Submission</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Feather name="x" size={20} color="#0f172a" />
-            </TouchableOpacity>
-          </View>
+    <Modal
+      visible={!!target}
+      animationType="fade"
+      transparent
+      statusBarTranslucent={true}
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View
+          style={[
+            styles.overlay,
+            {
+              paddingTop: Math.max(insets.top + 16, 24),
+              paddingBottom: Math.max(insets.bottom + 16, 24),
+            },
+          ]}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardAvoid}
+          >
+            <View style={styles.sheetContainer}>
+              {/* Header */}
+              <View style={styles.headerRow}>
+                <Text style={styles.titleText}>Grade Submission</Text>
+                <TouchableOpacity
+                  onPress={onClose}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.closeBtn}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close grading modal"
+                >
+                  <Feather name="x" size={18} color="#64748b" />
+                </TouchableOpacity>
+              </View>
 
-          <Text style={styles.studentNameSubtitle}>Student: {target.name}</Text>
+              <Text style={styles.studentNameSubtitle}>Student: {target.name}</Text>
 
-          {/* Marks Input */}
-          <Text style={styles.inputLabel}>
-            Marks (Out of {totalMarks}) <Text style={{ color: "#ef4444" }}>*</Text>
-          </Text>
-          <View style={styles.marksInputRow}>
-            <TextInput
-              style={styles.marksInput}
-              placeholder={`0 - ${totalMarks}`}
-              placeholderTextColor="#94a3b8"
-              value={marksStr}
-              onChangeText={(text) => {
-                // Sanitize input: allow only digits and at most one decimal point
-                const sanitized = text.replace(/[^0-9.]/g, "");
-                setMarksStr(sanitized);
-              }}
-              keyboardType="numeric"
-              autoFocus
-            />
-            <Text style={styles.marksSuffix}>/ {totalMarks} Marks</Text>
-          </View>
+              {/* Marks Input */}
+              <Text style={styles.inputLabel}>
+                Marks (Out of {totalMarks}) <Text style={{ color: "#ef4444" }}>*</Text>
+              </Text>
+              <View style={styles.marksInputRow}>
+                <TextInput
+                  style={styles.marksInput}
+                  placeholder={`0 - ${totalMarks}`}
+                  placeholderTextColor="#94a3b8"
+                  value={marksStr}
+                  onChangeText={(text) => {
+                    const sanitized = text.replace(/[^0-9.]/g, "");
+                    setMarksStr(sanitized);
+                  }}
+                  keyboardType="numeric"
+                  autoFocus
+                />
+                <Text style={styles.marksSuffix}>/ {totalMarks} Marks</Text>
+              </View>
 
-          {/* Feedback Input */}
-          <Text style={styles.inputLabel}>Instructor Feedback (Optional)</Text>
-          <TextInput
-            style={styles.feedbackInput}
-            placeholder="Add comments, corrections, or encouraging feedback..."
-            placeholderTextColor="#94a3b8"
-            value={feedback}
-            onChangeText={setFeedback}
-            multiline
-            numberOfLines={3}
-          />
+              {/* Feedback Input */}
+              <Text style={styles.inputLabel}>Instructor Feedback (Optional)</Text>
+              <TextInput
+                style={styles.feedbackInput}
+                placeholder="Add comments, corrections, or encouraging feedback..."
+                placeholderTextColor="#94a3b8"
+                value={feedback}
+                onChangeText={setFeedback}
+                multiline
+                numberOfLines={3}
+              />
 
-          {/* Actions */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={onClose}
-              disabled={isPending}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
+              {/* Actions */}
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={onClose}
+                  disabled={isPending}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel"
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.saveBtn}
-              onPress={handleValidateAndSave}
-              disabled={isPending}
-            >
-              {isPending ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text style={styles.saveBtnText}>Save Grade</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+                <TouchableOpacity
+                  style={styles.saveBtn}
+                  onPress={handleValidateAndSave}
+                  disabled={isPending}
+                  activeOpacity={0.85}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save Grade"
+                >
+                  {isPending ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Save Grade</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };
@@ -165,9 +205,15 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
     justifyContent: "center",
-    padding: 20,
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  keyboardAvoid: {
+    width: "100%",
+    maxWidth: 440,
+    justifyContent: "center",
   },
   sheetContainer: {
     backgroundColor: "#ffffff",
@@ -190,6 +236,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "800",
     color: "#0f172a",
+  },
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
   },
   studentNameSubtitle: {
     fontFamily,

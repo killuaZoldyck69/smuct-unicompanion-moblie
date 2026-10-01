@@ -13,15 +13,19 @@ const fontFamily = Platform.select({
 interface AssessmentHeroCardProps {
   assessment: AssessmentData;
   typeConfig: AssessmentTypeConfig;
-  statusLabel: string;
-  isOverdue: boolean;
+  statusLabel?: string;
+  isOverdue?: boolean;
 }
 
 export const AssessmentHeroCard: React.FC<AssessmentHeroCardProps> = React.memo(
-  ({ assessment, typeConfig, statusLabel, isOverdue }) => {
+  ({ assessment, typeConfig }) => {
+    const isHand =
+      assessment.submissionType === "HAND" ||
+      assessment.submissionType === "OFFLINE";
+
     return (
       <View style={styles.cardContainer}>
-        {/* Top Icon and Type Pill */}
+        {/* Top Icon, Type Pill, and Submission Method Pill */}
         <View style={styles.topRow}>
           <View
             style={[
@@ -40,6 +44,29 @@ export const AssessmentHeroCard: React.FC<AssessmentHeroCardProps> = React.memo(
               {typeConfig.label}
             </Text>
           </View>
+
+          {/* Submission Method Badge */}
+          <View
+            style={[
+              styles.methodBadgePill,
+              isHand ? styles.methodBadgePillHand : styles.methodBadgePillOnline,
+            ]}
+          >
+            <Feather
+              name={isHand ? "clipboard" : "globe"}
+              size={12}
+              color={isHand ? "#b45309" : "#0284c7"}
+              style={{ marginRight: 4 }}
+            />
+            <Text
+              style={[
+                styles.methodBadgeText,
+                { color: isHand ? "#b45309" : "#0284c7" },
+              ]}
+            >
+              {isHand ? "In-Hand" : "Online"}
+            </Text>
+          </View>
         </View>
 
         {/* Title */}
@@ -50,7 +77,7 @@ export const AssessmentHeroCard: React.FC<AssessmentHeroCardProps> = React.memo(
           <Text style={styles.descriptionText}>{assessment.description}</Text>
         ) : null}
 
-        {/* 3 Metric Cards: Max Marks | Due Date | Status */}
+        {/* 2 Metric Cards: Max Marks & Due Date */}
         <View style={styles.metricsRow}>
           {/* Max Marks */}
           <View style={styles.metricBox}>
@@ -58,32 +85,18 @@ export const AssessmentHeroCard: React.FC<AssessmentHeroCardProps> = React.memo(
             <Text style={styles.metricValue}>{assessment.totalMarks}</Text>
           </View>
 
-          {/* Due Date */}
-          <View style={[styles.metricBox, { flex: 1.5 }]}>
+          {/* Due Date & Time */}
+          <View style={[styles.metricBox, styles.dueMetricBox]}>
             <Text style={styles.metricLabel}>Due Date</Text>
-            <Text style={styles.metricValue} numberOfLines={1}>
-              {formatDueDate(assessment.deadline)}
-            </Text>
-          </View>
-
-          {/* Status */}
-          <View style={styles.metricBox}>
-            <Text style={styles.metricLabel}>Status</Text>
-            <View
-              style={[
-                styles.statusPill,
-                isOverdue ? styles.statusPillClosed : styles.statusPillPublished,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusPillText,
-                  isOverdue
-                    ? styles.statusPillTextClosed
-                    : styles.statusPillTextPublished,
-                ]}
-              >
-                {statusLabel}
+            <View style={styles.metricRowContent}>
+              <Feather
+                name="clock"
+                size={13}
+                color="#64748b"
+                style={{ marginRight: 5 }}
+              />
+              <Text style={styles.metricValue}>
+                {formatDueDate(assessment.deadline)}
               </Text>
             </View>
           </View>
@@ -110,13 +123,13 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     marginBottom: 10,
   },
   typeIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -131,68 +144,70 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  methodBadgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  methodBadgePillOnline: {
+    backgroundColor: "#f0f9ff",
+  },
+  methodBadgePillHand: {
+    backgroundColor: "#fef3c7",
+  },
+  methodBadgeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+  },
   titleText: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "800",
     color: "#0f172a",
-    lineHeight: 24,
-    marginBottom: 8,
+    letterSpacing: -0.3,
+    marginBottom: 6,
   },
   descriptionText: {
     fontFamily,
     fontSize: 13,
     color: "#64748b",
     lineHeight: 19,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   metricsRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
   metricBox: {
     flex: 1,
     backgroundColor: "#f8fafc",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 12,
-    padding: 10,
     borderWidth: 1,
     borderColor: "rgba(15, 23, 42, 0.04)",
+  },
+  dueMetricBox: {
+    flex: 1.8,
+  },
+  metricRowContent: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   metricLabel: {
     fontFamily,
     fontSize: 11,
     fontWeight: "600",
-    color: "#64748b",
-    marginBottom: 4,
+    color: "#94a3b8",
+    marginBottom: 3,
   },
   metricValue: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     color: "#0f172a",
-  },
-  statusPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999,
-    alignSelf: "flex-start",
-  },
-  statusPillPublished: {
-    backgroundColor: "#ecfdf5",
-  },
-  statusPillClosed: {
-    backgroundColor: "#fff1f2",
-  },
-  statusPillText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  statusPillTextPublished: {
-    color: "#059669",
-  },
-  statusPillTextClosed: {
-    color: "#e11d48",
   },
 });

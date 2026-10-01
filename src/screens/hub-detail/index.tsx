@@ -379,7 +379,8 @@ export function HubDetail({ hubId }: HubDetailProps) {
             hubId={hubId}
             hubDetails={hubDetails}
             canManage={canManage}
-            canSubmit={!canManage}
+            canSubmit={!isTeacher}
+            isTeacher={isTeacher}
             currentUserId={myUserId}
           />
         )}

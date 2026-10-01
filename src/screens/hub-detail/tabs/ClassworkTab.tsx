@@ -43,9 +43,24 @@ export default function ClassworkTab({
   hubDetails,
   canManage,
   canSubmit = true,
+  isTeacher,
   currentUserId,
 }: ClassworkTabProps) {
   const queryClient = useQueryClient();
+
+  const isTeacherRole = useMemo(() => {
+    if (typeof isTeacher === "boolean") return isTeacher;
+    if (hubDetails?.teacherId && currentUserId) {
+      return hubDetails.teacherId === currentUserId;
+    }
+    return Boolean(
+      hubDetails?.members?.some(
+        (m: any) =>
+          (m.userId === currentUserId || m.id === currentUserId) &&
+          m.role === "TEACHER"
+      )
+    );
+  }, [isTeacher, hubDetails, currentUserId]);
 
   // Queries & Mutations
   const { data: assessments, isLoading, isRefetching } = useAssessments(hubId);
@@ -247,6 +262,7 @@ export default function ClassworkTab({
           hubId={hubId}
           canManage={canManage}
           canSubmit={canSubmit}
+          isTeacher={isTeacherRole}
           currentUserId={currentUserId}
           hubMembers={hubDetails?.members || []}
           onEdit={(item) => {

@@ -2,11 +2,48 @@ import { Linking } from "react-native";
 import Toast from "react-native-toast-message";
 import { AssessmentTypeConfig } from "./types";
 
-export const formatDueDate = (dateString?: string): string => {
-  if (!dateString) return "No deadline";
+export const parseDateSafe = (dateInput?: any): Date | null => {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) {
+    return isNaN(dateInput.getTime()) ? null : dateInput;
+  }
+  if (typeof dateInput === "number") {
+    const d = new Date(dateInput);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof dateInput === "string") {
+    const trimmed = dateInput.trim();
+    if (!trimmed) return null;
+
+    // Direct ISO or standard parse
+    let d = new Date(trimmed);
+    if (!isNaN(d.getTime())) return d;
+
+    // Handle space instead of T in SQL format (e.g. "2026-09-25 23:59:00")
+    if (trimmed.includes(" ")) {
+      d = new Date(trimmed.replace(" ", "T"));
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    // Handle "YYYY-MM-DD"
+    const parts = trimmed.split(/[-T :]/);
+    if (parts.length >= 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const hour = parts.length > 3 ? parseInt(parts[3], 10) : 23;
+      const min = parts.length > 4 ? parseInt(parts[4], 10) : 59;
+      d = new Date(year, month, day, hour, min);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  return null;
+};
+
+export const formatDueDate = (dateString?: any): string => {
+  const d = parseDateSafe(dateString);
+  if (!d) return "No deadline";
   try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return "No deadline";
     const day = d.getDate();
     const months = [
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -19,8 +56,7 @@ export const formatDueDate = (dateString?: string): string => {
     const ampm = hours >= 12 ? "PM" : "AM";
     hours = hours % 12;
     hours = hours ? hours : 12;
-    const hoursStr = hours.toString().padStart(2, "0");
-    return `${day} ${month} ${year}, ${hoursStr}:${minutes} ${ampm}`;
+    return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
   } catch {
     return "No deadline";
   }

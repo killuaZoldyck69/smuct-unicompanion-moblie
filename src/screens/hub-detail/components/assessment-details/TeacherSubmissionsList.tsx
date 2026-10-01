@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
   Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -21,6 +22,7 @@ interface TeacherSubmissionsListProps {
   submissions: AssessmentSubmission[];
   totalMarks: number;
   isLoading: boolean;
+  hubMembers?: any[];
   onOpenGrading: (
     target: GradingStudentTarget,
     currentMarks?: number | null,
@@ -29,7 +31,7 @@ interface TeacherSubmissionsListProps {
 }
 
 export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = React.memo(
-  ({ submissions, totalMarks, isLoading, onOpenGrading }) => {
+  ({ submissions, totalMarks, isLoading, hubMembers = [], onOpenGrading }) => {
     return (
       <View style={styles.container}>
         <Text style={styles.headingText}>
@@ -55,12 +57,58 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
             const studentId = sub.studentId || sub.student?.id || sub.id;
             const isGraded = sub.marks !== null && sub.marks !== undefined;
 
+            // Resolve member info from hubMembers if needed
+            const member = hubMembers.find(
+              (m: any) =>
+                (m.userId && (m.userId === sub.studentId || m.userId === sub.student?.id)) ||
+                (m.user?.id && (m.user.id === sub.studentId || m.user.id === sub.student?.id)) ||
+                (m.id && (m.id === sub.studentId || m.id === sub.student?.id))
+            );
+
+            // Student Profile Image
+            const studentAvatar =
+              sub.student?.image ||
+              sub.student?.avatar ||
+              member?.user?.image ||
+              member?.user?.avatar;
+
+            // Student ID (Roll / Reg / ID)
+            const studentIdDisplay =
+              sub.student?.studentProfile?.studentId ||
+              sub.student?.studentId ||
+              member?.user?.studentProfile?.studentId ||
+              member?.user?.studentId ||
+              (member?.role === "STUDENT" || member?.role === "CR" || member?.role === "TA"
+                ? member.studentId
+                : null);
+
             return (
               <View key={sub.id} style={styles.subCard}>
-                {/* Header Row: Student Name + Date + Grade Pill */}
+                {/* Header Row: Student Avatar + Name + ID + Date + Grade Pill */}
                 <View style={styles.subCardHeaderRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.studentNameText}>{studentName}</Text>
+                  {/* Profile Avatar / Initials */}
+                  {studentAvatar ? (
+                    <Image source={{ uri: studentAvatar }} style={styles.studentAvatar} />
+                  ) : (
+                    <View style={styles.studentAvatarFallback}>
+                      <Text style={styles.studentAvatarText}>
+                        {studentName.charAt(0).toUpperCase() || "S"}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.studentInfoCol}>
+                    <Text style={styles.studentNameText} numberOfLines={1}>
+                      {studentName}
+                    </Text>
+
+                    {studentIdDisplay ? (
+                      <View style={styles.studentIdBadge}>
+                        <Feather name="hash" size={10} color="#475569" style={{ marginRight: 2 }} />
+                        <Text style={styles.studentIdText}>ID: {studentIdDisplay}</Text>
+                      </View>
+                    ) : null}
+
                     <Text style={styles.submittedDateText}>
                       Submitted:{" "}
                       {new Date(sub.createdAt).toLocaleDateString([], {
@@ -239,8 +287,52 @@ const styles = StyleSheet.create({
   subCardHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  studentAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    backgroundColor: "#e2e8f0",
+  },
+  studentAvatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  studentAvatarText: {
+    fontFamily,
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#2563eb",
+  },
+  studentInfoCol: {
+    flex: 1,
+    marginRight: 8,
+  },
+  studentIdBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  studentIdText: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#475569",
   },
   studentNameText: {
     fontFamily,
@@ -250,9 +342,8 @@ const styles = StyleSheet.create({
   },
   submittedDateText: {
     fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
     color: "#64748b",
-    marginTop: 2,
   },
   gradeStatusPill: {
     paddingHorizontal: 10,

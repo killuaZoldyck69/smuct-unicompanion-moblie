@@ -12,7 +12,7 @@ interface SubmissionsAnalyticsCardProps {
   submitted: number;
   pending: number;
   graded: number;
-  onViewAll: () => void;
+  onViewAll?: () => void;
 }
 
 export const SubmissionsAnalyticsCard: React.FC<SubmissionsAnalyticsCardProps> = React.memo(
@@ -21,15 +21,17 @@ export const SubmissionsAnalyticsCard: React.FC<SubmissionsAnalyticsCardProps> =
       <View style={styles.container}>
         {/* Header Row */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Submissions</Text>
-          <TouchableOpacity
-            onPress={onViewAll}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="View all submissions"
-          >
-            <Text style={styles.sectionActionText}>View all</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Submissions Overview</Text>
+          {onViewAll && (
+            <TouchableOpacity
+              onPress={onViewAll}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="View all submissions"
+            >
+              <Text style={styles.sectionActionText}>View all</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* 4 Stats Cards in a Row: Total | Submitted | Pending | Graded */}
