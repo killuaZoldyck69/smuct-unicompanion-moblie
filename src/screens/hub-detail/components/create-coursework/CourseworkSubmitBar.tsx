@@ -9,6 +9,7 @@ interface Props {
   isPending: boolean;
   isUploading: boolean;
   bottomInset: number;
+  label?: string;
 }
 
 export const CourseworkSubmitBar: React.FC<Props> = ({
@@ -17,6 +18,7 @@ export const CourseworkSubmitBar: React.FC<Props> = ({
   isPending,
   isUploading,
   bottomInset,
+  label = "Publish Coursework",
 }) => {
   const isDisabled = !isFormValid || isPending || isUploading;
 
@@ -36,7 +38,7 @@ export const CourseworkSubmitBar: React.FC<Props> = ({
         activeOpacity={0.85}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel="Publish coursework"
+        accessibilityLabel={label}
       >
         {isPending ? (
           <ActivityIndicator size="small" color="#ffffff" />
@@ -54,7 +56,7 @@ export const CourseworkSubmitBar: React.FC<Props> = ({
                 isDisabled && styles.publishBtnTextDisabled,
               ]}
             >
-              {isUploading ? "Uploading Files..." : "Publish Coursework"}
+              {isUploading ? "Uploading Files..." : label}
             </Text>
           </>
         )}

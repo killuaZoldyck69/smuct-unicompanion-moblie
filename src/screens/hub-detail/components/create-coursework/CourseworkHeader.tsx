@@ -4,12 +4,14 @@ import { Feather } from "@expo/vector-icons";
 import { BENTO, fontFamily } from "./constants";
 
 interface Props {
+  title?: string;
   onClose: () => void;
   isPending: boolean;
   isUploading: boolean;
 }
 
 export const CourseworkHeader: React.FC<Props> = ({
+  title = "New Coursework",
   onClose,
   isPending,
   isUploading,
@@ -17,7 +19,7 @@ export const CourseworkHeader: React.FC<Props> = ({
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <Text style={styles.headerTitle}>New Coursework</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
       </View>
 
       <TouchableOpacity
@@ -27,7 +29,7 @@ export const CourseworkHeader: React.FC<Props> = ({
         activeOpacity={0.7}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel="Close coursework creation modal"
+        accessibilityLabel="Close coursework modal"
       >
         <Feather name="x" size={18} color={BENTO.navy} />
       </TouchableOpacity>

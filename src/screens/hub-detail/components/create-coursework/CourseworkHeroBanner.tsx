@@ -3,17 +3,23 @@ import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO, fontFamily } from "./constants";
 
-export const CourseworkHeroBanner: React.FC = () => {
+interface Props {
+  title?: string;
+  subtitle?: string;
+}
+
+export const CourseworkHeroBanner: React.FC<Props> = ({
+  title = "Academic Assessment",
+  subtitle = "Set assignment goals, submission format, marks, and resources",
+}) => {
   return (
     <View style={styles.heroBanner}>
       <View style={styles.heroIconBox}>
         <Feather name="book-open" size={16} color={BENTO.blueText} />
       </View>
       <View style={styles.textCol}>
-        <Text style={styles.heroTitle}>Academic Assessment</Text>
-        <Text style={styles.heroSubtitle}>
-          Set assignment goals, submission format, marks, and resources
-        </Text>
+        <Text style={styles.heroTitle}>{title}</Text>
+        <Text style={styles.heroSubtitle}>{subtitle}</Text>
       </View>
     </View>
   );
