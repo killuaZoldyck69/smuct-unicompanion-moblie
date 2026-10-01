@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AssessmentData } from "./types";
@@ -20,13 +20,39 @@ interface ClassworkCardProps {
   canManage: boolean;
   onPress: (item: AssessmentData) => void;
   onOptionsPress?: (item: AssessmentData) => void;
+  currentUserId?: string;
+  isTeacher?: boolean;
 }
 
 export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
-  ({ item, canManage, onPress, onOptionsPress }) => {
+  ({
+    item,
+    canManage,
+    onPress,
+    onOptionsPress,
+    currentUserId,
+    isTeacher,
+  }) => {
     const typeConfig = getAssessmentTypeConfig(item.type);
     const submissionTypeInfo = getSubmissionTypeInfo(item.submissionType);
     const remainingDaysInfo = getRemainingDaysInfo(item.deadline);
+
+    // Current user's submission
+    const mySub = useMemo(() => {
+      if (item.mySubmission) return item.mySubmission;
+      if (!currentUserId || !item.submissions || !Array.isArray(item.submissions)) {
+        return undefined;
+      }
+      return item.submissions.find(
+        (s: any) =>
+          s.studentId === currentUserId ||
+          s.student?.id === currentUserId ||
+          (s.student as any)?.userId === currentUserId
+      );
+    }, [item.mySubmission, item.submissions, currentUserId]);
+
+    const isSubmitted = !!mySub;
+    const isGraded = mySub?.marks !== null && mySub?.marks !== undefined;
 
     return (
       <TouchableOpacity
@@ -98,6 +124,71 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                     {submissionTypeInfo.label}
                   </Text>
                 </View>
+
+                {/* Submitted Tag */}
+                {isSubmitted && (
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      mySub?.isLate
+                        ? styles.statusBadgeLate
+                        : styles.statusBadgeSubmitted,
+                    ]}
+                  >
+                    <Feather
+                      name={mySub?.isLate ? "clock" : "check"}
+                      size={10}
+                      color={mySub?.isLate ? "#d97706" : "#16a34a"}
+                      style={{ marginRight: 3.5 }}
+                    />
+                    <Text
+                      style={[
+                        styles.statusBadgeText,
+                        mySub?.isLate
+                          ? styles.statusBadgeLateText
+                          : styles.statusBadgeSubmittedText,
+                      ]}
+                    >
+                      {mySub?.isLate ? "Submitted (Late)" : "Submitted"}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Graded Tag */}
+                {isGraded && (
+                  <View style={styles.statusBadgeGraded}>
+                    <Feather
+                      name="award"
+                      size={10}
+                      color="#7c3aed"
+                      style={{ marginRight: 3.5 }}
+                    />
+                    <Text style={styles.statusBadgeGradedText}>
+                      Graded • {mySub?.marks}/{item.totalMarks}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Teacher Submissions Count Tag */}
+                {isTeacher && !isSubmitted && (
+                  <View style={styles.statusBadgeTeacher}>
+                    <Feather
+                      name="users"
+                      size={10}
+                      color="#475569"
+                      style={{ marginRight: 3.5 }}
+                    />
+                    <Text style={styles.statusBadgeTeacherText}>
+                      {item.submissionStats
+                        ? `${item.submissionStats.total} submitted${
+                            item.submissionStats.graded > 0
+                              ? ` • ${item.submissionStats.graded} graded`
+                              : ""
+                          }`
+                        : `${item.submissions?.length || 0} submitted`}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {canManage && onOptionsPress && (
@@ -126,7 +217,7 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
               <Text style={styles.dueText}>
                 Due: {formatDueDate(item.deadline)}
               </Text>
-              {remainingDaysInfo && (
+              {remainingDaysInfo && !isSubmitted && (
                 <View
                   style={[
                     styles.remainingBadge,
@@ -325,5 +416,64 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: "600",
     color: "#64748b",
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  statusBadgeSubmitted: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+  },
+  statusBadgeLate: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
+  },
+  statusBadgeText: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "700",
+  },
+  statusBadgeSubmittedText: {
+    color: "#16a34a",
+  },
+  statusBadgeLateText: {
+    color: "#d97706",
+  },
+  statusBadgeGraded: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9999,
+    borderWidth: 1,
+    backgroundColor: "#faf5ff",
+    borderColor: "#e9d5ff",
+  },
+  statusBadgeGradedText: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#7e22ce",
+  },
+  statusBadgeTeacher: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9999,
+    borderWidth: 1,
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0",
+  },
+  statusBadgeTeacherText: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#475569",
   },
 });

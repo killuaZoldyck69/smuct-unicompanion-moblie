@@ -257,6 +257,10 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
       (Array.isArray(assessment.attachments) && assessment.attachments.length > 0) ||
       (Array.isArray(assessment.links) && assessment.links.length > 0);
 
+    const isHand =
+      assessment.submissionType === "HAND" ||
+      assessment.submissionType === "OFFLINE";
+
     return (
       <View style={styles.container}>
         <ScrollView
@@ -287,6 +291,29 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
               >
                 <Text style={[styles.typeBadgeText, { color: typeConfig.badgeText }]}>
                   {typeConfig.label}
+                </Text>
+              </View>
+
+              {/* Submission Method Tag */}
+              <View
+                style={[
+                  styles.methodBadgePill,
+                  isHand ? styles.methodBadgePillHand : styles.methodBadgePillOnline,
+                ]}
+              >
+                <Feather
+                  name={isHand ? "clipboard" : "globe"}
+                  size={12}
+                  color={isHand ? "#b45309" : "#0284c7"}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.methodBadgeText,
+                    { color: isHand ? "#b45309" : "#0284c7" },
+                  ]}
+                >
+                  {isHand ? "In-Hand" : "Online"}
                 </Text>
               </View>
             </View>
@@ -688,6 +715,27 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontFamily,
     fontSize: 12,
+    fontWeight: "700",
+  },
+  methodBadgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  methodBadgePillOnline: {
+    backgroundColor: "#f0f9ff",
+    borderColor: "#bae6fd",
+  },
+  methodBadgePillHand: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
+  },
+  methodBadgeText: {
+    fontFamily,
+    fontSize: 11,
     fontWeight: "700",
   },
   resourcesWrapper: {

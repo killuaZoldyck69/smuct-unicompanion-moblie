@@ -56,6 +56,12 @@ export interface AssessmentData {
   attachments?: AssessmentAttachment[] | null;
   links?: AssessmentLink[] | null;
   submissions?: AssessmentSubmission[];
+  mySubmission?: AssessmentSubmission | null;
+  submissionStats?: {
+    total: number;
+    graded: number;
+    pending: number;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

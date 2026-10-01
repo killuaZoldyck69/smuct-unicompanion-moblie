@@ -19,6 +19,7 @@ import {
   useUpdateAssessment,
   useDeleteAssessment,
 } from "@/features/hubs/useHubs";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 import CreateCourseworkModal from "../components/create-coursework-modal";
 import EditCourseworkModal from "../components/edit-coursework-modal";
@@ -47,20 +48,22 @@ export default function ClassworkTab({
   currentUserId,
 }: ClassworkTabProps) {
   const queryClient = useQueryClient();
+  const { user: authUser } = useCurrentUser();
+  const effectiveUserId = currentUserId || authUser?.id;
 
   const isTeacherRole = useMemo(() => {
     if (typeof isTeacher === "boolean") return isTeacher;
-    if (hubDetails?.teacherId && currentUserId) {
-      return hubDetails.teacherId === currentUserId;
+    if (hubDetails?.teacherId && effectiveUserId) {
+      return hubDetails.teacherId === effectiveUserId;
     }
     return Boolean(
       hubDetails?.members?.some(
         (m: any) =>
-          (m.userId === currentUserId || m.id === currentUserId) &&
+          (m.userId === effectiveUserId || m.id === effectiveUserId) &&
           m.role === "TEACHER"
       )
     );
-  }, [isTeacher, hubDetails, currentUserId]);
+  }, [isTeacher, hubDetails, effectiveUserId]);
 
   // Queries & Mutations
   const { data: assessments, isLoading, isRefetching } = useAssessments(hubId);
@@ -177,11 +180,13 @@ export default function ClassworkTab({
       <ClassworkCard
         item={item}
         canManage={canManage}
+        currentUserId={effectiveUserId}
+        isTeacher={isTeacherRole}
         onPress={handleCardPress}
         onOptionsPress={handleOptionsPress}
       />
     ),
-    [canManage, handleCardPress, handleOptionsPress]
+    [canManage, effectiveUserId, isTeacherRole, handleCardPress, handleOptionsPress]
   );
 
   return (

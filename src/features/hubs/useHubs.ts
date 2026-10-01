@@ -251,6 +251,7 @@ export const useGradeSubmission = (assessmentId: string) => {
     }) => gradeSubmissionAPI(submissionId, marks, feedback),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["submissions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["assessments"] });
     },
   });
 };
@@ -262,6 +263,7 @@ export const useBulkGrade = (assessmentId: string) => {
       bulkGradeAPI(assessmentId, grades),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["submissions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["assessments"] });
     },
   });
 };
