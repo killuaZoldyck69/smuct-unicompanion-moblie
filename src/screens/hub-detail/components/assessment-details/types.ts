@@ -49,6 +49,8 @@ export interface AssessmentData {
   attachments?: AssessmentAttachment[] | null;
   links?: AssessmentLink[] | null;
   submissions?: AssessmentSubmission[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AssessmentTypeConfig {
