@@ -67,6 +67,31 @@ export const AssessmentHeroCard: React.FC<AssessmentHeroCardProps> = React.memo(
               {isHand ? "In-Hand" : "Online"}
             </Text>
           </View>
+
+          {/* Late Submission Policy Badge */}
+          <View
+            style={[
+              styles.policyBadgePill,
+              assessment.allowLateSubmission
+                ? styles.policyBadgePillLate
+                : styles.policyBadgePillStrict,
+            ]}
+          >
+            <Feather
+              name={assessment.allowLateSubmission ? "clock" : "lock"}
+              size={12}
+              color={assessment.allowLateSubmission ? "#0d9488" : "#64748b"}
+              style={{ marginRight: 4 }}
+            />
+            <Text
+              style={[
+                styles.policyBadgeText,
+                { color: assessment.allowLateSubmission ? "#0d9488" : "#64748b" },
+              ]}
+            >
+              {assessment.allowLateSubmission ? "Late Allowed" : "Strict Deadline"}
+            </Text>
+          </View>
         </View>
 
         {/* Title */}
@@ -158,6 +183,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#fef3c7",
   },
   methodBadgeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  policyBadgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  policyBadgePillOnline: {
+    backgroundColor: "#f0f9ff",
+  },
+  policyBadgePillStrict: {
+    backgroundColor: "#f1f5f9",
+  },
+  policyBadgePillLate: {
+    backgroundColor: "#ccfbf1",
+  },
+  policyBadgeText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "700",

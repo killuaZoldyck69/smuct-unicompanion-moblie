@@ -63,6 +63,7 @@ export interface CreateAssessmentInput {
   deadline: string | Date;
   startDate?: string | Date;
   totalMarks: number;
+  allowLateSubmission?: boolean;
   status?: string;
   attachments?: AttachmentItem[];
   links?: LinkItem[];

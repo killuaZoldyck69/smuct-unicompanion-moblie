@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import { Feather } from "@expo/vector-icons";
 import { AssessmentData } from "./types";
 import { getAssessmentTypeConfig } from "./utils";
@@ -60,8 +61,11 @@ export const ClassworkOptionsSheet: React.FC<ClassworkOptionsSheetProps> = ({
   };
 
   const handleEditPress = () => {
+    StatusBar.setBarStyle("dark-content", true);
     onClose();
-    onEdit(item);
+    setTimeout(() => {
+      onEdit(item);
+    }, 120);
   };
 
   return (
@@ -69,14 +73,18 @@ export const ClassworkOptionsSheet: React.FC<ClassworkOptionsSheetProps> = ({
       visible={isVisible}
       animationType="fade"
       transparent={true}
-      onRequestClose={onClose}
+      onRequestClose={() => {
+        StatusBar.setBarStyle("dark-content", true);
+        onClose();
+      }}
       statusBarTranslucent={true}
     >
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor="transparent"
         translucent={true}
       />
+      <ExpoStatusBar style="dark" />
       <View
         style={[
           styles.overlay,

@@ -109,6 +109,13 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
                       </View>
                     ) : null}
 
+                    {sub.isLate ? (
+                      <View style={styles.lateSubmissionBadge}>
+                        <Feather name="clock" size={10} color="#b45309" style={{ marginRight: 3 }} />
+                        <Text style={styles.lateSubmissionBadgeText}>Late Submission</Text>
+                      </View>
+                    ) : null}
+
                     <Text style={styles.submittedDateText}>
                       Submitted:{" "}
                       {new Date(sub.createdAt).toLocaleDateString([], {
@@ -117,9 +124,6 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                      {sub.isLate ? (
-                        <Text style={{ color: "#ef4444", fontWeight: "700" }}> (Late)</Text>
-                      ) : null}
                     </Text>
                   </View>
 
@@ -333,6 +337,25 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "700",
     color: "#475569",
+  },
+  lateSubmissionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  lateSubmissionBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#b45309",
   },
   studentNameText: {
     fontFamily,

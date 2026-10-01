@@ -125,6 +125,33 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                   </Text>
                 </View>
 
+                {/* Late Submission Policy Badge */}
+                <View
+                  style={[
+                    styles.policyBadge,
+                    item.allowLateSubmission
+                      ? styles.policyBadgeLate
+                      : styles.policyBadgeStrict,
+                  ]}
+                >
+                  <Feather
+                    name={item.allowLateSubmission ? "clock" : "lock"}
+                    size={9.5}
+                    color={item.allowLateSubmission ? "#0d9488" : "#64748b"}
+                    style={{ marginRight: 3 }}
+                  />
+                  <Text
+                    style={[
+                      styles.policyBadgeText,
+                      item.allowLateSubmission
+                        ? styles.policyBadgeTextLate
+                        : styles.policyBadgeTextStrict,
+                    ]}
+                  >
+                    {item.allowLateSubmission ? "Late OK" : "Strict"}
+                  </Text>
+                </View>
+
                 {/* Submitted Tag */}
                 {isSubmitted && (
                   <View
@@ -222,7 +249,9 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                   style={[
                     styles.remainingBadge,
                     remainingDaysInfo.isOverdue
-                      ? styles.remainingBadgeOverdue
+                      ? item.allowLateSubmission
+                        ? styles.remainingBadgeLateAllowed
+                        : styles.remainingBadgeOverdue
                       : remainingDaysInfo.isUrgent
                         ? styles.remainingBadgeUrgent
                         : styles.remainingBadgeNormal,
@@ -230,12 +259,20 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                 >
                   <Feather
                     name={
-                      remainingDaysInfo.isOverdue ? "alert-circle" : "clock"
+                      remainingDaysInfo.isOverdue
+                        ? item.allowLateSubmission
+                          ? "clock"
+                          : "lock"
+                        : remainingDaysInfo.isUrgent
+                          ? "alert-circle"
+                          : "clock"
                     }
                     size={10}
                     color={
                       remainingDaysInfo.isOverdue
-                        ? "#dc2626"
+                        ? item.allowLateSubmission
+                          ? "#b45309"
+                          : "#dc2626"
                         : remainingDaysInfo.isUrgent
                           ? "#b45309"
                           : "#475569"
@@ -246,13 +283,19 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                     style={[
                       styles.remainingBadgeText,
                       remainingDaysInfo.isOverdue
-                        ? styles.remainingBadgeTextOverdue
+                        ? item.allowLateSubmission
+                          ? styles.remainingBadgeTextLateAllowed
+                          : styles.remainingBadgeTextOverdue
                         : remainingDaysInfo.isUrgent
                           ? styles.remainingBadgeTextUrgent
                           : styles.remainingBadgeTextNormal,
                     ]}
                   >
-                    {remainingDaysInfo.text}
+                    {remainingDaysInfo.isOverdue
+                      ? item.allowLateSubmission
+                        ? "Late Submissions Open"
+                        : "Closed"
+                      : remainingDaysInfo.text}
                   </Text>
                 </View>
               )}
@@ -397,6 +440,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fef2f2",
     borderColor: "#fecaca",
   },
+  remainingBadgeLateAllowed: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
+  },
   remainingBadgeText: {
     fontFamily,
     fontSize: 10,
@@ -410,6 +457,9 @@ const styles = StyleSheet.create({
   },
   remainingBadgeTextOverdue: {
     color: "#dc2626",
+  },
+  remainingBadgeTextLateAllowed: {
+    color: "#b45309",
   },
   maxMarksText: {
     fontFamily,
@@ -475,5 +525,32 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "700",
     color: "#475569",
+  },
+  policyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  policyBadgeStrict: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0",
+  },
+  policyBadgeLate: {
+    backgroundColor: "#f0fdfa",
+    borderColor: "#99f6e4",
+  },
+  policyBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  policyBadgeTextStrict: {
+    color: "#64748b",
+  },
+  policyBadgeTextLate: {
+    color: "#0f766e",
   },
 });

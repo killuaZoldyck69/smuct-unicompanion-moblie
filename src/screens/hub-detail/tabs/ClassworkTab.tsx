@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  StatusBar,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
@@ -271,8 +272,11 @@ export default function ClassworkTab({
           currentUserId={currentUserId}
           hubMembers={hubDetails?.members || []}
           onEdit={(item) => {
+            StatusBar.setBarStyle("dark-content", true);
             setSelectedAssessment(null);
-            setEditingAssessment(item);
+            setTimeout(() => {
+              setEditingAssessment(item);
+            }, 120);
           }}
           onDelete={(id) => {
             setSelectedAssessment(null);

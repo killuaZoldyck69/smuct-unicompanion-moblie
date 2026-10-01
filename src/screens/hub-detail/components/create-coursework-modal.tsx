@@ -1,6 +1,5 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
-  View,
   StyleSheet,
   Modal,
   KeyboardAvoidingView,
@@ -8,7 +7,8 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets, SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 
 import {
   CreateCourseworkModalProps,
@@ -24,6 +24,7 @@ import {
   CourseworkSubmissionMethod,
   CourseworkMarksInput,
   CourseworkDeadlineSection,
+  CourseworkLateSubmissionToggle,
   CourseworkAttachmentsSection,
   CourseworkInstructionsInput,
   CourseworkSubmitBar,
@@ -43,6 +44,7 @@ export default function CreateCourseworkModal({
     type: "ASSIGNMENT",
     submissionType: "ONLINE",
     totalMarks: "100",
+    allowLateSubmission: false,
   });
 
   const [deadline, setDeadline] = useState<Date>(getInitialDeadline);
@@ -67,6 +69,7 @@ export default function CreateCourseworkModal({
       submissionType: form.submissionType,
       totalMarks: parseFloat(form.totalMarks) || 100,
       deadline: deadline.toISOString(),
+      allowLateSubmission: form.allowLateSubmission,
       attachments: attachments.length > 0 ? attachments : undefined,
       links: links.length > 0 ? links : undefined,
     });
@@ -78,6 +81,7 @@ export default function CreateCourseworkModal({
       type: "ASSIGNMENT",
       submissionType: "ONLINE",
       totalMarks: "100",
+      allowLateSubmission: false,
     });
     setAttachments([]);
     setLinks([]);
@@ -105,6 +109,30 @@ export default function CreateCourseworkModal({
     form.totalMarks.trim().length > 0 &&
     !isUploading;
 
+  const applyDarkStatusBar = useCallback(() => {
+    StatusBar.setBarStyle("dark-content", true);
+    if (Platform.OS === "android") {
+      StatusBar.setBackgroundColor("transparent", true);
+      StatusBar.setTranslucent(true);
+    }
+  }, []);
+
+  // Ensure status bar icons/text are dark on Android & iOS
+  useEffect(() => {
+    if (isVisible) {
+      applyDarkStatusBar();
+      const t1 = setTimeout(applyDarkStatusBar, 100);
+      const t2 = setTimeout(applyDarkStatusBar, 250);
+      const t3 = setTimeout(applyDarkStatusBar, 500);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+  }, [isVisible, applyDarkStatusBar]);
+
   return (
     <Modal
       visible={isVisible}
@@ -112,17 +140,16 @@ export default function CreateCourseworkModal({
       presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
       statusBarTranslucent={true}
       onRequestClose={handleClose}
+      onShow={applyDarkStatusBar}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <ExpoStatusBar style="dark" />
 
-      <View
-        style={[
-          styles.container,
-          {
-            paddingTop: Platform.OS === "android" ? insets.top : 0,
-          },
-        ]}
-      >
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardContainer}
@@ -167,6 +194,13 @@ export default function CreateCourseworkModal({
               onChangeDeadline={setDeadline}
             />
 
+            <CourseworkLateSubmissionToggle
+              value={form.allowLateSubmission}
+              onToggle={(enabled) =>
+                setForm((prev) => ({ ...prev, allowLateSubmission: enabled }))
+              }
+            />
+
             <CourseworkAttachmentsSection
               attachments={attachments}
               onAddAttachments={handleAddAttachments}
@@ -193,7 +227,7 @@ export default function CreateCourseworkModal({
             bottomInset={insets.bottom}
           />
         </KeyboardAvoidingView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }

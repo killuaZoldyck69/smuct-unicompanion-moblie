@@ -53,6 +53,7 @@ export interface AssessmentData {
   deadline?: string;
   startDate?: string;
   totalMarks: number;
+  allowLateSubmission?: boolean;
   attachments?: AssessmentAttachment[] | null;
   links?: AssessmentLink[] | null;
   submissions?: AssessmentSubmission[];

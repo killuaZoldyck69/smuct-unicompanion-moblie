@@ -8,6 +8,7 @@ export * from "./CourseworkTypeSelector";
 export * from "./CourseworkSubmissionMethod";
 export * from "./CourseworkMarksInput";
 export * from "./CourseworkDeadlineSection";
+export * from "./CourseworkLateSubmissionToggle";
 export * from "./CourseworkAttachmentsSection";
 export * from "./CourseworkInstructionsInput";
 export * from "./CourseworkSubmitBar";

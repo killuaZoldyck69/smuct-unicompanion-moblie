@@ -20,6 +20,7 @@ export interface CourseworkFormData {
   type: AssessmentType;
   submissionType: SubmissionType;
   totalMarks: string;
+  allowLateSubmission: boolean;
 }
 
 export interface CreateCourseworkPayload {
@@ -29,6 +30,7 @@ export interface CreateCourseworkPayload {
   submissionType: SubmissionType;
   totalMarks: number;
   deadline: string;
+  allowLateSubmission?: boolean;
   attachments?: AttachmentItem[];
   links?: LinkItem[];
 }
