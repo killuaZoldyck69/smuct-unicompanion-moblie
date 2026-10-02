@@ -1,10 +1,13 @@
 import { MaterialItem } from "./types";
 
-export const formatFileSize = (bytes?: number): string => {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+export const formatFileSize = (bytes?: number | string): string => {
+  if (bytes === undefined || bytes === null || bytes === "") return "";
+  const num = typeof bytes === "string" ? parseFloat(bytes) : bytes;
+  if (isNaN(num) || num <= 0) return "";
+  if (num < 1024) return `${Math.round(num)} B`;
+  if (num < 1024 * 1024) return `${(num / 1024).toFixed(1)} KB`;
+  if (num < 1024 * 1024 * 1024) return `${(num / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(num / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 };
 
 export type MaterialFileType =
