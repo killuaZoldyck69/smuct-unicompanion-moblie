@@ -123,6 +123,13 @@ export interface SubmitReviewInput {
   answers?: any;
 }
 
+export interface EditReviewInput {
+  rating?: number;
+  comment?: string;
+  answers?: any;
+}
+
+
 export const getMyHubs = async () => {
   const res = await api.get("/hubs/my");
   return res.data?.data || [];
@@ -460,6 +467,22 @@ export const submitReview = async (
   return res.data?.data;
 };
 export const submitReviewAPI = submitReview;
+
+export const editReview = async (
+  hubId: string,
+  data: EditReviewInput,
+) => {
+  const res = await api.patch(`/hubs/${hubId}/reviews`, data);
+  return res.data?.data;
+};
+export const editReviewAPI = editReview;
+
+export const deleteReview = async (hubId: string) => {
+  const res = await api.delete(`/hubs/${hubId}/reviews`);
+  return res.data?.data;
+};
+export const deleteReviewAPI = deleteReview;
+
 
 // Class Routine Notices & Status Updates
 export type ClassNoticeType =

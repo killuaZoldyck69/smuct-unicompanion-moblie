@@ -110,3 +110,10 @@ export interface SubmitReviewInput {
   isAnonymous?: boolean;
   answers?: any;
 }
+
+export interface EditReviewInput {
+  rating?: number;
+  comment?: string;
+  answers?: any;
+}
+

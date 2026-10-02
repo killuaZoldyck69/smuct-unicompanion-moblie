@@ -34,6 +34,8 @@ import {
   replyDiscussionAPI,
   getReviewsAPI,
   submitReviewAPI,
+  editReviewAPI,
+  deleteReviewAPI,
   updateReviewSettingsAPI,
   updateAnnouncementAPI,
   deleteAnnouncementAPI,
@@ -49,6 +51,7 @@ import {
   CreateAnnouncementInput,
   CreateDiscussionInput,
   SubmitReviewInput,
+  EditReviewInput,
 } from "./types";
 
 export const useMyHubs = () => {
@@ -404,6 +407,27 @@ export const useSubmitReview = (hubId: string) => {
     },
   });
 };
+
+export const useEditReview = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: EditReviewInput) => editReviewAPI(hubId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", hubId] });
+    },
+  });
+};
+
+export const useDeleteReview = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteReviewAPI(hubId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", hubId] });
+    },
+  });
+};
+
 
 export const useUpdateReviewSettings = (hubId: string) => {
   const queryClient = useQueryClient();

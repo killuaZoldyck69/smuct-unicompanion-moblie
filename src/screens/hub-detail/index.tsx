@@ -396,8 +396,9 @@ export function HubDetail({ hubId }: HubDetailProps) {
         {activeTab === "review" && (
           <ReviewTab
             hubId={hubId}
-            canManage={canManage}
-            canSubmit={!canManage}
+            isTeacher={isTeacher}
+            canManage={isTeacher}
+            canSubmit={!isTeacher}
             currentUserId={myUserId}
           />
         )}
