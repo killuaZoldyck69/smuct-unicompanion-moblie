@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
-  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,21 +25,6 @@ import {
   useUpdateAnnouncementComment,
   useDeleteAnnouncementComment,
 } from "@/features/hubs/useHubs";
-
-const BENTO = {
-  canvas: "#f8fafc",
-  card: "#ffffff",
-  navy: "#0f172a",
-  slate: "#64748b",
-  border: "rgba(15, 23, 42, 0.08)",
-  shadow: {
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
-  },
-};
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -72,15 +56,17 @@ export default function StreamTab({
   const effectiveIsTeacher = Boolean(
     isTeacher || (myRole || "").toUpperCase() === "TEACHER",
   );
-  const effectiveIsCR = Boolean(
-    isCR || (myRole || "").toUpperCase() === "CR",
-  );
+  const effectiveIsCR = Boolean(isCR || (myRole || "").toUpperCase() === "CR");
   const canPost =
     canPostAnnouncement !== undefined
       ? canPostAnnouncement
       : effectiveIsTeacher || effectiveIsCR;
 
-  const { data: announcements, isLoading, isRefetching } = useAnnouncements(hubId);
+  const {
+    data: announcements,
+    isLoading,
+    isRefetching,
+  } = useAnnouncements(hubId);
   const createMutation = useCreateAnnouncement(hubId);
   const updateMutation = useUpdateAnnouncement(hubId);
   const deleteMutation = useDeleteAnnouncement(hubId);
@@ -212,10 +198,7 @@ export default function StreamTab({
     );
   };
 
-  const handleDeleteComment = (
-    announcementId: string,
-    commentId: string,
-  ) => {
+  const handleDeleteComment = (announcementId: string, commentId: string) => {
     deleteCommentMutation.mutate(
       {
         announcementId,
@@ -264,7 +247,12 @@ export default function StreamTab({
                 setIsComposerVisible(true);
               }}
             >
-              <Feather name="plus" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+              <Feather
+                name="plus"
+                size={16}
+                color="#ffffff"
+                style={{ marginRight: 6 }}
+              />
               <Text style={styles.emptyActionText}>Create Announcement</Text>
             </TouchableOpacity>
           )}
@@ -287,8 +275,15 @@ export default function StreamTab({
                   accessibilityRole="button"
                   accessibilityLabel="New Announcement"
                 >
-                  <Feather name="plus" size={15} color="#ffffff" style={{ marginRight: 6 }} />
-                  <Text style={styles.newAnnouncementBtnText}>New Announcement</Text>
+                  <Feather
+                    name="plus"
+                    size={15}
+                    color="#ffffff"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.newAnnouncementBtnText}>
+                    New Announcement
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : null
@@ -322,7 +317,9 @@ export default function StreamTab({
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={() => {
-                queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
+                queryClient.invalidateQueries({
+                  queryKey: ["announcements", hubId],
+                });
               }}
               tintColor="#0f172a"
             />
@@ -337,7 +334,9 @@ export default function StreamTab({
           setIsComposerVisible(false);
           setEditingItem(null);
         }}
-        onSubmit={editingItem ? handleUpdateAnnouncement : handleCreateAnnouncement}
+        onSubmit={
+          editingItem ? handleUpdateAnnouncement : handleCreateAnnouncement
+        }
         isPending={createMutation.isPending || updateMutation.isPending}
         initialData={editingItem}
       />

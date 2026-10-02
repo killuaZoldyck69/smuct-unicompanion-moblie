@@ -70,6 +70,7 @@ export interface AssessmentData {
 export interface AssessmentTypeConfig {
   label: string;
   icon: keyof typeof Feather.glyphMap;
+  assetIcon?: any;
   badgeBg: string;
   badgeText: string;
   iconBg: string;

@@ -27,9 +27,6 @@ import {
 export default function ReviewTab({
   hubId,
   isTeacher = false,
-  canManage,
-  canSubmit,
-  currentUserId,
 }: ReviewTabProps) {
   const insets = useSafeAreaInsets();
   const {

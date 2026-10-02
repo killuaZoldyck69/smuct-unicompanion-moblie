@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AssessmentData } from "./types";
 import {
@@ -71,11 +71,19 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
               },
             ]}
           >
-            <Feather
-              name={typeConfig.icon}
-              size={20}
-              color={typeConfig.iconColor}
-            />
+            {typeConfig.assetIcon ? (
+              <Image
+                source={typeConfig.assetIcon}
+                style={{ width: 24, height: 24 }}
+                resizeMode="contain"
+              />
+            ) : (
+              <Feather
+                name={typeConfig.icon}
+                size={20}
+                color={typeConfig.iconColor}
+              />
+            )}
           </View>
 
           {/* Right Details Column */}
