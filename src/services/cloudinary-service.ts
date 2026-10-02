@@ -265,3 +265,26 @@ export async function uploadMultipleFilesToCloudinary(
     type: item.format || files[idx]?.mimeType,
   }));
 }
+
+/**
+ * Deletes a file or image from Cloudinary storage via the backend API.
+ * Non-blocking: returns true/false, safely handles failures.
+ */
+export async function deleteFileFromCloudinaryApi(
+  urlOrPublicId: string,
+  resourceType: "image" | "raw" | "auto" = "raw"
+): Promise<boolean> {
+  if (!urlOrPublicId || typeof urlOrPublicId !== "string" || !urlOrPublicId.trim()) {
+    return false;
+  }
+  try {
+    const res = await api.post("/upload/delete", {
+      url: urlOrPublicId,
+      resourceType,
+    });
+    return Boolean(res.data?.data?.success);
+  } catch (err) {
+    console.warn("[Cloudinary] Failed to delete file:", err);
+    return false;
+  }
+}

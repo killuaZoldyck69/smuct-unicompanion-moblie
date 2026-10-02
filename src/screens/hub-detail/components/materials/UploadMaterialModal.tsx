@@ -19,7 +19,10 @@ import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import * as DocumentPicker from "expo-document-picker";
 
-import { uploadMultipleFilesToCloudinary } from "@/services/cloudinary-service";
+import {
+  uploadMultipleFilesToCloudinary,
+  deleteFileFromCloudinaryApi,
+} from "@/services/cloudinary-service";
 import {
   CreateMaterialPayload,
   MaterialAttachment,
@@ -36,6 +39,16 @@ const fontFamily = Platform.select({
   default: "sans-serif",
 });
 
+interface StagedAttachment {
+  id: string;
+  localUri: string;
+  name: string;
+  size?: number;
+  type?: string;
+  mimeType?: string;
+  uploadedUrl?: string;
+}
+
 interface UploadMaterialModalProps {
   isVisible: boolean;
   onClose: () => void;
@@ -50,8 +63,9 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
     const insets = useSafeAreaInsets();
     const [title, setTitle] = useState("");
     const [isStudentNote, setIsStudentNote] = useState(!canManage || initialTab === "STUDENT_NOTES");
-    const [attachedFiles, setAttachedFiles] = useState<MaterialAttachment[]>([]);
+    const [attachedFiles, setAttachedFiles] = useState<StagedAttachment[]>([]);
     const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+    const [uploadProgressText, setUploadProgressText] = useState<string | null>(null);
     const [links, setLinks] = useState<MaterialLink[]>([]);
     const [isLinkDrawerOpen, setIsLinkDrawerOpen] = useState(false);
     const [tempLinkUrl, setTempLinkUrl] = useState("");
@@ -67,6 +81,7 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
         setIsLinkDrawerOpen(false);
         setTempLinkUrl("");
         setTempLinkTitle("");
+        setUploadProgressText(null);
       }
     }, [isVisible, canManage, initialTab]);
 
@@ -86,6 +101,18 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
       }
     }, [isVisible, applyLightStatusBar]);
 
+    const handleClose = useCallback(() => {
+      if (isPending || isUploadingFiles) return;
+      // Clean up any files that were uploaded to Cloudinary if user cancels/closes modal
+      attachedFiles.forEach((f) => {
+        if (f.uploadedUrl) {
+          deleteFileFromCloudinaryApi(f.uploadedUrl).catch(() => {});
+        }
+      });
+      onClose();
+    }, [isPending, isUploadingFiles, attachedFiles, onClose]);
+
+    // Deferred upload: select files locally without uploading to Cloudinary
     const handlePickFiles = async () => {
       try {
         const res = await DocumentPicker.getDocumentAsync({
@@ -95,37 +122,35 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
 
         if (res.canceled || !res.assets || res.assets.length === 0) return;
 
-        setIsUploadingFiles(true);
-        const uploaded = await uploadMultipleFilesToCloudinary(
-          res.assets.map((asset) => ({
-            uri: asset.uri,
+        const newItems: StagedAttachment[] = res.assets.map((asset) => {
+          const ext = asset.name.split(".").pop()?.toLowerCase();
+          return {
+            id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            localUri: asset.uri,
             name: asset.name,
-            mimeType: asset.mimeType || undefined,
             size: asset.size || undefined,
-          }))
-        );
+            type: ext || "file",
+            mimeType: asset.mimeType || undefined,
+          };
+        });
 
-        const items: MaterialAttachment[] = uploaded.map((u) => ({
-          name: u.name,
-          url: u.secureUrl,
-          size: u.size,
-          type: u.type,
-        }));
-
-        setAttachedFiles((prev) => [...prev, ...items]);
+        setAttachedFiles((prev) => [...prev, ...newItems]);
         Toast.show({ type: "success", text1: "Files Attached" });
       } catch (err: any) {
         Toast.show({
           type: "error",
-          text1: "Upload Failed",
-          text2: err.message || "Failed to upload file",
+          text1: "Selection Failed",
+          text2: err.message || "Failed to pick file",
         });
-      } finally {
-        setIsUploadingFiles(false);
       }
     };
 
+    // Remove file: if already uploaded to Cloudinary, clean it up immediately; otherwise just remove from state
     const handleRemoveFile = (idx: number) => {
+      const file = attachedFiles[idx];
+      if (file?.uploadedUrl) {
+        deleteFileFromCloudinaryApi(file.uploadedUrl).catch(() => {});
+      }
       setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
     };
 
@@ -155,7 +180,7 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
       setLinks((prev) => prev.filter((_, i) => i !== idx));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
       if (!title.trim()) {
         Toast.show({
           type: "error",
@@ -165,19 +190,77 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
         return;
       }
 
-      const primaryUrl =
-        links[0]?.url ||
-        attachedFiles[0]?.url ||
-        "https://drive.google.com";
+      setIsUploadingFiles(true);
+      try {
+        let finalAttachments: MaterialAttachment[] = [];
 
-      onSubmit({
-        title: title.trim(),
-        description: undefined,
-        driveUrl: primaryUrl,
-        isStudentNote: canManage ? isStudentNote : true,
-        attachments: attachedFiles.length > 0 ? attachedFiles : undefined,
-        links: links.length > 0 ? links : undefined,
-      });
+        if (attachedFiles.length > 0) {
+          const filesNeedingUpload = attachedFiles.filter((f) => !f.uploadedUrl);
+          const alreadyUploaded = attachedFiles.filter((f) => Boolean(f.uploadedUrl));
+
+          let newUploadedResults: MaterialAttachment[] = [];
+          if (filesNeedingUpload.length > 0) {
+            setUploadProgressText("Uploading attachments...");
+            const uploaded = await uploadMultipleFilesToCloudinary(
+              filesNeedingUpload.map((f) => ({
+                uri: f.localUri,
+                name: f.name,
+                mimeType: f.mimeType,
+                size: f.size,
+              }))
+            );
+
+            // Update attachedFiles with uploaded URLs so subsequent retry doesn't re-upload
+            setAttachedFiles((prev) =>
+              prev.map((item) => {
+                const match = uploaded.find((u) => u.name === item.name);
+                return match ? { ...item, uploadedUrl: match.secureUrl } : item;
+              })
+            );
+
+            newUploadedResults = uploaded.map((u) => ({
+              name: u.name,
+              url: u.secureUrl,
+              size: u.size,
+              type: u.type,
+            }));
+          }
+
+          finalAttachments = [
+            ...alreadyUploaded.map((f) => ({
+              name: f.name,
+              url: f.uploadedUrl!,
+              size: f.size,
+              type: f.type,
+            })),
+            ...newUploadedResults,
+          ];
+        }
+
+        const primaryUrl =
+          links[0]?.url ||
+          finalAttachments[0]?.url ||
+          "https://drive.google.com";
+
+        setUploadProgressText("Publishing material...");
+        await onSubmit({
+          title: title.trim(),
+          description: undefined,
+          driveUrl: primaryUrl,
+          isStudentNote: canManage ? isStudentNote : true,
+          attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
+          links: links.length > 0 ? links : undefined,
+        });
+      } catch (err: any) {
+        Toast.show({
+          type: "error",
+          text1: "Upload Failed",
+          text2: err?.message || "Failed to upload or publish material",
+        });
+      } finally {
+        setIsUploadingFiles(false);
+        setUploadProgressText(null);
+      }
     };
 
     const totalAttached = attachedFiles.length + links.length;
@@ -188,7 +271,7 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
         animationType="slide"
         transparent={true}
         statusBarTranslucent={true}
-        onRequestClose={onClose}
+        onRequestClose={handleClose}
         onShow={applyLightStatusBar}
       >
         <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
@@ -199,7 +282,7 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
           <TouchableOpacity
             style={styles.backdrop}
             activeOpacity={1}
-            onPress={isPending ? undefined : onClose}
+            onPress={isPending || isUploadingFiles ? undefined : handleClose}
             accessible={false}
           />
 
@@ -243,7 +326,7 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                 </View>
 
                 <TouchableOpacity
-                  onPress={onClose}
+                  onPress={handleClose}
                   style={styles.closeBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessible={true}
@@ -358,19 +441,15 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                         { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
                       ]}
                       onPress={handlePickFiles}
-                      disabled={isUploadingFiles}
+                      disabled={isUploadingFiles || isPending}
                       activeOpacity={0.8}
                     >
                       <View style={[styles.actionIconCircle, { backgroundColor: "#dcfce7" }]}>
-                        {isUploadingFiles ? (
-                          <ActivityIndicator size="small" color="#15803d" />
-                        ) : (
-                          <Feather name="file-plus" size={15} color="#15803d" />
-                        )}
+                        <Feather name="file-plus" size={15} color="#15803d" />
                       </View>
                       <View style={styles.actionTextCol}>
                         <Text style={[styles.actionBtnTitle, { color: "#15803d" }]}>
-                          {isUploadingFiles ? "Uploading..." : "Attach Files"}
+                          Attach Files
                         </Text>
                         <Text style={[styles.actionBtnSubtitle, { color: "#166534" }]}>
                           PDF, PPT, Word, Images
@@ -533,7 +612,8 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
               <View style={styles.footerBar}>
                 <TouchableOpacity
                   style={styles.cancelBtn}
-                  onPress={onClose}
+                  onPress={handleClose}
+                  disabled={isUploadingFiles || isPending}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -548,8 +628,13 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                   disabled={!title.trim() || isUploadingFiles || isPending}
                   activeOpacity={0.85}
                 >
-                  {isPending ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
+                  {isPending || isUploadingFiles ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <ActivityIndicator size="small" color="#ffffff" />
+                      <Text style={styles.submitBtnText}>
+                        {uploadProgressText || "Publishing..."}
+                      </Text>
+                    </View>
                   ) : (
                     <Text style={styles.submitBtnText}>Publish Material</Text>
                   )}
