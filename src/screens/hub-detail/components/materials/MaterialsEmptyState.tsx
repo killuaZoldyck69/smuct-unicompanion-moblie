@@ -13,19 +13,22 @@ interface MaterialsEmptyStateProps {
   activeTab: MaterialSectionTab;
   canManage: boolean;
   onUploadPress: () => void;
+  onSwitchToStudentNotes?: () => void;
 }
 
 export const MaterialsEmptyState: React.FC<MaterialsEmptyStateProps> = React.memo(
-  ({ activeTab, canManage, onUploadPress }) => {
+  ({ activeTab, canManage, onUploadPress, onSwitchToStudentNotes }) => {
     const isOfficial = activeTab === "OFFICIAL";
+    // Only Teacher & CR (canManage) can upload Course Materials.
+    // Student Resources can be uploaded by all.
     const canUpload = isOfficial ? canManage : true;
 
     return (
       <View style={styles.container}>
         <View style={styles.iconCircle}>
           <Feather
-            name={isOfficial ? "folder" : "users"}
-            size={30}
+            name={isOfficial ? "book-open" : "users"}
+            size={28}
             color={isOfficial ? "#2563eb" : "#16a34a"}
           />
         </View>
@@ -36,13 +39,16 @@ export const MaterialsEmptyState: React.FC<MaterialsEmptyStateProps> = React.mem
 
         <Text style={styles.subtitle}>
           {isOfficial
-            ? "Faculty and instructors will post official syllabus, lecture slides, and course outlines here."
-            : "Share lecture summaries, handwritten notes, reference materials, or question banks with peers."}
+            ? "Teachers and CRs will post official syllabus, lecture slides, and course files here."
+            : "Share lecture summaries, handwritten notes, reference materials, or solved questions with classmates."}
         </Text>
 
-        {canUpload && (
+        {canUpload ? (
           <TouchableOpacity
-            style={styles.actionBtn}
+            style={[
+              styles.actionBtn,
+              { backgroundColor: isOfficial ? "#0f172a" : "#16a34a" },
+            ]}
             onPress={onUploadPress}
             activeOpacity={0.85}
             accessible={true}
@@ -59,6 +65,27 @@ export const MaterialsEmptyState: React.FC<MaterialsEmptyStateProps> = React.mem
               {isOfficial ? "Upload Course Material" : "Share Student Resource"}
             </Text>
           </TouchableOpacity>
+        ) : (
+          onSwitchToStudentNotes && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: "#16a34a" }]}
+              onPress={onSwitchToStudentNotes}
+              activeOpacity={0.85}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Share Study Notes in Student Resources"
+            >
+              <Feather
+                name="plus"
+                size={15}
+                color="#ffffff"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.actionBtnText}>
+                Share in Student Resources
+              </Text>
+            </TouchableOpacity>
+          )
         )}
       </View>
     );
@@ -74,9 +101,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 18,
     backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
@@ -101,14 +128,13 @@ const styles = StyleSheet.create({
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0f172a",
-    paddingHorizontal: 16,
     paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 12,
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     elevation: 2,
   },
   actionBtnText: {

@@ -7,6 +7,11 @@ export interface MaterialAttachment {
   type?: string;
 }
 
+export interface MaterialLink {
+  title?: string | null;
+  url: string;
+}
+
 export interface MaterialItem {
   id: string;
   title: string;
@@ -14,6 +19,7 @@ export interface MaterialItem {
   category?: string | null;
   driveUrl: string;
   attachments?: MaterialAttachment[] | null;
+  links?: MaterialLink[] | null;
   uploaderId: string;
   uploader?: {
     id: string;
@@ -33,4 +39,6 @@ export interface CreateMaterialPayload {
   category?: string;
   isStudentNote: boolean;
   attachments?: MaterialAttachment[];
+  links?: MaterialLink[];
 }
+

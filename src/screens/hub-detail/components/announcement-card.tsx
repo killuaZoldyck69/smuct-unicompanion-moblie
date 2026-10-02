@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { formatDateTime12h } from "@/utils/date-formatter";
+import { openDocumentOrLink } from "./materials/file-actions";
 
 const BENTO_COLORS = {
   deepNavy: "#131b2e",
@@ -165,7 +166,7 @@ const AnnouncementCard = ({
               <TouchableOpacity
                 key={idx}
                 style={styles.attachmentFilePill}
-                onPress={() => Linking.openURL(att.url)}
+                onPress={() => openDocumentOrLink(att.url, att.name)}
                 activeOpacity={0.75}
               >
                 <Feather
@@ -190,7 +191,7 @@ const AnnouncementCard = ({
           {item.attachedLinkUrl && (
             <TouchableOpacity
               style={styles.linkPill}
-              onPress={() => Linking.openURL(item.attachedLinkUrl)}
+              onPress={() => openDocumentOrLink(item.attachedLinkUrl, item.attachedLinkTitle || undefined, true)}
               activeOpacity={0.7}
             >
               <Feather name="link-2" size={14} color="#2563eb" style={{ marginRight: 8 }} />
@@ -203,7 +204,7 @@ const AnnouncementCard = ({
             <TouchableOpacity
               key={idx}
               style={styles.linkPill}
-              onPress={() => Linking.openURL(link.url)}
+              onPress={() => openDocumentOrLink(link.url, link.title || undefined, true)}
               activeOpacity={0.7}
             >
               <Feather name="link-2" size={14} color="#2563eb" style={{ marginRight: 8 }} />

@@ -119,27 +119,22 @@ export default function MaterialsTab({
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: MaterialItem }) => (
+    ({ item, index }: { item: MaterialItem; index: number }) => (
       <MaterialCard
         item={item}
         canManage={canManage}
         currentUserId={currentUserId}
         onDelete={handleDeleteResource}
+        isFirst={index === 0}
+        isLast={index === displayedResources.length - 1}
       />
     ),
-    [canManage, currentUserId, handleDeleteResource]
+    [canManage, currentUserId, handleDeleteResource, displayedResources.length]
   );
 
   return (
     <View style={styles.container}>
-      {/* 1. Redesigned Upload Course Material Action Button */}
-      <MaterialsHeaderAction
-        canManage={canManage}
-        activeTab={activeSection}
-        onUploadPress={() => setIsUploadModalVisible(true)}
-      />
-
-      {/* 2. Dual Filter Tabs: "Course Material" and "Student Resources" Only */}
+      {/* 1. Dual Filter Tabs: "Course Material" and "Student Resources" */}
       <MaterialsFilterTabs
         activeTab={activeSection}
         onTabChange={setActiveSection}
@@ -147,7 +142,7 @@ export default function MaterialsTab({
         studentNotesCount={studentNotesCount}
       />
 
-      {/* 3. Materials List / Empty State */}
+      {/* 2. Materials List with Section Header */}
       {isLoading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#0f172a" />
@@ -159,11 +154,22 @@ export default function MaterialsTab({
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <MaterialsHeaderAction
+              canManage={canManage}
+              activeTab={activeSection}
+              onUploadPress={() => setIsUploadModalVisible(true)}
+            />
+          }
           ListEmptyComponent={
             <MaterialsEmptyState
               activeTab={activeSection}
               canManage={canManage}
               onUploadPress={() => setIsUploadModalVisible(true)}
+              onSwitchToStudentNotes={() => {
+                setActiveSection("STUDENT_NOTES");
+                setIsUploadModalVisible(true);
+              }}
             />
           }
           refreshControl={

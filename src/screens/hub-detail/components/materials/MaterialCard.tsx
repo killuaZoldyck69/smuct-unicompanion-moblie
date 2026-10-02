@@ -1,15 +1,25 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  Linking,
   StyleSheet,
   Platform,
+  ActivityIndicator,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { MaterialItem } from "./types";
 import { formatDate } from "@/utils/date-formatter";
+import {
+  getMaterialTheme,
+  getMaterialSubtitle,
+  getFileTheme,
+  formatFileSize,
+} from "./utils";
+import {
+  openDocumentOrLink,
+  downloadAndSaveDocument,
+} from "./file-actions";
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -22,236 +32,635 @@ interface MaterialCardProps {
   canManage: boolean;
   currentUserId?: string;
   onDelete: (id: string, title: string) => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
 export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
-  ({ item, canManage, currentUserId, onDelete }) => {
-    const isUploader = currentUserId && item.uploaderId === currentUserId;
-    const canDelete = isUploader || canManage;
-    const isStudent = item.isStudentNote;
-    const attachments = Array.isArray(item.attachments) ? item.attachments : [];
+  ({ item, canManage, currentUserId, onDelete, isFirst = true, isLast = true }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
 
-    const handleOpenLink = (url: string) => {
+    const isUploader = currentUserId && item.uploaderId === currentUserId;
+    const canDelete = Boolean(isUploader || canManage);
+    const attachments = Array.isArray(item.attachments) ? item.attachments : [];
+    const links = Array.isArray(item.links) ? item.links : [];
+
+    const theme = getMaterialTheme(item);
+    const subtitle = getMaterialSubtitle(item);
+
+    const hasMultiFiles = attachments.length > 1;
+    const hasBothFilesAndLinks = attachments.length > 0 && links.length > 0;
+    const hasMultipleLinks = links.length > 1;
+    const hasDescription = Boolean(item.description && item.description.trim());
+    const isExpandable =
+      hasMultiFiles || hasBothFilesAndLinks || hasMultipleLinks || hasDescription;
+
+    const primaryAttachment = attachments.length > 0 ? attachments[0] : null;
+    const primaryLink = links.length > 0 ? links[0] : null;
+
+    const handleDownload = async (url: string, name?: string, type?: string) => {
+      if (!url || downloadingUrl) return;
+      try {
+        setDownloadingUrl(url);
+        await downloadAndSaveDocument(url, name, type);
+      } finally {
+        setDownloadingUrl(null);
+      }
+    };
+
+    const handleOpen = async (
+      url: string,
+      name?: string,
+      isExplicitLink?: boolean
+    ) => {
       if (!url) return;
-      Linking.openURL(url).catch(() => {});
+      await openDocumentOrLink(url, name, isExplicitLink);
+    };
+
+    const handleCardPress = () => {
+      if (isExpandable) {
+        setIsExpanded((prev) => !prev);
+        return;
+      }
+
+      // Single item: open directly
+      if (primaryAttachment?.url) {
+        handleOpen(primaryAttachment.url, primaryAttachment.name);
+        return;
+      }
+      if (primaryLink?.url) {
+        handleOpen(primaryLink.url, primaryLink.title || undefined, true);
+        return;
+      }
+      if (item.driveUrl && item.driveUrl !== "https://drive.google.com") {
+        handleOpen(item.driveUrl, undefined, true);
+        return;
+      }
     };
 
     return (
-      <View style={styles.card}>
-        {/* Card Header Row */}
-        <View style={styles.headerRow}>
+      <View
+        style={[
+          styles.cardRow,
+          isFirst && styles.cardRowFirst,
+          isLast && styles.cardRowLast,
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.rowMain}
+          activeOpacity={0.7}
+          onPress={handleCardPress}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.title}, ${subtitle}, ${formatDate(item.createdAt)}`}
+        >
+          {/* File Icon Badge */}
           <View
             style={[
-              styles.iconCircle,
-              { backgroundColor: isStudent ? "#f0fdf4" : "#eff6ff" },
+              styles.badgeContainer,
+              {
+                backgroundColor: theme.badgeBg,
+                borderColor: theme.badgeBorder,
+              },
             ]}
           >
-            <Feather
-              name={isStudent ? "file-text" : "book-open"}
-              size={18}
-              color={isStudent ? "#16a34a" : "#2563eb"}
-            />
+            {theme.iconFamily === "MaterialCommunityIcons" ? (
+              <MaterialCommunityIcons
+                name={theme.iconName as any}
+                size={23}
+                color={theme.iconColor}
+              />
+            ) : (
+              <Feather
+                name={theme.iconName as any}
+                size={20}
+                color={theme.iconColor}
+              />
+            )}
           </View>
 
-          <View style={styles.titleCol}>
-            <Text style={styles.title} numberOfLines={2}>
+          {/* Title & Metadata Column */}
+          <View style={styles.textCol}>
+            <Text style={styles.title} numberOfLines={1}>
               {item.title}
             </Text>
-            <Text style={styles.uploaderText}>
-              By {item.uploader?.name || "Member"} • {formatDate(item.createdAt)}
-            </Text>
+            <View style={styles.subtitleRow}>
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {subtitle}
+              </Text>
+              {isExpandable && (
+                <Feather
+                  name={isExpanded ? "chevron-up" : "chevron-down"}
+                  size={12}
+                  color="#94a3b8"
+                  style={{ marginLeft: 4 }}
+                />
+              )}
+            </View>
           </View>
 
-          {canDelete && (
-            <TouchableOpacity
-              onPress={() => onDelete(item.id, item.title)}
-              style={styles.deleteBtn}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={`Delete material ${item.title}`}
-            >
-              <Feather name="trash-2" size={14} color="#ef4444" />
-            </TouchableOpacity>
-          )}
-        </View>
+          {/* Date & Actions Column */}
+          <View style={styles.rightCol}>
+            <Text style={styles.dateText}>
+              {formatDate(item.createdAt)}
+            </Text>
 
-        {/* Optional Description */}
-        {item.description ? (
-          <Text style={styles.description} numberOfLines={3}>
-            {item.description}
-          </Text>
-        ) : null}
+            <View style={styles.actionsRow}>
+              {primaryAttachment ? (
+                <TouchableOpacity
+                  style={styles.downloadIconBtn}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDownload(
+                      primaryAttachment.url,
+                      primaryAttachment.name,
+                      primaryAttachment.type
+                    );
+                  }}
+                  disabled={downloadingUrl === primaryAttachment.url}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Download ${primaryAttachment.name || "file"}`}
+                >
+                  {downloadingUrl === primaryAttachment.url ? (
+                    <ActivityIndicator size="small" color="#0284c7" />
+                  ) : (
+                    <Feather name="download" size={13} color="#0284c7" />
+                  )}
+                </TouchableOpacity>
+              ) : primaryLink ? (
+                <TouchableOpacity
+                  style={styles.linkIconBtn}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleOpen(
+                      primaryLink.url,
+                      primaryLink.title || undefined,
+                      true
+                    );
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open link ${primaryLink.title || primaryLink.url}`}
+                >
+                  <Feather name="external-link" size={13} color="#0284c7" />
+                </TouchableOpacity>
+              ) : null}
 
-        {/* Attached Files List */}
-        {attachments.length > 0 && (
-          <View style={styles.attachmentsContainer}>
-            {attachments.map((att, idx) => (
-              <TouchableOpacity
-                key={`att-${idx}`}
-                style={styles.attachmentPill}
-                activeOpacity={0.7}
-                onPress={() => handleOpenLink(att.url)}
-                accessible={true}
-                accessibilityRole="link"
-                accessibilityLabel={`Open attachment ${att.name || `File ${idx + 1}`}`}
-              >
-                <Feather
-                  name="paperclip"
-                  size={12}
-                  color="#2563eb"
-                  style={{ marginRight: 6 }}
-                />
-                <Text style={styles.attachmentName} numberOfLines={1}>
-                  {att.name || `Attachment ${idx + 1}`}
-                </Text>
-                <Feather
-                  name="external-link"
-                  size={11}
-                  color="#64748b"
-                  style={{ marginLeft: 5 }}
-                />
-              </TouchableOpacity>
-            ))}
+              {canDelete && (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onDelete(item.id, item.title);
+                  }}
+                  style={styles.deleteBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete material ${item.title}`}
+                >
+                  <Feather name="trash-2" size={13} color="#ef4444" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Expandable Details for items with multiple attachments/links or description */}
+        {isExpanded && (
+          <View style={styles.expandedContent}>
+            {item.description ? (
+              <View style={styles.descriptionBox}>
+                <Text style={styles.descriptionText}>{item.description}</Text>
+              </View>
+            ) : null}
+
+            {/* Sub-attachments */}
+            {attachments.length > 0 && (
+              <View style={styles.subFilesContainer}>
+                {attachments.map((att, idx) => {
+                  const subTheme = getFileTheme(att.type, att.name);
+                  const isDownloadingThis = downloadingUrl === att.url;
+                  return (
+                    <View key={`sub-att-${idx}`} style={styles.subFileCard}>
+                      <View
+                        style={[
+                          styles.subFileIconDot,
+                          { backgroundColor: subTheme.badgeBg },
+                        ]}
+                      >
+                        {subTheme.iconFamily === "MaterialCommunityIcons" ? (
+                          <MaterialCommunityIcons
+                            name={subTheme.iconName as any}
+                            size={16}
+                            color={subTheme.iconColor}
+                          />
+                        ) : (
+                          <Feather
+                            name={subTheme.iconName as any}
+                            size={14}
+                            color={subTheme.iconColor}
+                          />
+                        )}
+                      </View>
+
+                      <View style={styles.subFileInfo}>
+                        <Text style={styles.subFileName} numberOfLines={1}>
+                          {att.name || `Attachment ${idx + 1}`}
+                        </Text>
+                        {att.size ? (
+                          <Text style={styles.subFileSize}>
+                            {formatFileSize(att.size)}
+                          </Text>
+                        ) : null}
+                      </View>
+
+                      <View style={styles.subFileActions}>
+                        <TouchableOpacity
+                          style={styles.subActionBtn}
+                          activeOpacity={0.7}
+                          onPress={() => handleOpen(att.url, att.name)}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                          accessible={true}
+                          accessibilityRole="button"
+                          accessibilityLabel={`View attachment ${att.name || `File ${idx + 1}`}`}
+                        >
+                          <Feather name="eye" size={12} color="#475569" />
+                          <Text style={styles.subActionText}>View</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.subActionBtn, styles.subDownloadBtn]}
+                          activeOpacity={0.7}
+                          onPress={() =>
+                            handleDownload(att.url, att.name, att.type)
+                          }
+                          disabled={isDownloadingThis}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                          accessible={true}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Download attachment ${att.name || `File ${idx + 1}`}`}
+                        >
+                          {isDownloadingThis ? (
+                            <ActivityIndicator size="small" color="#0284c7" />
+                          ) : (
+                            <>
+                              <Feather
+                                name="download"
+                                size={12}
+                                color="#0284c7"
+                              />
+                              <Text style={styles.subDownloadText}>Save</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Sub-links */}
+            {links.length > 0 && (
+              <View style={styles.subLinksContainer}>
+                {links.map((lnk, idx) => (
+                  <TouchableOpacity
+                    key={`sub-lnk-${idx}`}
+                    style={styles.subLinkCard}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      handleOpen(lnk.url, lnk.title || undefined, true)
+                    }
+                    accessible={true}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Open link ${lnk.title || lnk.url}`}
+                  >
+                    <View style={styles.subLinkIconDot}>
+                      <Feather name="link-2" size={13} color="#0284c7" />
+                    </View>
+                    <Text style={styles.subLinkText} numberOfLines={1}>
+                      {lnk.title || lnk.url}
+                    </Text>
+                    <Feather
+                      name="external-link"
+                      size={12}
+                      color="#0284c7"
+                      style={{ marginLeft: "auto" }}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Fallback Drive URL */}
+            {item.driveUrl &&
+              item.driveUrl !== "https://drive.google.com" &&
+              links.length === 0 && (
+                <TouchableOpacity
+                  style={styles.openDriveBtn}
+                  activeOpacity={0.75}
+                  onPress={() => handleOpen(item.driveUrl, undefined, true)}
+                >
+                  <Feather
+                    name="link-2"
+                    size={12}
+                    color="#0284c7"
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={styles.openDriveText}>
+                    Open Primary Resource Link
+                  </Text>
+                  <Feather
+                    name="arrow-up-right"
+                    size={12}
+                    color="#0284c7"
+                    style={{ marginLeft: 3 }}
+                  />
+                </TouchableOpacity>
+              )}
+
+            {/* Uploader Attribution */}
+            <View style={styles.uploaderRow}>
+              <Text style={styles.uploaderText}>
+                Uploaded by {item.uploader?.name || "Member"}
+              </Text>
+            </View>
           </View>
         )}
-
-        {/* Footer: External Drive / Web link (if provided) */}
-        {item.driveUrl && item.driveUrl !== "https://drive.google.com" ? (
-          <View style={styles.footerRow}>
-            <TouchableOpacity
-              style={styles.openUrlBtn}
-              activeOpacity={0.75}
-              onPress={() => handleOpenLink(item.driveUrl)}
-              accessible={true}
-              accessibilityRole="link"
-              accessibilityLabel="Open document link"
-            >
-              <Feather
-                name="link-2"
-                size={12}
-                color="#0284c7"
-                style={{ marginRight: 5 }}
-              />
-              <Text style={styles.openUrlText} numberOfLines={1}>
-                Open Resource Link
-              </Text>
-              <Feather
-                name="arrow-up-right"
-                size={12}
-                color="#0284c7"
-                style={{ marginLeft: 3 }}
-              />
-            </TouchableOpacity>
-          </View>
-        ) : null}
       </View>
     );
   }
 );
 
 const styles = StyleSheet.create({
-  card: {
+  cardRow: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "rgba(15, 23, 42, 0.06)",
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.07)",
+    overflow: "hidden",
+  },
+  cardRowFirst: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderTopWidth: 1,
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  cardRowLast: {
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    borderBottomWidth: 1,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
+    marginBottom: 16,
   },
-  headerRow: {
+  rowMain: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  iconCircle: {
-    width: 38,
-    height: 38,
+  badgeContainer: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 14,
   },
-  titleCol: {
+  textCol: {
     flex: 1,
-    paddingRight: 8,
+    justifyContent: "center",
+    paddingRight: 10,
   },
   title: {
     fontFamily,
     fontSize: 14.5,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0f172a",
     lineHeight: 20,
-    marginBottom: 3,
+    marginBottom: 2,
   },
-  uploaderText: {
+  subtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  subtitle: {
     fontFamily,
     fontSize: 11.5,
     fontWeight: "500",
     color: "#64748b",
   },
-  deleteBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: "#fef2f2",
+  rightCol: {
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
-  description: {
-    fontFamily,
-    fontSize: 12.5,
-    color: "#475569",
-    lineHeight: 18,
-    marginTop: 10,
-  },
-  attachmentsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 12,
-  },
-  attachmentPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#eff6ff",
-    borderRadius: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.12)",
-    maxWidth: "100%",
-  },
-  attachmentName: {
+  dateText: {
     fontFamily,
     fontSize: 11.5,
     fontWeight: "600",
-    color: "#1e40af",
-    maxWidth: 220,
+    color: "#64748b",
+    marginBottom: 3,
   },
-  footerRow: {
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(15, 23, 42, 0.04)",
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  openUrlBtn: {
+  actionsRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  downloadIconBtn: {
+    width: 27,
+    height: 27,
+    borderRadius: 7,
     backgroundColor: "#f0f9ff",
+    borderWidth: 1,
+    borderColor: "rgba(2, 132, 199, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  linkIconBtn: {
+    width: 27,
+    height: 27,
+    borderRadius: 7,
+    backgroundColor: "#f0f9ff",
+    borderWidth: 1,
+    borderColor: "rgba(2, 132, 199, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteBtn: {
+    width: 27,
+    height: 27,
+    borderRadius: 7,
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expandedContent: {
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(15, 23, 42, 0.05)",
+  },
+  descriptionBox: {
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.06)",
+  },
+  descriptionText: {
+    fontFamily,
+    fontSize: 12,
+    color: "#475569",
+    lineHeight: 18,
+  },
+  subFilesContainer: {
+    gap: 7,
+    marginBottom: 8,
+  },
+  subFileCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
     paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.08)",
+  },
+  subFileIconDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 9,
+  },
+  subFileInfo: {
+    flex: 1,
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  subFileName: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  subFileSize: {
+    fontFamily,
+    fontSize: 10.5,
+    color: "#64748b",
+    marginTop: 1,
+  },
+  subFileActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  subActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 6,
+    gap: 4,
+  },
+  subActionText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  subDownloadBtn: {
+    backgroundColor: "#f0f9ff",
+    borderWidth: 1,
+    borderColor: "rgba(2, 132, 199, 0.2)",
+  },
+  subDownloadText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#0284c7",
+  },
+  subLinksContainer: {
+    gap: 6,
+    marginBottom: 8,
+  },
+  subLinkCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: "rgba(2, 132, 199, 0.15)",
   },
-  openUrlText: {
+  subLinkIconDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: "#f0f9ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  subLinkText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0369a1",
+    flex: 1,
+    marginRight: 8,
+  },
+  openDriveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#f0f9ff",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(2, 132, 199, 0.15)",
+    marginBottom: 8,
+  },
+  openDriveText: {
     fontFamily,
     fontSize: 11.5,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0284c7",
+  },
+  uploaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  uploaderText: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "500",
+    color: "#94a3b8",
   },
 });
