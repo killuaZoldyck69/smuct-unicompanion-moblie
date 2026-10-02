@@ -2,11 +2,14 @@ export type AssessmentType = "ASSIGNMENT" | "QUIZ" | "PRESENTATION";
 export type SubmissionType = "ONLINE" | "HAND";
 
 export interface AttachmentItem {
+  id?: string;
   name: string;
-  url: string;
+  url?: string;
+  localUri?: string;
   size?: number;
   type?: string;
   publicId?: string;
+  mimeType?: string;
 }
 
 export interface LinkItem {

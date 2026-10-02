@@ -10,11 +10,12 @@ import { Feather } from "@expo/vector-icons";
 
 import { AssessmentAttachment } from "../types";
 import { formatFileSize } from "../utils";
-import { SubmissionLink, ActiveDrawerType } from "./types";
+import { SubmissionLink, ActiveDrawerType, StagedSubmissionAttachment } from "./types";
 import { styles } from "./styles";
 
 interface SubmissionOnlineContentProps {
-  files: AssessmentAttachment[];
+  files: (AssessmentAttachment | StagedSubmissionAttachment)[];
+
   links: SubmissionLink[];
   noteContent: string;
   activeDrawer: ActiveDrawerType;

@@ -13,7 +13,6 @@ import Toast from "react-native-toast-message";
 import { AttachmentItem, LinkItem } from "./types";
 import { BENTO, fontFamily } from "./constants";
 import { formatFileSize, getFileIcon } from "./utils";
-import { uploadMultipleFilesToCloudinary } from "@/services/cloudinary-service";
 
 interface Props {
   attachments: AttachmentItem[];
@@ -58,33 +57,26 @@ export const CourseworkAttachmentsSection: React.FC<Props> = ({
         return;
       }
 
-      setIsUploading(true);
-      const uploaded = await uploadMultipleFilesToCloudinary(
-        res.assets.map((asset) => ({
-          uri: asset.uri,
+      const newItems: AttachmentItem[] = res.assets.map((asset) => {
+        const ext = asset.name.split(".").pop()?.toLowerCase();
+        return {
+          id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          localUri: asset.uri,
           name: asset.name,
-          mimeType: asset.mimeType || undefined,
           size: asset.size || undefined,
-        })),
-      );
-
-      const newItems: AttachmentItem[] = uploaded.map((u) => ({
-        name: u.name,
-        url: u.secureUrl,
-        size: u.size,
-        type: u.type,
-      }));
+          type: ext || asset.mimeType || "file",
+          mimeType: asset.mimeType || undefined,
+        };
+      });
 
       onAddAttachments(newItems);
       Toast.show({ type: "success", text1: "Files Attached" });
     } catch (err: any) {
       Toast.show({
         type: "error",
-        text1: "File Upload Failed",
-        text2: err.message || "Failed to upload attached files.",
+        text1: "File Selection Error",
+        text2: err.message || "Failed to select attached files.",
       });
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -138,15 +130,11 @@ export const CourseworkAttachmentsSection: React.FC<Props> = ({
           activeOpacity={0.8}
         >
           <View style={[styles.actionIconCircle, { backgroundColor: "#dcfce7" }]}>
-            {isUploading ? (
-              <ActivityIndicator size="small" color={BENTO.mintText} />
-            ) : (
-              <Feather name="file-plus" size={15} color={BENTO.mintText} />
-            )}
+            <Feather name="file-plus" size={15} color={BENTO.mintText} />
           </View>
           <View style={styles.actionTextCol}>
             <Text style={[styles.actionBtnTitle, { color: BENTO.mintText }]}>
-              {isUploading ? "Uploading..." : "Attach Files"}
+              Attach Files
             </Text>
             <Text style={[styles.actionBtnSubtitle, { color: "#166534" }]}>
               PDF, PPT, Word, Images

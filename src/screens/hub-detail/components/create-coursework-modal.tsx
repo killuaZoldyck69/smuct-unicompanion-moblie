@@ -29,6 +29,11 @@ import {
   CourseworkInstructionsInput,
   CourseworkSubmitBar,
 } from "./create-coursework";
+import Toast from "react-native-toast-message";
+import {
+  uploadMultipleFilesToCloudinary,
+  deleteFileFromCloudinaryApi,
+} from "@/services/cloudinary-service";
 
 export default function CreateCourseworkModal({
   isVisible,
@@ -54,38 +59,97 @@ export default function CreateCourseworkModal({
 
   const handleClose = useCallback(() => {
     if (isPending || isUploading) return;
+    attachments.forEach((item) => {
+      if (item.url && item.localUri) {
+        deleteFileFromCloudinaryApi(item.url).catch(() => {});
+      }
+    });
     onClose();
-  }, [isPending, isUploading, onClose]);
+  }, [isPending, isUploading, attachments, onClose]);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!form.title.trim() || !form.totalMarks.trim() || isPending || isUploading) {
       return;
     }
 
-    onSubmit({
-      title: form.title.trim(),
-      description: form.description.trim() || undefined,
-      type: form.type,
-      submissionType: form.submissionType,
-      totalMarks: parseFloat(form.totalMarks) || 100,
-      deadline: deadline.toISOString(),
-      allowLateSubmission: form.allowLateSubmission,
-      attachments: attachments.length > 0 ? attachments : undefined,
-      links: links.length > 0 ? links : undefined,
-    });
+    setIsUploading(true);
+    try {
+      let finalAttachments: AttachmentItem[] = [];
 
-    // Reset Form State
-    setForm({
-      title: "",
-      description: "",
-      type: "ASSIGNMENT",
-      submissionType: "ONLINE",
-      totalMarks: "100",
-      allowLateSubmission: false,
-    });
-    setAttachments([]);
-    setLinks([]);
-    setDeadline(getInitialDeadline());
+      if (attachments.length > 0) {
+        const filesNeedingUpload = attachments.filter((a) => !a.url && a.localUri);
+        const alreadyUploaded = attachments.filter((a) => Boolean(a.url));
+
+        let newUploaded: AttachmentItem[] = [];
+        if (filesNeedingUpload.length > 0) {
+          const uploaded = await uploadMultipleFilesToCloudinary(
+            filesNeedingUpload.map((f) => ({
+              uri: f.localUri!,
+              name: f.name,
+              mimeType: f.mimeType,
+              size: f.size,
+            }))
+          );
+
+          setAttachments((prev) =>
+            prev.map((item) => {
+              const match = uploaded.find((u) => u.name === item.name);
+              return match ? { ...item, url: match.secureUrl } : item;
+            })
+          );
+
+          newUploaded = uploaded.map((u) => ({
+            name: u.name,
+            url: u.secureUrl,
+            size: u.size,
+            type: u.type,
+          }));
+        }
+
+        finalAttachments = [
+          ...alreadyUploaded.map((a) => ({
+            name: a.name,
+            url: a.url!,
+            size: a.size,
+            type: a.type,
+          })),
+          ...newUploaded,
+        ];
+      }
+
+      await onSubmit({
+        title: form.title.trim(),
+        description: form.description.trim() || undefined,
+        type: form.type,
+        submissionType: form.submissionType,
+        totalMarks: parseFloat(form.totalMarks) || 100,
+        deadline: deadline.toISOString(),
+        allowLateSubmission: form.allowLateSubmission,
+        attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
+        links: links.length > 0 ? links : undefined,
+      });
+
+      // Reset Form State
+      setForm({
+        title: "",
+        description: "",
+        type: "ASSIGNMENT",
+        submissionType: "ONLINE",
+        totalMarks: "100",
+        allowLateSubmission: false,
+      });
+      setAttachments([]);
+      setLinks([]);
+      setDeadline(getInitialDeadline());
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Publish Failed",
+        text2: err?.message || "Failed to upload attachments or create coursework.",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   }, [form, deadline, attachments, links, isPending, isUploading, onSubmit]);
 
   const handleAddAttachments = useCallback((newItems: AttachmentItem[]) => {
@@ -93,8 +157,12 @@ export default function CreateCourseworkModal({
   }, []);
 
   const handleRemoveAttachment = useCallback((idx: number) => {
+    const item = attachments[idx];
+    if (item?.url) {
+      deleteFileFromCloudinaryApi(item.url).catch(() => {});
+    }
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
-  }, []);
+  }, [attachments]);
 
   const handleAddLink = useCallback((link: LinkItem) => {
     setLinks((prev) => [...prev, link]);

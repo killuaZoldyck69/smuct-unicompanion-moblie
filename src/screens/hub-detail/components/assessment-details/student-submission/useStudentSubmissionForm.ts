@@ -12,13 +12,18 @@ import {
   MAX_FILE_SIZE_BYTES,
   MAX_FILE_COUNT,
 } from "../utils";
-import { uploadMultipleFilesToCloudinary } from "@/services/cloudinary-service";
+import {
+  uploadMultipleFilesToCloudinary,
+  deleteFileFromCloudinaryApi,
+} from "@/services/cloudinary-service";
 import {
   SubmissionLink,
   SubmissionMethod,
   ActiveDrawerType,
   StudentSubmissionPayload,
+  StagedSubmissionAttachment,
 } from "./types";
+
 
 interface UseStudentSubmissionFormProps {
   assessment: AssessmentData;
@@ -76,7 +81,7 @@ export function useStudentSubmissionForm({
   const [submissionMethod, setSubmissionMethod] = useState<SubmissionMethod>("ONLINE");
 
   // Submission Data State
-  const [files, setFiles] = useState<AssessmentAttachment[]>([]);
+  const [files, setFiles] = useState<StagedSubmissionAttachment[]>([]);
   const [links, setLinks] = useState<SubmissionLink[]>([]);
   const [noteContent, setNoteContent] = useState("");
 
@@ -112,7 +117,7 @@ export function useStudentSubmissionForm({
     }
   }, [mySub, assessment.submissionType]);
 
-  // Pick & Upload Files with Security & Size Validation
+  // Pick Files with Security & Size Validation (Deferred Upload)
   const handlePickFiles = useCallback(async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
@@ -159,42 +164,38 @@ export function useStudentSubmissionForm({
 
       if (validAssets.length === 0) return;
 
-      setIsUploadingFiles(true);
-      const uploaded = await uploadMultipleFilesToCloudinary(
-        validAssets.map((asset) => ({
-          uri: asset.uri,
-          name: asset.name,
-          mimeType: asset.mimeType || undefined,
-          size: asset.size || undefined,
-        }))
-      );
+      const newStaged: StagedSubmissionAttachment[] = validAssets.map((asset) => ({
+        name: asset.name,
+        localUri: asset.uri,
+        size: asset.size || undefined,
+        mimeType: asset.mimeType || undefined,
+        type: asset.name.split(".").pop()?.toLowerCase(),
+      }));
 
-      setFiles((prev) => [
-        ...prev,
-        ...uploaded.map((u) => ({
-          name: u.name,
-          url: u.secureUrl,
-          size: u.size,
-          type: u.type,
-        })),
-      ]);
-
+      setFiles((prev) => [...prev, ...newStaged]);
       Toast.show({ type: "success", text1: "Files Attached Successfully!" });
     } catch (err: any) {
       Toast.show({
         type: "error",
-        text1: "Upload Failed",
-        text2: err.message || "Failed to upload file",
+        text1: "Pick Error",
+        text2: err.message || "Failed to select file",
       });
-    } finally {
-      setIsUploadingFiles(false);
     }
   }, [files.length]);
 
   // Remove handlers
-  const handleRemoveFile = useCallback((idx: number) => {
+  const handleRemoveFile = useCallback(async (idx: number) => {
+    const target = files[idx];
     setFiles((prev) => prev.filter((_, i) => i !== idx));
-  }, []);
+
+    if (target?.url) {
+      try {
+        await deleteFileFromCloudinaryApi(target.url);
+      } catch (e) {
+        console.warn("Failed to delete removed submission file from Cloudinary:", e);
+      }
+    }
+  }, [files]);
 
   const handleRemoveLink = useCallback((idx: number) => {
     setLinks((prev) => prev.filter((_, i) => i !== idx));
@@ -252,8 +253,8 @@ export function useStudentSubmissionForm({
   const isClosed = isOverdue && !allowLate;
   const isLateActive = isOverdue && allowLate;
 
-  // Submit Action with security guard
-  const handleFormSubmit = useCallback(() => {
+  // Submit Action with security guard and deferred file upload
+  const handleFormSubmit = useCallback(async () => {
     if (isClosed) {
       Toast.show({
         type: "error",
@@ -273,14 +274,61 @@ export function useStudentSubmissionForm({
       return;
     }
 
-    onSubmit({
-      submittedUrl: links.length > 0 ? links[0].url : undefined,
-      content: noteContent || undefined,
-      attachments: files.length > 0 ? files : undefined,
-      links: links.length > 0 ? links : undefined,
-      status: "SUBMITTED",
-      isLate,
-    });
+    setIsUploadingFiles(true);
+    try {
+      const finalAttachments: AssessmentAttachment[] = [];
+      const pendingUploads: StagedSubmissionAttachment[] = [];
+
+      for (const f of files) {
+        if (f.url) {
+          finalAttachments.push({
+            name: f.name,
+            url: f.url,
+            size: f.size,
+            type: f.type,
+          });
+        } else if (f.localUri) {
+          pendingUploads.push(f);
+        }
+      }
+
+      if (pendingUploads.length > 0) {
+        const uploaded = await uploadMultipleFilesToCloudinary(
+          pendingUploads.map((item) => ({
+            uri: item.localUri!,
+            name: item.name,
+            mimeType: item.mimeType,
+            size: item.size,
+          }))
+        );
+
+        for (const u of uploaded) {
+          finalAttachments.push({
+            name: u.name,
+            url: u.secureUrl,
+            size: u.size,
+            type: u.type,
+          });
+        }
+      }
+
+      onSubmit({
+        submittedUrl: links.length > 0 ? links[0].url : undefined,
+        content: noteContent || undefined,
+        attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
+        links: links.length > 0 ? links : undefined,
+        status: "SUBMITTED",
+        isLate,
+      });
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Upload Failed",
+        text2: err.message || "Failed to upload files. Please try again.",
+      });
+    } finally {
+      setIsUploadingFiles(false);
+    }
   }, [isClosed, isOverdue, submissionMethod, links, noteContent, files, onSubmit]);
 
   const isOnlineEmpty = useMemo(() => {

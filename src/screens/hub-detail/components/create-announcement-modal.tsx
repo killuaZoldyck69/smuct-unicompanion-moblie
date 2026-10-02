@@ -17,7 +17,20 @@ import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import Toast from "react-native-toast-message";
 
-import { uploadMultipleFilesToCloudinary } from "@/services/cloudinary-service";
+import {
+  uploadMultipleFilesToCloudinary,
+  deleteFileFromCloudinaryApi,
+} from "@/services/cloudinary-service";
+
+interface StagedAnnouncementAttachment {
+  id: string;
+  name: string;
+  url?: string;
+  localUri?: string;
+  size?: number;
+  type?: string;
+  mimeType?: string;
+}
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -115,7 +128,7 @@ export default function CreateAnnouncementModal({
   const [linkTitle, setLinkTitle] = useState("");
   const [tempLinkUrl, setTempLinkUrl] = useState("");
   const [tempLinkTitle, setTempLinkTitle] = useState("");
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachments, setAttachments] = useState<StagedAnnouncementAttachment[]>([]);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
 
   useEffect(() => {
@@ -128,7 +141,17 @@ export default function CreateAnnouncementModal({
       setTempLinkUrl(u);
       setTempLinkTitle(t);
       setIsLinkDrawerOpen(false);
-      setAttachments(Array.isArray(initialData.attachments) ? initialData.attachments : []);
+      setAttachments(
+        Array.isArray(initialData.attachments)
+          ? initialData.attachments.map((a: any, i: number) => ({
+              id: `init-${i}-${a.url || a.name}`,
+              name: a.name || `Attachment ${i + 1}`,
+              url: a.url,
+              size: a.size,
+              type: a.type,
+            }))
+          : []
+      );
     } else {
       setContent("");
       setLinkUrl("");
@@ -175,6 +198,7 @@ export default function CreateAnnouncementModal({
     setIsLinkDrawerOpen(false);
   };
 
+  // Deferred upload: select files locally without uploading to Cloudinary
   const handlePickFiles = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
@@ -193,54 +217,110 @@ export default function CreateAnnouncementModal({
         return;
       }
 
-      setIsUploadingFiles(true);
-      const uploaded = await uploadMultipleFilesToCloudinary(
-        res.assets.map((asset) => ({
-          uri: asset.uri,
+      const newItems: StagedAnnouncementAttachment[] = res.assets.map((asset) => {
+        const ext = asset.name.split(".").pop()?.toLowerCase();
+        return {
+          id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          localUri: asset.uri,
           name: asset.name,
-          mimeType: asset.mimeType || undefined,
           size: asset.size || undefined,
-        })),
-      );
-
-      const newItems: Attachment[] = uploaded.map((u) => ({
-        name: u.name,
-        url: u.secureUrl,
-        size: u.size,
-        type: u.type,
-      }));
+          type: ext || asset.mimeType || "file",
+          mimeType: asset.mimeType || undefined,
+        };
+      });
 
       setAttachments((prev) => [...prev, ...newItems]);
       Toast.show({ type: "success", text1: "Files Attached" });
     } catch (err: any) {
       Toast.show({
         type: "error",
-        text1: "File Upload Failed",
-        text2: err.message || "Failed to upload attached files.",
+        text1: "Selection Failed",
+        text2: err.message || "Failed to pick file",
       });
-    } finally {
-      setIsUploadingFiles(false);
     }
   };
 
   const handleRemoveAttachment = (idx: number) => {
+    const item = attachments[idx];
+    if (item?.url && !initialData?.attachments?.some((a: any) => a.url === item.url)) {
+      deleteFileFromCloudinaryApi(item.url).catch(() => {});
+    }
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleClose = () => {
     if (isPending || isUploadingFiles) return;
+    attachments.forEach((item) => {
+      if (item.url && item.localUri && !initialData?.attachments?.some((a: any) => a.url === item.url)) {
+        deleteFileFromCloudinaryApi(item.url).catch(() => {});
+      }
+    });
     onClose();
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!content.trim() || isPending || isUploadingFiles) return;
 
-    onSubmit({
-      content: content.trim(),
-      attachedLinkUrl: linkUrl.trim() || undefined,
-      attachedLinkTitle: linkTitle.trim() || undefined,
-      attachments: attachments.length > 0 ? attachments : undefined,
-    });
+    setIsUploadingFiles(true);
+    try {
+      let finalAttachments: Attachment[] = [];
+
+      if (attachments.length > 0) {
+        const filesNeedingUpload = attachments.filter((a) => !a.url && a.localUri);
+        const alreadyUploaded = attachments.filter((a) => Boolean(a.url));
+
+        let newUploaded: Attachment[] = [];
+        if (filesNeedingUpload.length > 0) {
+          const uploaded = await uploadMultipleFilesToCloudinary(
+            filesNeedingUpload.map((f) => ({
+              uri: f.localUri!,
+              name: f.name,
+              mimeType: f.mimeType,
+              size: f.size,
+            }))
+          );
+
+          setAttachments((prev) =>
+            prev.map((item) => {
+              const match = uploaded.find((u) => u.name === item.name);
+              return match ? { ...item, url: match.secureUrl } : item;
+            })
+          );
+
+          newUploaded = uploaded.map((u) => ({
+            name: u.name,
+            url: u.secureUrl,
+            size: u.size,
+            type: u.type,
+          }));
+        }
+
+        finalAttachments = [
+          ...alreadyUploaded.map((a) => ({
+            name: a.name,
+            url: a.url!,
+            size: a.size,
+            type: a.type,
+          })),
+          ...newUploaded,
+        ];
+      }
+
+      await onSubmit({
+        content: content.trim(),
+        attachedLinkUrl: linkUrl.trim() || undefined,
+        attachedLinkTitle: linkTitle.trim() || undefined,
+        attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
+      });
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Publish Failed",
+        text2: err?.message || "Failed to upload attachments or post announcement.",
+      });
+    } finally {
+      setIsUploadingFiles(false);
+    }
   };
 
   const canSubmit = content.trim().length > 0 && !isUploadingFiles;
@@ -424,19 +504,15 @@ export default function CreateAnnouncementModal({
                     { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
                   ]}
                   onPress={handlePickFiles}
-                  disabled={isUploadingFiles || attachments.length >= 5}
+                  disabled={isUploadingFiles || isPending || attachments.length >= 5}
                   activeOpacity={0.8}
                 >
                   <View style={[styles.actionIconCircle, { backgroundColor: "#dcfce7" }]}>
-                    {isUploadingFiles ? (
-                      <ActivityIndicator size="small" color="#15803d" />
-                    ) : (
-                      <Feather name="file-plus" size={15} color="#15803d" />
-                    )}
+                    <Feather name="file-plus" size={15} color="#15803d" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.actionBtnTitle, { color: "#15803d" }]}>
-                      {isUploadingFiles ? "Uploading..." : "Attach Files"}
+                      Attach Files
                     </Text>
                     <Text style={[styles.actionBtnSubtitle, { color: "#166534" }]}>
                       PDF, PPT, Word, Images
@@ -605,18 +681,27 @@ export default function CreateAnnouncementModal({
           >
             <TouchableOpacity
               onPress={handleSubmit}
-              disabled={!canSubmit || isPending}
+              disabled={!canSubmit || isPending || isUploadingFiles}
               style={[
                 styles.publishBtn,
-                (!canSubmit || isPending) && styles.publishBtnDisabled,
+                (!canSubmit || isPending || isUploadingFiles) && styles.publishBtnDisabled,
               ]}
               activeOpacity={0.85}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={isEditing ? "Save changes" : "Publish announcement"}
             >
-              {isPending ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+              {isPending || isUploadingFiles ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <ActivityIndicator size="small" color="#ffffff" />
+                  <Text style={styles.publishBtnText}>
+                    {isUploadingFiles
+                      ? "Uploading attachments..."
+                      : isEditing
+                      ? "Saving changes..."
+                      : "Publishing..."}
+                  </Text>
+                </View>
               ) : (
                 <>
                   <Feather
