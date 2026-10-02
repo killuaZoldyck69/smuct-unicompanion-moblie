@@ -29,6 +29,8 @@ import {
   getAnnouncementsAPI,
   createAnnouncementAPI,
   addAnnouncementCommentAPI,
+  updateAnnouncementCommentAPI,
+  deleteAnnouncementCommentAPI,
   getDiscussionsAPI,
   createDiscussionAPI,
   replyDiscussionAPI,
@@ -356,8 +358,56 @@ export const useDeleteAnnouncement = (hubId: string) => {
 export const useAddAnnouncementComment = (hubId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ announcementId, content }: { announcementId: string; content: string }) =>
-      addAnnouncementCommentAPI(hubId, announcementId, content),
+    mutationFn: ({
+      announcementId,
+      content,
+      parentId,
+    }: {
+      announcementId: string;
+      content: string;
+      parentId?: string | null;
+    }) => addAnnouncementCommentAPI(hubId, announcementId, content, parentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
+    },
+  });
+};
+
+export const useUpdateAnnouncementComment = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      announcementId,
+      commentId,
+      content,
+    }: {
+      announcementId: string;
+      commentId: string;
+      content: string;
+    }) =>
+      updateAnnouncementCommentAPI(
+        hubId,
+        announcementId,
+        commentId,
+        content,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
+    },
+  });
+};
+
+export const useDeleteAnnouncementComment = (hubId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      announcementId,
+      commentId,
+    }: {
+      announcementId: string;
+      commentId: string;
+    }) =>
+      deleteAnnouncementCommentAPI(hubId, announcementId, commentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["announcements", hubId] });
     },

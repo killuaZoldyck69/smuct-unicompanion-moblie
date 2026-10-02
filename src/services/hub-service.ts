@@ -406,14 +406,41 @@ export const addAnnouncementComment = async (
   hubId: string,
   announcementId: string,
   content: string,
+  parentId?: string | null,
 ) => {
   const res = await api.post(
     `/hubs/${hubId}/announcements/${announcementId}/comments`,
-    { content },
+    { content, parentId: parentId || undefined },
   );
   return res.data?.data;
 };
 export const addAnnouncementCommentAPI = addAnnouncementComment;
+
+export const updateAnnouncementComment = async (
+  hubId: string,
+  announcementId: string,
+  commentId: string,
+  content: string,
+) => {
+  const res = await api.patch(
+    `/hubs/${hubId}/announcements/${announcementId}/comments/${commentId}`,
+    { content },
+  );
+  return res.data?.data;
+};
+export const updateAnnouncementCommentAPI = updateAnnouncementComment;
+
+export const deleteAnnouncementComment = async (
+  hubId: string,
+  announcementId: string,
+  commentId: string,
+) => {
+  const res = await api.delete(
+    `/hubs/${hubId}/announcements/${announcementId}/comments/${commentId}`,
+  );
+  return res.data?.data;
+};
+export const deleteAnnouncementCommentAPI = deleteAnnouncementComment;
 
 export const getDiscussions = async (hubId: string) => {
   const res = await api.get(`/hubs/${hubId}/discussions`);

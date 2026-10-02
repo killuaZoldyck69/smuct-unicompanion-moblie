@@ -23,6 +23,8 @@ import {
   useUpdateAnnouncement,
   useDeleteAnnouncement,
   useAddAnnouncementComment,
+  useUpdateAnnouncementComment,
+  useDeleteAnnouncementComment,
 } from "@/features/hubs/useHubs";
 
 const BENTO = {
@@ -51,6 +53,9 @@ interface StreamTabProps {
   canManage: boolean;
   canPostAnnouncement?: boolean;
   currentUserId?: string;
+  myRole?: string;
+  isTeacher?: boolean;
+  isCR?: boolean;
 }
 
 export default function StreamTab({
@@ -58,16 +63,30 @@ export default function StreamTab({
   canManage,
   canPostAnnouncement,
   currentUserId,
+  myRole,
+  isTeacher,
+  isCR,
 }: StreamTabProps) {
   const queryClient = useQueryClient();
 
-  const canPost = canPostAnnouncement !== undefined ? canPostAnnouncement : canManage;
+  const effectiveIsTeacher = Boolean(
+    isTeacher || (myRole || "").toUpperCase() === "TEACHER",
+  );
+  const effectiveIsCR = Boolean(
+    isCR || (myRole || "").toUpperCase() === "CR",
+  );
+  const canPost =
+    canPostAnnouncement !== undefined
+      ? canPostAnnouncement
+      : effectiveIsTeacher || effectiveIsCR;
 
   const { data: announcements, isLoading, isRefetching } = useAnnouncements(hubId);
   const createMutation = useCreateAnnouncement(hubId);
   const updateMutation = useUpdateAnnouncement(hubId);
   const deleteMutation = useDeleteAnnouncement(hubId);
   const commentMutation = useAddAnnouncementComment(hubId);
+  const updateCommentMutation = useUpdateAnnouncementComment(hubId);
+  const deleteCommentMutation = useDeleteAnnouncementComment(hubId);
 
   const [isComposerVisible, setIsComposerVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -138,20 +157,78 @@ export default function StreamTab({
     });
   };
 
-  const handleAddComment = (announcementId: string, content: string) => {
+  const handleAddComment = (
+    announcementId: string,
+    content: string,
+    parentId?: string | null,
+  ) => {
     commentMutation.mutate(
       {
         announcementId,
         content,
+        parentId,
       },
       {
         onSuccess: () => {
-          Toast.show({ type: "success", text1: "Comment added" });
+          Toast.show({
+            type: "success",
+            text1: parentId ? "Reply posted" : "Comment added",
+          });
         },
         onError: (err: any) => {
           Toast.show({
             type: "error",
-            text1: "Failed to add comment",
+            text1: parentId ? "Failed to post reply" : "Failed to add comment",
+            text2: err.response?.data?.message || err.message,
+          });
+        },
+      },
+    );
+  };
+
+  const handleEditComment = (
+    announcementId: string,
+    commentId: string,
+    content: string,
+  ) => {
+    updateCommentMutation.mutate(
+      {
+        announcementId,
+        commentId,
+        content,
+      },
+      {
+        onSuccess: () => {
+          Toast.show({ type: "success", text1: "Comment updated" });
+        },
+        onError: (err: any) => {
+          Toast.show({
+            type: "error",
+            text1: "Failed to update comment",
+            text2: err.response?.data?.message || err.message,
+          });
+        },
+      },
+    );
+  };
+
+  const handleDeleteComment = (
+    announcementId: string,
+    commentId: string,
+  ) => {
+    deleteCommentMutation.mutate(
+      {
+        announcementId,
+        commentId,
+      },
+      {
+        onSuccess: () => {
+          Toast.show({ type: "success", text1: "Comment deleted" });
+        },
+        onError: (err: any) => {
+          Toast.show({
+            type: "error",
+            text1: "Failed to delete comment",
             text2: err.response?.data?.message || err.message,
           });
         },
@@ -221,8 +298,17 @@ export default function StreamTab({
               item={item}
               currentUserId={currentUserId}
               canManage={canManage}
+              myRole={myRole}
+              isTeacher={effectiveIsTeacher}
+              isCR={effectiveIsCR}
               onAddComment={handleAddComment}
-              isAddingComment={commentMutation.isPending}
+              onEditComment={handleEditComment}
+              onDeleteComment={handleDeleteComment}
+              isAddingComment={
+                commentMutation.isPending ||
+                updateCommentMutation.isPending ||
+                deleteCommentMutation.isPending
+              }
               onEditPress={(ann) => {
                 setEditingItem(ann);
                 setIsComposerVisible(true);
