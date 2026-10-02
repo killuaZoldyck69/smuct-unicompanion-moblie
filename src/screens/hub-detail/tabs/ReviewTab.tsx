@@ -111,12 +111,15 @@ export default function ReviewTab({
             {/* 2. STUDENT ACTIONS & PINNED "YOUR REVIEW" CARD */}
             {!isTeacher && (
               <View style={styles.studentSection}>
-                {hasSubmitted && myReview ? (
-                  <MyReviewCard
-                    myReview={myReview}
-                    onEdit={handleOpenEditModal}
-                    onDelete={() => setIsDeleteModalVisible(true)}
-                  />
+                {hasSubmitted || myReview ? (
+                  myReview ? (
+                    <MyReviewCard
+                      myReview={myReview}
+                      reviewQuestions={reviewQuestions}
+                      onEdit={handleOpenEditModal}
+                      onDelete={() => setIsDeleteModalVisible(true)}
+                    />
+                  ) : null
                 ) : (
                   <ReviewPromptCard
                     isReviewOpen={isReviewOpen}
@@ -137,7 +140,9 @@ export default function ReviewTab({
             </View>
           </>
         }
-        renderItem={({ item }) => <ReviewCard item={item} />}
+        renderItem={({ item }) => (
+          <ReviewCard item={item} reviewQuestions={reviewQuestions} />
+        )}
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.centerContainer}>

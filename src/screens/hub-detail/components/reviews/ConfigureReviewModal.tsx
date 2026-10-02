@@ -59,7 +59,12 @@ export const ConfigureReviewModal: React.FC<ConfigureReviewModalProps> = React.m
         statusBarTranslucent={true}
         onRequestClose={onClose}
       >
-        <View style={styles.modalBackdrop}>
+        <View
+          style={[
+            styles.modalBackdrop,
+            { paddingTop: Math.max(insets.top + 16, 44) },
+          ]}
+        >
           {/* Backdrop tap to dismiss */}
           <TouchableOpacity
             style={styles.backdropTap}
@@ -74,7 +79,7 @@ export const ConfigureReviewModal: React.FC<ConfigureReviewModalProps> = React.m
             <View
               style={[
                 styles.modalSheet,
-                { paddingBottom: Math.max(insets.bottom + 14, 20) },
+                { paddingBottom: Math.max(insets.bottom, 12) + 8 },
               ]}
             >
               {/* Drag Handle */}
@@ -97,10 +102,11 @@ export const ConfigureReviewModal: React.FC<ConfigureReviewModalProps> = React.m
               </View>
 
               <ScrollView
-                style={{ marginTop: 12 }}
-                contentContainerStyle={{ paddingBottom: 16 }}
+                style={styles.scrollArea}
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                bounces={false}
               >
                 {/* Active Evaluation Switch */}
                 <View style={styles.switchRow}>
@@ -162,7 +168,10 @@ export const ConfigureReviewModal: React.FC<ConfigureReviewModalProps> = React.m
                     </TouchableOpacity>
                   </View>
                 </View>
+              </ScrollView>
 
+              {/* Fixed Footer with Save Settings Button */}
+              <View style={styles.modalFooter}>
                 <TouchableOpacity
                   style={styles.saveSettingsBtn}
                   onPress={onSave}
@@ -175,7 +184,7 @@ export const ConfigureReviewModal: React.FC<ConfigureReviewModalProps> = React.m
                     <Text style={styles.saveSettingsBtnText}>Save Settings</Text>
                   )}
                 </TouchableOpacity>
-              </ScrollView>
+              </View>
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -200,6 +209,7 @@ const styles = StyleSheet.create({
   keyboardWrap: {
     width: "100%",
     justifyContent: "flex-end",
+    maxHeight: "100%",
   },
   modalSheet: {
     backgroundColor: "#ffffff",
@@ -207,7 +217,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 26,
     paddingHorizontal: 20,
     paddingTop: 8,
-    maxHeight: SCREEN_HEIGHT * 0.88,
+    maxHeight: "100%",
     width: "100%",
   },
   dragHandleWrap: {
@@ -342,13 +352,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  scrollArea: {
+    marginTop: 10,
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  scrollContent: {
+    paddingBottom: 16,
+  },
+  modalFooter: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
+  },
   saveSettingsBtn: {
     backgroundColor: "#0f172a",
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
-    marginTop: 24,
-    marginBottom: 16,
   },
   saveSettingsBtnText: {
     fontFamily,

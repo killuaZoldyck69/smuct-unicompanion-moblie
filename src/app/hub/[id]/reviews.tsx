@@ -279,9 +279,10 @@ export default function HubReviewsScreen() {
                   ([questionIndex, answer]: any) => (
                     <View key={questionIndex} style={styles.answerItem}>
                       <Text style={styles.questionText}>
-                        Q:{" "}
-                        {hubDetails?.reviewQuestions?.[questionIndex] ||
-                          "Question"}
+                        {`Q${Number(questionIndex) + 1}: ${
+                          hubDetails?.reviewQuestions?.[questionIndex] ||
+                          `Question ${Number(questionIndex) + 1}`
+                        }`}
                       </Text>
                       <Text style={styles.answerText}>{answer}</Text>
                     </View>
@@ -380,8 +381,8 @@ export default function HubReviewsScreen() {
         />
       )}
 
-      {/* FAB - Only visible to students/CRs/TAs if reviews are open */}
-      {canReview && hubDetails?.isReviewOpen && (
+      {/* FAB - Only visible to students/CRs/TAs if reviews are open and user has not reviewed yet */}
+      {canReview && hubDetails?.isReviewOpen && !reviewsData?.hasSubmitted && !reviewsData?.myReview && (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => setIsReviewModalVisible(true)}
@@ -532,7 +533,18 @@ export default function HubReviewsScreen() {
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Write Review</Text>
               <TouchableOpacity
-                onPress={() => submitReviewMutation.mutate(reviewForm)}
+                onPress={() => {
+                  if (reviewsData?.hasSubmitted || reviewsData?.myReview) {
+                    Toast.show({
+                      type: "error",
+                      text1: "Already Submitted",
+                      text2: "You can only submit one review for each course.",
+                    });
+                    setIsReviewModalVisible(false);
+                    return;
+                  }
+                  submitReviewMutation.mutate(reviewForm);
+                }}
                 disabled={!reviewForm.rating || submitReviewMutation.isPending}
                 accessible={true}
                 accessibilityRole="button"

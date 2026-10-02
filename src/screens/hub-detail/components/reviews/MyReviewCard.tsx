@@ -1,16 +1,43 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { BENTO, fontFamily, RATING_LABELS, ReviewItem } from "./types";
 
 interface MyReviewCardProps {
   myReview: ReviewItem;
+  reviewQuestions?: string[];
   onEdit: () => void;
   onDelete: () => void;
 }
 
+const getQuestionLabel = (key: string, index: number, questions?: string[]): string => {
+  const trimmed = String(key).trim();
+  let num = index + 1;
+  let text = "";
+
+  if (/^\d+$/.test(trimmed)) {
+    const idx = parseInt(trimmed, 10);
+    num = idx + 1;
+    if (questions && questions[idx]) {
+      text = questions[idx].trim();
+    }
+  } else {
+    text = trimmed;
+  }
+
+  if (/^q\d+[:.\s-]/i.test(text)) {
+    return text;
+  }
+
+  if (text && !/^question\s*\d+$/i.test(text)) {
+    return `Q${num}: ${text}`;
+  }
+
+  return `Q${num}`;
+};
+
 export const MyReviewCard: React.FC<MyReviewCardProps> = React.memo(
-  ({ myReview, onEdit, onDelete }) => {
+  ({ myReview, reviewQuestions, onEdit, onDelete }) => {
     return (
       <View style={styles.card}>
         <View style={styles.header}>
@@ -27,16 +54,8 @@ export const MyReviewCard: React.FC<MyReviewCardProps> = React.memo(
             </View>
           </View>
 
-          {/* Edit & Delete Action Buttons */}
+          {/* Delete Action Button */}
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.actionIconButton}
-              onPress={onEdit}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Edit Review"
-            >
-              <Feather name="edit-2" size={14} color="#0f172a" />
-            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionIconButton, styles.deleteIconButton]}
               onPress={onDelete}
@@ -52,7 +71,7 @@ export const MyReviewCard: React.FC<MyReviewCardProps> = React.memo(
         <View style={styles.ratingRow}>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((s) => (
-              <Feather
+              <Ionicons
                 key={s}
                 name="star"
                 size={16}
@@ -73,12 +92,16 @@ export const MyReviewCard: React.FC<MyReviewCardProps> = React.memo(
         {/* Answers to Teacher Questions */}
         {myReview.answers && typeof myReview.answers === "object" && (
           <View style={styles.answersBox}>
-            {Object.entries(myReview.answers).map(([q, a], idx) => (
-              <View key={idx} style={styles.answerItem}>
-                <Text style={styles.answerQuestion}>{q}</Text>
-                <Text style={styles.answerText}>{String(a)}</Text>
-              </View>
-            ))}
+            {Object.entries(myReview.answers).map(([key, a], idx) => {
+              if (a === null || a === undefined || String(a).trim() === "") return null;
+              const questionText = getQuestionLabel(key, idx, reviewQuestions);
+              return (
+                <View key={key || idx} style={styles.answerItem}>
+                  <Text style={styles.answerQuestion}>{questionText}</Text>
+                  <Text style={styles.answerText}>{String(a)}</Text>
+                </View>
+              );
+            })}
           </View>
         )}
 

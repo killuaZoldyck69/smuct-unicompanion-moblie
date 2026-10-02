@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Linking,
   Image,
   Platform,
   ActivityIndicator,
@@ -68,7 +67,9 @@ const AnnouncementCard = ({
     }, 120);
   };
 
-  const isAuthor = currentUserId && (item.creatorId === currentUserId || item.creator?.id === currentUserId);
+  const isAuthor =
+    currentUserId &&
+    (item.creatorId === currentUserId || item.creator?.id === currentUserId);
   const canModify = isAuthor || canManage;
 
   const handleDelete = () => {
@@ -76,7 +77,9 @@ const AnnouncementCard = ({
   };
 
   // Parse attachments
-  const attachments: any[] = Array.isArray(item.attachments) ? item.attachments : [];
+  const attachments: any[] = Array.isArray(item.attachments)
+    ? item.attachments
+    : [];
   // Parse links
   const links: any[] = Array.isArray(item.links) ? item.links : [];
   // Parse comments
@@ -111,7 +114,9 @@ const AnnouncementCard = ({
             </View>
           )}
           <View>
-            <Text style={styles.userName}>{item.creator?.name || "Faculty"}</Text>
+            <Text style={styles.userName}>
+              {item.creator?.name || "Faculty"}
+            </Text>
             <View style={styles.dateRow}>
               <Feather
                 name="clock"
@@ -159,7 +164,9 @@ const AnnouncementCard = ({
       {attachments.length > 0 && (
         <View style={styles.attachmentsContainer}>
           {attachments.map((att: any, idx: number) => {
-            const isImg = att.type?.includes("image") || att.url?.match(/\.(jpg|jpeg|png|webp|gif)/i);
+            const isImg =
+              att.type?.includes("image") ||
+              att.url?.match(/\.(jpg|jpeg|png|webp|gif)/i);
             const isPdf = att.type?.includes("pdf") || att.url?.match(/\.pdf/i);
 
             return (
@@ -178,7 +185,12 @@ const AnnouncementCard = ({
                 <Text style={styles.attachmentFileName} numberOfLines={1}>
                   {att.name || `Attachment ${idx + 1}`}
                 </Text>
-                <Feather name="external-link" size={12} color="#94a3b8" style={{ marginLeft: 6 }} />
+                <Feather
+                  name="external-link"
+                  size={12}
+                  color="#94a3b8"
+                  style={{ marginLeft: 6 }}
+                />
               </TouchableOpacity>
             );
           })}
@@ -191,10 +203,21 @@ const AnnouncementCard = ({
           {item.attachedLinkUrl && (
             <TouchableOpacity
               style={styles.linkPill}
-              onPress={() => openDocumentOrLink(item.attachedLinkUrl, item.attachedLinkTitle || undefined, true)}
+              onPress={() =>
+                openDocumentOrLink(
+                  item.attachedLinkUrl,
+                  item.attachedLinkTitle || undefined,
+                  true,
+                )
+              }
               activeOpacity={0.7}
             >
-              <Feather name="link-2" size={14} color="#2563eb" style={{ marginRight: 8 }} />
+              <Feather
+                name="link-2"
+                size={14}
+                color="#2563eb"
+                style={{ marginRight: 8 }}
+              />
               <Text style={styles.linkText} numberOfLines={1}>
                 {item.attachedLinkTitle || item.attachedLinkUrl}
               </Text>
@@ -204,10 +227,17 @@ const AnnouncementCard = ({
             <TouchableOpacity
               key={idx}
               style={styles.linkPill}
-              onPress={() => openDocumentOrLink(link.url, link.title || undefined, true)}
+              onPress={() =>
+                openDocumentOrLink(link.url, link.title || undefined, true)
+              }
               activeOpacity={0.7}
             >
-              <Feather name="link-2" size={14} color="#2563eb" style={{ marginRight: 8 }} />
+              <Feather
+                name="link-2"
+                size={14}
+                color="#2563eb"
+                style={{ marginRight: 8 }}
+              />
               <Text style={styles.linkText} numberOfLines={1}>
                 {link.title || link.url}
               </Text>
@@ -280,7 +310,8 @@ const AnnouncementCard = ({
             <TouchableOpacity
               style={[
                 styles.commentSendBtn,
-                (!commentText.trim() || isAddingComment) && styles.commentSendBtnDisabled,
+                (!commentText.trim() || isAddingComment) &&
+                  styles.commentSendBtnDisabled,
               ]}
               onPress={handleSendComment}
               disabled={!commentText.trim() || isAddingComment}
@@ -304,7 +335,12 @@ const AnnouncementCard = ({
           {/* Comments List Below Composer */}
           {comments.length === 0 ? (
             <View style={styles.emptyCommentsBox}>
-              <Feather name="message-square" size={15} color="#94a3b8" style={{ marginRight: 6 }} />
+              <Feather
+                name="message-square"
+                size={15}
+                color="#94a3b8"
+                style={{ marginRight: 6 }}
+              />
               <Text style={styles.emptyCommentsText}>
                 No comments yet. Be the first to reply!
               </Text>
@@ -315,7 +351,10 @@ const AnnouncementCard = ({
                 return (
                   <View key={c.id || index} style={styles.commentRow}>
                     {c.author?.image ? (
-                      <Image source={{ uri: c.author.image }} style={styles.commentAvatar} />
+                      <Image
+                        source={{ uri: c.author.image }}
+                        style={styles.commentAvatar}
+                      />
                     ) : (
                       <View style={styles.commentAvatarFallback}>
                         <Text style={styles.commentAvatarText}>
@@ -325,7 +364,10 @@ const AnnouncementCard = ({
                     )}
                     <View style={styles.commentBubble}>
                       <View style={styles.commentMetaRow}>
-                        <Text style={styles.commentAuthorName} numberOfLines={1}>
+                        <Text
+                          style={styles.commentAuthorName}
+                          numberOfLines={1}
+                        >
                           {c.author?.name || "Student"}
                         </Text>
                         <Text style={styles.commentTimestamp}>

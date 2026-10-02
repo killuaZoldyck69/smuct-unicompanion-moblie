@@ -1,13 +1,40 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { BENTO, fontFamily, ReviewItem } from "./types";
 
 interface ReviewCardProps {
   item: ReviewItem;
+  reviewQuestions?: string[];
 }
 
-export const ReviewCard: React.FC<ReviewCardProps> = React.memo(({ item }) => {
+const getQuestionLabel = (key: string, index: number, questions?: string[]): string => {
+  const trimmed = String(key).trim();
+  let num = index + 1;
+  let text = "";
+
+  if (/^\d+$/.test(trimmed)) {
+    const idx = parseInt(trimmed, 10);
+    num = idx + 1;
+    if (questions && questions[idx]) {
+      text = questions[idx].trim();
+    }
+  } else {
+    text = trimmed;
+  }
+
+  if (/^q\d+[:.\s-]/i.test(text)) {
+    return text;
+  }
+
+  if (text && !/^question\s*\d+$/i.test(text)) {
+    return `Q${num}: ${text}`;
+  }
+
+  return `Q${num}`;
+};
+
+export const ReviewCard: React.FC<ReviewCardProps> = React.memo(({ item, reviewQuestions }) => {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -28,7 +55,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = React.memo(({ item }) => {
         {/* Star Rating Badge */}
         <View style={styles.starsRow}>
           {[1, 2, 3, 4, 5].map((s) => (
-            <Feather
+            <Ionicons
               key={s}
               name="star"
               size={13}
@@ -43,12 +70,16 @@ export const ReviewCard: React.FC<ReviewCardProps> = React.memo(({ item }) => {
       {/* Answers to Custom Questions */}
       {item.answers && typeof item.answers === "object" && (
         <View style={styles.answersContainer}>
-          {Object.entries(item.answers).map(([q, a], idx) => (
-            <View key={idx} style={styles.answerItem}>
-              <Text style={styles.answerQuestion}>{q}</Text>
-              <Text style={styles.answerText}>{String(a)}</Text>
-            </View>
-          ))}
+          {Object.entries(item.answers).map(([key, a], idx) => {
+            if (a === null || a === undefined || String(a).trim() === "") return null;
+            const questionLabel = getQuestionLabel(key, idx, reviewQuestions);
+            return (
+              <View key={key || idx} style={styles.answerItem}>
+                <Text style={styles.answerQuestion}>{questionLabel}</Text>
+                <Text style={styles.answerText}>{String(a)}</Text>
+              </View>
+            );
+          })}
         </View>
       )}
     </View>

@@ -13,7 +13,7 @@ import {
   Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { fontFamily, RATING_LABELS } from "./types";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -60,7 +60,12 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = React.memo(
         statusBarTranslucent={true}
         onRequestClose={onClose}
       >
-        <View style={styles.modalBackdrop}>
+        <View
+          style={[
+            styles.modalBackdrop,
+            { paddingTop: Math.max(insets.top + 16, 44) },
+          ]}
+        >
           {/* Backdrop tap to dismiss */}
           <TouchableOpacity
             style={styles.backdropTap}
@@ -75,7 +80,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = React.memo(
             <View
               style={[
                 styles.modalSheet,
-                { paddingBottom: Math.max(insets.bottom + 14, 20) },
+                { paddingBottom: Math.max(insets.bottom, 12) + 8 },
               ]}
             >
               {/* Drag Handle */}
@@ -102,7 +107,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = React.memo(
               </View>
 
               <ScrollView
-                style={{ marginTop: 8 }}
+                style={styles.scrollArea}
                 contentContainerStyle={{ paddingBottom: 16 }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
@@ -127,7 +132,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = React.memo(
                         style={styles.starTouch}
                         activeOpacity={0.7}
                       >
-                        <Feather
+                        <Ionicons
                           name="star"
                           size={32}
                           color={s <= rating ? "#f59e0b" : "#cbd5e1"}
@@ -165,23 +170,33 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = React.memo(
                     {reviewQuestions.map((q, idx) => (
                       <View key={idx} style={{ marginTop: 12 }}>
                         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
-                          <Text style={styles.questionTextLabel}>{q}</Text>
+                          <Text style={styles.questionTextLabel}>
+                            {/^q\d+[:.\s-]/i.test(q) ? q : `Q${idx + 1}: ${q}`}
+                          </Text>
                           <Text style={styles.optionalMiniBadge}>(Optional)</Text>
                         </View>
                         <TextInput
                           style={styles.input}
                           placeholder="Your answer (optional)..."
                           placeholderTextColor="#94a3b8"
-                          value={answers[q] || ""}
+                          value={answers[String(idx)] ?? answers[idx] ?? answers[q] ?? ""}
                           onChangeText={(val) =>
-                            setAnswers((prev) => ({ ...prev, [q]: val }))
+                            setAnswers((prev) => {
+                              const updated = { ...prev };
+                              if (q in updated) delete updated[q];
+                              updated[String(idx)] = val;
+                              return updated;
+                            })
                           }
                         />
                       </View>
                     ))}
                   </View>
                 )}
+              </ScrollView>
 
+              {/* Fixed Footer Action Button */}
+              <View style={styles.modalFooter}>
                 <TouchableOpacity
                   style={styles.submitConfirmBtn}
                   onPress={onSubmit}
@@ -196,7 +211,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = React.memo(
                     </Text>
                   )}
                 </TouchableOpacity>
-              </ScrollView>
+              </View>
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -221,6 +236,7 @@ const styles = StyleSheet.create({
   keyboardWrap: {
     width: "100%",
     justifyContent: "flex-end",
+    maxHeight: "100%",
   },
   modalSheet: {
     backgroundColor: "#ffffff",
@@ -228,7 +244,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 26,
     paddingHorizontal: 20,
     paddingTop: 8,
-    maxHeight: SCREEN_HEIGHT * 0.88,
+    maxHeight: "100%",
     width: "100%",
   },
   dragHandleWrap: {
@@ -377,13 +393,21 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     marginLeft: 6,
   },
+  scrollArea: {
+    marginTop: 8,
+    flexShrink: 1,
+  },
+  modalFooter: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
+  },
   submitConfirmBtn: {
     backgroundColor: "#0f172a",
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 16,
   },
   submitConfirmBtnText: {
     fontFamily,

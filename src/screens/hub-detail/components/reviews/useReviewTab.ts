@@ -123,12 +123,20 @@ export function useReviewTab({ hubId, isTeacher = false }: UseReviewTabProps) {
 
   // Student review submission & edit handlers
   const handleOpenCreateModal = useCallback(() => {
+    if (hasSubmitted || myReview) {
+      Toast.show({
+        type: "info",
+        text1: "Review already submitted",
+        text2: "You can only submit one review per course. You can edit your existing review.",
+      });
+      return;
+    }
     setIsEditMode(false);
     setRating(5);
     setComment("");
     setAnswers({});
     setIsSubmitModalVisible(true);
-  }, []);
+  }, [hasSubmitted, myReview]);
 
   const handleOpenEditModal = useCallback(() => {
     if (!myReview) return;
@@ -156,7 +164,16 @@ export function useReviewTab({ hubId, isTeacher = false }: UseReviewTabProps) {
     }
 
     const sanitizedComment = comment.trim() || undefined;
-    const sanitizedAnswers = Object.keys(answers).length > 0 ? answers : undefined;
+    const cleanAnswers: Record<string, string> = {};
+    if (answers && typeof answers === "object") {
+      Object.entries(answers).forEach(([k, v]) => {
+        const valStr = String(v ?? "").trim();
+        if (valStr.length > 0) {
+          cleanAnswers[k] = valStr;
+        }
+      });
+    }
+    const sanitizedAnswers = Object.keys(cleanAnswers).length > 0 ? cleanAnswers : undefined;
 
     if (isEditMode) {
       editMutation.mutate(
@@ -184,6 +201,15 @@ export function useReviewTab({ hubId, isTeacher = false }: UseReviewTabProps) {
         }
       );
     } else {
+      if (hasSubmitted || myReview) {
+        Toast.show({
+          type: "error",
+          text1: "Already Submitted",
+          text2: "You can only submit one evaluation per course. You can edit your existing evaluation.",
+        });
+        setIsSubmitModalVisible(false);
+        return;
+      }
       submitMutation.mutate(
         {
           rating,
@@ -210,7 +236,7 @@ export function useReviewTab({ hubId, isTeacher = false }: UseReviewTabProps) {
         }
       );
     }
-  }, [rating, comment, answers, isEditMode, editMutation, submitMutation]);
+  }, [rating, comment, answers, isEditMode, editMutation, submitMutation, hasSubmitted, myReview]);
 
   const handleDeleteReview = useCallback(() => {
     deleteMutation.mutate(undefined, {

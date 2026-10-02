@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { BENTO, fontFamily } from "./types";
 
 interface ReviewPromptCardProps {
@@ -14,7 +14,7 @@ export const ReviewPromptCard: React.FC<ReviewPromptCardProps> = React.memo(
       return (
         <View style={styles.promptCard}>
           <View style={styles.promptIconBox}>
-            <Feather name="star" size={20} color="#f59e0b" />
+            <Ionicons name="star" size={20} color="#f59e0b" />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.promptTitle}>Share Your Course Evaluation</Text>

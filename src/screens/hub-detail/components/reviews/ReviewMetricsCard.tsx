@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { BENTO, fontFamily, RatingDistribution } from "./types";
 
 interface ReviewMetricsCardProps {
@@ -59,11 +59,11 @@ export const ReviewMetricsCard: React.FC<ReviewMetricsCardProps> = React.memo(
             <Text style={styles.scoreText}>{averageRating > 0 ? averageRating : "—"}</Text>
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map((star) => (
-                <Feather
+                <Ionicons
                   key={star}
                   name="star"
                   size={14}
-                  color={star <= Math.round(Number(averageRating)) ? "#f59e0b" : "#cbd5e1"}
+                  color={star <= Math.round(Number(averageRating)) ? "#f59e0b" : "#e2e8f0"}
                 />
               ))}
             </View>
