@@ -243,7 +243,7 @@ export const updateMemberRole = async (
   memberId: string,
   role: string,
 ) => {
-  const res = await api.patch(`/hubs/${hubId}/members/${memberId}`, { role });
+  const res = await api.patch(`/hubs/${hubId}/members/${memberId}/role`, { role });
   return res.data?.data;
 };
 export const updateMemberRoleAPI = updateMemberRole;

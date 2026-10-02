@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   ReviewTabProps,
@@ -30,6 +31,7 @@ export default function ReviewTab({
   canSubmit,
   currentUserId,
 }: ReviewTabProps) {
+  const insets = useSafeAreaInsets();
   const {
     allReviews,
     otherReviews,
@@ -88,7 +90,10 @@ export default function ReviewTab({
         data={displayedReviews}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: Math.max(insets.bottom + 32, 56) },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}

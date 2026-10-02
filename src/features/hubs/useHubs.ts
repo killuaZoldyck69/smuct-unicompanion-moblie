@@ -66,6 +66,8 @@ export const useHubDetails = (hubId: string) => {
     queryKey: ["hubDetails", hubId],
     queryFn: () => getHubDetailsAPI(hubId),
     enabled: !!hubId,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };
 
@@ -163,6 +165,7 @@ export const useUpdateMemberRole = (hubId: string) => {
       updateMemberRoleAPI(hubId, memberId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
+      queryClient.invalidateQueries({ queryKey: ["myHubs"] });
     },
   });
 };
@@ -173,6 +176,7 @@ export const useRemoveMember = (hubId: string) => {
     mutationFn: (memberId: string) => removeMemberAPI(hubId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
+      queryClient.invalidateQueries({ queryKey: ["myHubs"] });
     },
   });
 };
