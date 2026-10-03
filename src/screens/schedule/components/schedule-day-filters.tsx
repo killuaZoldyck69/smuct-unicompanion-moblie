@@ -58,6 +58,7 @@ export const ScheduleDayFilters = React.memo(function ScheduleDayFilters({
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
         {/* "ALL" Pill / Card */}
@@ -171,11 +172,17 @@ export const ScheduleDayFilters = React.memo(function ScheduleDayFilters({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 16,
+    marginBottom: 8,
     marginHorizontal: -20,
+    overflow: "visible",
+  },
+  scrollView: {
+    overflow: "visible",
   },
   content: {
     paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 10,
     gap: CARD_GAP,
     alignItems: "center",
   },

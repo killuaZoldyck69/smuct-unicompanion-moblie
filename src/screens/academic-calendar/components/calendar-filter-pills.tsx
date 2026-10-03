@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from "react-native";
 import { BENTO_COLORS, fontFamily } from "../constants";
 
 export interface CalendarFilterItem {
@@ -24,6 +24,7 @@ export const CalendarFilterPills = React.memo(function CalendarFilterPills({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
         {filters.map((cat) => {
@@ -75,11 +76,17 @@ export const CalendarFilterPills = React.memo(function CalendarFilterPills({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 12,
+    marginBottom: 6,
+    overflow: "visible",
+  },
+  scrollView: {
+    overflow: "visible",
   },
   content: {
     paddingLeft: 20,
     paddingRight: 20,
+    paddingTop: 3,
+    paddingBottom: 8,
     gap: 8,
   },
   scrollEndSpacer: {
@@ -96,11 +103,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
     gap: 8,
-    ...BENTO_COLORS.shadow,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   pillActive: {
     backgroundColor: BENTO_COLORS.deepNavy,
     borderColor: BENTO_COLORS.deepNavy,
+    ...Platform.select({
+      ios: {
+        shadowColor: BENTO_COLORS.deepNavy,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.22,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   pillLabel: {
     fontFamily,
