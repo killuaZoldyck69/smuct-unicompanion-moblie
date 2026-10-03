@@ -15,10 +15,12 @@ interface SubmissionStatusBannerProps {
 
 export const SubmissionStatusBanner: React.FC<SubmissionStatusBannerProps> = React.memo(
   ({ assessment, mySub, isClosed, isLateActive }) => {
+    const isGraded = mySub?.marks !== null && mySub?.marks !== undefined;
+
     return (
       <>
-        {/* PREVIOUS SUBMISSION STATUS (IF ANY) */}
-        {mySub && (
+        {/* SUBMISSION RECEIPT STATUS (IF PENDING GRADE) */}
+        {mySub && !isGraded && (
           <View style={styles.mySubmissionCard}>
             <View style={styles.subStatusBadge}>
               <Feather
@@ -33,27 +35,41 @@ export const SubmissionStatusBanner: React.FC<SubmissionStatusBannerProps> = Rea
                   mySub.isLate && { color: "#b45309" },
                 ]}
               >
-                {mySub.marks !== null && mySub.marks !== undefined
-                  ? `Graded: ${mySub.marks} / ${assessment.totalMarks} Marks${mySub.isLate ? " (Late)" : ""}`
-                  : mySub.isLate
-                  ? "Submitted (Late)"
-                  : "Work Submitted"}
+                {mySub.isLate
+                  ? "Submitted (Late) • Waiting for grade"
+                  : "Work Submitted • Waiting for grade"}
               </Text>
             </View>
-            {mySub.feedback ? (
-              <View style={styles.feedbackBanner}>
-                <Text style={styles.feedbackBannerTitle}>Feedback:</Text>
-                <Text style={styles.feedbackBannerText}>{mySub.feedback}</Text>
-              </View>
-            ) : null}
             {isClosed && (
               <View style={styles.closedSubmissionLockNotice}>
-                <Feather name="lock" size={13} color="#b91c1c" style={{ marginRight: 6 }} />
+                <Feather
+                  name="lock"
+                  size={13}
+                  color="#b91c1c"
+                  style={{ marginRight: 6 }}
+                />
                 <Text style={styles.closedSubmissionLockText}>
                   Submissions are closed. Your submitted work is locked.
                 </Text>
               </View>
             )}
+          </View>
+        )}
+
+        {/* LOCKED NOTICE IF GRADED AND CLOSED */}
+        {mySub && isGraded && isClosed && (
+          <View style={[styles.mySubmissionCard, { marginBottom: 12 }]}>
+            <View style={styles.closedSubmissionLockNotice}>
+              <Feather
+                name="lock"
+                size={13}
+                color="#b91c1c"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.closedSubmissionLockText}>
+                Submissions are closed. Your submitted work is locked.
+              </Text>
+            </View>
           </View>
         )}
 
@@ -66,7 +82,9 @@ export const SubmissionStatusBanner: React.FC<SubmissionStatusBannerProps> = Rea
             <View style={styles.bannerTextCol}>
               <Text style={styles.closedBannerTitle}>Submissions Closed</Text>
               <Text style={styles.closedBannerDesc}>
-                The submission window for this coursework closed on {formatDueDate(assessment.deadline)}. Late submissions are not accepted.
+                The submission window for this coursework closed on{" "}
+                {formatDueDate(assessment.deadline)}. Late submissions are not
+                accepted.
               </Text>
             </View>
           </View>
@@ -78,7 +96,9 @@ export const SubmissionStatusBanner: React.FC<SubmissionStatusBannerProps> = Rea
             <View style={styles.bannerTextCol}>
               <Text style={styles.lateBannerTitle}>Late Submissions Allowed</Text>
               <Text style={styles.lateBannerDesc}>
-                The deadline has passed ({formatDueDate(assessment.deadline)}). Late submissions are accepted, but your submission will be marked as "Late".
+                The deadline has passed ({formatDueDate(assessment.deadline)}).
+                Late submissions are accepted, but your submission will be
+                marked as "Late".
               </Text>
             </View>
           </View>

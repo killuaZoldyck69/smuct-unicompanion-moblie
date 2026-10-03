@@ -29,7 +29,6 @@ import {
 } from "./assessment-details/types";
 import { getAssessmentTypeConfig } from "./assessment-details/utils";
 import { AssessmentHeroCard } from "./assessment-details/AssessmentHeroCard";
-import { AssessmentResourcesSection } from "./assessment-details/AssessmentResourcesSection";
 import { SubmissionsAnalyticsCard } from "./assessment-details/SubmissionsAnalyticsCard";
 import { TeacherSubmissionsList } from "./assessment-details/TeacherSubmissionsList";
 import { GradingModalSheet } from "./assessment-details/GradingModalSheet";
@@ -320,11 +319,6 @@ function AssessmentDetailsContent({
                 typeConfig={typeConfig}
                 statusLabel={statusLabel}
                 isOverdue={isOverdue}
-              />
-
-              <AssessmentResourcesSection
-                attachments={assessment.attachments}
-                links={assessment.links}
               />
 
               <SubmissionsAnalyticsCard

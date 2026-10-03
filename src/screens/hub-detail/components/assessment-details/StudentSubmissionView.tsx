@@ -7,7 +7,6 @@ import {
   AssessmentSubmission,
   AssessmentAttachment,
 } from "./types";
-import { AssessmentResourcesSection } from "./AssessmentResourcesSection";
 import {
   SubmissionLink,
   useStudentSubmissionForm,
@@ -79,21 +78,12 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* 1. TOP SUMMARY CARD */}
+          {/* 1. TOP UNIFIED SUMMARY CARD (Classwork Detail: Hero, Grade & Feedback, Instructions, Resources) */}
           <StudentHeroSummary
             assessment={assessment}
             typeConfig={typeConfig}
+            mySub={mySub}
           />
-
-          {/* 2. COURSEWORK RESOURCES & ATTACHMENTS (FROM TEACHER) */}
-          {hasResources && (
-            <View style={styles.resourcesWrapper}>
-              <AssessmentResourcesSection
-                attachments={assessment.attachments}
-                links={assessment.links}
-              />
-            </View>
-          )}
 
           {/* 3. PREVIOUS SUBMISSION STATUS & POLICY NOTICES */}
           <SubmissionStatusBanner

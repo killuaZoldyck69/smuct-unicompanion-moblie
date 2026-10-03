@@ -1,5 +1,15 @@
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from "react-native";
+import React, { useMemo, useState, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  Image,
+  Modal,
+  Dimensions,
+  Alert,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AssessmentData } from "./types";
 import {
@@ -20,6 +30,8 @@ interface ClassworkCardProps {
   canManage: boolean;
   onPress: (item: AssessmentData) => void;
   onOptionsPress?: (item: AssessmentData) => void;
+  onEdit?: (item: AssessmentData) => void;
+  onDelete?: (item: AssessmentData) => void;
   currentUserId?: string;
   isTeacher?: boolean;
 }
@@ -30,9 +42,56 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
     canManage,
     onPress,
     onOptionsPress,
+    onEdit,
+    onDelete,
     currentUserId,
     isTeacher,
   }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [menuCoords, setMenuCoords] = useState<{ top: number; right: number }>({
+      top: 0,
+      right: 16,
+    });
+    const moreBtnRef = useRef<View>(null);
+
+    const handleOpenMenu = () => {
+      if (moreBtnRef.current) {
+        moreBtnRef.current.measureInWindow((x, y, width, height) => {
+          const windowWidth = Dimensions.get("window").width;
+          const windowHeight = Dimensions.get("window").height;
+          const menuHeight = 110;
+
+          if (typeof y === "number" && !isNaN(y) && y > 0) {
+            let top = y + height + 6;
+            let right = Math.max(16, windowWidth - (x + width));
+            if (top + menuHeight > windowHeight - 20) {
+              top = Math.max(20, y - menuHeight - 6);
+            }
+            setMenuCoords({ top, right });
+          } else {
+            setMenuCoords({ top: 100, right: 16 });
+          }
+          setIsMenuOpen(true);
+        });
+      } else {
+        setMenuCoords({ top: 100, right: 16 });
+        setIsMenuOpen(true);
+      }
+    };
+
+    const handleEdit = () => {
+      setIsMenuOpen(false);
+      if (onEdit) {
+        onEdit(item);
+      } else if (onOptionsPress) {
+        onOptionsPress(item);
+      }
+    };
+
+    const handleDelete = () => {
+      setIsMenuOpen(false);
+      onDelete?.(item);
+    };
     const typeConfig = getAssessmentTypeConfig(item.type);
     const submissionTypeInfo = getSubmissionTypeInfo(item.submissionType);
     const remainingDaysInfo = getRemainingDaysInfo(item.deadline);
@@ -53,6 +112,21 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
 
     const isSubmitted = !!mySub;
     const isGraded = mySub?.marks !== null && mySub?.marks !== undefined;
+
+    const submittedCount = useMemo(() => {
+      if (item.submissionStats?.total !== undefined) return item.submissionStats.total;
+      return Array.isArray(item.submissions) ? item.submissions.length : 0;
+    }, [item.submissionStats, item.submissions]);
+
+    const gradedCount = useMemo(() => {
+      if (item.submissionStats?.graded !== undefined) return item.submissionStats.graded;
+      if (Array.isArray(item.submissions)) {
+        return item.submissions.filter(
+          (s: any) => s.marks !== null && s.marks !== undefined
+        ).length;
+      }
+      return 0;
+    }, [item.submissionStats, item.submissions]);
 
     return (
       <TouchableOpacity
@@ -159,107 +233,71 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                     {item.allowLateSubmission ? "Late OK" : "Strict"}
                   </Text>
                 </View>
-
-                {/* Submitted Tag */}
-                {isSubmitted && (
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      mySub?.isLate
-                        ? styles.statusBadgeLate
-                        : styles.statusBadgeSubmitted,
-                    ]}
-                  >
-                    <Feather
-                      name={mySub?.isLate ? "clock" : "check"}
-                      size={10}
-                      color={mySub?.isLate ? "#d97706" : "#16a34a"}
-                      style={{ marginRight: 3.5 }}
-                    />
-                    <Text
-                      style={[
-                        styles.statusBadgeText,
-                        mySub?.isLate
-                          ? styles.statusBadgeLateText
-                          : styles.statusBadgeSubmittedText,
-                      ]}
-                    >
-                      {mySub?.isLate ? "Submitted (Late)" : "Submitted"}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Graded Tag */}
-                {isGraded && (
-                  <View style={styles.statusBadgeGraded}>
-                    <Feather
-                      name="award"
-                      size={10}
-                      color="#7c3aed"
-                      style={{ marginRight: 3.5 }}
-                    />
-                    <Text style={styles.statusBadgeGradedText}>
-                      Graded • {mySub?.marks}/{item.totalMarks}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Teacher Submissions Count Tag */}
-                {isTeacher && !isSubmitted && (
-                  <View style={styles.statusBadgeTeacher}>
-                    <Feather
-                      name="users"
-                      size={10}
-                      color="#475569"
-                      style={{ marginRight: 3.5 }}
-                    />
-                    <Text style={styles.statusBadgeTeacherText}>
-                      {item.submissionStats
-                        ? `${item.submissionStats.total} submitted${
-                            item.submissionStats.graded > 0
-                              ? ` • ${item.submissionStats.graded} graded`
-                              : ""
-                          }`
-                        : `${item.submissions?.length || 0} submitted`}
-                    </Text>
-                  </View>
-                )}
               </View>
 
-              {canManage && onOptionsPress && (
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation?.();
-                    onOptionsPress(item);
-                  }}
-                  style={styles.moreBtn}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Classwork options"
-                >
-                  <Feather name="more-vertical" size={17} color="#64748b" />
-                </TouchableOpacity>
+              {canManage && (
+                <View collapsable={false} ref={moreBtnRef}>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleOpenMenu();
+                    }}
+                    style={styles.moreBtn}
+                    activeOpacity={0.6}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Classwork options"
+                  >
+                    <Feather name="more-vertical" size={18} color="#64748b" />
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 
-            {/* Classwork Title */}
-            <Text style={styles.classworkTitle}>{item.title}</Text>
+            {/* Classwork Title & Submitted Status */}
+            <View style={styles.titleRow}>
+              <Text style={styles.classworkTitle}>{item.title}</Text>
+              {isSubmitted && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    mySub?.isLate
+                      ? styles.statusBadgeLate
+                      : styles.statusBadgeSubmitted,
+                  ]}
+                >
+                  <Feather
+                    name={mySub?.isLate ? "clock" : "check"}
+                    size={10}
+                    color={mySub?.isLate ? "#d97706" : "#16a34a"}
+                    style={{ marginRight: 3.5 }}
+                  />
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      mySub?.isLate
+                        ? styles.statusBadgeLateText
+                        : styles.statusBadgeSubmittedText,
+                    ]}
+                  >
+                    {mySub?.isLate ? "Submitted (Late)" : "Submitted"}
+                  </Text>
+                </View>
+              )}
+            </View>
 
             {/* Due Date & Remaining Days Badge */}
             <View style={styles.dueRow}>
               <Text style={styles.dueText}>
                 Due: {formatDueDate(item.deadline)}
               </Text>
-              {remainingDaysInfo && !isSubmitted && (
+              {remainingDaysInfo && !isSubmitted && !(remainingDaysInfo.isOverdue && item.allowLateSubmission) && (
                 <View
                   style={[
                     styles.remainingBadge,
                     remainingDaysInfo.isOverdue
-                      ? item.allowLateSubmission
-                        ? styles.remainingBadgeLateAllowed
-                        : styles.remainingBadgeOverdue
+                      ? styles.remainingBadgeOverdue
                       : remainingDaysInfo.isUrgent
                         ? styles.remainingBadgeUrgent
                         : styles.remainingBadgeNormal,
@@ -268,9 +306,7 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                   <Feather
                     name={
                       remainingDaysInfo.isOverdue
-                        ? item.allowLateSubmission
-                          ? "clock"
-                          : "lock"
+                        ? "lock"
                         : remainingDaysInfo.isUrgent
                           ? "alert-circle"
                           : "clock"
@@ -278,9 +314,7 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                     size={10}
                     color={
                       remainingDaysInfo.isOverdue
-                        ? item.allowLateSubmission
-                          ? "#b45309"
-                          : "#dc2626"
+                        ? "#dc2626"
                         : remainingDaysInfo.isUrgent
                           ? "#b45309"
                           : "#475569"
@@ -291,30 +325,136 @@ export const ClassworkCard: React.FC<ClassworkCardProps> = React.memo(
                     style={[
                       styles.remainingBadgeText,
                       remainingDaysInfo.isOverdue
-                        ? item.allowLateSubmission
-                          ? styles.remainingBadgeTextLateAllowed
-                          : styles.remainingBadgeTextOverdue
+                        ? styles.remainingBadgeTextOverdue
                         : remainingDaysInfo.isUrgent
                           ? styles.remainingBadgeTextUrgent
                           : styles.remainingBadgeTextNormal,
                     ]}
                   >
                     {remainingDaysInfo.isOverdue
-                      ? item.allowLateSubmission
-                        ? "Late Submissions Open"
-                        : "Closed"
+                      ? "Closed"
                       : remainingDaysInfo.text}
                   </Text>
                 </View>
               )}
             </View>
 
-            {/* Max Marks */}
-            <Text style={styles.maxMarksText}>
-              Max Marks: {item.totalMarks}
-            </Text>
+            {/* Max Marks & Graded Tag Row */}
+            <View style={styles.marksRow}>
+              <Text style={styles.maxMarksText}>
+                Max Marks: {item.totalMarks}
+              </Text>
+              {/* Student View: Graded Tag */}
+              {!isTeacher && isGraded && (
+                <View style={styles.statusBadgeGraded}>
+                  <Feather
+                    name="award"
+                    size={10}
+                    color="#7c3aed"
+                    style={{ marginRight: 3.5 }}
+                  />
+                  <Text style={styles.statusBadgeGradedText}>
+                    Graded • {mySub?.marks}/{item.totalMarks}
+                  </Text>
+                </View>
+              )}
+
+              {/* Teacher View: Submissions & Graded Tags */}
+              {isTeacher && (
+                <>
+                  <View style={styles.teacherSubmittedBadge}>
+                    <Feather
+                      name="users"
+                      size={10}
+                      color="#0284c7"
+                      style={{ marginRight: 3.5 }}
+                    />
+                    <Text style={styles.teacherSubmittedBadgeText}>
+                      {submittedCount} submitted
+                    </Text>
+                  </View>
+
+                  <View style={styles.teacherGradedBadge}>
+                    <Feather
+                      name="award"
+                      size={10}
+                      color="#16a34a"
+                      style={{ marginRight: 3.5 }}
+                    />
+                    <Text style={styles.teacherGradedBadgeText}>
+                      {gradedCount} graded
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
           </View>
         </View>
+
+        {/* 3-Dots Dropdown Menu Modal */}
+        <Modal
+          visible={isMenuOpen}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsMenuOpen(false)}
+          statusBarTranslucent={true}
+        >
+          <TouchableOpacity
+            style={styles.menuBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsMenuOpen(false)}
+            accessible={false}
+          >
+            <View
+              style={[
+                styles.dropdownMenu,
+                {
+                  top: menuCoords.top,
+                  right: menuCoords.right,
+                },
+              ]}
+              onStartShouldSetResponder={() => true}
+            >
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                activeOpacity={0.7}
+                onPress={handleEdit}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Edit classwork"
+              >
+                <View
+                  style={[styles.dropdownIconBox, styles.dropdownIconBoxEdit]}
+                >
+                  <Feather name="edit-2" size={14} color="#2563eb" />
+                </View>
+                <Text style={styles.dropdownItemText}>Edit Classwork</Text>
+              </TouchableOpacity>
+
+              <View style={styles.dropdownDivider} />
+
+              <TouchableOpacity
+                style={[styles.dropdownItem, styles.dropdownItemDelete]}
+                activeOpacity={0.7}
+                onPress={handleDelete}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Delete classwork"
+              >
+                <View
+                  style={[styles.dropdownIconBox, styles.dropdownIconBoxDelete]}
+                >
+                  <Feather name="trash-2" size={14} color="#e11d48" />
+                </View>
+                <Text
+                  style={[styles.dropdownItemText, styles.dropdownItemTextDelete]}
+                >
+                  Delete Classwork
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </TouchableOpacity>
     );
   }
@@ -400,12 +540,74 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   moreBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    padding: 4,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "transparent",
+  },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.12)",
+  },
+  dropdownMenu: {
+    position: "absolute",
+    minWidth: 195,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: "rgba(19, 27, 46, 0.08)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 6,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  dropdownItemDelete: {},
+  dropdownIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  dropdownIconBoxEdit: {
+    backgroundColor: "#eff6ff",
+  },
+  dropdownIconBoxDelete: {
+    backgroundColor: "#fff1f2",
+  },
+  dropdownItemText: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#131b2e",
+    letterSpacing: -0.1,
+  },
+  dropdownItemTextDelete: {
+    color: "#e11d48",
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: "rgba(19, 27, 46, 0.06)",
+    marginVertical: 3,
+    marginHorizontal: 4,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 4,
   },
   classworkTitle: {
     fontFamily,
@@ -413,7 +615,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#0f172a",
     lineHeight: 20,
-    marginBottom: 4,
   },
   dueRow: {
     flexDirection: "row",
@@ -468,6 +669,13 @@ const styles = StyleSheet.create({
   },
   remainingBadgeTextLateAllowed: {
     color: "#b45309",
+  },
+  marksRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 3,
   },
   maxMarksText: {
     fontFamily,
@@ -533,6 +741,38 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "700",
     color: "#475569",
+  },
+  teacherSubmittedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    backgroundColor: "#f0f9ff",
+    borderColor: "#bae6fd",
+  },
+  teacherSubmittedBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#0284c7",
+  },
+  teacherGradedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+  },
+  teacherGradedBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#16a34a",
   },
   policyBadge: {
     flexDirection: "row",

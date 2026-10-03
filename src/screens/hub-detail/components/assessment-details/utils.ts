@@ -69,12 +69,19 @@ export const formatFileSize = (bytes?: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const ICONS = {
+  assignment: require("../../../../assets/icons/assignment.png"),
+  quiz: require("../../../../assets/icons/quiz.png"),
+  presentation: require("../../../../assets/icons/presentation.png"),
+} as const;
+
 export const getAssessmentTypeConfig = (type?: string): AssessmentTypeConfig => {
   const t = (type || "ASSIGNMENT").toUpperCase();
   if (t.includes("QUIZ") || t.includes("CT")) {
     return {
       label: "CT / Quiz",
       icon: "clipboard",
+      assetIcon: ICONS.quiz,
       badgeBg: "#EFF6FF",
       badgeText: "#2563EB",
       iconBg: "#EFF6FF",
@@ -86,6 +93,7 @@ export const getAssessmentTypeConfig = (type?: string): AssessmentTypeConfig => 
     return {
       label: "Presentation",
       icon: "monitor",
+      assetIcon: ICONS.presentation,
       badgeBg: "#ECFDF5",
       badgeText: "#059669",
       iconBg: "#ECFDF5",
@@ -108,6 +116,7 @@ export const getAssessmentTypeConfig = (type?: string): AssessmentTypeConfig => 
   return {
     label: "Assignment",
     icon: "file-text",
+    assetIcon: ICONS.assignment,
     badgeBg: "#FDF2F8",
     badgeText: "#C026D3",
     iconBg: "#FDF2F8",

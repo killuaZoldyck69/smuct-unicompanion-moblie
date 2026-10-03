@@ -109,13 +109,6 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
                       </View>
                     ) : null}
 
-                    {sub.isLate ? (
-                      <View style={styles.lateSubmissionBadge}>
-                        <Feather name="clock" size={10} color="#b45309" style={{ marginRight: 3 }} />
-                        <Text style={styles.lateSubmissionBadgeText}>Late Submission</Text>
-                      </View>
-                    ) : null}
-
                     <Text style={styles.submittedDateText}>
                       Submitted:{" "}
                       {new Date(sub.createdAt).toLocaleDateString([], {
@@ -127,21 +120,30 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
                     </Text>
                   </View>
 
-                  {/* Grade Pill */}
-                  <View
-                    style={[
-                      styles.gradeStatusPill,
-                      isGraded ? styles.gradePillGraded : styles.gradePillUngraded,
-                    ]}
-                  >
-                    <Text
+                  {/* Grade Pill & Late Submission Tag Column */}
+                  <View style={styles.gradeCol}>
+                    <View
                       style={[
-                        styles.gradeStatusPillText,
-                        isGraded ? styles.gradeTextGraded : styles.gradeTextUngraded,
+                        styles.gradeStatusPill,
+                        isGraded ? styles.gradePillGraded : styles.gradePillUngraded,
                       ]}
                     >
-                      {isGraded ? `${sub.marks}/${totalMarks} Marks` : "Ungraded"}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.gradeStatusPillText,
+                          isGraded ? styles.gradeTextGraded : styles.gradeTextUngraded,
+                        ]}
+                      >
+                        {isGraded ? `${sub.marks}/${totalMarks} Marks` : "Ungraded"}
+                      </Text>
+                    </View>
+
+                    {sub.isLate ? (
+                      <View style={styles.lateSubmissionBadge}>
+                        <Feather name="clock" size={9.5} color="#b45309" style={{ marginRight: 3 }} />
+                        <Text style={styles.lateSubmissionBadgeText}>Late Submission</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
 
@@ -290,7 +292,7 @@ const styles = StyleSheet.create({
   },
   subCardHeaderRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 8,
   },
   studentAvatar: {
@@ -338,22 +340,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#475569",
   },
+  gradeCol: {
+    alignItems: "flex-end",
+  },
   lateSubmissionBadge: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
     backgroundColor: "#fffbeb",
     borderWidth: 1,
     borderColor: "#fde68a",
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 6,
-    marginTop: 2,
-    marginBottom: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 9999,
+    marginTop: 4,
   },
   lateSubmissionBadgeText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "700",
     color: "#b45309",
   },

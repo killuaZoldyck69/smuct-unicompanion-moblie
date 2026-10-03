@@ -32,9 +32,37 @@ export const styles = StyleSheet.create({
   },
   heroTopRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 12,
-    gap: 8,
+    gap: 10,
+  },
+  heroTopContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  badgesCluster: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  publishedDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+  },
+  publishedDateText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  editedLabelText: {
+    fontFamily,
+    fontSize: 10.5,
+    color: "#94a3b8",
+    fontStyle: "italic",
+    fontWeight: "500",
   },
   typeIconBox: {
     width: 38,
@@ -72,6 +100,28 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
+  policyBadgePillSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 9999,
+  },
+  policyBadgePillLateSmall: {
+    backgroundColor: "#f0fdfa",
+    borderWidth: 1,
+    borderColor: "#99f6e4",
+  },
+  policyBadgePillStrictSmall: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  policyBadgeTextSmall: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+  },
   heroTitleText: {
     fontFamily,
     fontSize: 18,
@@ -103,25 +153,158 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#cbd5e1",
   },
+
+  // Grade & Feedback Box inside Card
+  gradeFeedbackBox: {
+    backgroundColor: "#faf5ff",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e9d5ff",
+    marginBottom: 10,
+  },
+  gradeHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  gradeIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f3e8ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  gradeScoreCol: {
+    flex: 1,
+  },
+  gradeScoreLabel: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#7e22ce",
+    letterSpacing: 0.5,
+    marginBottom: 1,
+  },
+  gradeScoreValue: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#581c87",
+  },
+  gradeTotalText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#7e22ce",
+  },
+  gradeLateText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#b45309",
+  },
+  feedbackContainer: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(126, 34, 206, 0.12)",
+  },
+  feedbackHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  feedbackLabel: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#6b21a8",
+  },
+  feedbackBody: {
+    fontFamily,
+    fontSize: 12.5,
+    color: "#3b0764",
+    lineHeight: 18,
+  },
+
+  // Instructions inside Card
   instructionsContainer: {
     backgroundColor: "#f8fafc",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
     borderColor: "rgba(15, 23, 42, 0.04)",
+    marginBottom: 10,
+  },
+  instructionsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
   },
   instructionsHeading: {
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: "#334155",
-    marginBottom: 4,
   },
   instructionsBody: {
     fontFamily,
     fontSize: 12.5,
     color: "#475569",
     lineHeight: 18,
+  },
+
+  // Resources inside Card
+  resourcesBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.04)",
+  },
+  resourcesHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  resourcesHeadingText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  resourceItemPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.06)",
+    marginBottom: 6,
+  },
+  resourceItemIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    backgroundColor: "#eff6ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  resourceItemDetails: {
+    flex: 1,
+  },
+  resourceItemName: {
+    fontFamily,
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  resourceItemMeta: {
+    fontFamily,
+    fontSize: 10.5,
+    color: "#64748b",
   },
 
   // 2. Resources Wrapper

@@ -30,8 +30,8 @@ import {
   ClassworkTabProps,
   AssessmentData,
   ClassworkCard,
-  ClassworkOptionsSheet,
   ClassworkEmptyState,
+  DeleteCourseworkModal,
 } from "../components/classwork";
 
 const fontFamily = Platform.select({
@@ -76,7 +76,7 @@ export default function ClassworkTab({
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<AssessmentData | null>(null);
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentData | null>(null);
-  const [optionsAssessment, setOptionsAssessment] = useState<AssessmentData | null>(null);
+  const [deletingAssessment, setDeletingAssessment] = useState<AssessmentData | null>(null);
 
   // Memoized Base Assessment List
   const assessmentList: AssessmentData[] = useMemo(
@@ -163,12 +163,25 @@ export default function ClassworkTab({
     [deleteMutation]
   );
 
+  const handleConfirmDelete = useCallback(() => {
+    if (!deletingAssessment) return;
+    deleteMutation.mutate(deletingAssessment.id, {
+      onSuccess: () => {
+        setDeletingAssessment(null);
+        Toast.show({ type: "success", text1: "Coursework Deleted" });
+      },
+      onError: (err: any) => {
+        Toast.show({
+          type: "error",
+          text1: "Delete Failed",
+          text2: err.response?.data?.message || err.message,
+        });
+      },
+    });
+  }, [deletingAssessment, deleteMutation]);
+
   const handleCardPress = useCallback((item: AssessmentData) => {
     setSelectedAssessment(item);
-  }, []);
-
-  const handleOptionsPress = useCallback((item: AssessmentData) => {
-    setOptionsAssessment(item);
   }, []);
 
   const handleRefresh = useCallback(() => {
@@ -184,10 +197,11 @@ export default function ClassworkTab({
         currentUserId={effectiveUserId}
         isTeacher={isTeacherRole}
         onPress={handleCardPress}
-        onOptionsPress={handleOptionsPress}
+        onEdit={(it) => setEditingAssessment(it)}
+        onDelete={(it) => setDeletingAssessment(it)}
       />
     ),
-    [canManage, effectiveUserId, isTeacherRole, handleCardPress, handleOptionsPress]
+    [canManage, effectiveUserId, isTeacherRole, handleCardPress]
   );
 
   return (
@@ -279,23 +293,26 @@ export default function ClassworkTab({
             }, 120);
           }}
           onDelete={(id) => {
+            const item =
+              assessmentList.find((a) => a.id === id) ||
+              currentSelectedAssessment;
             setSelectedAssessment(null);
-            handleDelete(id);
+            if (item) {
+              setDeletingAssessment(item);
+            } else {
+              handleDelete(id);
+            }
           }}
         />
       )}
 
-      {/* 3-Dots Options Bottom Sheet for Teacher & CR */}
-      <ClassworkOptionsSheet
-        item={optionsAssessment}
-        isVisible={!!optionsAssessment}
-        onClose={() => setOptionsAssessment(null)}
-        onEdit={(item) => {
-          setEditingAssessment(item);
-        }}
-        onDelete={(id) => {
-          handleDelete(id);
-        }}
+      {/* Soft Campus Bento Delete Confirmation Modal */}
+      <DeleteCourseworkModal
+        isVisible={!!deletingAssessment}
+        onClose={() => setDeletingAssessment(null)}
+        onConfirm={handleConfirmDelete}
+        assessment={deletingAssessment}
+        isPending={deleteMutation.isPending}
       />
     </View>
   );

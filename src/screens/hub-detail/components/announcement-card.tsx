@@ -9,6 +9,8 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Modal,
+  Dimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { formatDateTime12h, formatCardDateTime } from "@/utils/date-formatter";
@@ -88,7 +90,13 @@ const AnnouncementCard = ({
     id: string;
     originalContent: string;
   } | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; right: number }>({
+    top: 0,
+    right: 16,
+  });
   const commentInputRef = useRef<TextInput>(null);
+  const moreBtnRef = useRef<View>(null);
 
   const normalizedRole = (myRole || "").toUpperCase();
   const effectiveIsTeacher = Boolean(
@@ -172,6 +180,31 @@ const AnnouncementCard = ({
     onDeletePress?.(item);
   };
 
+  const handleOpenMenu = () => {
+    if (moreBtnRef.current) {
+      moreBtnRef.current.measureInWindow((x, y, width, height) => {
+        const windowWidth = Dimensions.get("window").width;
+        const windowHeight = Dimensions.get("window").height;
+        const menuHeight = 110;
+
+        if (typeof y === "number" && !isNaN(y) && y > 0) {
+          let top = y + height + 6;
+          let right = Math.max(16, windowWidth - (x + width));
+          if (top + menuHeight > windowHeight - 20) {
+            top = Math.max(20, y - menuHeight - 6);
+          }
+          setMenuCoords({ top, right });
+        } else {
+          setMenuCoords({ top: 100, right: 16 });
+        }
+        setIsMenuOpen(true);
+      });
+    } else {
+      setMenuCoords({ top: 100, right: 16 });
+      setIsMenuOpen(true);
+    }
+  };
+
   // Parse attachments
   const attachments: any[] = Array.isArray(item.attachments)
     ? item.attachments
@@ -249,29 +282,18 @@ const AnnouncementCard = ({
         </View>
 
         {(canEditAnnouncement || canDeleteAnnouncement) && (
-          <View style={styles.actionMenuRow}>
-            {onEditPress && canEditAnnouncement && (
-              <TouchableOpacity
-                onPress={() => onEditPress(item)}
-                style={styles.actionIconBtn}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Edit announcement"
-              >
-                <Feather name="edit-2" size={14} color="#64748b" />
-              </TouchableOpacity>
-            )}
-            {onDeletePress && canDeleteAnnouncement && (
-              <TouchableOpacity
-                onPress={handleDelete}
-                style={styles.actionIconBtn}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Delete announcement"
-              >
-                <Feather name="trash-2" size={14} color="#ef4444" />
-              </TouchableOpacity>
-            )}
+          <View collapsable={false} ref={moreBtnRef}>
+            <TouchableOpacity
+              onPress={handleOpenMenu}
+              style={styles.moreOptionsBtn}
+              activeOpacity={0.6}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Announcement options"
+            >
+              <Feather name="more-vertical" size={18} color="#64748b" />
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -860,6 +882,82 @@ const AnnouncementCard = ({
           )}
         </View>
       )}
+
+      {/* 3-Dots Dropdown Menu Modal */}
+      <Modal
+        visible={isMenuOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsMenuOpen(false)}
+        statusBarTranslucent={true}
+      >
+        <TouchableOpacity
+          style={styles.menuBackdrop}
+          activeOpacity={1}
+          onPress={() => setIsMenuOpen(false)}
+          accessible={false}
+        >
+          <View
+            style={[
+              styles.dropdownMenu,
+              {
+                top: menuCoords.top,
+                right: menuCoords.right,
+              },
+            ]}
+            onStartShouldSetResponder={() => true}
+          >
+            {canEditAnnouncement && onEditPress && (
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setIsMenuOpen(false);
+                  onEditPress(item);
+                }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Edit announcement"
+              >
+                <View style={[styles.dropdownIconBox, styles.dropdownIconBoxEdit]}>
+                  <Feather name="edit-2" size={14} color="#2563eb" />
+                </View>
+                <Text style={styles.dropdownItemText}>Edit Announcement</Text>
+              </TouchableOpacity>
+            )}
+
+            {canEditAnnouncement &&
+              canDeleteAnnouncement &&
+              onEditPress &&
+              onDeletePress && <View style={styles.dropdownDivider} />}
+
+            {canDeleteAnnouncement && onDeletePress && (
+              <TouchableOpacity
+                style={[styles.dropdownItem, styles.dropdownItemDelete]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setIsMenuOpen(false);
+                  handleDelete();
+                }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Delete announcement"
+              >
+                <View
+                  style={[styles.dropdownIconBox, styles.dropdownIconBoxDelete]}
+                >
+                  <Feather name="trash-2" size={14} color="#e11d48" />
+                </View>
+                <Text
+                  style={[styles.dropdownItemText, styles.dropdownItemTextDelete]}
+                >
+                  Delete Announcement
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -926,6 +1024,69 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: BENTO_COLORS.subtleText,
     fontWeight: "500",
+  },
+  moreOptionsBtn: {
+    padding: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.12)",
+  },
+  dropdownMenu: {
+    position: "absolute",
+    minWidth: 195,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: "rgba(19, 27, 46, 0.08)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 6,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  dropdownItemDelete: {},
+  dropdownIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  dropdownIconBoxEdit: {
+    backgroundColor: "#eff6ff",
+  },
+  dropdownIconBoxDelete: {
+    backgroundColor: "#fff1f2",
+  },
+  dropdownItemText: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: BENTO_COLORS.deepNavy,
+    letterSpacing: -0.1,
+  },
+  dropdownItemTextDelete: {
+    color: "#e11d48",
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: "rgba(19, 27, 46, 0.06)",
+    marginVertical: 3,
+    marginHorizontal: 4,
   },
   actionMenuRow: {
     flexDirection: "row",
