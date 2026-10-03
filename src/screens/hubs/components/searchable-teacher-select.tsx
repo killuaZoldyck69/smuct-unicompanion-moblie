@@ -395,19 +395,6 @@ export default function SearchableTeacherSelect({
                       <Text style={styles.departmentText} numberOfLines={1}>
                         {item.teacherProfile?.department || "Faculty of Sciences"}
                       </Text>
-
-                      {!!item.teacherProfile?.officeRoom && (
-                        <View style={styles.roomRow}>
-                          <Feather
-                            name="map-pin"
-                            size={11}
-                            color={BENTO_COLORS.subtleText}
-                          />
-                          <Text style={styles.roomText}>
-                            Room: {item.teacherProfile.officeRoom}
-                          </Text>
-                        </View>
-                      )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
