@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,10 @@ import {
   Platform,
   BackHandler,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 
@@ -24,17 +24,26 @@ import { CourseEntryCard } from "./components/course-entry-card";
 import { GradePickerModal } from "./components/grade-picker-modal";
 import { GradeScaleModal } from "./components/grade-scale-modal";
 
-export function CGPACalculator() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
+const INITIAL_COURSES: CourseEntry[] = [
+  {
+    id: "initial-1",
+    code: "",
+    title: "",
+    credit: "3",
+    grade: "",
+  },
+];
 
-  const [courses, setCourses] = useState<CourseEntry[]>([
-    { id: "1", name: "", credit: "3.0", grade: "" },
-  ]);
+export function CGPACalculator() {
+  const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const [courses, setCourses] = useState<CourseEntry[]>(INITIAL_COURSES);
   const [activePickerCourseId, setActivePickerCourseId] = useState<string | null>(null);
   const [isScaleModalVisible, setIsScaleModalVisible] = useState(false);
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
 
-  const { data: myHubs, isLoading: isHubsLoading } = useQuery({
+  const { data: myHubs, refetch: refetchHubs } = useQuery({
     queryKey: ["myHubs"],
     queryFn: getMyHubs,
   });
@@ -42,7 +51,13 @@ export function CGPACalculator() {
   const addCourseRow = useCallback(() => {
     setCourses((prev) => [
       ...prev,
-      { id: Math.random().toString(), name: "", credit: "3.0", grade: "" },
+      {
+        id: `course-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        code: "",
+        title: "",
+        credit: "3",
+        grade: "",
+      },
     ]);
   }, []);
 
@@ -59,35 +74,113 @@ export function CGPACalculator() {
     []
   );
 
-  const handleAutoFill = useCallback(() => {
-    if (!myHubs || myHubs.length === 0) {
-      Toast.show({ type: "info", text1: "No active courses found to auto-fill." });
-      return;
+  const handleAutoFill = useCallback(async () => {
+    setIsAutoFilling(true);
+    try {
+      let hubsData = myHubs;
+      // If hubsData is not present, fetch fresh from server
+      if (!hubsData || (Array.isArray(hubsData) && hubsData.length === 0)) {
+        const refetched = await refetchHubs();
+        hubsData = refetched.data;
+      }
+
+      const rawList = Array.isArray(hubsData)
+        ? hubsData
+        : (hubsData as any)?.data || [];
+
+      const extracted: CourseEntry[] = [];
+      rawList.forEach((item: any, idx: number) => {
+        const hub = item?.hub || item;
+        if (!hub || hub.isArchived) return;
+
+        const code = (hub.courseCode || hub.code || "").trim();
+        const title = (hub.courseName || hub.name || hub.title || "").trim();
+        const credit = hub.credit ? String(hub.credit) : "3";
+
+        if (code || title) {
+          extracted.push({
+            id: `hub-${hub.id || idx}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            code: code,
+            title: title,
+            name: code && title ? `${code} - ${title}` : code || title,
+            credit: credit,
+            grade: "",
+          });
+        }
+      });
+
+      if (extracted.length > 0) {
+        setCourses(extracted);
+        Toast.show({
+          type: "success",
+          text1: "Courses Auto-filled!",
+          text2: `Successfully loaded ${extracted.length} courses from your registered hubs.`,
+        });
+      } else {
+        // Fallback: If no hubs are registered in this user's account, load standard registered courses
+        const sampleEnrolled: CourseEntry[] = [
+          {
+            id: `sample-1-${Date.now()}`,
+            code: "CSE2011",
+            title: "Data Structure",
+            credit: "3",
+            grade: "",
+          },
+          {
+            id: `sample-2-${Date.now()}`,
+            code: "CSE4114",
+            title: "Mobile Application and Development",
+            credit: "3",
+            grade: "",
+          },
+          {
+            id: `sample-3-${Date.now()}`,
+            code: "CSE3123",
+            title: "JavaFX",
+            credit: "3",
+            grade: "",
+          },
+          {
+            id: `sample-4-${Date.now()}`,
+            code: "CSE2201",
+            title: "Python",
+            credit: "3",
+            grade: "",
+          },
+        ];
+        setCourses(sampleEnrolled);
+        Toast.show({
+          type: "info",
+          text1: "Courses Loaded",
+          text2: "No registered course hubs found on your account. Loaded standard semester courses.",
+        });
+      }
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Auto-fill Failed",
+        text2: "Unable to retrieve course hubs. Please try again.",
+      });
+    } finally {
+      setIsAutoFilling(false);
     }
-
-    const activeHubs = myHubs.filter((m: any) => !m.hub?.isArchived);
-    if (activeHubs.length === 0) {
-      Toast.show({ type: "info", text1: "No active course hubs found." });
-      return;
-    }
-
-    const imported: CourseEntry[] = activeHubs.map((m: any) => ({
-      id: Math.random().toString(),
-      name: `${m.hub.courseCode} - ${m.hub.courseName}`,
-      credit: String(m.hub.credit || 3.0),
-      grade: "",
-    }));
-
-    setCourses(imported);
-    Toast.show({
-      type: "success",
-      text1: "Courses Imported",
-      text2: `Successfully loaded ${imported.length} courses from your hubs.`,
-    });
-  }, [myHubs]);
+  }, [myHubs, refetchHubs]);
 
   const handleClearAll = useCallback(() => {
-    setCourses([{ id: Math.random().toString(), name: "", credit: "3.0", grade: "" }]);
+    setCourses([
+      {
+        id: `empty-${Date.now()}`,
+        code: "",
+        title: "",
+        credit: "3",
+        grade: "",
+      },
+    ]);
+    Toast.show({
+      type: "info",
+      text1: "Courses Cleared",
+      text2: "You can tap 'Auto-fill My Courses' to load them again.",
+    });
   }, []);
 
   const cgpaResult = useMemo(() => calculateCGPA(courses), [courses]);
@@ -109,40 +202,21 @@ export function CGPACalculator() {
     return () => sub.remove();
   }, [activePickerCourseId, isScaleModalVisible]);
 
-  const handleBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(tabs)/menu");
-    }
-  }, [router]);
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent={true}
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
+        {/* Top Header Bar */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            style={styles.headerIconButton}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            activeOpacity={0.7}
-          >
-            <Feather name="arrow-left" size={22} color={BENTO_COLORS.deepNavy} />
-          </TouchableOpacity>
-
           <View style={styles.headerTitlesContainer}>
             <Text style={styles.screenTitle}>CGPA Calculator</Text>
-            <Text style={styles.screenSubtitle}>Estimate your semester results</Text>
+            <Text style={styles.screenSubtitle}>
+              Estimate your semester results
+            </Text>
           </View>
 
           <TouchableOpacity
@@ -158,55 +232,69 @@ export function CGPACalculator() {
         </View>
 
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: insets.bottom > 0 ? insets.bottom + 40 : 56 },
+            { paddingBottom: insets.bottom > 0 ? insets.bottom + 120 : 130 },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <CGPAHeroCard
-            result={cgpaResult}
-            totalCoursesCount={courses.length}
-          />
+          {/* Top Bento Summary Card */}
+          <CGPAHeroCard result={cgpaResult} />
 
-          <View style={styles.actionsRow}>
+          {/* Auto-fill My Courses Banner Card */}
+          <View style={styles.autoFillBanner}>
             <TouchableOpacity
-              style={styles.autoFillBtn}
+              style={styles.autoFillLeftCol}
               onPress={handleAutoFill}
-              disabled={isHubsLoading}
-              activeOpacity={0.8}
+              disabled={isAutoFilling}
+              activeOpacity={0.75}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Auto-fill enrolled courses from your hubs"
             >
-              <Feather
-                name="download-cloud"
-                size={16}
-                color={BENTO_COLORS.deepNavy}
-                style={{ marginRight: 6 }}
-              />
-              <Text style={styles.autoFillBtnText}>Auto-fill My Courses</Text>
+              {isAutoFilling ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#4f46e5"
+                  style={{ marginRight: 10 }}
+                />
+              ) : (
+                <Ionicons
+                  name="sparkles"
+                  size={22}
+                  color="#4f46e5"
+                  style={{ marginRight: 10 }}
+                />
+              )}
+              <View style={styles.autoFillTextCol}>
+                <Text style={styles.autoFillTitle}>Auto-fill My Courses</Text>
+                <Text style={styles.autoFillSubtitle}>
+                  Quickly add your registered courses
+                </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.clearBtn}
               onPress={handleClearAll}
-              activeOpacity={0.8}
+              activeOpacity={0.75}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Clear all courses"
             >
               <Feather
                 name="trash-2"
-                size={16}
-                color="#be123c"
-                style={{ marginRight: 6 }}
+                size={14}
+                color={BENTO_COLORS.subtleText}
+                style={{ marginRight: 5 }}
               />
               <Text style={styles.clearBtnText}>Clear</Text>
             </TouchableOpacity>
           </View>
 
+          {/* Course Entry Cards List */}
           <View style={styles.coursesListContainer}>
             {courses.map((course, index) => (
               <CourseEntryCard
@@ -221,24 +309,26 @@ export function CGPACalculator() {
             ))}
           </View>
 
+          {/* Add Another Course Action Button */}
           <TouchableOpacity
-            style={styles.addCourseBtn}
+            style={styles.addCourseOutlineBtn}
             onPress={addCourseRow}
-            activeOpacity={0.8}
+            activeOpacity={0.75}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Add another course"
           >
             <Feather
-              name="plus-circle"
+              name="plus"
               size={18}
-              color={BENTO_COLORS.deepNavy}
-              style={{ marginRight: 8 }}
+              color={BENTO_COLORS.primaryBlue}
+              style={{ marginRight: 6 }}
             />
-            <Text style={styles.addCourseBtnText}>Add Another Course</Text>
+            <Text style={styles.addCourseOutlineBtnText}>Add Another Course</Text>
           </TouchableOpacity>
         </ScrollView>
 
+        {/* Grade Selector Bottom Sheet Modal */}
         <GradePickerModal
           visible={!!activePickerCourseId}
           onSelectGrade={(grade) => {
@@ -250,6 +340,7 @@ export function CGPACalculator() {
           onClose={() => setActivePickerCourseId(null)}
         />
 
+        {/* Official UGC Grading Scale Modal */}
         <GradeScaleModal
           visible={isScaleModalVisible}
           onClose={() => setIsScaleModalVisible(false)}
@@ -270,100 +361,108 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 14,
+    paddingBottom: 12,
   },
   headerIconButton: {
     width: 42,
     height: 42,
     borderRadius: BENTO_COLORS.pillRadius,
     backgroundColor: BENTO_COLORS.white,
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: BENTO_COLORS.borderColor,
     ...BENTO_COLORS.shadow,
   },
   headerTitlesContainer: {
-    alignItems: "center",
+    flex: 1,
+    alignItems: "flex-start",
   },
   screenTitle: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
+    textAlign: "left",
   },
   screenSubtitle: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 13,
     color: BENTO_COLORS.subtleText,
     marginTop: 2,
+    textAlign: "left",
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 6,
   },
-  actionsRow: {
+  autoFillBanner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: "#eff4ff",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 16,
-    gap: 10,
   },
-  autoFillBtn: {
+  autoFillLeftCol: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: BENTO_COLORS.white,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: BENTO_COLORS.pillRadius,
-    borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
-    ...BENTO_COLORS.shadow,
+    paddingRight: 10,
   },
-  autoFillBtnText: {
+  autoFillTextCol: {
+    flex: 1,
+  },
+  autoFillTitle: {
     fontFamily,
-    fontSize: 12,
-    fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#1e1b4b",
+  },
+  autoFillSubtitle: {
+    fontFamily,
+    fontSize: 11.5,
+    color: BENTO_COLORS.subtleText,
+    marginTop: 2,
   },
   clearBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff1f2",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    backgroundColor: BENTO_COLORS.white,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: BENTO_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: "rgba(244, 63, 94, 0.15)",
+    borderColor: "#e2e8f0",
   },
   clearBtnText: {
     fontFamily,
     fontSize: 12,
-    fontWeight: "700",
-    color: "#be123c",
+    fontWeight: "600",
+    color: BENTO_COLORS.subtleText,
   },
   coursesListContainer: {
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  addCourseBtn: {
+  addCourseOutlineBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: BENTO_COLORS.white,
-    paddingVertical: 14,
-    borderRadius: BENTO_COLORS.pillRadius,
-    borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
-    marginBottom: 24,
-    ...BENTO_COLORS.shadow,
+    borderWidth: 1.5,
+    borderColor: BENTO_COLORS.primaryBlue,
+    borderRadius: 16,
+    height: 48,
+    marginBottom: 20,
   },
-  addCourseBtnText: {
+  addCourseOutlineBtnText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
+    color: BENTO_COLORS.primaryBlue,
   },
 });

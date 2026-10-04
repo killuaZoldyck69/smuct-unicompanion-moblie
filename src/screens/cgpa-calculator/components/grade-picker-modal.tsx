@@ -6,7 +6,9 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
+  Pressable,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, GRADE_SCALE, fontFamily } from "../constants";
 
@@ -21,20 +23,43 @@ export const GradePickerModal = React.memo(function GradePickerModal({
   onSelectGrade,
   onClose,
 }: GradePickerModalProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
       transparent={true}
+      statusBarTranslucent={true}
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
-        <View style={styles.sheet}>
+        {/* Backdrop Press Area to Dismiss */}
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Dismiss grade selector"
+        />
+
+        {/* Bottom Sheet Card */}
+        <View
+          style={[
+            styles.sheet,
+            {
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 16,
+            },
+          ]}
+        >
+          {/* Top Sheet Drag Handle Indicator */}
+          <View style={styles.sheetHandle} />
+
+          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Select Expected Grade</Text>
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              activeOpacity={0.7}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Close grade selector"
@@ -43,7 +68,13 @@ export const GradePickerModal = React.memo(function GradePickerModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.gradesList} showsVerticalScrollIndicator={false}>
+          {/* Scrollable Grades List (Expands Naturally Without Giant Blank Gap) */}
+          <ScrollView
+            style={styles.gradesList}
+            contentContainerStyle={styles.gradesListContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
             {GRADE_SCALE.map((item) => (
               <TouchableOpacity
                 key={item.grade}
@@ -57,7 +88,12 @@ export const GradePickerModal = React.memo(function GradePickerModal({
                 accessibilityRole="button"
                 accessibilityLabel={`Grade ${item.grade}, ${item.point.toFixed(2)} grade points, ${item.marks}`}
               >
-                <View style={[styles.badge, { backgroundColor: item.color + "15" }]}>
+                <View
+                  style={[
+                    styles.badge,
+                    { backgroundColor: `${item.color}15` },
+                  ]}
+                >
                   <Text style={[styles.badgeText, { color: item.color }]}>
                     {item.grade}
                   </Text>
@@ -88,22 +124,34 @@ export const GradePickerModal = React.memo(function GradePickerModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
     justifyContent: "flex-end",
   },
   sheet: {
     backgroundColor: BENTO_COLORS.white,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    padding: 24,
-    maxHeight: "75%",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    maxHeight: "82%",
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: BENTO_COLORS.borderColor,
     ...BENTO_COLORS.shadow,
+  },
+  sheetHandle: {
+    width: 38,
+    height: 4.5,
+    borderRadius: 2.25,
+    backgroundColor: "#e2e8f0",
+    alignSelf: "center",
+    marginBottom: 12,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   title: {
     fontFamily,
@@ -120,12 +168,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   gradesList: {
-    maxHeight: 400,
+    flexGrow: 0,
+  },
+  gradesListContent: {
+    paddingBottom: 6,
   },
   gradeRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 14,
     marginBottom: 6,
@@ -141,7 +192,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
   },
   details: {

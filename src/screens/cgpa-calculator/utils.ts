@@ -2,65 +2,82 @@ import { CourseEntry, GRADE_MAP } from "./constants";
 
 export interface CGPAResult {
   totalCredits: number;
+  gradedCredits: number;
+  remainingCredits: number;
+  targetCredits: number;
   calculatedCGPA: string;
   coursesCount: number;
+  gradedCoursesCount: number;
   standingInfo: {
     text: string;
     color: string;
   };
 }
 
-export const calculateCGPA = (courses: CourseEntry[]): CGPAResult => {
+export const calculateCGPA = (
+  courses: CourseEntry[],
+  targetSemesterCredits = 20
+): CGPAResult => {
   let totalCredits = 0;
+  let gradedCredits = 0;
   let totalPoints = 0;
   let gradedCourses = 0;
 
   courses.forEach((c) => {
     const creditNum = parseFloat(c.credit);
-    const gradePoint = GRADE_MAP[c.grade];
-
-    if (!isNaN(creditNum) && creditNum > 0 && gradePoint !== undefined) {
+    if (!isNaN(creditNum) && creditNum > 0) {
       totalCredits += creditNum;
-      totalPoints += creditNum * gradePoint;
-      gradedCourses += 1;
+      const gradePoint = GRADE_MAP[c.grade];
+      if (gradePoint !== undefined) {
+        gradedCredits += creditNum;
+        totalPoints += creditNum * gradePoint;
+        gradedCourses += 1;
+      }
     }
   });
 
-  const gpaNum = totalCredits > 0 ? totalPoints / totalCredits : 0;
-  const gpaStr = totalCredits > 0 ? gpaNum.toFixed(2) : "0.00";
+  // Calculate target credits (e.g., standard 20, or if total is higher, nearest 5)
+  const targetCredits = Math.max(targetSemesterCredits, Math.ceil(totalCredits / 5) * 5 || 20);
+  const remainingCredits = Math.max(0, targetCredits - gradedCredits);
+
+  const gpaNum = gradedCredits > 0 ? totalPoints / gradedCredits : 0;
+  const gpaStr = gradedCredits > 0 ? gpaNum.toFixed(2) : "0.00";
 
   let standing = "Enter grades to estimate";
-  let standingColor = "#c1dcff";
+  let standingColor = "#3b5bf5";
 
-  if (totalCredits > 0) {
+  if (gradedCredits > 0) {
     if (gpaNum >= 3.75) {
       standing = "First Class / Excellent";
-      standingColor = "#34d399";
+      standingColor = "#059669";
     } else if (gpaNum >= 3.25) {
       standing = "Very Good Standing";
-      standingColor = "#60a5fa";
+      standingColor = "#2563eb";
     } else if (gpaNum >= 3.0) {
       standing = "Good Standing";
-      standingColor = "#93c5fd";
+      standingColor = "#0284c7";
     } else if (gpaNum >= 2.5) {
       standing = "Satisfactory";
-      standingColor = "#fde047";
+      standingColor = "#d97706";
     } else {
       standing = "Academic Probation Risk";
-      standingColor = "#f87171";
+      standingColor = "#dc2626";
     }
   }
 
   return {
-    totalCredits: Number(totalCredits.toFixed(2)),
+    totalCredits: Math.round(totalCredits * 10) / 10,
+    gradedCredits: Math.round(gradedCredits * 10) / 10,
+    remainingCredits: Math.round(remainingCredits * 10) / 10,
+    targetCredits,
     calculatedCGPA: gpaStr,
-    coursesCount: gradedCourses,
+    coursesCount: courses.length,
+    gradedCoursesCount: gradedCourses,
     standingInfo: { text: standing, color: standingColor },
   };
 };
 
 export const sanitizeCredit = (val: string): string => {
-  // Allow only digits and a single period
   const cleaned = val.replace(/[^0-9.]/g, "");
   const parts = cleaned.split(".");
   if (parts.length > 2) {
@@ -68,3 +85,4 @@ export const sanitizeCredit = (val: string): string => {
   }
   return cleaned;
 };
+

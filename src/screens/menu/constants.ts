@@ -161,7 +161,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/grades.png"),
     fallbackIcon: "percent",
     roles: ["STUDENT"],
-    route: "/cgpa-calculator" as Href,
+    route: "/(tabs)/cgpa-calculator" as Href,
   },
 
   // -------------------------------------------------------------
