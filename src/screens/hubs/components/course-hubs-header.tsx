@@ -33,7 +33,7 @@ export const CourseHubsHeader = React.memo(function CourseHubsHeader({
         <View style={styles.titleColumn}>
           <Text style={styles.title}>Course Hubs</Text>
           <Text style={styles.subtitle}>
-            Your classes, resources and academic journey — all in one place.
+            Your classes, resources — all in one place.
           </Text>
         </View>
 
@@ -117,14 +117,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily,
-    fontSize: 29,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
     letterSpacing: -0.6,
   },
   subtitle: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 13,
     color: BENTO_COLORS.textSecondary,
     lineHeight: 20,
     marginTop: 5,

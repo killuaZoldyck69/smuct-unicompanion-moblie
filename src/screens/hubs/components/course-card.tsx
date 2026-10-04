@@ -125,38 +125,25 @@ export const CourseCard = React.memo(function CourseCard({
       {/* Procedural Visual Theme Decoration */}
       <CourseDecorativeBackdrop theme={theme} />
 
-      {/* 1. TOP UTILITY ROW: CATEGORY ICON, LIVE BADGE, NAVIGATION CHEVRON */}
-      <View style={styles.topUtilityRow}>
-        <View style={styles.topUtilityLeft}>
-          <View
-            style={[
-              styles.categoryIconBadge,
-              { backgroundColor: "rgba(255, 255, 255, 0.85)" },
-            ]}
-          >
-            <Feather name={theme.iconName} size={15} color={theme.accent} />
+      {/* 1. LIVE BADGE (WHEN ACTIVE) */}
+      {hub.isClassLive && (
+        <View style={styles.liveRow}>
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
           </View>
-
-          {hub.isClassLive && (
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE</Text>
-            </View>
-          )}
         </View>
+      )}
 
-        <View
-          style={[
-            styles.chevronAffordance,
-            { backgroundColor: "rgba(255, 255, 255, 0.75)" },
-          ]}
-        >
-          <Feather name="arrow-up-right" size={16} color={theme.textPrimary} />
-        </View>
-      </View>
+      {/* 2. COURSE TITLE WITH CATEGORY ICON */}
+      <View style={styles.titleRow}>
+        <Feather
+          name={theme.iconName}
+          size={24}
+          color={theme.accent}
+          style={styles.courseIcon}
+        />
 
-      {/* 2. COURSE TITLE (STRONGEST ELEMENT) */}
-      <View style={styles.titleContainer}>
         <Text style={styles.courseTitle} numberOfLines={2}>
           {hub.courseName || "Untitled Course"}
         </Text>
@@ -225,39 +212,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  // 1. Top Utility Row
-  topUtilityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  topUtilityLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  categoryIconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  chevronAffordance: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
   // Live Class Badge
+  liveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -281,16 +241,24 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // 2. Course Title (Dominant content)
-  titleContainer: {
-    marginBottom: 10,
+  // Course Title Row (Category Icon + Title)
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 12,
+  },
+  courseIcon: {
+    marginTop: Platform.OS === "android" ? 2 : 1,
+    flexShrink: 0,
   },
   courseTitle: {
+    flex: 1,
     fontFamily,
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "800",
     color: "#0f172a",
-    lineHeight: 26,
+    lineHeight: 25,
     letterSpacing: -0.3,
   },
 

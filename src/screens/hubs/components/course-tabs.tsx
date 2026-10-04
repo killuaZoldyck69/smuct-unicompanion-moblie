@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44, // Ensures touch target >= 44x44
+    minHeight: 40,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 12,
