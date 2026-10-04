@@ -27,6 +27,20 @@ export const formatEventDate = (
   );
 };
 
+export const getEventDateComponents = (dateStr: string | undefined) => {
+  if (!dateStr) {
+    return { month: "TBA", dayNumber: "--", weekday: "---" };
+  }
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    return { month: "TBA", dayNumber: "--", weekday: "---" };
+  }
+  const month = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+  const dayNumber = String(d.getDate()).padStart(2, "0");
+  const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
+  return { month, dayNumber, weekday };
+};
+
 export const formatEventTime = (dateStr: string | undefined): string => {
   if (!dateStr) return "TBA";
   const d = new Date(dateStr);

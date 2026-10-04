@@ -19,3 +19,13 @@ export interface CreateCampusEventInput {
   category?: string;
   registrationLink?: string;
 }
+
+export interface UpdateCampusEventInput {
+  title?: string;
+  description?: string;
+  eventDate?: string | Date;
+  location?: string;
+  organizer?: string;
+  category?: string;
+  registrationLink?: string;
+}
