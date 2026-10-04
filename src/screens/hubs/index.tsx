@@ -14,7 +14,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
@@ -22,13 +22,16 @@ import Toast from "react-native-toast-message";
 import { useMyHubs, useJoinHub, useCreateHub } from "@/features/hubs/useHubs";
 import { getStudentProfile } from "@/services/student-service";
 import { getTeacherProfile } from "@/services/teacher-service";
-import CreateHubModal from "./components/create-hub-modal";
-import { HubsSettingsModal } from "./components/hubs-settings-modal";
-import HubCard from "./components/hub-card";
 import { authClient } from "@/services/auth-client";
 import { PROFILE_CACHE_CONFIG } from "@/screens/profile/constants";
 
-type HubTab = "ACTIVE" | "ARCHIVED";
+import { BENTO_COLORS, fontFamily } from "./constants";
+import { CourseHubsHeader } from "./components/course-hubs-header";
+import { CourseTabs, HubTab } from "./components/course-tabs";
+import { CourseCard } from "./components/course-card";
+import { CourseHubsSkeleton } from "./components/course-hubs-skeleton";
+import CreateHubModal from "./components/create-hub-modal";
+import { HubsSettingsModal } from "./components/hubs-settings-modal";
 
 export function Hubs() {
   const insets = useSafeAreaInsets();
@@ -38,7 +41,7 @@ export function Hubs() {
     status?: string;
   }>();
 
-  // States
+  // Active Tab State ("ACTIVE" | "ARCHIVED")
   const [activeTab, setActiveTab] = useState<HubTab>(
     params.status?.toUpperCase() === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
   );
@@ -47,7 +50,7 @@ export function Hubs() {
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
 
-  // Sync with params if they change externally
+  // Sync state with router params if changed externally
   useEffect(() => {
     if (
       params.status &&
@@ -59,10 +62,10 @@ export function Hubs() {
   }, [params.status]);
 
   // Sync state back to router params
-  const updateRouteParams = (updates: { status?: string }) => {
+  const handleSelectTab = (tab: HubTab) => {
+    setActiveTab(tab);
     router.setParams({
-      status:
-        updates.status ?? (activeTab === "ARCHIVED" ? "archived" : "active"),
+      status: tab.toLowerCase(),
     } as any);
   };
 
@@ -106,10 +109,11 @@ export function Hubs() {
   const canCreateHub =
     currentUser?.role === "TEACHER" ||
     (currentUser?.studentProfile as any)?.isCR === true;
+
   const isLoadingScreen =
     isSessionPending || isLoadingHubs || isLoadingStudent || isLoadingTeacher;
 
-  // Count active and archived hubs
+  // Dynamic counts for active and archived hubs
   const { activeCount, archivedCount } = useMemo(() => {
     if (!Array.isArray(myHubs)) return { activeCount: 0, archivedCount: 0 };
     let active = 0;
@@ -124,7 +128,7 @@ export function Hubs() {
     return { activeCount: active, archivedCount: archived };
   }, [myHubs]);
 
-  // Filter hubs
+  // Filter hubs according to the active tab
   const displayedHubs = useMemo(() => {
     if (!Array.isArray(myHubs)) return [];
 
@@ -170,122 +174,119 @@ export function Hubs() {
         translucent={true}
       />
 
-      <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <Text style={styles.pageTitle}>Course Hubs</Text>
-          <View style={styles.headerIconsGroup}>
+      {/* 1. SCREEN HEADER */}
+      <CourseHubsHeader
+        onOpenNotifications={() => router.push("/(tabs)/notices")}
+        onOpenSettings={() => setIsSettingsModalVisible(true)}
+      />
+
+      {/* 2. ACTIVE / ARCHIVED SEGMENTED TABS */}
+      <CourseTabs
+        activeTab={activeTab}
+        activeCount={activeCount}
+        archivedCount={archivedCount}
+        onSelectTab={handleSelectTab}
+      />
+
+      {/* 3. CONTENT AREA */}
+      {isLoadingScreen ? (
+        <CourseHubsSkeleton />
+      ) : !myHubs || myHubs.length === 0 ? (
+        // Entirely empty (no courses enrolled)
+        <View style={styles.centerContainer}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons
+              name="school-outline"
+              size={42}
+              color={BENTO_COLORS.primary}
+            />
+          </View>
+          <Text style={styles.emptyTitle}>No active courses yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Your enrolled courses and academic hubs will appear here.
+          </Text>
+
+          <View style={styles.emptyActionsRow}>
             <TouchableOpacity
-              style={styles.headerIconButton}
-              onPress={() => router.push("/(tabs)/notices")}
-              activeOpacity={0.7}
+              style={styles.primaryActionButton}
+              onPress={() => setIsJoinModalVisible(true)}
+              activeOpacity={0.8}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="View notices and notifications"
+              accessibilityLabel="Join a course using join code"
             >
-              <Feather name="bell" size={18} color="#131b2e" />
+              <Feather
+                name="plus-circle"
+                size={16}
+                color="#ffffff"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.primaryActionText}>Join with Code</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.headerIconButton}
-              onPress={() => setIsSettingsModalVisible(true)}
-              activeOpacity={0.7}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Course Hub options and settings"
-            >
-              <Feather name="settings" size={18} color="#131b2e" />
-            </TouchableOpacity>
+            {canCreateHub && (
+              <TouchableOpacity
+                style={styles.secondaryActionButton}
+                onPress={() => setIsCreateModalVisible(true)}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Create a new course hub"
+              >
+                <Feather
+                  name="edit-3"
+                  size={16}
+                  color={BENTO_COLORS.deepNavy}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.secondaryActionText}>Create Hub</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsWrapper}>
-        <View style={styles.tabsContainer}>
-          {(["ACTIVE", "ARCHIVED"] as HubTab[]).map((tab) => {
-            const isActive = activeTab === tab;
-            const count = tab === "ACTIVE" ? activeCount : archivedCount;
-            return (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.tabButton, isActive && styles.tabButtonActive]}
-                onPress={() => {
-                  setActiveTab(tab);
-                  updateRouteParams({ status: tab.toLowerCase() });
-                }}
-                accessible={true}
-                accessibilityRole="tab"
-                accessibilityLabel={
-                  tab === "ACTIVE"
-                    ? `Active Classes tab, ${count} classes`
-                    : `Archived Classes tab, ${count} classes`
-                }
-              >
-                <Text
-                  style={[styles.tabText, isActive && styles.tabTextActive]}
-                >
-                  {tab === "ACTIVE" ? "Active Classes" : "Archived"}
-                </Text>
-                <View
-                  style={[styles.tabBadge, isActive && styles.tabBadgeActive]}
-                >
-                  <Text
-                    style={[
-                      styles.tabBadgeText,
-                      isActive && styles.tabBadgeTextActive,
-                    ]}
-                  >
-                    {count}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {isLoadingScreen ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#131b2e" />
-        </View>
-      ) : !myHubs || myHubs.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Feather
-            name="layers"
-            size={48}
-            color="#c6c6cd"
-            style={{ marginBottom: 16 }}
-          />
-          <Text style={styles.emptyTitle}>No Hubs Found</Text>
-          <Text style={styles.emptySubtitle}>
-            You aren't enrolled in any classes yet.
-          </Text>
-        </View>
       ) : displayedHubs.length === 0 ? (
+        // Empty tab state (e.g. 0 archived courses)
         <View style={styles.centerContainer}>
-          <Feather
-            name="layers"
-            size={44}
-            color="#cbd5e1"
-            style={{ marginBottom: 14 }}
-          />
+          <View style={styles.emptyIconCircle}>
+            <Feather
+              name={activeTab === "ACTIVE" ? "book-open" : "archive"}
+              size={36}
+              color={BENTO_COLORS.textSecondary}
+            />
+          </View>
           <Text style={styles.emptyTitle}>
             {activeTab === "ACTIVE"
-              ? "No Active Classes"
+              ? "No active courses yet"
               : "No Archived Classes"}
           </Text>
           <Text style={styles.emptySubtitle}>
             {activeTab === "ACTIVE"
-              ? "All your classes are currently in the archive."
+              ? "Your enrolled courses will appear here."
               : "You don't have any past classes archived."}
           </Text>
+
+          {activeTab === "ACTIVE" && (
+            <TouchableOpacity
+              style={styles.primaryActionButton}
+              onPress={() => setIsJoinModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Feather
+                name="plus-circle"
+                size={16}
+                color="#ffffff"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.primaryActionText}>Join with Code</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
           data={displayedHubs}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
-            <HubCard item={item} index={index} />
+            <CourseCard item={item} index={index} />
           )}
           contentContainerStyle={[
             styles.listContent,
@@ -298,12 +299,13 @@ export function Hubs() {
               onRefresh={() => {
                 queryClient.invalidateQueries({ queryKey: ["myHubs"] });
               }}
-              tintColor="#131b2e"
+              tintColor={BENTO_COLORS.deepNavy}
             />
           }
         />
       )}
 
+      {/* 4. JOIN COURSE MODAL */}
       <Modal
         visible={isJoinModalVisible}
         animationType="slide"
@@ -327,7 +329,12 @@ export function Hubs() {
             ]}
           >
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Join a Course</Text>
+              <View>
+                <Text style={styles.sheetTitle}>Join a Course</Text>
+                <Text style={styles.sheetSubtitle}>
+                  Enter the 6-character code given by your teacher or CR
+                </Text>
+              </View>
               <TouchableOpacity
                 onPress={() => setIsJoinModalVisible(false)}
                 style={styles.closeBtn}
@@ -335,21 +342,23 @@ export function Hubs() {
                 accessibilityRole="button"
                 accessibilityLabel="Close join course modal"
               >
-                <Feather name="x" size={24} color="#131b2e" />
+                <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.label}>Enter 6-Character Join Code</Text>
+
+            <Text style={styles.inputLabel}>Course Join Code</Text>
             <TextInput
               style={styles.inputCode}
               value={joinCode}
               onChangeText={setJoinCode}
               placeholder="e.g. X7B9Q2"
-              placeholderTextColor="#c6c6cd"
+              placeholderTextColor="#94a3b8"
               maxLength={6}
               autoCapitalize="characters"
               accessible={true}
               accessibilityLabel="6-Character Join Code"
             />
+
             <TouchableOpacity
               style={[
                 styles.submitBlockBtn,
@@ -371,6 +380,7 @@ export function Hubs() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* 5. CREATE HUB MODAL */}
       <CreateHubModal
         isVisible={isCreateModalVisible}
         onClose={() => setIsCreateModalVisible(false)}
@@ -379,6 +389,7 @@ export function Hubs() {
         currentUser={currentUser}
       />
 
+      {/* 6. HUBS SETTINGS MODAL */}
       <HubsSettingsModal
         isVisible={isSettingsModalVisible}
         onClose={() => setIsSettingsModalVisible(false)}
@@ -397,134 +408,101 @@ export function Hubs() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f7f9fb" },
-
-  // Header & Buttons
-  header: { paddingHorizontal: 20, paddingTop: 8, marginBottom: 12 },
-  headerTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  pageTitle: {
-    fontFamily: Platform.select({
-      ios: "Plus Jakarta Sans",
-      android: "sans-serif",
-      default: "sans-serif",
-    }),
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#131b2e",
-    letterSpacing: -0.4,
-  },
-  headerIconsGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  headerIconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.08)",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-
-  // Custom Tabs
-  tabsWrapper: { paddingHorizontal: 20, marginBottom: 16 },
-  tabsContainer: {
-    flexDirection: "row",
-    backgroundColor: "#ebeef2",
-    borderRadius: 14,
-    padding: 4,
-  },
-  tabButton: {
+  container: {
     flex: 1,
-    flexDirection: "row",
-    paddingVertical: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-    gap: 7,
+    backgroundColor: BENTO_COLORS.background,
   },
-  tabButtonActive: {
-    backgroundColor: "#ffffff",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  tabText: {
-    fontFamily: Platform.select({
-      ios: "Plus Jakarta Sans",
-      android: "sans-serif",
-      default: "sans-serif",
-    }),
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  tabTextActive: { color: "#131b2e", fontWeight: "800" },
-  tabBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: "rgba(19, 27, 46, 0.06)",
-    minWidth: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabBadgeActive: {
-    backgroundColor: "#131b2e",
-  },
-  tabBadgeText: {
-    fontFamily: Platform.select({
-      ios: "Plus Jakarta Sans",
-      android: "sans-serif",
-      default: "sans-serif",
-    }),
-    fontSize: 11.5,
-    fontWeight: "700",
-    color: "#64748b",
-  },
-  tabBadgeTextActive: {
-    color: "#ffffff",
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
 
-  // Layouts
+  // Empty & Placeholder States
   centerContainer: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    justifyContent: "center",
+    paddingHorizontal: 36,
+    paddingBottom: 80,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.border,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    elevation: 2,
   },
   emptyTitle: {
+    fontFamily,
     fontSize: 20,
     fontWeight: "800",
-    color: "#131b2e",
+    color: BENTO_COLORS.deepNavy,
+    textAlign: "center",
     marginBottom: 8,
   },
   emptySubtitle: {
+    fontFamily,
     fontSize: 14,
-    color: "#76777d",
+    color: BENTO_COLORS.textSecondary,
     textAlign: "center",
-    marginBottom: 12,
+    lineHeight: 20,
+    marginBottom: 20,
   },
-  listContent: { paddingHorizontal: 20, paddingTop: 8 },
+  emptyActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 6,
+  },
+  primaryActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: BENTO_COLORS.deepNavy,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: BENTO_COLORS.pillRadius,
+    shadowColor: BENTO_COLORS.deepNavy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  primaryActionText: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  secondaryActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: BENTO_COLORS.pillRadius,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.border,
+  },
+  secondaryActionText: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
+  },
 
-  // Modals
+  // Join Modal Bottom Sheet
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(19, 27, 46, 0.4)",
     justifyContent: "flex-end",
   },
   modalBackdrop: {
@@ -533,60 +511,86 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: "rgba(19, 27, 46, 0.45)",
   },
   bottomSheet: {
-    backgroundColor: "#f7f9fb",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 10,
   },
   sheetHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
+    alignItems: "flex-start",
+    marginBottom: 20,
   },
   sheetTitle: {
-    fontSize: 24,
+    fontFamily,
+    fontSize: 20,
     fontWeight: "800",
-    color: "#131b2e",
+    color: BENTO_COLORS.deepNavy,
   },
-  closeBtn: { padding: 4 },
-  label: {
-    fontSize: 14,
+  sheetSubtitle: {
+    fontFamily,
+    fontSize: 13,
+    color: BENTO_COLORS.textSecondary,
+    marginTop: 3,
+    maxWidth: 260,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inputLabel: {
+    fontFamily,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#45464d",
+    color: BENTO_COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
     marginBottom: 8,
   },
   inputCode: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 24,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: BENTO_COLORS.borderColor || "#e2e8f0",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    fontFamily,
+    fontSize: 18,
     fontWeight: "800",
-    color: "#131b2e",
-    textAlign: "center",
-    textTransform: "uppercase",
     letterSpacing: 4,
-    borderWidth: 1,
-    borderColor: "#e0e3e5",
+    color: BENTO_COLORS.deepNavy,
+    textAlign: "center",
+    marginBottom: 20,
   },
   submitBlockBtn: {
-    backgroundColor: "#131b2e",
-    paddingVertical: 18,
-    borderRadius: 9999,
+    backgroundColor: BENTO_COLORS.deepNavy,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
-    marginTop: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 4,
+    justifyContent: "center",
+    shadowColor: BENTO_COLORS.deepNavy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 3,
   },
   submitBlockText: {
-    fontSize: 16,
-    color: "#ffffff",
+    fontFamily,
+    fontSize: 15,
     fontWeight: "800",
+    color: "#ffffff",
   },
 });
