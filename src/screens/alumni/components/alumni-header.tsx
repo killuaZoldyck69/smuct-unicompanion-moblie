@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO, fontFamily } from "../constants";
 
@@ -71,7 +77,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO.navy,
     letterSpacing: -0.3,
@@ -90,5 +96,3 @@ const styles = StyleSheet.create({
     color: BENTO.slateLight,
   },
 });
-
-

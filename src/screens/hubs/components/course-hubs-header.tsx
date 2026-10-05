@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
 
 interface CourseHubsHeaderProps {
@@ -14,18 +14,14 @@ export const CourseHubsHeader = React.memo(function CourseHubsHeader({
 }: CourseHubsHeaderProps) {
   return (
     <View style={styles.headerContainer}>
-      {/* Subtle Academic Decorative Background (Non-intrusive) */}
+      {/* Background Illustration & Glow */}
       <View style={styles.decorativeLayer} pointerEvents="none">
         <View style={styles.glowCircle} />
-        <View style={styles.contourRing} />
-        <View style={styles.mortarboardWatermark}>
-          <Ionicons
-            name="school-outline"
-            size={88}
-            color="#3b5bf5"
-            style={{ opacity: 0.04 }}
-          />
-        </View>
+        <Image
+          source={require("@/assets/icons/student-benefits.png")}
+          style={styles.bgIllustration}
+          resizeMode="contain"
+        />
       </View>
 
       {/* Top Bar: Title & Action Buttons */}
@@ -69,7 +65,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 16,
+    paddingBottom: 14,
     position: "relative",
     overflow: "hidden",
   },
@@ -82,29 +78,20 @@ const styles = StyleSheet.create({
   },
   glowCircle: {
     position: "absolute",
-    top: -40,
+    top: -30,
     right: -20,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(59, 91, 245, 0.04)",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(59, 91, 245, 0.05)",
   },
-  contourRing: {
+  bgIllustration: {
     position: "absolute",
-    top: -20,
-    right: 20,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: "rgba(19, 27, 46, 0.05)",
-  },
-  mortarboardWatermark: {
-    position: "absolute",
-    top: -4,
-    right: 14,
-    transform: [{ rotate: "-10deg" }],
+    top: -2,
+    right: -120,
+    width: "100%",
+    height: "100%",
+    opacity: 0.85,
   },
   topRow: {
     flexDirection: "row",

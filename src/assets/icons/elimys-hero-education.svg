@@ -1,0 +1,223 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1600 900"
+     role="img"
+     aria-labelledby="title desc"
+     preserveAspectRatio="xMidYMid meet">
+  <title id="title">Elimys education hero illustration</title>
+  <desc id="desc">A soft blue academic building with a clock, sunrise, education icons, trees and a faint city skyline. The artwork has transparent fading edges so it blends into the Elimys hero gradient on desktop, tablet and mobile.</desc>
+
+  <defs>
+    <linearGradient id="buildingFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dcecff"/>
+      <stop offset="0.55" stop-color="#c7def8"/>
+      <stop offset="1" stop-color="#a9c8ee"/>
+    </linearGradient>
+
+    <linearGradient id="buildingShadow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9dbfe8" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#6f9ed5" stop-opacity=".08"/>
+    </linearGradient>
+
+    <linearGradient id="sunFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe0a0"/>
+      <stop offset="1" stop-color="#f3b44b"/>
+    </linearGradient>
+
+    <linearGradient id="groundFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d8e6f7" stop-opacity=".65"/>
+      <stop offset="1" stop-color="#edf3fa" stop-opacity="0"/>
+    </linearGradient>
+
+    <radialGradient id="softGlow" cx="72%" cy="36%" r="62%">
+      <stop offset="0" stop-color="#4b88db" stop-opacity=".12"/>
+      <stop offset=".52" stop-color="#4b88db" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#4b88db" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="warmGlow" cx="65%" cy="46%" r="40%">
+      <stop offset="0" stop-color="#e9a23b" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#e9a23b" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18"/>
+      <feOffset dy="12"/>
+      <feColorMatrix values="0 0 0 0 0.19
+                             0 0 0 0 0.38
+                             0 0 0 0 0.63
+                             0 0 0 .16 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="smallShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#5d86b6" flood-opacity=".14"/>
+    </filter>
+
+    <!-- Fade the entire illustration into transparency at every edge -->
+    <mask id="edgeFadeMask">
+      <rect width="1600" height="900" fill="black"/>
+      <rect x="70" y="40" width="1460" height="780" rx="110" fill="white"/>
+      <rect x="0" y="0" width="1600" height="900"
+            fill="url(#fadeMaskGradient)"/>
+    </mask>
+
+    <radialGradient id="fadeMaskGradient" cx="62%" cy="48%" r="67%">
+      <stop offset="0" stop-color="white"/>
+      <stop offset=".70" stop-color="white"/>
+      <stop offset=".88" stop-color="white" stop-opacity=".78"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+
+    <clipPath id="safeClip">
+      <rect x="0" y="0" width="1600" height="900" rx="28"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#safeClip)" mask="url(#edgeFadeMask)">
+    <!-- Transparent ambient glows that match the page gradient -->
+    <ellipse cx="1180" cy="260" rx="650" ry="430" fill="url(#softGlow)"/>
+    <ellipse cx="1030" cy="430" rx="380" ry="250" fill="url(#warmGlow)"/>
+
+    <!-- Large soft arcs -->
+    <circle cx="1120" cy="430" r="370"
+            fill="none" stroke="#dbe8fb" stroke-width="96" opacity=".40"/>
+    <circle cx="1120" cy="430" r="275"
+            fill="none" stroke="#d7e6fa" stroke-width="62" opacity=".48"/>
+    <circle cx="1120" cy="430" r="198"
+            fill="none" stroke="#d3e3f8" stroke-width="38" opacity=".54"/>
+
+    <!-- Sun -->
+    <circle cx="1120" cy="490" r="180" fill="url(#sunFill)" opacity=".78"/>
+
+    <!-- Faint skyline -->
+    <g fill="#c9dcf4" opacity=".58">
+      <rect x="380" y="455" width="52" height="170" rx="5"/>
+      <rect x="396" y="418" width="20" height="42" rx="2"/>
+
+      <rect x="470" y="505" width="84" height="120" rx="5"/>
+      <path d="M470 505l42-48 42 48z"/>
+
+      <rect x="585" y="475" width="80" height="150" rx="5"/>
+      <rect x="665" y="520" width="64" height="105" rx="5"/>
+
+      <rect x="1290" y="485" width="70" height="140" rx="5"/>
+      <rect x="1375" y="515" width="60" height="110" rx="5"/>
+      <rect x="1450" y="460" width="74" height="165" rx="5"/>
+    </g>
+
+    <!-- Ground haze -->
+    <ellipse cx="1040" cy="650" rx="650" ry="94" fill="url(#groundFade)"/>
+
+    <!-- Trees -->
+    <g fill="#a9c8ee" opacity=".92">
+      <rect x="470" y="570" width="9" height="92" rx="4"/>
+      <circle cx="474" cy="545" r="35"/>
+      <circle cx="447" cy="562" r="25"/>
+      <circle cx="503" cy="562" r="27"/>
+
+      <rect x="625" y="590" width="8" height="72" rx="4"/>
+      <circle cx="629" cy="570" r="29"/>
+      <circle cx="608" cy="584" r="20"/>
+      <circle cx="648" cy="584" r="21"/>
+
+      <rect x="1390" y="515" width="10" height="147" rx="5"/>
+      <ellipse cx="1395" cy="455" rx="34" ry="92"/>
+      <ellipse cx="1395" cy="540" rx="28" ry="74"/>
+
+      <rect x="1270" y="585" width="8" height="77" rx="4"/>
+      <circle cx="1274" cy="564" r="30"/>
+      <circle cx="1252" cy="578" r="21"/>
+      <circle cx="1296" cy="579" r="22"/>
+    </g>
+
+    <!-- Main building -->
+    <g filter="url(#softShadow)">
+      <!-- Side wings -->
+      <rect x="760" y="470" width="190" height="180" rx="8" fill="url(#buildingFill)"/>
+      <rect x="1150" y="470" width="190" height="180" rx="8" fill="url(#buildingFill)"/>
+
+      <!-- Central body -->
+      <rect x="925" y="395" width="250" height="255" rx="8" fill="url(#buildingFill)"/>
+
+      <!-- Roof and pediment -->
+      <rect x="885" y="385" width="330" height="24" rx="6" fill="#a8c8ee"/>
+      <path d="M925 385L1050 305L1175 385Z" fill="#b8d5f6"/>
+      <path d="M954 374L1050 320L1146 374Z" fill="#e5f1ff"/>
+
+      <!-- Subtle facade wash -->
+      <rect x="925" y="395" width="250" height="255" rx="8" fill="url(#buildingShadow)"/>
+
+      <!-- Clock -->
+      <circle cx="1050" cy="354" r="26" fill="#f8fbff" stroke="#8fb4df" stroke-width="4"/>
+      <line x1="1050" y1="354" x2="1050" y2="340" stroke="#769ccf" stroke-width="3.2" stroke-linecap="round"/>
+      <line x1="1050" y1="354" x2="1062" y2="360" stroke="#769ccf" stroke-width="3.2" stroke-linecap="round"/>
+
+      <!-- Columns -->
+      <g fill="#f3f8ff">
+        <rect x="950" y="408" width="24" height="220" rx="4"/>
+        <rect x="995" y="408" width="24" height="220" rx="4"/>
+        <rect x="1040" y="408" width="24" height="220" rx="4"/>
+        <rect x="1085" y="408" width="24" height="220" rx="4"/>
+        <rect x="1130" y="408" width="24" height="220" rx="4"/>
+      </g>
+
+      <!-- Column caps -->
+      <g fill="#c5dcf8">
+        <rect x="944" y="402" width="36" height="9" rx="2"/>
+        <rect x="989" y="402" width="36" height="9" rx="2"/>
+        <rect x="1034" y="402" width="36" height="9" rx="2"/>
+        <rect x="1079" y="402" width="36" height="9" rx="2"/>
+        <rect x="1124" y="402" width="36" height="9" rx="2"/>
+
+        <rect x="944" y="624" width="36" height="10" rx="2"/>
+        <rect x="989" y="624" width="36" height="10" rx="2"/>
+        <rect x="1034" y="624" width="36" height="10" rx="2"/>
+        <rect x="1079" y="624" width="36" height="10" rx="2"/>
+        <rect x="1124" y="624" width="36" height="10" rx="2"/>
+      </g>
+
+      <!-- Door -->
+      <rect x="1023" y="520" width="54" height="130" rx="6" fill="#84a9d7"/>
+      <rect x="1033" y="535" width="34" height="115" rx="4" fill="#739bcf"/>
+
+      <!-- Windows -->
+      <g fill="#8fb4df">
+        <rect x="795" y="505" width="30" height="44" rx="3"/>
+        <rect x="855" y="505" width="30" height="44" rx="3"/>
+        <rect x="795" y="575" width="30" height="44" rx="3"/>
+        <rect x="855" y="575" width="30" height="44" rx="3"/>
+
+        <rect x="1215" y="505" width="30" height="44" rx="3"/>
+        <rect x="1275" y="505" width="30" height="44" rx="3"/>
+        <rect x="1215" y="575" width="30" height="44" rx="3"/>
+        <rect x="1275" y="575" width="30" height="44" rx="3"/>
+      </g>
+
+      <!-- Steps -->
+      <rect x="995" y="650" width="110" height="10" rx="3" fill="#c6dcf7"/>
+      <rect x="980" y="660" width="140" height="11" rx="3" fill="#b8d2f2"/>
+    </g>
+
+    <!-- Floating icons -->
+    <g filter="url(#smallShadow)">
+      <!-- Graduation cap -->
+      <circle cx="760" cy="235" r="58" fill="#e5f0ff" opacity=".96"/>
+      <path d="M720 229l40-21 40 21-40 21z" fill="#1f5baa"/>
+      <path d="M737 240v24c15 11 31 11 46 0v-24l-23 11z" fill="#1f5baa"/>
+      <line x1="799" y1="229" x2="799" y2="258" stroke="#1f5baa" stroke-width="4" stroke-linecap="round"/>
+
+      <!-- User -->
+      <circle cx="670" cy="405" r="54" fill="#fff0d3" opacity=".96"/>
+      <circle cx="670" cy="385" r="16" fill="#d88a00"/>
+      <path d="M642 429c4-20 15-31 28-31s24 11 28 31z" fill="#d88a00"/>
+
+      <!-- Book -->
+      <circle cx="1390" cy="250" r="58" fill="#e5f0ff" opacity=".96"/>
+      <path d="M1358 228c16 0 25 4 32 11v36c-9-8-20-11-32-10z" fill="#1f5baa"/>
+      <path d="M1422 228c-16 0-25 4-32 11v36c9-8 20-11 32-10z" fill="#1f5baa"/>
+    </g>
+  </g>
+</svg>

@@ -59,7 +59,7 @@ export const CourseTabs = React.memo(function CourseTabs({
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   container: {
     flexDirection: "row",
