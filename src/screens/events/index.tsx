@@ -10,17 +10,19 @@ import {
   BackHandler,
   Platform,
   ActivityIndicator,
+  Image,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
 import { useInfiniteCampusEvents } from "@/features/events/useEvents";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { CampusEventItem } from "@/services/event-service";
 import { BENTO_COLORS, EventTabType, fontFamily } from "./constants";
 import { EventCard } from "./components/event-card";
-import { EventHeroCard } from "./components/event-hero-card";
 import { EventTabFilters } from "./components/event-tab-filters";
 import { EventDetailModal } from "./components/event-detail-modal";
 import { CreateEventModal } from "./components/create-event-modal";
@@ -40,7 +42,6 @@ export {
 } from "./utils";
 
 export function EventsScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { role, user } = useCurrentUser();
   const isAdmin = role === "ADMIN" || user?.role === "ADMIN";
@@ -49,9 +50,13 @@ export function EventsScreen() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
-  const [selectedEvent, setSelectedEvent] = useState<CampusEventItem | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CampusEventItem | null>(
+    null,
+  );
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
-  const [editingEvent, setEditingEvent] = useState<CampusEventItem | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CampusEventItem | null>(
+    null,
+  );
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   // Debounce search query to prevent unnecessary queries while typing
@@ -130,14 +135,6 @@ export function EventsScreen() {
     });
   }, []);
 
-  const handleBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(tabs)/menu");
-    }
-  }, [router]);
-
   const handleCloseCreate = useCallback(() => {
     setIsCreateOpen(false);
     setEditingEvent(null);
@@ -176,7 +173,7 @@ export function EventsScreen() {
     ({ item, index }: { item: CampusEventItem; index: number }) => (
       <EventCard item={item} index={index} onPress={setSelectedEvent} />
     ),
-    []
+    [],
   );
 
   const keyExtractor = useCallback((item: CampusEventItem) => item.id, []);
@@ -225,9 +222,6 @@ export function EventsScreen() {
           </View>
         )}
 
-        {/* Hero Card */}
-        <EventHeroCard counts={counts} nextEvent={nextUpcomingEvent} />
-
         {/* Horizontal Tab Filters */}
         <EventTabFilters
           activeTab={activeTab}
@@ -236,7 +230,7 @@ export function EventsScreen() {
         />
       </View>
     );
-  }, [isSearchOpen, searchQuery, counts, nextUpcomingEvent, activeTab]);
+  }, [isSearchOpen, searchQuery, counts, activeTab]);
 
   const ListEmpty = useMemo(() => {
     if (isLoading) {
@@ -252,7 +246,14 @@ export function EventsScreen() {
         onReset={handleResetFilters}
       />
     );
-  }, [isLoading, isError, debouncedSearch, activeTab, refetch, handleResetFilters]);
+  }, [
+    isLoading,
+    isError,
+    debouncedSearch,
+    activeTab,
+    refetch,
+    handleResetFilters,
+  ]);
 
   const ListFooter = useMemo(() => {
     if (isFetchingNextPage) {
@@ -263,46 +264,34 @@ export function EventsScreen() {
         </View>
       );
     }
-    return <View style={{ height: insets.bottom > 0 ? insets.bottom + 80 : 96 }} />;
+    // Extra space so content is not hidden behind the floating tab bar
+    return (
+      <View style={{ height: insets.bottom > 0 ? insets.bottom + 110 : 120 }} />
+    );
   }, [isFetchingNextPage, insets.bottom]);
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
-      {/* Header Bar */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.headerIconButton}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          activeOpacity={0.7}
-        >
-          <Feather name="arrow-left" size={20} color={BENTO_COLORS.deepNavy} />
-        </TouchableOpacity>
+      {/* ── Header (ExploreHeader-style) ── */}
+      <View style={styles.heroContainer}>
+        <View style={styles.heroRow}>
+          {/* Left: Title + subtitle */}
+          <View style={styles.heroTitleGroup}>
+            <Text style={styles.screenTitle}>Campus Events</Text>
+            <Text style={styles.screenSubtitle}>
+              Programs, Fests, Workshops & Activities
+            </Text>
+          </View>
 
-        <View style={styles.headerTitlesContainer}>
-          <Text style={styles.screenTitle}>Campus Events</Text>
-          <Text style={styles.screenSubtitle}>Programs, Fests & Activities</Text>
+          <View style={styles.heroIllustrationWrap} pointerEvents="none">
+            <Image
+              source={require("@/assets/header-bg-images/event-screen-bg-2.png")}
+              style={styles.heroIllustration}
+              resizeMode="contain"
+              accessible={false}
+            />
+          </View>
         </View>
-
-        <TouchableOpacity
-          onPress={handleToggleSearch}
-          style={[
-            styles.headerIconButton,
-            isSearchOpen && styles.headerIconButtonActive,
-          ]}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Toggle event search"
-          activeOpacity={0.7}
-        >
-          <Feather
-            name={isSearchOpen ? "x" : "search"}
-            size={18}
-            color={isSearchOpen ? "#ffffff" : BENTO_COLORS.deepNavy}
-          />
-        </TouchableOpacity>
       </View>
 
       {/* Virtualized Infinite Scroll List */}
@@ -339,7 +328,7 @@ export function EventsScreen() {
         <TouchableOpacity
           style={[
             styles.fab,
-            { bottom: insets.bottom > 0 ? insets.bottom + 16 : 24 },
+            { bottom: insets.bottom > 0 ? insets.bottom + 88 : 100 },
           ]}
           onPress={() => {
             setEditingEvent(null);
@@ -376,53 +365,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BENTO_COLORS.background,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+
+  // ── Header (mirrors ExploreHeader) ────────────────────────────
+  heroContainer: {
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 12,
+    backgroundColor: BENTO_COLORS.background,
   },
-  headerIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: BENTO_COLORS.pillRadius,
-    backgroundColor: BENTO_COLORS.white,
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  heroTitleGroup: {
+    flex: 1,
+    paddingTop: 6,
+  },
+  heroIllustrationWrap: {
+    width: 110,
+    height: 90,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#0f172a",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    marginTop: -20,
   },
-  headerIconButtonActive: {
-    backgroundColor: BENTO_COLORS.deepNavy,
-    borderColor: BENTO_COLORS.deepNavy,
-  },
-  headerTitlesContainer: {
-    alignItems: "center",
+  heroIllustration: {
+    width: 250,
+    height: 120,
+    opacity: 0.7,
   },
   screenTitle: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
   screenSubtitle: {
     fontFamily,
-    fontSize: 11.5,
+    fontSize: 13,
     color: BENTO_COLORS.subtleText,
-    marginTop: 2,
+    marginTop: 7,
+    fontWeight: "500",
+    zIndex: 10,
   },
   listContent: {
     paddingHorizontal: 20,

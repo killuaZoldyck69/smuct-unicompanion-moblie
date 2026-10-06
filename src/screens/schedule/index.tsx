@@ -7,6 +7,7 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
+  Image,
 } from "react-native";
 import {
   SafeAreaView,
@@ -112,22 +113,20 @@ export function ScheduleScreen() {
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
       {/* Header Bar */}
       <View style={styles.screenHeader}>
-        {/* <TouchableOpacity
-          onPress={handleBack}
-          style={styles.headerIconButton}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          activeOpacity={0.7}
-        >
-          <Feather name="arrow-left" size={22} color={BENTO_COLORS.deepNavy} />
-        </TouchableOpacity> */}
-
         <View style={styles.headerTitlesContainer}>
           <Text style={styles.screenTitle} numberOfLines={1}>
             My Schedule
           </Text>
           <Text style={styles.screenSubtitle}>Weekly class routine</Text>
+        </View>
+
+        <View style={styles.headerIllustrationWrap} pointerEvents="none">
+          <Image
+            source={require("@/assets/header-bg-images/my-schedule-bg.png")}
+            style={styles.headerIllustration}
+            resizeMode="contain"
+            accessible={false}
+          />
         </View>
       </View>
 
@@ -457,50 +456,41 @@ const styles = StyleSheet.create({
   },
   screenHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
-  },
-  headerIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: BENTO_COLORS.pillRadius,
-    backgroundColor: BENTO_COLORS.white,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
   },
   headerTitlesContainer: {
     flex: 1,
-    marginLeft: 14,
+    paddingTop: 6,
+  },
+  headerIllustrationWrap: {
+    width: 110,
+    height: 80,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerIllustration: {
+    width: 250,
+    height: 120,
+    opacity: 0.7,
   },
   screenTitle: {
     fontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
   screenSubtitle: {
     fontFamily,
     fontSize: 13,
-    fontWeight: "500",
     color: BENTO_COLORS.subtleText,
-    marginTop: 1,
+    marginTop: 7,
+    fontWeight: "500",
   },
   scrollContent: {
     paddingHorizontal: 20,

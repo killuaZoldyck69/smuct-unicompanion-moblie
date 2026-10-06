@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -10,8 +16,12 @@ import {
   BackHandler,
   StatusBar,
   ActivityIndicator,
+  Image,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
@@ -39,7 +49,9 @@ export function CGPACalculator() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [courses, setCourses] = useState<CourseEntry[]>(INITIAL_COURSES);
-  const [activePickerCourseId, setActivePickerCourseId] = useState<string | null>(null);
+  const [activePickerCourseId, setActivePickerCourseId] = useState<
+    string | null
+  >(null);
   const [isScaleModalVisible, setIsScaleModalVisible] = useState(false);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
 
@@ -68,10 +80,10 @@ export function CGPACalculator() {
   const updateCourse = useCallback(
     (id: string, field: keyof CourseEntry, value: string) => {
       setCourses((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
+        prev.map((c) => (c.id === id ? { ...c, [field]: value } : c)),
       );
     },
-    []
+    [],
   );
 
   const handleAutoFill = useCallback(async () => {
@@ -152,7 +164,8 @@ export function CGPACalculator() {
         Toast.show({
           type: "info",
           text1: "Courses Loaded",
-          text2: "No registered course hubs found on your account. Loaded standard semester courses.",
+          text2:
+            "No registered course hubs found on your account. Loaded standard semester courses.",
         });
       }
     } catch {
@@ -202,7 +215,6 @@ export function CGPACalculator() {
     return () => sub.remove();
   }, [activePickerCourseId, isScaleModalVisible]);
 
-
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
@@ -219,16 +231,31 @@ export function CGPACalculator() {
             </Text>
           </View>
 
-          <TouchableOpacity
-            onPress={() => setIsScaleModalVisible(true)}
-            style={styles.headerIconButton}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="View official grading scale"
-            activeOpacity={0.7}
-          >
-            <Feather name="help-circle" size={19} color={BENTO_COLORS.deepNavy} />
-          </TouchableOpacity>
+          <View style={styles.headerRightContainer}>
+            <View style={styles.headerIllustrationWrap} pointerEvents="none">
+              <Image
+                source={require("@/assets/header-bg-images/cgpa-calculator-bg.png")}
+                style={styles.headerIllustration}
+                resizeMode="contain"
+                accessible={false}
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setIsScaleModalVisible(true)}
+              style={styles.headerIconButton}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="View official grading scale"
+              activeOpacity={0.7}
+            >
+              <Feather
+                name="help-circle"
+                size={19}
+                color={BENTO_COLORS.deepNavy}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
@@ -324,7 +351,9 @@ export function CGPACalculator() {
               color={BENTO_COLORS.primaryBlue}
               style={{ marginRight: 6 }}
             />
-            <Text style={styles.addCourseOutlineBtnText}>Add Another Course</Text>
+            <Text style={styles.addCourseOutlineBtnText}>
+              Add Another Course
+            </Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -357,15 +386,40 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingTop: 12,
+    backgroundColor: BENTO_COLORS.background,
+  },
+  headerTitlesContainer: {
+    flex: 1,
+    paddingTop: 6,
+  },
+  headerRightContainer: {
+    width: 110,
+    height: 80,
+    justifyContent: "center",
+    alignItems: "flex-end",
+    position: "relative",
+  },
+  headerIllustrationWrap: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerIllustration: {
+    width: 120,
+    height: 100,
+    opacity: 0.6,
   },
   headerIconButton: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     borderRadius: BENTO_COLORS.pillRadius,
     backgroundColor: BENTO_COLORS.white,
     justifyContent: "center",
@@ -373,24 +427,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BENTO_COLORS.borderColor,
     ...BENTO_COLORS.shadow,
-  },
-  headerTitlesContainer: {
-    flex: 1,
-    alignItems: "flex-start",
+    zIndex: 10,
   },
   screenTitle: {
     fontFamily,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    textAlign: "left",
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
   screenSubtitle: {
     fontFamily,
     fontSize: 13,
     color: BENTO_COLORS.subtleText,
-    marginTop: 2,
-    textAlign: "left",
+    marginTop: 7,
+    fontWeight: "500",
   },
   scrollContent: {
     paddingHorizontal: 20,

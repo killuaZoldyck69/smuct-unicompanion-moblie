@@ -195,7 +195,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/event-list.png"),
     fallbackIcon: "activity",
     roles: ["STUDENT", "TEACHER", "ADMIN"],
-    route: "/events" as Href,
+    route: "/(tabs)/events" as Href,
   },
   {
     id: "campus_forum",
