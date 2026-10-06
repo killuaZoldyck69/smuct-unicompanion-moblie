@@ -7,12 +7,10 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
-  BackHandler,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
 import {
   useAlumniInfinite,
@@ -27,7 +25,7 @@ import { AlumniSkeletons } from "./components/alumni-skeletons";
 import { AlumniProfileModal } from "./components/alumni-profile-modal";
 
 export const AlumniScreen: React.FC = () => {
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -63,23 +61,6 @@ export const AlumniScreen: React.FC = () => {
   }, [data]);
 
   const totalCount = data?.pages[0]?.meta?.total ?? alumniList.length;
-
-  const handleBack = useCallback(() => {
-    if (selectedAlumni) {
-      setSelectedAlumni(null);
-      return;
-    }
-    router.replace("/(tabs)/menu" as any);
-  }, [selectedAlumni, router]);
-
-  useEffect(() => {
-    const onBackPress = () => {
-      handleBack();
-      return true;
-    };
-    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-    return () => sub.remove();
-  }, [handleBack]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -147,7 +128,6 @@ export const AlumniScreen: React.FC = () => {
         <AlumniHeader
           totalCount={totalCount}
           filteredCount={totalCount}
-          onBack={handleBack}
         />
 
         <AlumniFilters
@@ -236,7 +216,10 @@ export const AlumniScreen: React.FC = () => {
             ListFooterComponent={renderFooter}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.4}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[
+              styles.listContent,
+              { paddingBottom: insets.bottom > 0 ? insets.bottom + 110 : 120 },
+            ]}
             showsVerticalScrollIndicator={false}
             initialNumToRender={10}
             maxToRenderPerBatch={12}

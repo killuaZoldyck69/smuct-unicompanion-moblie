@@ -3,44 +3,41 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Platform,
+  Image,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { BENTO, fontFamily } from "../constants";
 
 interface AlumniHeaderProps {
   totalCount?: number;
   filteredCount?: number;
-  onBack: () => void;
 }
 
 export const AlumniHeader: React.FC<AlumniHeaderProps> = React.memo(
-  ({ totalCount = 0, filteredCount, onBack }) => {
+  ({ totalCount = 0, filteredCount }) => {
     const displayCount =
       typeof filteredCount === "number" ? filteredCount : totalCount;
 
     return (
       <View style={styles.header}>
-        {/* Squircle Back Button */}
-        <TouchableOpacity
-          onPress={onBack}
-          style={styles.squircleButton}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Go back to all features"
-          activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Feather name="chevron-left" size={20} color={BENTO.navy} />
-        </TouchableOpacity>
+        {/* Left: Titles */}
+        <View style={styles.headerTitleGroup}>
+          <Text style={styles.screenTitle}>Alumni Network</Text>
+          <Text style={styles.screenSubtitle}>
+            {displayCount > 0
+              ? `${displayCount} verified graduates`
+              : "Connect with SMUCT graduates"}
+          </Text>
+        </View>
 
-        {/* Title */}
-        <Text style={styles.screenTitle}>Alumni Network</Text>
-
-        {/* Right Section: Count */}
-        <View style={styles.headerRight}>
-          <Text style={styles.countText}>{displayCount} alumni</Text>
+        {/* Right: Illustration */}
+        <View style={styles.headerIllustrationWrap} pointerEvents="none">
+          <Image
+            source={require("@/assets/header-bg-images/alumni-screen-bg.png")}
+            style={styles.headerIllustration}
+            resizeMode="contain"
+            accessible={false}
+          />
         </View>
       </View>
     );
@@ -50,49 +47,41 @@ export const AlumniHeader: React.FC<AlumniHeaderProps> = React.memo(
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingTop: 12,
     backgroundColor: BENTO.canvas,
   },
-  squircleButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: BENTO.card,
-    alignItems: "center",
+  headerTitleGroup: {
+    flex: 1,
+    paddingTop: 6,
+  },
+  headerIllustrationWrap: {
+    width: 120,
+    height: 80,
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: BENTO.border,
-    ...Platform.select({
-      web: {
-        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-      } as any,
-      default: {
-        elevation: 1,
-      },
-    }),
+    alignItems: "center",
+    marginTop: -12,
+  },
+  headerIllustration: {
+    width: 200,
+    height: 100,
+    opacity: 0.8,
   },
   screenTitle: {
     fontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: BENTO.navy,
-    letterSpacing: -0.3,
-    marginLeft: 10,
-    flex: 1,
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  countText: {
+  screenSubtitle: {
     fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    color: BENTO.slate,
+    marginTop: 7,
     fontWeight: "500",
-    color: BENTO.slateLight,
   },
 });

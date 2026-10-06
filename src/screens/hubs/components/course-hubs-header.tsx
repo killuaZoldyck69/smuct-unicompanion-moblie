@@ -34,7 +34,7 @@ export const CourseHubsHeader = React.memo(function CourseHubsHeader({
         </View>
 
         <View style={styles.actionButtonsGroup}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.iconButton}
             onPress={onOpenNotifications}
             activeOpacity={0.7}
@@ -43,7 +43,7 @@ export const CourseHubsHeader = React.memo(function CourseHubsHeader({
             accessibilityLabel="View university notices and notifications"
           >
             <Feather name="bell" size={19} color={BENTO_COLORS.deepNavy} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={styles.iconButton}
