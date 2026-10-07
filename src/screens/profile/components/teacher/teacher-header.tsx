@@ -73,10 +73,10 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontFamily,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
     color: PROFILE_COLORS.deepNavy,
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
   },
   actionButtonsRow: {
     flexDirection: "row",
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   },
   topBtnText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
   },
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "700",
     color: "#dc2626",
   },

@@ -193,8 +193,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
     color: SECTION_THEMES.FACULTY_ACADEMIC.primaryText,
     letterSpacing: 0.8,
   },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily,
     fontSize: 10.5,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#a16207",
     letterSpacing: 0.5,
     marginBottom: 2,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   valueText: {
     fontFamily,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
     color: SECTION_THEMES.FACULTY_ACADEMIC.primaryText, // #854d0e
   },
   divider: {
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   input: {
     fontFamily,
     fontSize: 13.5,
-    fontWeight: "700",
+    fontWeight: "600",
     color: SECTION_THEMES.FACULTY_ACADEMIC.primaryText,
     padding: 0,
     outlineStyle: "none" as any,

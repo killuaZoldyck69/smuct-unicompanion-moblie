@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontFamily,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
   },
   closeBtn: {
@@ -185,11 +185,11 @@ const styles = StyleSheet.create({
   groupText: {
     fontFamily,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "500",
     color: PROFILE_COLORS.neutralText,
   },
   groupTextSelected: {
-    fontWeight: "800",
+    fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
   },
 });

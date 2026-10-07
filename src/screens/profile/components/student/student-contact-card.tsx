@@ -1,12 +1,6 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from "react-native";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
@@ -14,7 +8,7 @@ import {
   BLOOD_GROUP_TO_UI,
   fontFamily,
 } from "../../constants";
-import { formatPhoneNumber } from "../../utils";
+import { DropMotif, WaveMotif } from "../illustrations/contact-motifs";
 
 interface StudentContactCardProps {
   phoneNumber: string;
@@ -23,7 +17,7 @@ interface StudentContactCardProps {
   profilePhone?: string | null;
   isEditing: boolean;
   onOpenBloodModal: () => void;
-  onChangePhone: (phone: string) => void;
+  onChangePhone: (val: string) => void;
 }
 
 export const StudentContactCard = React.memo(function StudentContactCard({
@@ -35,168 +29,166 @@ export const StudentContactCard = React.memo(function StudentContactCard({
   onOpenBloodModal,
   onChangePhone,
 }: StudentContactCardProps) {
-  const theme = SECTION_THEMES.CONTACT;
-
   const displayBloodGroup = dbBloodGroup
-    ? BLOOD_GROUP_TO_UI[dbBloodGroup] || "N/A"
+    ? BLOOD_GROUP_TO_UI[dbBloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || dbBloodGroup
     : "N/A";
 
+  const displayEditBloodGroup = bloodGroup
+    ? BLOOD_GROUP_TO_UI[bloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || bloodGroup
+    : "Select";
+
   return (
-    <View style={styles.safetyRow}>
-      {/* Blood Group Tile */}
-      <View style={[styles.card, styles.safetyTile]}>
-        <View style={styles.safetyCenter}>
-          <View style={styles.safetyIconCircle}>
-            <Feather name="droplet" size={18} color={theme.iconColor} />
-          </View>
-          <Text style={styles.safetyLabel}>BLOOD GROUP</Text>
-          {isEditing ? (
-            <TouchableOpacity
-              onPress={onOpenBloodModal}
-              style={styles.editPillBtn}
-              activeOpacity={0.75}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Select blood group"
-            >
-              <Text style={styles.editPillText}>{bloodGroup || "Select"}</Text>
-              <Feather
-                name="chevron-down"
-                size={13}
-                color={theme.primaryText}
-                style={{ marginLeft: 4 }}
-              />
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.bloodGroupValue}>{displayBloodGroup}</Text>
-          )}
+    <View style={styles.container}>
+      {/* Blood Group Card */}
+      <View style={styles.halfCard}>
+        <View style={styles.watermarkContainer} pointerEvents="none">
+          <DropMotif width={60} height={60} opacity={0.08} color={SECTION_THEMES.BLOOD.primaryText} />
         </View>
+        <View style={styles.headerRow}>
+          <View style={[styles.iconBadge, { backgroundColor: SECTION_THEMES.BLOOD.badgeBg }]}>
+            <Ionicons name="water" size={14} color={SECTION_THEMES.BLOOD.primaryText} />
+          </View>
+        </View>
+        <Text style={[styles.cardTitle, { color: SECTION_THEMES.BLOOD.primaryText }]}>
+          BLOOD GROUP
+        </Text>
+        
+        {isEditing ? (
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={onOpenBloodModal}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.editBtnText, { color: SECTION_THEMES.BLOOD.primaryText }]}>
+              {displayEditBloodGroup}
+            </Text>
+            <Feather name="chevron-down" size={14} color={SECTION_THEMES.BLOOD.primaryText} />
+          </TouchableOpacity>
+        ) : (
+          <Text style={[styles.cardValue, { color: SECTION_THEMES.BLOOD.primaryText }]}>
+            {displayBloodGroup}
+          </Text>
+        )}
       </View>
 
-      {/* Emergency Phone Tile */}
-      <View style={[styles.card, styles.safetyTile]}>
-        <View style={styles.safetyCenter}>
-          <View style={styles.safetyIconCircle}>
-            <Feather name="phone" size={18} color={theme.iconColor} />
-          </View>
-          <Text style={styles.safetyLabel}>PHONE NUMBER</Text>
-          {isEditing ? (
-            <View style={styles.phoneInputWrapper}>
-              <TextInput
-                style={styles.safetyInput}
-                value={phoneNumber}
-                onChangeText={onChangePhone}
-                keyboardType="phone-pad"
-                placeholder="01XXX-XXXXXX"
-                placeholderTextColor={PROFILE_COLORS.mutedText}
-                accessible={true}
-                accessibilityLabel="Phone number input"
-              />
-            </View>
-          ) : (
-            <Text style={styles.phoneValue}>
-              {formatPhoneNumber(profilePhone)}
-            </Text>
-          )}
+      {/* Phone Card */}
+      <View style={styles.halfCard}>
+        <View style={styles.watermarkContainer} pointerEvents="none">
+          <WaveMotif width={60} height={60} opacity={0.08} color={SECTION_THEMES.PHONE.primaryText} />
         </View>
+        <View style={styles.headerRow}>
+          <View style={[styles.iconBadge, { backgroundColor: SECTION_THEMES.PHONE.badgeBg }]}>
+            <Feather name="phone" size={14} color={SECTION_THEMES.PHONE.primaryText} />
+          </View>
+        </View>
+        <Text style={[styles.cardTitle, { color: SECTION_THEMES.PHONE.primaryText }]}>
+          PHONE NUMBER
+        </Text>
+        
+        {isEditing ? (
+          <TextInput
+            style={styles.editInput}
+            value={phoneNumber}
+            onChangeText={onChangePhone}
+            placeholder="016..."
+            keyboardType="phone-pad"
+            placeholderTextColor={PROFILE_COLORS.mutedText}
+          />
+        ) : (
+          <Text style={[styles.cardValue, { color: PROFILE_COLORS.deepNavy }]}>
+            {profilePhone || "Not set"}
+          </Text>
+        )}
       </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  safetyRow: {
+  container: {
     flexDirection: "row",
     gap: SPACING.md,
     marginBottom: SPACING.cardGap,
   },
-  card: {
+  halfCard: {
+    flex: 1,
     backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
-    borderWidth: 1,
+    padding: SPACING.lg,
     shadowColor: PROFILE_COLORS.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: 16,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.02)",
+    position: "relative",
+    overflow: "hidden",
   },
-  safetyTile: {
-    flex: 1,
-    borderColor: SECTION_THEMES.CONTACT.badgeBorder,
-    padding: SPACING.md,
-    alignItems: "center",
-    justifyContent: "center",
+  watermarkContainer: {
+    position: "absolute",
+    right: -10,
+    bottom: -10,
+    zIndex: 0,
   },
-  safetyCenter: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  safetyIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: SECTION_THEMES.CONTACT.iconCircleBg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  safetyLabel: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: PROFILE_COLORS.subtleText,
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  bloodGroupValue: {
-    fontFamily,
-    fontSize: 20,
-    fontWeight: "800",
-    color: SECTION_THEMES.CONTACT.iconColor,
-    letterSpacing: -0.3,
-  },
-  editPillBtn: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff1f2",
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: PROFILE_COLORS.pillRadius,
-    borderWidth: 1,
-    borderColor: SECTION_THEMES.CONTACT.badgeBorder,
+    justifyContent: "space-between",
+    marginBottom: 16,
+    zIndex: 1,
   },
-  editPillText: {
+  iconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cardTitle: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
-    color: SECTION_THEMES.CONTACT.primaryText,
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    zIndex: 1,
   },
-  phoneInputWrapper: {
-    backgroundColor: "#ffffff",
+  cardValue: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: -0.4,
+    zIndex: 1,
+  },
+  editInput: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    color: PROFILE_COLORS.deepNavy,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: PROFILE_COLORS.border,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 118,
-    marginTop: 2,
+    paddingVertical: 6,
+    zIndex: 1,
   },
-  phoneValue: {
+  editBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: PROFILE_COLORS.border,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    zIndex: 1,
+  },
+  editBtnText: {
     fontFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    color: PROFILE_COLORS.deepNavy,
-    textAlign: "center",
-  },
-  safetyInput: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    color: PROFILE_COLORS.deepNavy,
-    textAlign: "center",
-    paddingVertical: 0,
-    borderWidth: 0,
-    backgroundColor: "transparent",
-    outlineStyle: "none" as any,
-  },
+    fontSize: 14,
+    fontWeight: "600",
+  }
 });

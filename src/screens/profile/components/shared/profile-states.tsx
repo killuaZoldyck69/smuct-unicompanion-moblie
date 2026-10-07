@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontFamily,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "700",
     color: PROFILE_COLORS.neutralText,
     marginBottom: 8,
   },
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   },
   retryBtnText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "700",
     color: PROFILE_COLORS.white,
   },

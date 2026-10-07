@@ -134,8 +134,8 @@ const styles = StyleSheet.create({
   },
   nameText: {
     fontFamily,
-    fontSize: 18,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
     letterSpacing: -0.2,
     marginBottom: 4,

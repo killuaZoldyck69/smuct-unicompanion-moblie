@@ -225,8 +225,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
     color: SECTION_THEMES.SKILLS.primaryText,
     letterSpacing: 0.8,
   },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   qualDegree: {
     fontFamily,
     fontSize: 13.5,
-    fontWeight: "700",
+    fontWeight: "600",
     color: PROFILE_COLORS.deepNavy,
   },
   qualInst: {

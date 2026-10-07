@@ -38,8 +38,12 @@ export const TeacherContactCard = React.memo(function TeacherContactCard({
   const theme = SECTION_THEMES.CONTACT;
 
   const displayBloodGroup = dbBloodGroup
-    ? BLOOD_GROUP_TO_UI[dbBloodGroup] || "N/A"
+    ? BLOOD_GROUP_TO_UI[dbBloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || dbBloodGroup
     : "N/A";
+
+  const displayEditBloodGroup = bloodGroup
+    ? BLOOD_GROUP_TO_UI[bloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || bloodGroup
+    : "Select";
 
   return (
     <View style={styles.safetyRow}>
@@ -59,7 +63,7 @@ export const TeacherContactCard = React.memo(function TeacherContactCard({
               accessibilityRole="button"
               accessibilityLabel="Select blood group"
             >
-              <Text style={styles.editPillText}>{bloodGroup || "Select"}</Text>
+              <Text style={styles.editPillText}>{displayEditBloodGroup}</Text>
               <Feather
                 name="chevron-down"
                 size={13}
@@ -143,7 +147,7 @@ const styles = StyleSheet.create({
   safetyLabel: {
     fontFamily,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
     color: PROFILE_COLORS.subtleText,
     letterSpacing: 0.8,
     marginBottom: 4,
@@ -151,7 +155,7 @@ const styles = StyleSheet.create({
   bloodGroupValue: {
     fontFamily,
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "700",
     color: SECTION_THEMES.CONTACT.iconColor,
     letterSpacing: -0.3,
   },

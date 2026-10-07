@@ -90,7 +90,7 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "padding"}
       style={styles.container}
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />

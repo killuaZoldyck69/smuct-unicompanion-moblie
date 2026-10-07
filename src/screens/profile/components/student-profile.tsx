@@ -56,7 +56,7 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
     (payload: UpdateStudentProfileInput, onSuccess: () => void) => {
       updateStudentProfile(payload, { onSuccess });
     },
-    [updateStudentProfile]
+    [updateStudentProfile],
   );
 
   const {
@@ -81,7 +81,11 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
   if (isError || !profile) {
     return (
       <ProfileErrorState
-        title={!profile ? "No student profile found" : "Failed to load student profile"}
+        title={
+          !profile
+            ? "No student profile found"
+            : "Failed to load student profile"
+        }
         onRetry={refetch}
       />
     );
@@ -89,10 +93,14 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "padding"}
       style={styles.container}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
 
       <StudentHeader
         insetsTop={insets.top}
@@ -106,7 +114,7 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom > 0 ? insets.bottom + 110 : 120 },
+          { paddingBottom: insets.bottom > 0 ? insets.bottom + 40 : 120 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

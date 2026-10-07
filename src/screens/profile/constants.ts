@@ -42,11 +42,8 @@ export const SECTION_THEMES = {
     accentText: "#131b2e",
     accentColor: "#131b2e",
   },
-  // ROLE-BASED HUE SEPARATION RULE:
-  // Color in this app expresses ROLE at the top level (e.g. Student Academic Blue vs. Faculty Academic Amber)
-  // and CONTENT CATEGORY within a role (Contact/Safety = Crimson, Links = Cyan across all roles).
 
-  // Student Academic Record: Academic Blue (#1d4ed8 / #eff6ff)
+  // Student Academic Record: Calm academic blue (#1d4ed8 / #eff6ff)
   ACADEMIC: {
     primaryText: "#1d4ed8",
     headerBg: "rgba(37, 99, 235, 0.06)",
@@ -57,7 +54,8 @@ export const SECTION_THEMES = {
     iconColor: "#2563eb",
     divider: "rgba(37, 99, 235, 0.08)",
   },
-  // Faculty Academic Position: Deliberately distinct Amber/Yellow (#854d0e / #fefce8 / #fffbeb)
+
+  // Faculty Academic Position: Amber/Yellow
   FACULTY_ACADEMIC: {
     primaryText: "#854d0e",
     headerBg: "rgba(202, 138, 4, 0.08)",
@@ -69,39 +67,63 @@ export const SECTION_THEMES = {
     iconCircleBg: "#fef9c3",
     divider: "rgba(202, 138, 4, 0.10)",
   },
-  // Professional Skills: Reuses Campus Life Emerald (#047857 / #ecfdf5)
+
+  // Professional Skills: Sage/Teal — calm, technical
   SKILLS: {
-    primaryText: "#047857",
-    badgeBg: "#ecfdf5",
-    badgeBorder: "rgba(5, 150, 105, 0.14)",
-    iconColor: "#059669",
+    primaryText: "#0D9488",
+    badgeBg: "#F0FDFA",
+    badgeBorder: "rgba(13, 148, 136, 0.14)",
+    iconColor: "#0D9488",
     chipBg: "#ffffff",
-    chipBorder: "rgba(5, 150, 105, 0.20)",
-    chipText: "#065f46",
-    addBtnBg: "#059669",
+    chipBorder: "rgba(13, 148, 136, 0.18)",
+    chipText: "#065F46",
+    addBtnBg: "#0D9488",
   },
-  // Contact & Safety: Reuses Support & Aid Crimson (#be123c / #fff1f2) across both student & faculty
+
+  // Contact & Safety: muted coral (blood) + warm peach (phone)
+  BLOOD: {
+    primaryText: "#be123c",
+    badgeBg: "#fff1f2",
+  },
+  PHONE: {
+    primaryText: "#d97706",
+    badgeBg: "#fffbeb",
+  },
   CONTACT: {
+    // Blood group
     primaryText: "#be123c",
     badgeBg: "#fff1f2",
     badgeBorder: "rgba(225, 29, 72, 0.14)",
     iconColor: "#dc2626",
     iconCircleBg: "#fee2e2",
+    // Phone
+    phoneText: "#92400e",
+    phoneBg: "#fffbeb",
+    phoneBorder: "rgba(180, 83, 9, 0.14)",
+    phoneIconColor: "#d97706",
+    phoneIconCircleBg: "#fef3c7",
     tileBg: "#ffffff",
   },
-  // External Links: Digital web cyan (#0284c7 / #f0f9ff) across all roles
+
+  // Portfolio / Social: Soft indigo
+  SOCIAL: {
+    primaryText: "#4F46E5",
+    badgeBg: "#EEF2FF",
+  },
   LINKS: {
-    primaryText: "#0284c7",
-    badgeBg: "#f0f9ff",
-    badgeBorder: "rgba(2, 132, 199, 0.14)",
-    iconColor: "#0284c7",
-    iconCircleBg: "#e0f2fe",
+    primaryText: "#4F46E5",
+    badgeBg: "#EEF2FF",
+    badgeBorder: "rgba(79, 70, 229, 0.14)",
+    iconColor: "#4F46E5",
+    iconCircleBg: "#E0E7FF",
   },
 } as const;
 
 export const PROFILE_COLORS = {
-  background: "#f7f9fb",
-  deepNavy: "#131b2e",
+  // Soft Editorial Campus palette (Bento theme matched)
+  background: "#f7f9fb",       // bento theme background
+  surface: "#FAFAF7",          // card surface (slightly brighter)
+  deepNavy: "#131b2e",         // primary text / headings
   white: "#ffffff",
   neutralText: "#191c1d",
   subtleText: "#64748b",
@@ -113,25 +135,26 @@ export const PROFILE_COLORS = {
   border: "rgba(19, 27, 46, 0.08)",
   shadow: {
     shadowColor: "#131b2e",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
     elevation: 2,
   },
   heroShadow: {
     shadowColor: "#131b2e",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 28,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.10,
+    shadowRadius: 24,
+    elevation: 4,
   },
 } as const;
 
+// Unified font: Aligns with Bento theme / ExploreHeader
 export const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
   android: "sans-serif",
   default: "sans-serif",
-});
+}) as string;
 
 export const PROFILE_CACHE_CONFIG = {
   staleTime: Infinity,
@@ -140,4 +163,3 @@ export const PROFILE_CACHE_CONFIG = {
   refetchOnWindowFocus: false as const,
   refetchOnReconnect: false as const,
 } as const;
-

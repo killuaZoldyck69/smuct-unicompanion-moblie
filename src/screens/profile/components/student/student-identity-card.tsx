@@ -7,7 +7,8 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import Svg, { Circle, G } from "react-native-svg";
 import { StudentProfileData } from "@/services/student-service";
 import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
 
@@ -23,6 +24,15 @@ interface StudentIdentityCardProps {
   onPickAvatar: (safeName: string) => void;
 }
 
+const IdentityWatermark = () => (
+  <Svg width={120} height={120} viewBox="0 0 120 120" style={styles.watermark}>
+    <G opacity={0.06}>
+      <Circle cx="100" cy="10" r="40" fill="#2563EB" />
+      <Circle cx="120" cy="80" r="30" fill="#2563EB" />
+    </G>
+  </Svg>
+);
+
 export const StudentIdentityCard = React.memo(function StudentIdentityCard({
   profile,
   sessionUser,
@@ -33,6 +43,8 @@ export const StudentIdentityCard = React.memo(function StudentIdentityCard({
 
   return (
     <View style={styles.card}>
+      <IdentityWatermark />
+      
       <View style={styles.avatarRow}>
         <TouchableOpacity
           onPress={() => onPickAvatar(safeName)}
@@ -55,6 +67,7 @@ export const StudentIdentityCard = React.memo(function StudentIdentityCard({
               <Feather name="user" size={32} color={PROFILE_COLORS.subtleText} />
             </View>
           )}
+          
           <View style={styles.cameraBadge}>
             {isUploading ? (
               <ActivityIndicator size="small" color="#ffffff" />
@@ -65,10 +78,12 @@ export const StudentIdentityCard = React.memo(function StudentIdentityCard({
         </TouchableOpacity>
 
         <View style={styles.avatarTextContainer}>
-          <Text style={styles.nameText}>{profile.name || sessionUser.name}</Text>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {profile.name || sessionUser.name}
+          </Text>
           <View style={styles.roleRow}>
             <View style={styles.rolePill}>
-              <Feather name="book-open" size={11} color={PROFILE_COLORS.deepNavy} />
+              <Ionicons name="school" size={12} color={PROFILE_COLORS.subtleText} />
               <Text style={styles.rolePillText}>Student</Text>
             </View>
             {profile.isCR && (
@@ -77,8 +92,18 @@ export const StudentIdentityCard = React.memo(function StudentIdentityCard({
               </View>
             )}
           </View>
-          <Text style={styles.subText}>ID: {profile.studentId}</Text>
-          <Text style={styles.subText}>{profile.email || sessionUser.email}</Text>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>ID:</Text>
+            <Text style={styles.subText}>{profile.studentId}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Feather name="mail" size={11} color={PROFILE_COLORS.subtleText} />
+            <Text style={styles.subText} numberOfLines={1}>
+              {profile.email || sessionUser.email}
+            </Text>
+          </View>
         </View>
       </View>
     </View>
@@ -87,43 +112,53 @@ export const StudentIdentityCard = React.memo(function StudentIdentityCard({
 
 const styles = StyleSheet.create({
   card: {
+    position: "relative",
     backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
     padding: SPACING.xl,
     marginBottom: SPACING.cardGap,
-    borderWidth: 1,
-    borderColor: PROFILE_COLORS.border,
     shadowColor: PROFILE_COLORS.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: 16,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.02)",
+    overflow: "hidden",
+  },
+  watermark: {
+    position: "absolute",
+    right: -20,
+    top: -20,
+    zIndex: 0,
   },
   avatarRow: {
     flexDirection: "row",
     alignItems: "center",
+    zIndex: 1,
   },
   avatarContainer: {
     position: "relative",
+    marginRight: 20,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: "#f1f5f9",
   },
   avatarPlaceholder: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
   },
   cameraBadge: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
+    bottom: 2,
+    right: 2,
     backgroundColor: PROFILE_COLORS.deepNavy,
     width: 24,
     height: 24,
@@ -134,35 +169,35 @@ const styles = StyleSheet.create({
     borderColor: PROFILE_COLORS.white,
   },
   avatarTextContainer: {
-    marginLeft: 16,
     flex: 1,
+    justifyContent: "center",
   },
   nameText: {
     fontFamily,
-    fontSize: 18,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
-    letterSpacing: -0.2,
-    marginBottom: 4,
+    letterSpacing: -0.4,
+    marginBottom: 6,
   },
   roleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
+    gap: 8,
+    marginBottom: 8,
   },
   rolePill: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f1f5f9",
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    gap: 4,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
   },
   rolePillText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
   },
@@ -171,14 +206,26 @@ const styles = StyleSheet.create({
   },
   crPillText: {
     fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#3730a3",
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#4338ca",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  infoLabel: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: PROFILE_COLORS.subtleText,
   },
   subText: {
     fontFamily,
     fontSize: 12,
+    fontWeight: "500",
     color: PROFILE_COLORS.subtleText,
-    lineHeight: 16,
   },
 });

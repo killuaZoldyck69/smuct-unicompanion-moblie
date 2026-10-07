@@ -1,11 +1,5 @@
 import React, { useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import {
   PROFILE_COLORS,
@@ -13,6 +7,7 @@ import {
   SPACING,
   fontFamily,
 } from "../../constants";
+import { SkillsIllustration } from "../illustrations/skills-illustration";
 
 interface StudentSkillsCardProps {
   skills: string[];
@@ -37,16 +32,20 @@ export const StudentSkillsCard = React.memo(function StudentSkillsCard({
       setInputValue("");
     }
   }, [inputValue, onAddSkill]);
-
+  
   return (
     <View style={styles.card}>
+      <View style={styles.watermarkContainer} pointerEvents="none">
+        <SkillsIllustration width={120} height={100} opacity={0.12} color={theme.primaryText} />
+      </View>
+
       <View style={styles.sectionHeaderRow}>
-        <View style={[styles.sectionIconBadge, { backgroundColor: theme.badgeBg }]}>
-          <Feather name="code" size={14} color={theme.primaryText} />
+        <View style={styles.headerLeft}>
+          <View style={styles.sectionIconBadge}>
+            <Feather name="code" size={15} color={theme.primaryText} />
+          </View>
+          <Text style={styles.sectionTitle}>PROFESSIONAL SKILLS</Text>
         </View>
-        <Text style={[styles.sectionTitle, { color: theme.primaryText }]}>
-          PROFESSIONAL SKILLS
-        </Text>
       </View>
 
       {isEditing && (
@@ -55,21 +54,13 @@ export const StudentSkillsCard = React.memo(function StudentSkillsCard({
             style={styles.input}
             value={inputValue}
             onChangeText={setInputValue}
-            placeholder="Add a skill (e.g. React Native, UI/UX)..."
+            placeholder="Add a skill..."
             placeholderTextColor={PROFILE_COLORS.mutedText}
             returnKeyType="done"
             onSubmitEditing={handleAdd}
             accessible={true}
-            accessibilityLabel="Add skill text input"
           />
-          <TouchableOpacity
-            onPress={handleAdd}
-            style={styles.addBtn}
-            activeOpacity={0.8}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Add skill button"
-          >
+          <TouchableOpacity onPress={handleAdd} style={styles.addBtn} activeOpacity={0.8}>
             <Feather name="plus" size={15} color="#ffffff" />
           </TouchableOpacity>
         </View>
@@ -81,14 +72,8 @@ export const StudentSkillsCard = React.memo(function StudentSkillsCard({
             <View key={idx} style={styles.chip}>
               <Text style={styles.chipText}>{skill}</Text>
               {isEditing && (
-                <TouchableOpacity
-                  onPress={() => onRemoveSkill(skill)}
-                  style={{ marginLeft: 6 }}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove skill ${skill}`}
-                >
-                  <Feather name="x" size={13} color={theme.chipText} />
+                <TouchableOpacity onPress={() => onRemoveSkill(skill)} style={{ marginLeft: 6 }}>
+                  <Feather name="x" size={13} color={theme.primaryText} />
                 </TouchableOpacity>
               )}
             </View>
@@ -105,35 +90,52 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
-    padding: SPACING.xl,
     marginBottom: SPACING.cardGap,
-    borderWidth: 1,
-    borderColor: SECTION_THEMES.SKILLS.badgeBorder,
     shadowColor: PROFILE_COLORS.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: 16,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.02)",
+    padding: SPACING.lg,
+    position: "relative",
+    overflow: "hidden",
+  },
+  watermarkContainer: {
+    position: "absolute",
+    right: -20,
+    top: 20,
+    zIndex: 0,
   },
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
     marginBottom: SPACING.md,
+    zIndex: 1,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   sectionIconBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: SECTION_THEMES.SKILLS.badgeBg,
     alignItems: "center",
     justifyContent: "center",
   },
   sectionTitle: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
+    color: SECTION_THEMES.SKILLS.primaryText,
     letterSpacing: 0.8,
   },
+
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -143,15 +145,15 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: SECTION_THEMES.SKILLS.chipBorder,
+    borderColor: "rgba(16, 185, 129, 0.15)",
+    zIndex: 1,
   },
   input: {
     flex: 1,
     fontFamily,
-    fontSize: 13,
-    color: PROFILE_COLORS.neutralText,
+    fontSize: 14,
+    color: PROFILE_COLORS.deepNavy,
     padding: 0,
-    outlineStyle: "none" as any,
   },
   addBtn: {
     width: 26,
@@ -165,26 +167,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+    zIndex: 1,
   },
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0fdf4",
+    backgroundColor: SECTION_THEMES.SKILLS.badgeBg,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: PROFILE_COLORS.pillRadius,
-    borderWidth: 1,
-    borderColor: SECTION_THEMES.SKILLS.chipBorder,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   chipText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    color: SECTION_THEMES.SKILLS.chipText,
+    color: SECTION_THEMES.SKILLS.primaryText,
   },
   emptyText: {
     fontFamily,
-    fontSize: 13,
-    color: PROFILE_COLORS.mutedText,
+    fontSize: 14,
+    color: PROFILE_COLORS.subtleText,
+    fontStyle: "italic",
   },
 });

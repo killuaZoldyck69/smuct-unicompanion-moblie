@@ -1,26 +1,40 @@
 import React from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import Svg, { Rect, Circle, G } from "react-native-svg";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
   SPACING,
   fontFamily,
 } from "../../constants";
-import {
-  safeOpenURL,
-  resolveSocialUrl,
-  formatFriendlyLink,
-} from "../../utils";
 
 interface ProfileSocialCardProps {
   isEditing: boolean;
   linkedInUrl: string;
   personalWebsiteUrl: string;
-  userName?: string;
+  userName: string;
   onChangeLinkedIn: (url: string) => void;
   onChangeWebsite: (url: string) => void;
 }
+
+const BrowserWatermark = () => (
+  <Svg width={140} height={100} viewBox="0 0 140 100" style={styles.watermark}>
+    <G opacity={0.08} fill={SECTION_THEMES.SOCIAL.primaryText}>
+      {/* Browser Window */}
+      <Rect x="20" y="20" width="100" height="70" rx="6" />
+      {/* Top Bar */}
+      <Circle cx="30" cy="28" r="2" fill="#fff" />
+      <Circle cx="36" cy="28" r="2" fill="#fff" />
+      <Circle cx="42" cy="28" r="2" fill="#fff" />
+      <Rect x="20" y="34" width="100" height="1" fill="#fff" />
+      {/* Content lines */}
+      <Rect x="30" y="44" width="30" height="30" rx="15" fill="#fff" />
+      <Rect x="70" y="52" width="40" height="6" rx="3" fill="#fff" />
+      <Rect x="70" y="64" width="30" height="4" rx="2" fill="#fff" />
+    </G>
+  </Svg>
+);
 
 export const ProfileSocialCard = React.memo(function ProfileSocialCard({
   isEditing,
@@ -30,124 +44,80 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
   onChangeLinkedIn,
   onChangeWebsite,
 }: ProfileSocialCardProps) {
-  const theme = SECTION_THEMES.LINKS;
+  const theme = SECTION_THEMES.SOCIAL;
 
-  const linkedInResolution = resolveSocialUrl(linkedInUrl, "linkedin", userName);
-  const websiteResolution = resolveSocialUrl(personalWebsiteUrl, "website", userName);
-
-  const hasLinkedIn = linkedInResolution.isValid;
-  const hasWebsite = websiteResolution.isValid;
-
-  // In read mode, if neither link is provided by the user, do not show anything
-  if (!isEditing && !hasLinkedIn && !hasWebsite) {
+  if (!isEditing && !linkedInUrl && !personalWebsiteUrl) {
     return null;
   }
 
-  const friendlyLinkedIn = formatFriendlyLink(linkedInResolution.displayUrl);
-  const friendlyWebsite = formatFriendlyLink(websiteResolution.displayUrl);
-
   return (
     <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerIcon}>
-          <Feather name="globe" size={14} color={theme.primaryText} />
+      <BrowserWatermark />
+
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.headerLeft}>
+          <View style={styles.sectionIconBadge}>
+            <Feather name="link" size={15} color={theme.primaryText} />
+          </View>
+          <Text style={styles.sectionTitle}>PORTFOLIO & SOCIAL PROFILES</Text>
         </View>
-        <Text style={styles.cardHeader}>PORTFOLIO & SOCIAL PROFILES</Text>
       </View>
 
-      {/* LinkedIn Row */}
-      {(isEditing || hasLinkedIn) && (
-        <View style={styles.itemRow}>
-          <View style={styles.iconCircle}>
-            <Feather name="linkedin" size={18} color="#0077b5" />
+      {(isEditing || !!linkedInUrl) && (
+        <View style={styles.linkRow}>
+          <View style={styles.linkIconWrapper}>
+            <Feather name="linkedin" size={18} color="#ffffff" />
           </View>
-          <View style={styles.itemContent}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>LinkedIn</Text>
-            </View>
+          <View style={styles.linkContent}>
+            <Text style={styles.linkLabel}>LinkedIn</Text>
             {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={linkedInUrl}
-                onChangeText={onChangeLinkedIn}
-                placeholder="https://linkedin.com/in/username"
-                placeholderTextColor={PROFILE_COLORS.mutedText}
-                autoCapitalize="none"
-                keyboardType="url"
-                accessible={true}
-                accessibilityLabel="LinkedIn URL input"
-              />
+               <TextInput
+                 style={styles.editInput}
+                 value={linkedInUrl}
+                 onChangeText={onChangeLinkedIn}
+                 placeholder="linkedin.com/in/..."
+                 placeholderTextColor={PROFILE_COLORS.mutedText}
+                 autoCapitalize="none"
+                 autoCorrect={false}
+                 accessible={true}
+               />
             ) : (
-              <TouchableOpacity
-                onPress={() => safeOpenURL(linkedInResolution.displayUrl)}
-                style={styles.linkTouchable}
-                activeOpacity={0.7}
-                accessible={true}
-                accessibilityRole="link"
-                accessibilityLabel={`Open LinkedIn profile: ${linkedInResolution.displayUrl}`}
-              >
-                <Text style={styles.linkText} numberOfLines={1}>
-                  {friendlyLinkedIn}
+              <View style={styles.linkUrlRow}>
+                <Text style={styles.linkUrl} numberOfLines={1}>
+                  {linkedInUrl}
                 </Text>
-                <Feather
-                  name="arrow-up-right"
-                  size={14}
-                  color="#0077b5"
-                  style={{ marginLeft: 4 }}
-                />
-              </TouchableOpacity>
+                <Feather name="arrow-up-right" size={12} color={theme.primaryText} />
+              </View>
             )}
           </View>
         </View>
       )}
 
-      {/* Divider between LinkedIn and Website */}
-      {(isEditing || (hasLinkedIn && hasWebsite)) && (
-        <View style={styles.divider} />
-      )}
-
-      {/* Personal Website Row */}
-      {(isEditing || hasWebsite) && (
-        <View style={styles.itemRow}>
-          <View style={styles.iconCircle}>
-            <Feather name="external-link" size={17} color={theme.primaryText} />
+      {(isEditing || !!personalWebsiteUrl) && (
+        <View style={[styles.linkRow, { marginTop: 12 }]}>
+          <View style={[styles.linkIconWrapper, { backgroundColor: "#0f172a" }]}>
+            <Feather name="globe" size={18} color="#ffffff" />
           </View>
-          <View style={styles.itemContent}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Personal Website</Text>
-            </View>
-
+          <View style={styles.linkContent}>
+            <Text style={styles.linkLabel}>Website</Text>
             {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={personalWebsiteUrl}
-                onChangeText={onChangeWebsite}
-                placeholder="https://yourwebsite.com"
-                placeholderTextColor={PROFILE_COLORS.mutedText}
-                autoCapitalize="none"
-                keyboardType="url"
-                accessible={true}
-                accessibilityLabel="Personal Website URL input"
-              />
+               <TextInput
+                 style={styles.editInput}
+                 value={personalWebsiteUrl}
+                 onChangeText={onChangeWebsite}
+                 placeholder="yourwebsite.com"
+                 placeholderTextColor={PROFILE_COLORS.mutedText}
+                 autoCapitalize="none"
+                 autoCorrect={false}
+                 accessible={true}
+               />
             ) : (
-              <TouchableOpacity
-                onPress={() => safeOpenURL(websiteResolution.displayUrl)}
-                style={styles.linkTouchable}
-                activeOpacity={0.7}
-                accessible={true}
-                accessibilityRole="link"
-                accessibilityLabel={`Open Personal Website: ${websiteResolution.displayUrl}`}
-              >
-                <Text style={styles.linkText} numberOfLines={1}>
-                  {friendlyWebsite}
+              <View style={styles.linkUrlRow}>
+                <Text style={styles.linkUrl} numberOfLines={1}>
+                  {personalWebsiteUrl}
                 </Text>
-                <Feather
-                  name="arrow-up-right"
-                  size={14}
-                  color={theme.primaryText}
-                  style={{ marginLeft: 4 }}
-                />
-              </TouchableOpacity>
+                <Feather name="arrow-up-right" size={12} color={theme.primaryText} />
+              </View>
             )}
           </View>
         </View>
@@ -160,85 +130,105 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
-    padding: SPACING.lg, // 16px
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.cardGap,
+    shadowColor: PROFILE_COLORS.deepNavy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: PROFILE_COLORS.subtleBorder,
-    ...PROFILE_COLORS.shadow,
+    borderColor: "rgba(0,0,0,0.02)",
+    padding: SPACING.lg,
+    position: "relative",
+    overflow: "hidden",
   },
-  headerRow: {
+  watermark: {
+    position: "absolute",
+    right: -20,
+    top: 10,
+    zIndex: 0,
+  },
+  sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: SPACING.md,
-    gap: 6,
+    justifyContent: "space-between",
+    marginBottom: SPACING.lg,
+    zIndex: 1,
   },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    backgroundColor: SECTION_THEMES.LINKS.badgeBg,
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: SECTION_THEMES.SOCIAL.badgeBg,
     alignItems: "center",
     justifyContent: "center",
   },
-  cardHeader: {
+  sectionTitle: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
-    color: SECTION_THEMES.LINKS.primaryText,
+    fontSize: 12,
+    fontWeight: "700",
+    color: SECTION_THEMES.SOCIAL.primaryText,
     letterSpacing: 0.8,
   },
-  itemRow: {
+
+  linkRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+    zIndex: 1,
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    backgroundColor: SECTION_THEMES.LINKS.badgeBg,
+  linkIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#0A66C2", // LinkedIn blue
     alignItems: "center",
     justifyContent: "center",
-    marginRight: SPACING.md,
-    borderWidth: 1,
-    borderColor: SECTION_THEMES.LINKS.badgeBorder,
   },
-  itemContent: {
+  linkContent: {
     flex: 1,
-  },
-  labelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 2,
+    justifyContent: "space-between",
   },
-  label: {
+  linkLabel: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    color: PROFILE_COLORS.subtleText,
-  },
-  linkTouchable: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  linkText: {
-    fontFamily,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "600",
-    color: SECTION_THEMES.LINKS.primaryText,
-    maxWidth: "90%",
+    color: PROFILE_COLORS.deepNavy,
   },
-  input: {
+  linkUrlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  linkUrl: {
     fontFamily,
-    fontSize: 13.5,
-    color: PROFILE_COLORS.neutralText,
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    fontSize: 13,
+    fontWeight: "500",
+    color: SECTION_THEMES.SOCIAL.primaryText,
+    maxWidth: 150,
+    textAlign: "right",
   },
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.04)",
-    marginVertical: SPACING.md,
+  editInput: {
+    flex: 1,
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "400",
+    color: PROFILE_COLORS.deepNavy,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: PROFILE_COLORS.border,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginLeft: 12,
   },
 });

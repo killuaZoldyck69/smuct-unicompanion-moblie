@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   nameText: {
     fontFamily,
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#ffffff",
     marginBottom: 6,
   },
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     fontFamily,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#a5b4fc",
     letterSpacing: 1,
   },
@@ -105,8 +105,8 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
     color: PROFILE_COLORS.subtleText,
     letterSpacing: 1,
     marginBottom: 16,
@@ -127,14 +127,14 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontFamily,
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "600",
     color: PROFILE_COLORS.subtleText,
     marginBottom: 2,
   },
   infoValue: {
     fontFamily,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
     color: PROFILE_COLORS.neutralText,
   },
   logoutWrapper: {
