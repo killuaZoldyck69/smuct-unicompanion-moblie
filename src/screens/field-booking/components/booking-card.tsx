@@ -1,36 +1,60 @@
 import React, { memo } from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { FieldBookingItem } from "@/services/field-service";
 import { BENTO } from "../constants";
 import {
   formatDate,
+  formatRequestedDate,
   formatTime,
   getBookingDuration,
   getSportIcon,
 } from "../utils";
+import { BookingStatusBadge } from "./booking-status-badge";
 import { CardSportMotif } from "./card-sport-motifs";
 import { SportIcon } from "./sport-icon";
 
-interface ScheduleCardProps {
+interface BookingCardProps {
   item: FieldBookingItem;
+  onPress?: () => void;
 }
 
-export const ScheduleCard = memo(function ScheduleCard({
+export const BookingCard = memo(function BookingCard({
   item,
-}: ScheduleCardProps) {
+  onPress,
+}: BookingCardProps) {
   const sport = getSportIcon(item.purpose);
   const duration = getBookingDuration(item);
   const dateDisplay = formatDate(item.bookingDate || item.startTime);
-  const userName = item.user?.name || "University Member";
-  const userInitial = userName.charAt(0).toUpperCase();
+  const requestedDate = formatRequestedDate(item.createdAt);
+
+  const statusNorm = (item.status || "").toUpperCase();
+  const leftAccentColor =
+    statusNorm === "APPROVED"
+      ? BENTO.emerald
+      : statusNorm === "REJECTED"
+      ? BENTO.rose
+      : BENTO.amber;
 
   return (
-    <View style={styles.card}>
-      {/* Subtle sport motif */}
+    <TouchableOpacity
+      style={[styles.card, { borderLeftColor: leftAccentColor }]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.75 : 1}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`Booking for ${item.purpose}, ${statusNorm}, on ${dateDisplay}`}
+    >
+      {/* Subtle Bottom-Right Sports Motif Art */}
       <CardSportMotif type={sport.type} />
 
-      {/* Row 1: Date & Reserved Slot Pill */}
+      {/* Row 1: Date & Status Badge */}
       <View style={styles.cardHeader}>
         <View style={styles.dateRow}>
           <Feather
@@ -41,26 +65,23 @@ export const ScheduleCard = memo(function ScheduleCard({
           />
           <Text style={styles.dateText}>{dateDisplay}</Text>
         </View>
-
-        <View style={styles.reservedBadge}>
-          <Feather
-            name="lock"
-            size={11}
-            color={BENTO.emerald}
-            style={styles.lockIcon}
-          />
-          <Text style={styles.reservedBadgeText}>APPROVED SLOT</Text>
-        </View>
+        <BookingStatusBadge status={item.status} />
       </View>
 
-      {/* Row 2: Event Title */}
+      {/* Row 2: Booking Title + Chevron */}
       <View style={styles.titleRow}>
         <Text style={styles.purposeTitle} numberOfLines={2} ellipsizeMode="tail">
           {item.purpose}
         </Text>
+        <Feather
+          name="chevron-right"
+          size={18}
+          color={BENTO.slateLight}
+          style={styles.chevron}
+        />
       </View>
 
-      {/* Row 3: Sport Category */}
+      {/* Row 3: Sport Category Metadata */}
       <View style={styles.sportRow}>
         <SportIcon
           type={sport.type}
@@ -71,7 +92,7 @@ export const ScheduleCard = memo(function ScheduleCard({
         <Text style={styles.sportLabel}>{sport.label}</Text>
       </View>
 
-      {/* Row 4: Time Slot & Duration */}
+      {/* Row 4: Time Slot & Duration Pill */}
       <View style={styles.timeRow}>
         <View style={styles.timePill}>
           <Feather
@@ -92,16 +113,48 @@ export const ScheduleCard = memo(function ScheduleCard({
         ) : null}
       </View>
 
-      {/* Row 5: Booked By */}
-      <View style={styles.bookedByRow}>
-        <View style={styles.avatarWrap}>
-          <Text style={styles.avatarText}>{userInitial}</Text>
+      {/* Admin Feedback Box if present */}
+      {item.adminFeedback ? (
+        <View
+          style={[
+            styles.feedbackBox,
+            statusNorm === "REJECTED"
+              ? styles.feedbackBoxRejected
+              : styles.feedbackBoxNormal,
+          ]}
+        >
+          <Feather
+            name="info"
+            size={12}
+            color={statusNorm === "REJECTED" ? BENTO.rose : BENTO.slate}
+            style={styles.feedbackIcon}
+          />
+          <Text
+            style={[
+              styles.feedbackText,
+              statusNorm === "REJECTED" && { color: BENTO.rose },
+            ]}
+          >
+            {item.adminFeedback}
+          </Text>
         </View>
-        <Text style={styles.bookedByText}>
-          Reserved for <Text style={styles.userNameHighlight}>{userName}</Text>
-        </Text>
-      </View>
-    </View>
+      ) : null}
+
+      {/* Row 5: Secondary Requested Date */}
+      {requestedDate ? (
+        <View style={styles.requestedRow}>
+          <Feather
+            name="user"
+            size={12}
+            color={BENTO.slateLight}
+            style={styles.requestedIcon}
+          />
+          <Text style={styles.requestedText}>
+            Requested {requestedDate}
+          </Text>
+        </View>
+      ) : null}
+    </TouchableOpacity>
   );
 });
 
@@ -114,7 +167,6 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     marginBottom: 12,
     borderLeftWidth: 3.5,
-    borderLeftColor: BENTO.emerald,
     borderWidth: 1,
     borderColor: BENTO.border,
     shadowColor: "#0f172a",
@@ -143,29 +195,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: BENTO.navySecondary,
   },
-  reservedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: BENTO.emeraldBg,
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BENTO.emeraldBorder,
-  },
-  lockIcon: {
-    marginRight: 4,
-  },
-  reservedBadgeText: {
-    fontSize: 10.5,
-    fontWeight: "800",
-    color: BENTO.emerald,
-    letterSpacing: 0.3,
-  },
   titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     marginBottom: 4,
+    paddingRight: 4,
   },
   purposeTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: "700",
     color: BENTO.navy,
@@ -175,6 +213,10 @@ const styles = StyleSheet.create({
       Platform.OS === "web"
         ? "var(--font-heading), 'Plus Jakarta Sans', system-ui, sans-serif"
         : undefined,
+  },
+  chevron: {
+    marginLeft: 8,
+    marginTop: 2,
   },
   sportRow: {
     flexDirection: "row",
@@ -223,33 +265,41 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: BENTO.slate,
   },
-  bookedByRow: {
+  feedbackBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  feedbackBoxNormal: {
+    backgroundColor: BENTO.slateSubtle,
+    borderColor: BENTO.border,
+  },
+  feedbackBoxRejected: {
+    backgroundColor: BENTO.roseBg,
+    borderColor: BENTO.roseBorder,
+  },
+  feedbackIcon: {
+    marginRight: 6,
+  },
+  feedbackText: {
+    fontSize: 12,
+    color: BENTO.slate,
+    flex: 1,
+  },
+  requestedRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 2,
   },
-  avatarWrap: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: BENTO.slateSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 6,
-    borderWidth: 1,
-    borderColor: BENTO.border,
+  requestedIcon: {
+    marginRight: 5,
   },
-  avatarText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: BENTO.navy,
-  },
-  bookedByText: {
+  requestedText: {
     fontSize: 11.5,
-    color: BENTO.slate,
-  },
-  userNameHighlight: {
-    fontWeight: "600",
-    color: BENTO.navySecondary,
+    fontWeight: "500",
+    color: BENTO.slateLight,
   },
 });

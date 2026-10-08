@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BENTO, TIME_SLOT_PRESETS } from "../../constants";
+import { BENTO } from "../../constants";
 import { formatTime12h } from "../../utils";
 import type { DurationInfo } from "../../types";
 
@@ -15,7 +15,7 @@ interface TimeSectionProps {
   startTime: string;
   endTime: string;
   durationInfo: DurationInfo;
-  onSelectPreset: (start: string, end: string) => void;
+  onSelectPreset?: (start: string, end: string) => void;
   onChangeStartTime: (val: string) => void;
   onChangeEndTime: (val: string) => void;
   onOpenNativePicker: (mode: "start" | "end") => void;
@@ -25,7 +25,6 @@ export const TimeSection = memo(function TimeSection({
   startTime,
   endTime,
   durationInfo,
-  onSelectPreset,
   onChangeStartTime,
   onChangeEndTime,
   onOpenNativePicker,
@@ -34,49 +33,7 @@ export const TimeSection = memo(function TimeSection({
     <View style={styles.formSection}>
       <Text style={styles.sectionLabel}>TIME SLOT (12-HR)</Text>
 
-      {/* Quick Campus Time Slots */}
-      <View style={styles.timeSlotPresetsGrid}>
-        {TIME_SLOT_PRESETS.map((slot) => {
-          const isSelected = startTime === slot.start && endTime === slot.end;
-          return (
-            <TouchableOpacity
-              key={slot.label}
-              style={[
-                styles.timeSlotPresetCard,
-                isSelected && styles.timeSlotPresetCardActive,
-              ]}
-              onPress={() => onSelectPreset(slot.start, slot.end)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.timePresetIconWrap}>
-                <Feather
-                  name={slot.icon}
-                  size={14}
-                  color={isSelected ? BENTO.navy : BENTO.slate}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.timePresetLabel,
-                  isSelected && styles.timePresetLabelActive,
-                ]}
-              >
-                {slot.label}
-              </Text>
-              <Text
-                style={[
-                  styles.timePresetSub,
-                  isSelected && styles.timePresetSubActive,
-                ]}
-              >
-                {formatTime12h(slot.start)} - {formatTime12h(slot.end)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Custom Start & End Time Pickers */}
+      {/* Start & End Time Pickers */}
       <View style={styles.customTimeRow}>
         {/* Start Time Card */}
         <TouchableOpacity
@@ -87,6 +44,9 @@ export const TimeSection = memo(function TimeSection({
               onOpenNativePicker("start");
             }
           }}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Start time: ${formatTime12h(startTime)}`}
         >
           <Text style={styles.timeCardSubLabel}>START TIME</Text>
           <View style={styles.timeCardValRow}>
@@ -132,6 +92,9 @@ export const TimeSection = memo(function TimeSection({
               onOpenNativePicker("end");
             }
           }}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`End time: ${formatTime12h(endTime)}`}
         >
           <Text style={styles.timeCardSubLabel}>END TIME</Text>
           <View style={styles.timeCardValRow}>
@@ -206,53 +169,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 8,
   },
-  timeSlotPresetsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  timeSlotPresetCard: {
-    width: "48%",
-    backgroundColor: BENTO.card,
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: BENTO.border,
-  },
-  timeSlotPresetCardActive: {
-    borderColor: BENTO.navy,
-    backgroundColor: "#f8fafc",
-  },
-  timePresetIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: BENTO.slateSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  timePresetLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: BENTO.navy,
-  },
-  timePresetLabelActive: {
-    color: BENTO.navy,
-  },
-  timePresetSub: {
-    fontSize: 10,
-    color: BENTO.slate,
-    marginTop: 2,
-  },
-  timePresetSubActive: {
-    color: BENTO.indigo,
-    fontWeight: "600",
-  },
   customTimeRow: {
     flexDirection: "row",
     gap: 10,
+    marginBottom: 10,
   },
   timeCardHalf: {
     flex: 1,
@@ -267,8 +187,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     color: BENTO.slate,
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   timeCardValRow: {
     flexDirection: "row",
@@ -278,15 +197,14 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   timeCardValText: {
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 15,
+    fontWeight: "700",
     color: BENTO.navy,
   },
   durationPillContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: BENTO.emeraldBg,
-    marginTop: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -302,7 +220,7 @@ const styles = StyleSheet.create({
   },
   durationPillText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
     color: BENTO.emerald,
   },
 });

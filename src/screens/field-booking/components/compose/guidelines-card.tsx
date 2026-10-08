@@ -16,9 +16,6 @@ export const GuidelinesCard = memo(function GuidelinesCard() {
         <Text style={styles.guidelinesTitle}>Campus Ground Guidelines</Text>
       </View>
       <Text style={styles.guidelinesItem}>
-        • Ground lights shut down at 10:00 PM sharp.
-      </Text>
-      <Text style={styles.guidelinesItem}>
         • Reservations require sports committee or admin approval.
       </Text>
       <Text style={styles.guidelinesItem}>

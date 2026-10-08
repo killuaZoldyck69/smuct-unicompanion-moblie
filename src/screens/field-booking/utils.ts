@@ -16,7 +16,7 @@ export function formatTime12h(time24: string): string {
   if (isNaN(h)) return time24;
   const ampm = h >= 12 ? "PM" : "AM";
   const displayH = h % 12 || 12;
-  return `${String(displayH).padStart(2, "0")}:${m} ${ampm}`;
+  return `${displayH}:${m} ${ampm}`;
 }
 
 export function formatDate(isoString?: string | null): string {
@@ -28,6 +28,21 @@ export function formatDate(isoString?: string | null): string {
       weekday: "short",
       day: "numeric",
       month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return isoString;
+  }
+}
+
+export function formatRequestedDate(isoString?: string | null): string {
+  if (!isoString) return "";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
       year: "numeric",
     });
   } catch {
@@ -83,11 +98,11 @@ export function calculateDurationString(
   const mins = diffMins % 60;
   let text = "";
   if (hours > 0 && mins > 0) {
-    text = `${hours} hr ${mins} mins`;
+    text = `${hours}h ${mins}m`;
   } else if (hours > 0) {
-    text = `${hours} ${hours === 1 ? "hour" : "hours"}`;
+    text = `${hours}h`;
   } else {
-    text = `${mins} mins`;
+    text = `${mins}m`;
   }
 
   return { durationText: text, isValid: true, minutes: diffMins };
@@ -102,7 +117,7 @@ export function getBookingDuration(item: FieldBookingItem): string {
     const hours = Math.floor(diffMins / 60);
     const mins = diffMins % 60;
     if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
-    if (hours > 0) return `${hours} hr${hours > 1 ? "s" : ""}`;
+    if (hours > 0) return `${hours}h`;
     return `${mins}m`;
   } catch {
     return "";
@@ -111,26 +126,33 @@ export function getBookingDuration(item: FieldBookingItem): string {
 
 export function getSportIcon(purpose: string): SportIconData {
   const p = (purpose || "").toLowerCase();
-  if (p.includes("cricket")) return { name: "award", label: "Cricket" };
-  if (p.includes("football") || p.includes("soccer"))
-    return { name: "activity", label: "Football" };
-  if (p.includes("badminton") || p.includes("tennis"))
-    return { name: "target", label: "Racket Sports" };
+  if (p.includes("cricket")) {
+    return { type: "cricket", label: "Cricket" };
+  }
+  if (p.includes("football") || p.includes("soccer")) {
+    return { type: "football", label: "Football" };
+  }
+  if (p.includes("badminton") || p.includes("tennis")) {
+    return { type: "racket", label: "Racket Sports" };
+  }
   if (
     p.includes("fest") ||
     p.includes("cultural") ||
     p.includes("event") ||
     p.includes("concert")
-  )
-    return { name: "music", label: "Campus Event" };
+  ) {
+    return { type: "event", label: "Campus Event" };
+  }
   if (
     p.includes("sports") ||
     p.includes("athletic") ||
     p.includes("race") ||
     p.includes("run")
-  )
-    return { name: "zap", label: "Athletics" };
-  if (p.includes("photo") || p.includes("shoot") || p.includes("film"))
-    return { name: "camera", label: "Media / Photo" };
-  return { name: "flag", label: "Sports Field" };
+  ) {
+    return { type: "athletics", label: "Athletics" };
+  }
+  if (p.includes("photo") || p.includes("shoot") || p.includes("film")) {
+    return { type: "media", label: "Media / Photo" };
+  }
+  return { type: "general", label: "Sports Field" };
 }

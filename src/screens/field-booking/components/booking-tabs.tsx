@@ -21,15 +21,19 @@ export const BookingTabs = memo(function BookingTabs({
   const isSchedule = activeTab === "SCHEDULE";
 
   return (
-    <View style={styles.tabBarWrapper}>
-      <View style={styles.segmentedContainer}>
+    <View style={styles.container}>
+      <View style={styles.segmentedTrack}>
+        {/* My Bookings Segment */}
         <TouchableOpacity
-          style={[styles.segmentedTab, isMyBookings && styles.segmentedTabActive]}
+          style={[styles.segment, isMyBookings && styles.segmentActive]}
           onPress={() => onSelectTab("MY_BOOKINGS")}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
           accessible={true}
           accessibilityRole="tab"
-          accessibilityLabel="My Bookings tab"
+          accessibilityLabel={`My Bookings tab${
+            typeof myBookingsCount === "number" ? `, ${myBookingsCount} bookings` : ""
+          }`}
+          accessibilityState={{ selected: isMyBookings }}
         >
           <Feather
             name="calendar"
@@ -39,8 +43,8 @@ export const BookingTabs = memo(function BookingTabs({
           />
           <Text
             style={[
-              styles.segmentedTabText,
-              isMyBookings && styles.segmentedTabTextActive,
+              styles.segmentText,
+              isMyBookings && styles.segmentTextActive,
             ]}
           >
             My Bookings
@@ -48,14 +52,14 @@ export const BookingTabs = memo(function BookingTabs({
           {typeof myBookingsCount === "number" && myBookingsCount > 0 && (
             <View
               style={[
-                styles.countPill,
-                isMyBookings && styles.countPillActive,
+                styles.countBadge,
+                isMyBookings ? styles.countBadgeActive : styles.countBadgeInactive,
               ]}
             >
               <Text
                 style={[
-                  styles.countPillText,
-                  isMyBookings && styles.countPillTextActive,
+                  styles.countText,
+                  isMyBookings ? styles.countTextActive : styles.countTextInactive,
                 ]}
               >
                 {myBookingsCount}
@@ -64,13 +68,17 @@ export const BookingTabs = memo(function BookingTabs({
           )}
         </TouchableOpacity>
 
+        {/* Public Schedule Segment */}
         <TouchableOpacity
-          style={[styles.segmentedTab, isSchedule && styles.segmentedTabActive]}
+          style={[styles.segment, isSchedule && styles.segmentActive]}
           onPress={() => onSelectTab("SCHEDULE")}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
           accessible={true}
           accessibilityRole="tab"
-          accessibilityLabel="Public Schedule tab"
+          accessibilityLabel={`Public Schedule tab${
+            typeof scheduleCount === "number" ? `, ${scheduleCount} slots` : ""
+          }`}
+          accessibilityState={{ selected: isSchedule }}
         >
           <Feather
             name="globe"
@@ -80,8 +88,8 @@ export const BookingTabs = memo(function BookingTabs({
           />
           <Text
             style={[
-              styles.segmentedTabText,
-              isSchedule && styles.segmentedTabTextActive,
+              styles.segmentText,
+              isSchedule && styles.segmentTextActive,
             ]}
           >
             Public Schedule
@@ -89,14 +97,14 @@ export const BookingTabs = memo(function BookingTabs({
           {typeof scheduleCount === "number" && scheduleCount > 0 && (
             <View
               style={[
-                styles.countPill,
-                isSchedule && styles.countPillActive,
+                styles.countBadge,
+                isSchedule ? styles.countBadgeActive : styles.countBadgeInactive,
               ]}
             >
               <Text
                 style={[
-                  styles.countPillText,
-                  isSchedule && styles.countPillTextActive,
+                  styles.countText,
+                  isSchedule ? styles.countTextActive : styles.countTextInactive,
                 ]}
               >
                 {scheduleCount}
@@ -110,62 +118,71 @@ export const BookingTabs = memo(function BookingTabs({
 });
 
 const styles = StyleSheet.create({
-  tabBarWrapper: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  container: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: BENTO.canvas,
   },
-  segmentedContainer: {
+  segmentedTrack: {
     flexDirection: "row",
-    backgroundColor: BENTO.slateSubtle,
-    borderRadius: 14,
+    backgroundColor: "#e2e8f0",
+    borderRadius: 16,
     padding: 4,
     borderWidth: 1,
-    borderColor: BENTO.border,
+    borderColor: "rgba(15, 23, 42, 0.05)",
   },
-  segmentedTab: {
+  segment: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 12,
   },
-  segmentedTabActive: {
+  segmentActive: {
     backgroundColor: BENTO.card,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowRadius: 4,
     elevation: 2,
   },
   tabIcon: {
     marginRight: 6,
   },
-  segmentedTabText: {
+  segmentText: {
     fontSize: 13,
     fontWeight: "600",
     color: BENTO.slate,
   },
-  segmentedTabTextActive: {
-    fontWeight: "800",
+  segmentTextActive: {
     color: BENTO.navy,
+    fontWeight: "700",
   },
-  countPill: {
-    backgroundColor: BENTO.slateSubtle,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
+  countBadge: {
     marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 10,
+    minWidth: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  countPillActive: {
+  countBadgeActive: {
     backgroundColor: BENTO.navy,
   },
-  countPillText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: BENTO.slate,
+  countBadgeInactive: {
+    backgroundColor: "#cbd5e1",
   },
-  countPillTextActive: {
+  countText: {
+    fontSize: 10.5,
+    fontWeight: "800",
+  },
+  countTextActive: {
     color: "#ffffff",
+  },
+  countTextInactive: {
+    color: BENTO.slate,
   },
 });

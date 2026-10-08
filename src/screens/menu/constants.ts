@@ -215,7 +215,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/soccer-field.png"),
     fallbackIcon: "target",
     roles: ["STUDENT", "TEACHER"],
-    route: "/field-booking" as Href,
+    route: "/(tabs)/field-booking" as Href,
   },
 
   // -------------------------------------------------------------

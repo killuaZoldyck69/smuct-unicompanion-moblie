@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Modal,
-  SafeAreaView,
   KeyboardAvoidingView,
   ScrollView,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import {
   Platform,
   StyleSheet,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { BENTO } from "../../constants";
@@ -29,6 +29,8 @@ export const BookingComposeModal = memo(function BookingComposeModal({
   visible,
   onClose,
 }: BookingComposeModalProps) {
+  const insets = useSafeAreaInsets();
+
   const {
     purpose,
     setPurpose,
@@ -43,12 +45,14 @@ export const BookingComposeModal = memo(function BookingComposeModal({
     isPending,
     applyDateOffset,
     applyUpcomingWeekend,
-    selectPreset,
     handleNativePickerChange,
     handleSubmit,
     setStartTime,
     setEndTime,
   } = useFieldBookingForm({ onSuccess: onClose });
+
+  const topPadding = Platform.OS === "android" ? Math.max(insets.top, 24) : insets.top;
+  const bottomPadding = Math.max(insets.bottom, 16);
 
   const pickerDateValue =
     nativePickerMode === "date"
@@ -70,46 +74,33 @@ export const BookingComposeModal = memo(function BookingComposeModal({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
+      statusBarTranslucent={true}
       onRequestClose={onClose}
     >
-      <SafeAreaView
-        style={styles.modalSafeArea}
+      <View
+        style={[styles.modalContainer, { paddingTop: topPadding }]}
         accessibilityViewIsModal={true}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.flexOne}
         >
-          {/* Modal Header */}
+          {/* Modal Header: Left Title, Right Close Button */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.modalCloseBtn}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel booking request"
-            >
-              <Feather name="x" size={20} color={BENTO.navy} />
-            </TouchableOpacity>
-
-            <View style={styles.titleWrap}>
+            <View style={styles.titleWrapLeft}>
               <Text style={styles.modalTitle}>Request Sports Ground</Text>
               <Text style={styles.modalSub}>SMUCT Main Campus Field</Text>
             </View>
 
             <TouchableOpacity
-              onPress={handleSubmit}
-              disabled={isPending}
-              style={[styles.modalSubmitBtn, isPending && styles.btnDisabled]}
+              onPress={onClose}
+              style={styles.modalCloseBtn}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Submit booking request"
+              accessibilityLabel="Close request form"
+              activeOpacity={0.7}
             >
-              {isPending ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text style={styles.modalSubmitBtnText}>Submit</Text>
-              )}
+              <Feather name="x" size={20} color={BENTO.navy} />
             </TouchableOpacity>
           </View>
 
@@ -118,6 +109,7 @@ export const BookingComposeModal = memo(function BookingComposeModal({
             style={styles.modalScrollView}
             contentContainerStyle={styles.modalScrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <PurposeSection purpose={purpose} onChangePurpose={setPurpose} />
 
@@ -134,7 +126,6 @@ export const BookingComposeModal = memo(function BookingComposeModal({
               startTime={startTime}
               endTime={endTime}
               durationInfo={durationInfo}
-              onSelectPreset={selectPreset}
               onChangeStartTime={setStartTime}
               onChangeEndTime={setEndTime}
               onOpenNativePicker={setNativePickerMode}
@@ -142,6 +133,35 @@ export const BookingComposeModal = memo(function BookingComposeModal({
 
             <GuidelinesCard />
           </ScrollView>
+
+          {/* Bottom Docked Submit Action with Safe Area */}
+          <View style={[styles.bottomBar, { paddingBottom: bottomPadding }]}>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isPending}
+              style={[styles.modalSubmitBtn, isPending && styles.btnDisabled]}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Submit booking request"
+              activeOpacity={0.85}
+            >
+              {isPending ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Feather
+                    name="check-circle"
+                    size={16}
+                    color="#ffffff"
+                    style={styles.submitBtnIcon}
+                  />
+                  <Text style={styles.modalSubmitBtnText}>
+                    Submit Booking Request
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* Native iOS / Android Picker */}
           {nativePickerMode && Platform.OS !== "web" && (
@@ -157,7 +177,7 @@ export const BookingComposeModal = memo(function BookingComposeModal({
             />
           )}
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 });
@@ -166,7 +186,7 @@ const styles = StyleSheet.create({
   flexOne: {
     flex: 1,
   },
-  modalSafeArea: {
+  modalContainer: {
     flex: 1,
     backgroundColor: BENTO.canvas,
   },
@@ -174,52 +194,79 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: BENTO.card,
+    backgroundColor: BENTO.canvas,
     borderBottomWidth: 1,
-    borderBottomColor: BENTO.border,
+    borderBottomColor: "rgba(15, 23, 42, 0.06)",
+  },
+  titleWrapLeft: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: BENTO.navy,
+    letterSpacing: -0.3,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: BENTO.slate,
+    marginTop: 2,
   },
   modalCloseBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: BENTO.slateSubtle,
+    borderRadius: 12,
+    backgroundColor: BENTO.card,
     alignItems: "center",
     justifyContent: "center",
-  },
-  titleWrap: {
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: BENTO.navy,
-  },
-  modalSub: {
-    fontSize: 11,
-    color: BENTO.slate,
-    marginTop: 1,
-  },
-  modalSubmitBtn: {
-    backgroundColor: BENTO.navy,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  btnDisabled: {
-    opacity: 0.7,
-  },
-  modalSubmitBtnText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#ffffff",
+    borderWidth: 1,
+    borderColor: BENTO.border,
   },
   modalScrollView: {
     flex: 1,
   },
   modalScrollContent: {
-    padding: 18,
-    paddingBottom: 40,
+    padding: 20,
+    paddingBottom: 24,
+  },
+  bottomBar: {
+    backgroundColor: BENTO.card,
+    borderTopWidth: 1,
+    borderTopColor: BENTO.border,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  modalSubmitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: BENTO.navy,
+    paddingVertical: 14,
+    borderRadius: 16,
+    shadowColor: BENTO.navy,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  btnDisabled: {
+    opacity: 0.7,
+  },
+  submitBtnIcon: {
+    marginRight: 6,
+  },
+  modalSubmitBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: -0.2,
   },
 });

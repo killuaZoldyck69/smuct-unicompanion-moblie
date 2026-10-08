@@ -10,8 +10,17 @@ export interface DurationInfo {
   minutes: number;
 }
 
+export type SportType =
+  | "cricket"
+  | "football"
+  | "racket"
+  | "athletics"
+  | "event"
+  | "media"
+  | "general";
+
 export interface SportIconData {
-  name: "award" | "activity" | "target" | "music" | "zap" | "camera" | "flag";
+  type: SportType;
   label: string;
 }
 

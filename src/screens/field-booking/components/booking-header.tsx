@@ -9,73 +9,111 @@ import {
 import { Feather } from "@expo/vector-icons";
 import type { FieldBookingSettings } from "@/services/field-service";
 import { BENTO } from "../constants";
+import { CampusFieldArt } from "./campus-field-art";
+
+const fontFamily = Platform.select({
+  ios: "Plus Jakarta Sans",
+  android: "sans-serif",
+  default: "sans-serif",
+});
+
+const deepNavy = "#131b2e";
 
 interface BookingHeaderProps {
-  onBack: () => void;
   isLoadingSettings: boolean;
   settings?: FieldBookingSettings | null;
+  onBookField?: () => void;
+  canBook?: boolean;
 }
 
 export const BookingHeader = memo(function BookingHeader({
-  onBack,
   isLoadingSettings,
   settings,
+  onBookField,
+  canBook = true,
 }: BookingHeaderProps) {
   const isClosed = !isLoadingSettings && settings?.isBookingOpen === false;
   const closureReason =
     settings?.closureReason ||
     (settings as any)?.closedNotice ||
-    "The administration has temporarily disabled ground bookings for maintenance or scheduled events.";
+    "The campus field is temporarily closed for maintenance or university scheduled events.";
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.topRow}>
-          <TouchableOpacity
-            onPress={onBack}
-            style={styles.backButton}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            activeOpacity={0.7}
-          >
-            <Feather name="arrow-left" size={20} color={BENTO.navy} />
-          </TouchableOpacity>
-
-          <View style={styles.titleContainer}>
-            <Text style={styles.headerTitle}>Field Booking</Text>
-            <Text style={styles.headerSubtitle}>
-              Reserve university sports ground for matches & events
-            </Text>
-          </View>
+      {/* Top Row: Title & Subtitle on Left, Campus Artwork on Right */}
+      <View style={styles.headerTopRow}>
+        <View style={styles.titleColumn}>
+          <Text style={styles.headerTitle}>Field Booking</Text>
+          <Text style={styles.headerSubtitle}>
+            Reserve university sports grounds for matches, practice & events.
+          </Text>
         </View>
 
-        {!isLoadingSettings && (
-          <View style={styles.statusIndicatorRow}>
+        <View style={styles.artColumn}>
+          <CampusFieldArt />
+        </View>
+      </View>
+
+      {/* Availability Row: Status on the left, + Book Field button directly on the right */}
+      {!isLoadingSettings && (
+        <View style={styles.availabilityRow}>
+          <View style={styles.statusChipWrapper}>
             {!isClosed ? (
               <View style={styles.groundOpenChip}>
-                <View style={styles.liveDotOpen} />
-                <Text style={styles.groundOpenText}>
-                  Ground Open for Reservations
+                <View style={styles.livePulseDot} />
+                <Feather
+                  name="map-pin"
+                  size={11}
+                  color={BENTO.emerald}
+                  style={styles.chipIcon}
+                />
+                <Text style={styles.groundOpenText} numberOfLines={1}>
+                  Ground open for reservations
                 </Text>
               </View>
             ) : (
               <View style={styles.groundClosedChip}>
-                <View style={styles.liveDotClosed} />
-                <Text style={styles.groundClosedText}>
-                  Reservations Temporarily Paused
+                <View style={styles.closedPulseDot} />
+                <Feather
+                  name="alert-circle"
+                  size={11}
+                  color={BENTO.rose}
+                  style={styles.chipIcon}
+                />
+                <Text style={styles.groundClosedText} numberOfLines={1}>
+                  Reservations closed
                 </Text>
               </View>
             )}
           </View>
-        )}
-      </View>
 
+          {canBook && onBookField && (
+            <TouchableOpacity
+              style={styles.bookFieldHeaderBtn}
+              onPress={onBookField}
+              activeOpacity={0.85}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Book campus sports field"
+            >
+              <Feather
+                name="plus"
+                size={13}
+                color="#ffffff"
+                style={styles.bookFieldBtnIcon}
+              />
+              <Text style={styles.bookFieldHeaderBtnText}>Book Field</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Closure Banner if ground closed */}
       {isClosed && (
         <View style={styles.noticeBanner}>
           <View style={styles.noticeHeaderRow}>
-            <Feather name="alert-triangle" size={18} color={BENTO.rose} />
-            <Text style={styles.noticeTitle}>Ground Currently Closed</Text>
+            <Feather name="alert-triangle" size={16} color={BENTO.rose} />
+            <Text style={styles.noticeTitle}>Field Currently Unavailable</Text>
           </View>
           <Text style={styles.noticeDesc}>{closureReason}</Text>
         </View>
@@ -87,76 +125,75 @@ export const BookingHeader = memo(function BookingHeader({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: BENTO.canvas,
-  },
-  header: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 14,
-    backgroundColor: BENTO.card,
-    borderBottomWidth: 1,
-    borderBottomColor: BENTO.border,
+    paddingBottom: 10,
   },
-  topRow: {
+  headerTopRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
   },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: BENTO.slateSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-    borderWidth: 1,
-    borderColor: BENTO.border,
-  },
-  titleContainer: {
+  titleColumn: {
     flex: 1,
+    paddingRight: 10,
+    paddingTop: 6,
   },
   headerTitle: {
-    fontSize: 22,
+    fontFamily,
+    fontSize: 24,
     fontWeight: "800",
-    color: BENTO.navy,
-    letterSpacing: -0.5,
-    fontFamily:
-      Platform.OS === "web"
-        ? "var(--font-heading), 'Plus Jakarta Sans', system-ui, sans-serif"
-        : undefined,
+    color: deepNavy,
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
   headerSubtitle: {
+    fontFamily,
     fontSize: 13,
-    color: BENTO.slate,
-    marginTop: 2,
-    fontFamily:
-      Platform.OS === "web"
-        ? "var(--font-body), 'Plus Jakarta Sans', system-ui, sans-serif"
-        : undefined,
+    fontWeight: "500",
+    color: "#64748b",
+    marginTop: 7,
+    lineHeight: 18,
   },
-  statusIndicatorRow: {
+  artColumn: {
+    width: 120,
+    height: 76,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  availabilityRow: {
     marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "nowrap",
+  },
+  statusChipWrapper: {
+    flexShrink: 1,
+    marginRight: 8,
   },
   groundOpenChip: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: BENTO.emeraldBg,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingVertical: 5.5,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: BENTO.emeraldBorder,
   },
-  liveDotOpen: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+  livePulseDot: {
+    width: 6.5,
+    height: 6.5,
+    borderRadius: 3.5,
     backgroundColor: BENTO.emerald,
     marginRight: 6,
   },
+  chipIcon: {
+    marginRight: 4,
+  },
   groundOpenText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "700",
     color: BENTO.emerald,
   },
@@ -165,28 +202,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: BENTO.roseBg,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingVertical: 5.5,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: BENTO.roseBorder,
   },
-  liveDotClosed: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+  closedPulseDot: {
+    width: 6.5,
+    height: 6.5,
+    borderRadius: 3.5,
     backgroundColor: BENTO.rose,
     marginRight: 6,
   },
   groundClosedText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "700",
     color: BENTO.rose,
   },
+  bookFieldHeaderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO.navy,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    borderRadius: 18,
+    shadowColor: BENTO.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+    flexShrink: 0,
+  },
+  bookFieldBtnIcon: {
+    marginRight: 4,
+  },
+  bookFieldHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: -0.2,
+  },
   noticeBanner: {
     backgroundColor: BENTO.roseBg,
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 14,
+    marginTop: 10,
+    padding: 12,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: BENTO.roseBorder,
@@ -194,17 +253,17 @@ const styles = StyleSheet.create({
   noticeHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 3,
   },
   noticeTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: BENTO.rose,
-    marginLeft: 8,
+    marginLeft: 6,
   },
   noticeDesc: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: "#991b1b",
-    lineHeight: 18,
+    lineHeight: 16,
   },
 });
