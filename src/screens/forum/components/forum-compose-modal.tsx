@@ -11,9 +11,8 @@ import {
   Platform,
   StyleSheet,
   StatusBar,
-  Dimensions,
   Keyboard,
-  LayoutAnimation,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -31,14 +30,13 @@ interface ForumComposeModalProps {
   onSuccess?: () => void;
 }
 
-const SCREEN_HEIGHT = Dimensions.get("screen").height;
-
 export const ForumComposeModal = memo(function ForumComposeModal({
   visible,
   onClose,
   onSuccess,
 }: ForumComposeModalProps) {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -50,16 +48,10 @@ export const ForumComposeModal = memo(function ForumComposeModal({
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
-      if (Platform.OS === "android") {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      }
       setIsKeyboardVisible(true);
       setKeyboardHeight(e.endCoordinates.height);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
-      if (Platform.OS === "android") {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      }
       setIsKeyboardVisible(false);
       setKeyboardHeight(0);
     });
@@ -70,10 +62,17 @@ export const ForumComposeModal = memo(function ForumComposeModal({
     };
   }, []);
 
-  const defaultHeight = Math.round(SCREEN_HEIGHT * 0.6);
+  const topSafePadding = Math.max(insets.top, 24);
   const maxAvailableHeight =
-    SCREEN_HEIGHT - keyboardHeight - Math.max(insets.top, 24) - 16;
-  const sheetHeight = Math.min(defaultHeight, maxAvailableHeight);
+    Platform.OS === "ios" && keyboardHeight > 0
+      ? windowHeight - keyboardHeight - topSafePadding - 12
+      : windowHeight - topSafePadding - 12;
+  const sheetMaxHeight = Math.max(280, maxAvailableHeight);
+
+  const handleClose = () => {
+    Keyboard.dismiss();
+    onClose();
+  };
 
   const {
     title,
@@ -84,6 +83,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
     handleSubmit,
   } = useComposePostForm({
     onSuccess: () => {
+      Keyboard.dismiss();
       onSuccess?.();
       onClose();
     },
@@ -96,8 +96,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
       style={[
         styles.sheet,
         {
-          height: sheetHeight,
-          marginBottom: Platform.OS === "android" ? keyboardHeight : 0,
+          maxHeight: sheetMaxHeight,
         },
       ]}
     >
@@ -107,7 +106,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
       {/* Header */}
       <View style={styles.modalHeader}>
         <TouchableOpacity
-          onPress={onClose}
+          onPress={handleClose}
           style={styles.modalCloseBtn}
           accessible={true}
           accessibilityRole="button"
@@ -126,15 +125,11 @@ export const ForumComposeModal = memo(function ForumComposeModal({
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.modalScrollContent,
-          { paddingBottom: isKeyboardVisible ? 120 : 24 },
-        ]}
+        contentContainerStyle={styles.modalScrollContent}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
         showsVerticalScrollIndicator={true}
-        alwaysBounceVertical={true}
-        overScrollMode="always"
+        bounces={false}
       >
         {/* Title Field */}
         <View style={styles.formGroup}>
@@ -209,11 +204,6 @@ export const ForumComposeModal = memo(function ForumComposeModal({
             textAlignVertical="top"
             accessible={true}
             accessibilityLabel="Question Description"
-            onFocus={() => {
-              setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-              }, 120);
-            }}
           />
         </View>
       </ScrollView>
@@ -263,29 +253,28 @@ export const ForumComposeModal = memo(function ForumComposeModal({
       animationType="slide"
       transparent={true}
       statusBarTranslucent={true}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <StatusBar
         barStyle="dark-content"
         backgroundColor="transparent"
         translucent={true}
       />
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { paddingTop: topSafePadding }]}>
         {/* Backdrop tap to dismiss */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
-          onPress={onClose}
+          onPress={handleClose}
           accessible={false}
         />
 
-        {Platform.OS === "ios" ? (
-          <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoid}>
-            {renderSheetContent()}
-          </KeyboardAvoidingView>
-        ) : (
-          renderSheetContent()
-        )}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.keyboardAvoid}
+        >
+          {renderSheetContent()}
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -309,7 +298,8 @@ const styles = StyleSheet.create({
     ...BENTO_COLORS.heroShadow,
   },
   scrollView: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   dragHandle: {
     width: 40,
@@ -350,11 +340,12 @@ const styles = StyleSheet.create({
     width: 36,
   },
   modalScrollContent: {
-    padding: 20,
-    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   formGroup: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   labelRow: {
     flexDirection: "row",
@@ -412,7 +403,7 @@ const styles = StyleSheet.create({
     ...BENTO_COLORS.shadow,
   },
   formInputArea: {
-    minHeight: 160,
+    minHeight: 120,
     paddingTop: 14,
     fontSize: 14,
     fontWeight: "500",
