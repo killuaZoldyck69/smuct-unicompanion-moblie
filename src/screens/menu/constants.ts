@@ -121,7 +121,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/exam-time.png"),
     fallbackIcon: "award",
     roles: ["STUDENT"],
-    route: "/exams" as Href,
+    route: "/(tabs)/exams" as Href,
   },
   {
     id: "class_routines",

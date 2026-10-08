@@ -42,7 +42,7 @@ const QUICK_ACTIONS = [
     id: "exams",
     title: "Exams",
     assetIcon: require("@/assets/icons/exam-time.png"),
-    route: "/exams",
+    route: "/(tabs)/exams",
     color: "#7c3aed",
     bg: "#f5f3ff",
   },
