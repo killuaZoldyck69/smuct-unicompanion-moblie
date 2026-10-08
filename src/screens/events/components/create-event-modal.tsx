@@ -350,6 +350,8 @@ export const CreateEventModal = React.memo(function CreateEventModal({
     </View>
   );
 
+  if (!visible) return null;
+
   return (
     <Modal
       visible={visible}

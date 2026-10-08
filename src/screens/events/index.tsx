@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -49,7 +49,6 @@ export function EventsScreen() {
   const [activeTab, setActiveTab] = useState<EventTabType>("upcoming");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [selectedEvent, setSelectedEvent] = useState<CampusEventItem | null>(
     null,
   );
@@ -59,11 +58,13 @@ export function EventsScreen() {
   );
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  // Debounce search query to prevent unnecessary queries while typing
+  const onEndReachedCalledDuringMomentum = useRef(true);
+
+  // Debounce search query to prevent unnecessary queries while typing (300ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery.trim());
-    }, 350);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -100,10 +101,6 @@ export function EventsScreen() {
     );
   }, [data]);
 
-  const nextUpcomingEvent = useMemo(() => {
-    return data?.pages[0]?.nextUpcomingEvent ?? null;
-  }, [data]);
-
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -113,26 +110,26 @@ export function EventsScreen() {
     }
   }, [refetch]);
 
+  const handleMomentumScrollBegin = useCallback(() => {
+    onEndReachedCalledDuringMomentum.current = false;
+  }, []);
+
   const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
+    if (
+      !onEndReachedCalledDuringMomentum.current &&
+      !isLoading &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      onEndReachedCalledDuringMomentum.current = true;
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [isLoading, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleResetFilters = useCallback(() => {
     setActiveTab("all");
     setSearchQuery("");
     setDebouncedSearch("");
-  }, []);
-
-  const handleToggleSearch = useCallback(() => {
-    setIsSearchOpen((prev) => {
-      if (prev) {
-        setSearchQuery("");
-        setDebouncedSearch("");
-      }
-      return !prev;
-    });
   }, []);
 
   const handleCloseCreate = useCallback(() => {
@@ -156,8 +153,7 @@ export function EventsScreen() {
         setSelectedEvent(null);
         return true;
       }
-      if (isSearchOpen) {
-        setIsSearchOpen(false);
+      if (searchQuery.length > 0) {
         setSearchQuery("");
         setDebouncedSearch("");
         return true;
@@ -167,7 +163,7 @@ export function EventsScreen() {
 
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [isCreateOpen, selectedEvent, isSearchOpen, handleCloseCreate]);
+  }, [isCreateOpen, selectedEvent, searchQuery, handleCloseCreate]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: CampusEventItem; index: number }) => (
@@ -181,44 +177,62 @@ export function EventsScreen() {
   const ListHeader = useMemo(() => {
     return (
       <View style={styles.headerComponentContainer}>
-        {/* Search Bar (Expandable) */}
-        {isSearchOpen && (
-          <View style={styles.searchBarWrapper}>
-            <Feather
-              name="search"
-              size={16}
-              color={BENTO_COLORS.subtleText}
-              style={{ marginRight: 10 }}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search events by title, venue, or keyword..."
-              placeholderTextColor={BENTO_COLORS.subtleText}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus={true}
-              returnKeyType="search"
+        {/* Permanent, Responsive Search Bar */}
+        <View style={styles.searchBarWrapper}>
+          <Feather
+            name="search"
+            size={16}
+            color={BENTO_COLORS.subtleText}
+            style={{ marginRight: 10 }}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search events by title, venue, or keyword..."
+            placeholderTextColor={BENTO_COLORS.subtleText}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            accessible={true}
+            accessibilityLabel="Search campus events"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                setDebouncedSearch("");
+              }}
+              style={{ padding: 4 }}
               accessible={true}
-              accessibilityLabel="Search campus events"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchQuery("");
-                  setDebouncedSearch("");
-                }}
-                style={{ padding: 4 }}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Clear search"
-              >
-                <Feather
-                  name="x-circle"
-                  size={16}
-                  color={BENTO_COLORS.subtleText}
-                />
-              </TouchableOpacity>
-            )}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search query"
+            >
+              <Feather
+                name="x-circle"
+                size={16}
+                color={BENTO_COLORS.subtleText}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Active Search Filter Badge Feedback */}
+        {debouncedSearch.length > 0 && (
+          <View style={styles.activeSearchBadgeRow}>
+            <Text style={styles.activeSearchBadgeText} numberOfLines={1}>
+              Results for "{debouncedSearch}"
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                setDebouncedSearch("");
+              }}
+              style={styles.clearSearchChip}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search filter"
+            >
+              <Feather name="x" size={11} color="#ffffff" />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -230,7 +244,7 @@ export function EventsScreen() {
         />
       </View>
     );
-  }, [isSearchOpen, searchQuery, counts, activeTab]);
+  }, [searchQuery, debouncedSearch, counts, activeTab]);
 
   const ListEmpty = useMemo(() => {
     if (isLoading) {
@@ -264,11 +278,22 @@ export function EventsScreen() {
         </View>
       );
     }
+    if (!hasNextPage && events.length > 0) {
+      return (
+        <View style={styles.endOfListContainer}>
+          <View style={styles.endOfListDot} />
+          <Text style={styles.endOfListText}>You're all caught up</Text>
+          <View
+            style={{ height: insets.bottom > 0 ? insets.bottom + 90 : 100 }}
+          />
+        </View>
+      );
+    }
     // Extra space so content is not hidden behind the floating tab bar
     return (
       <View style={{ height: insets.bottom > 0 ? insets.bottom + 110 : 120 }} />
     );
-  }, [isFetchingNextPage, insets.bottom]);
+  }, [isFetchingNextPage, hasNextPage, events.length, insets.bottom]);
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
@@ -294,7 +319,7 @@ export function EventsScreen() {
         </View>
       </View>
 
-      {/* Virtualized Infinite Scroll List */}
+      {/* Virtualized Infinite Scroll List with Lazy Loading & Momentum Protection */}
       <FlatList<CampusEventItem>
         data={events}
         keyExtractor={keyExtractor}
@@ -307,8 +332,9 @@ export function EventsScreen() {
           events.length === 0 && { flexGrow: 1 },
         ]}
         showsVerticalScrollIndicator={false}
+        onMomentumScrollBegin={handleMomentumScrollBegin}
         onEndReached={handleEndReached}
-        onEndReachedThreshold={0.4}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -318,9 +344,9 @@ export function EventsScreen() {
           />
         }
         removeClippedSubviews={Platform.OS === "android"}
-        initialNumToRender={8}
-        maxToRenderPerBatch={10}
-        windowSize={7}
+        initialNumToRender={6}
+        maxToRenderPerBatch={8}
+        windowSize={5}
       />
 
       {/* Floating Action Button (FAB) - Admin Only */}
@@ -343,19 +369,23 @@ export function EventsScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Event Details Modal */}
-      <EventDetailModal
-        event={selectedEvent}
-        onClose={() => setSelectedEvent(null)}
-        onEdit={handleEditEvent}
-      />
+      {/* Event Details Modal - Lazy Loaded on Demand */}
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onEdit={handleEditEvent}
+        />
+      )}
 
-      {/* Create / Edit Event Modal - Admin Only */}
-      <CreateEventModal
-        visible={isCreateOpen}
-        onClose={handleCloseCreate}
-        eventToEdit={editingEvent}
-      />
+      {/* Create / Edit Event Modal - Admin Only - Lazy Loaded on Demand */}
+      {isCreateOpen && (
+        <CreateEventModal
+          visible={isCreateOpen}
+          onClose={handleCloseCreate}
+          eventToEdit={editingEvent}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -429,9 +459,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: BENTO_COLORS.subtleText,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 6,
+  endOfListContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 18,
+  },
+  endOfListDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#cbd5e1",
+    marginBottom: 6,
+  },
+  endOfListText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: BENTO_COLORS.subtleText,
   },
   searchBarWrapper: {
     flexDirection: "row",
@@ -442,7 +486,7 @@ const styles = StyleSheet.create({
     borderRadius: BENTO_COLORS.pillRadius,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.06)",
-    marginBottom: 14,
+    marginBottom: 10,
     ...BENTO_COLORS.shadow,
   },
   searchInput: {
@@ -451,6 +495,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: BENTO_COLORS.neutralText,
     padding: 0,
+  },
+  activeSearchBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.15)",
+  },
+  activeSearchBadgeText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2563eb",
+    flex: 1,
+  },
+  clearSearchChip: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
   cardsListContainer: {
     marginBottom: 16,

@@ -1,134 +1,119 @@
+// src/screens/notices/components/notice-category-filters.tsx
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
-import {
-  BENTO_COLORS,
-  CATEGORY_FILTERS,
-  CATEGORY_THEMES,
-  CategoryFilterKey,
-  fontFamily,
-} from "../constants";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { NOTICE_COLORS, fontFamily } from "../constants";
+import { NoticeCategoryKey } from "../types";
 
-interface NoticeCategoryFiltersProps {
-  selectedCategory: CategoryFilterKey;
-  onSelectCategory: (category: CategoryFilterKey) => void;
+interface Props {
+  selectedCategory: NoticeCategoryKey;
+  onSelectCategory: (category: NoticeCategoryKey) => void;
   categoryCounts: Record<string, number>;
+  categories: Array<{ key: NoticeCategoryKey; label: string }>;
 }
 
-export const NoticeCategoryFilters = React.memo(
-  function NoticeCategoryFilters({
-    selectedCategory,
-    onSelectCategory,
-    categoryCounts,
-  }: NoticeCategoryFiltersProps) {
-    return (
-      <View style={styles.wrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {CATEGORY_FILTERS.map((catKey) => {
-            const isSelected = selectedCategory === catKey;
-            const count = categoryCounts[catKey] ?? 0;
-            const theme =
-              catKey !== "ALL" ? CATEGORY_THEMES[catKey] : null;
-            const label =
-              catKey === "ALL" ? "All Notices" : theme ? theme.label : catKey;
+export const NoticeCategoryFilters = React.memo(function NoticeCategoryFilters({
+  selectedCategory,
+  onSelectCategory,
+  categoryCounts,
+  categories,
+}: Props) {
+  return (
+    <View style={styles.container}>
+      <View style={styles.wrapGrid}>
+        {categories.map((cat) => {
+          const isSelected = selectedCategory === cat.key;
+          const count = categoryCounts[cat.key] ?? 0;
 
-            return (
-              <TouchableOpacity
-                key={catKey}
-                onPress={() => onSelectCategory(catKey)}
+          return (
+            <TouchableOpacity
+              key={cat.key}
+              onPress={() => onSelectCategory(cat.key)}
+              style={[styles.pill, isSelected && styles.pillActive]}
+              activeOpacity={0.8}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter by ${cat.label}, ${count} notices`}
+            >
+              <Text style={[styles.pillText, isSelected && styles.pillTextActive]}>
+                {cat.label}
+              </Text>
+              <View
                 style={[
-                  styles.pill,
-                  isSelected && styles.pillActive,
+                  styles.countBadge,
+                  isSelected && styles.countBadgeActive,
                 ]}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={`Filter by ${label}, ${count} notices`}
-                activeOpacity={0.8}
               >
                 <Text
                   style={[
-                    styles.text,
-                    isSelected && styles.textActive,
+                    styles.countText,
+                    isSelected && styles.countTextActive,
                   ]}
                 >
-                  {label}
+                  {count}
                 </Text>
-                <View
-                  style={[
-                    styles.badge,
-                    isSelected && styles.badgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.badgeText,
-                      isSelected && styles.badgeTextActive,
-                    ]}
-                  >
-                    {count}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-    );
-  }
-);
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
-  wrapper: {
+  container: {
     marginBottom: 16,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
+  wrapGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: BENTO_COLORS.white,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: BENTO_COLORS.pillRadius,
+    backgroundColor: NOTICE_COLORS.white,
+    paddingVertical: 8,
+    paddingLeft: 14,
+    paddingRight: 8,
+    borderRadius: NOTICE_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
-    ...BENTO_COLORS.shadow,
+    borderColor: NOTICE_COLORS.mutedBorder,
+    ...NOTICE_COLORS.shadow,
   },
   pillActive: {
-    backgroundColor: BENTO_COLORS.deepNavy,
-    borderColor: BENTO_COLORS.deepNavy,
+    backgroundColor: NOTICE_COLORS.deepNavy,
+    borderColor: NOTICE_COLORS.deepNavy,
   },
-  text: {
+  pillText: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: BENTO_COLORS.neutralText,
-    marginRight: 6,
+    color: NOTICE_COLORS.deepNavy,
+    marginRight: 8,
   },
-  textActive: {
-    color: BENTO_COLORS.white,
+  pillTextActive: {
+    color: NOTICE_COLORS.white,
   },
-  badge: {
+  countBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: "#f1f5f9",
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: BENTO_COLORS.pillRadius,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
   },
-  badgeActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  countBadgeActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
   },
-  badgeText: {
+  countText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "800",
-    color: BENTO_COLORS.subtleText,
+    color: NOTICE_COLORS.subtleText,
   },
-  badgeTextActive: {
-    color: BENTO_COLORS.white,
+  countTextActive: {
+    color: NOTICE_COLORS.white,
   },
 });

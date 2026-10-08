@@ -1,101 +1,126 @@
+// src/screens/notices/constants.ts
 import { Platform } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { NoticeCategoryKey, NoticeCategoryTheme } from "./types";
 
-export const BENTO_COLORS = {
+export const NOTICE_COLORS = {
   background: "#f7f9fb",
+  surface: "#ffffff",
+  surfaceMuted: "#f1f5f9",
   deepNavy: "#131b2e",
-  white: "#ffffff",
   neutralText: "#191c1d",
+  bodyText: "#334155",
   subtleText: "#64748b",
-  cardRadius: 28,
+  mutedBorder: "rgba(15, 23, 42, 0.06)",
+  subtleBorder: "rgba(15, 23, 42, 0.06)",
+  divider: "rgba(15, 23, 42, 0.06)",
+  white: "#ffffff",
+  activeDot: "#22c55e",
+  cardRadius: 18,
   pillRadius: 9999,
-  subtleBorder: "rgba(0, 0, 0, 0.04)",
   shadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 24,
+    shadowRadius: 16,
     elevation: 2,
   },
   heroShadow: {
-    shadowColor: "#131b2e",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 28,
-    elevation: 6,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 3,
   },
 } as const;
 
-export type CategoryKey = "TRANSPORT" | "HOLIDAY" | "EXAM" | "ACADEMIC" | "ADMIN";
+// Backward-compatible alias
+export const BENTO_COLORS = NOTICE_COLORS;
 
-export interface CategoryTheme {
-  label: string;
-  bg: string;
-  surfaceBg: string;
-  text: string;
-  pillBg: string;
-  pillText: string;
-  icon: keyof typeof Feather.glyphMap;
-}
-
-export const CATEGORY_THEMES: Record<CategoryKey, CategoryTheme> = {
+export const CATEGORY_THEMES: Record<
+  Exclude<NoticeCategoryKey, "ALL">,
+  NoticeCategoryTheme
+> = {
   TRANSPORT: {
+    key: "TRANSPORT",
     label: "Transport",
-    bg: "#e0f2fe",
-    surfaceBg: "#f0f9ff",
-    text: "#0369a1",
-    pillBg: "#bae6fd",
-    pillText: "#0284c7",
+    badgeBg: "#e0f2fe",
+    badgeText: "#0284c7",
+    badgeBorder: "rgba(2, 132, 199, 0.15)",
+    accentBarColor: "#0ea5e9",
     icon: "truck",
+    iconBg: "rgba(2, 132, 199, 0.12)",
   },
   HOLIDAY: {
+    key: "HOLIDAY",
     label: "Holiday",
-    bg: "#d1fae5",
-    surfaceBg: "#ecfdf5",
-    text: "#047857",
-    pillBg: "#a7f3d0",
-    pillText: "#059669",
+    badgeBg: "#d1fae5",
+    badgeText: "#059669",
+    badgeBorder: "rgba(5, 150, 105, 0.15)",
+    accentBarColor: "#10b981",
     icon: "sun",
-  },
-  EXAM: {
-    label: "Exam",
-    bg: "#fef3c7",
-    surfaceBg: "#fffbeb",
-    text: "#b45309",
-    pillBg: "#fde68a",
-    pillText: "#d97706",
-    icon: "award",
+    iconBg: "rgba(5, 150, 105, 0.12)",
   },
   ACADEMIC: {
+    key: "ACADEMIC",
     label: "Academic",
-    bg: "#e0f2fe",
-    surfaceBg: "#f0f9ff",
-    text: "#0284c7",
-    pillBg: "#c1dcff",
-    pillText: "#0369a1",
+    badgeBg: "#e0e7ff",
+    badgeText: "#3730a3",
+    badgeBorder: "rgba(55, 48, 163, 0.15)",
+    accentBarColor: "#6366f1",
     icon: "book-open",
+    iconBg: "rgba(55, 48, 163, 0.12)",
   },
   ADMIN: {
+    key: "ADMIN",
     label: "Admin",
-    bg: "#ffe4e6",
-    surfaceBg: "#fff1f2",
-    text: "#be123c",
-    pillBg: "#fecdd3",
-    pillText: "#e11d48",
+    badgeBg: "#f3e8ff",
+    badgeText: "#7e22ce",
+    badgeBorder: "rgba(126, 34, 206, 0.15)",
+    accentBarColor: "#a855f7",
     icon: "shield",
+    iconBg: "rgba(126, 34, 206, 0.12)",
+  },
+  EXAM: {
+    key: "EXAM",
+    label: "Exam",
+    badgeBg: "#fef3c7",
+    badgeText: "#b45309",
+    badgeBorder: "rgba(180, 83, 9, 0.15)",
+    accentBarColor: "#f59e0b",
+    icon: "award",
+    iconBg: "rgba(180, 83, 9, 0.12)",
+  },
+  EMERGENCY: {
+    key: "EMERGENCY",
+    label: "Emergency",
+    badgeBg: "#fee2e2",
+    badgeText: "#b91c1c",
+    badgeBorder: "rgba(185, 28, 28, 0.15)",
+    accentBarColor: "#ef4444",
+    icon: "alert-circle",
+    iconBg: "rgba(185, 28, 28, 0.12)",
   },
 };
 
-export const CATEGORY_FILTERS = [
+export const DEFAULT_CATEGORY_THEME: NoticeCategoryTheme = {
+  key: "ADMIN",
+  label: "Notice",
+  badgeBg: "#f1f5f9",
+  badgeText: "#475569",
+  badgeBorder: "rgba(71, 85, 105, 0.15)",
+  accentBarColor: "#64748b",
+  icon: "file-text",
+  iconBg: "rgba(71, 85, 105, 0.12)",
+};
+
+export const ORDERED_CATEGORIES: NoticeCategoryKey[] = [
   "ALL",
   "ACADEMIC",
   "ADMIN",
-  "EXAM",
-  "HOLIDAY",
   "TRANSPORT",
-] as const;
-
-export type CategoryFilterKey = (typeof CATEGORY_FILTERS)[number];
+  "HOLIDAY",
+  "EXAM",
+];
 
 export const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",

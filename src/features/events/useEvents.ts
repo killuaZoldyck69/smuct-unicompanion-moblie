@@ -54,8 +54,10 @@ export const useInfiniteCampusEvents = (options?: UseInfiniteCampusEventsOptions
       }
       return undefined;
     },
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
+    placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
   });
 };
 
