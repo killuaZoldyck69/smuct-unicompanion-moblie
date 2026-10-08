@@ -99,7 +99,9 @@ export const StudentIdentityCard = React.memo(function StudentIdentityCard({
           </View>
           
           <View style={styles.infoRow}>
-            <Feather name="mail" size={11} color={PROFILE_COLORS.subtleText} />
+            <View style={styles.emailIconWrapper}>
+              <Feather name="mail" size={12} color={PROFILE_COLORS.subtleText} />
+            </View>
             <Text style={styles.subText} numberOfLines={1}>
               {profile.email || sessionUser.email}
             </Text>
@@ -216,16 +218,27 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 4,
   },
+  emailIconWrapper: {
+    width: 14,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   infoLabel: {
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: PROFILE_COLORS.subtleText,
+    lineHeight: 16,
+    includeFontPadding: false,
   },
   subText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "500",
     color: PROFILE_COLORS.subtleText,
+    lineHeight: 16,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 });

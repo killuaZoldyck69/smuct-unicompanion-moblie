@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Linking } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Svg, { Rect, Circle, G } from "react-native-svg";
 import {
@@ -81,13 +81,22 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
                  autoCorrect={false}
                  accessible={true}
                />
-            ) : (
-              <View style={styles.linkUrlRow}>
+             ) : (
+              <TouchableOpacity
+                onPress={() => {
+                  const target = /^https?:\/\//i.test(linkedInUrl) ? linkedInUrl : `https://${linkedInUrl}`;
+                  Linking.openURL(target).catch(() => {});
+                }}
+                style={styles.linkUrlRow}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="link"
+              >
                 <Text style={styles.linkUrl} numberOfLines={1}>
                   {linkedInUrl}
                 </Text>
                 <Feather name="arrow-up-right" size={12} color={theme.primaryText} />
-              </View>
+              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -112,12 +121,21 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
                  accessible={true}
                />
             ) : (
-              <View style={styles.linkUrlRow}>
+              <TouchableOpacity
+                onPress={() => {
+                  const target = /^https?:\/\//i.test(personalWebsiteUrl) ? personalWebsiteUrl : `https://${personalWebsiteUrl}`;
+                  Linking.openURL(target).catch(() => {});
+                }}
+                style={styles.linkUrlRow}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="link"
+              >
                 <Text style={styles.linkUrl} numberOfLines={1}>
                   {personalWebsiteUrl}
                 </Text>
                 <Feather name="arrow-up-right" size={12} color={theme.primaryText} />
-              </View>
+              </TouchableOpacity>
             )}
           </View>
         </View>

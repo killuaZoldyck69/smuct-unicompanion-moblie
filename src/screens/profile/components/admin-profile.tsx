@@ -18,7 +18,15 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom > 0 ? insets.bottom + 120 : 130,
+        },
+      ]}
+    >
       <View style={styles.heroCard}>
         <View style={styles.avatarCircle}>
           <Feather name="shield" size={36} color="#ffffff" />

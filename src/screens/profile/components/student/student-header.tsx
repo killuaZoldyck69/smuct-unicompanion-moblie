@@ -45,7 +45,7 @@ export const StudentHeader = React.memo(function StudentHeader({
               accessibilityRole="button"
               accessibilityLabel="Cancel editing profile"
             >
-              <Feather name="x" size={15} color="#dc2626" />
+              <Feather name="x" size={13} color="#dc2626" />
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
 
@@ -58,7 +58,7 @@ export const StudentHeader = React.memo(function StudentHeader({
               accessibilityRole="button"
               accessibilityLabel="Save profile changes"
             >
-              <Feather name="check" size={15} color="#ffffff" />
+              <Feather name="check" size={13} color="#ffffff" />
               <Text style={styles.saveBtnText}>
                 {isUpdating ? "Saving..." : "Save"}
               </Text>
@@ -146,11 +146,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 40,
+    height: 32,
     borderRadius: PROFILE_COLORS.pillRadius,
     borderWidth: 1,
-    gap: 6,
-    paddingHorizontal: 16,
+    gap: 4,
+    paddingHorizontal: 12,
   },
   cancelBtn: {
     backgroundColor: "#fef2f2",
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontFamily,
-    fontSize: 13.5,
+    fontSize: 12,
     fontWeight: "700",
     color: "#dc2626",
   },
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontFamily,
-    fontSize: 13.5,
+    fontSize: 12,
     fontWeight: "700",
     color: "#ffffff",
   },

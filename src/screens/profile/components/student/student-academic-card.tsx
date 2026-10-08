@@ -261,14 +261,15 @@ const styles = StyleSheet.create({
   fieldValuePrimary: {
     fontFamily,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
-    lineHeight: 18,
+    lineHeight: 19,
+    letterSpacing: -0.2,
   },
   termEditInput: {
     fontFamily,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
     backgroundColor: "#f8fafc",
     borderWidth: 1,

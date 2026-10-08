@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TextInput, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { TeacherProfileData } from "@/services/teacher-service";
 import {
   PROFILE_COLORS,
@@ -8,6 +8,7 @@ import {
   SPACING,
   fontFamily,
 } from "../../constants";
+import { CampusBuildingWatermark } from "./faculty-illustrations";
 
 interface TeacherAcademicCardProps {
   profile: TeacherProfileData;
@@ -34,7 +35,7 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
   onChangeOfficeRoom,
   onChangeConsultationHours,
 }: TeacherAcademicCardProps) {
-  const theme = SECTION_THEMES.FACULTY_ACADEMIC;
+  const theme = SECTION_THEMES.ACADEMIC;
 
   const displayOfficeRoom = profile.roomNumber
     ? `Office: ${profile.roomNumber}`
@@ -47,115 +48,128 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
 
   return (
     <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerIconBadge}>
-          <Feather name="award" size={14} color={theme.primaryText} />
-        </View>
-        <Text style={styles.sectionTitle}>ACADEMIC POSITION</Text>
+      {/* Background Campus Illustration Watermark on Right */}
+      <View style={styles.watermarkContainer} pointerEvents="none">
+        <CampusBuildingWatermark
+          width={150}
+          height={125}
+          opacity={0.13}
+          color={theme.primaryText}
+        />
       </View>
 
-      {/* Designation */}
+      {/* Header */}
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.headerLeft}>
+          <View style={styles.sectionIconBadge}>
+            <Ionicons name="business-outline" size={16} color={theme.primaryText} />
+          </View>
+          <Text style={styles.sectionTitle}>ACADEMIC POSITION</Text>
+        </View>
+      </View>
+
+      {/* Row 1: Designation */}
       <View style={styles.infoRow}>
         <View style={styles.iconCircle}>
-          <Feather name="briefcase" size={16} color={theme.iconColor} />
+          <Feather name="user" size={16} color={theme.primaryText} />
         </View>
-        <View style={styles.rowContent}>
-          <Text style={styles.label}>Designation</Text>
+        <View style={styles.fieldContent}>
+          <Text style={styles.fieldLabel}>Designation</Text>
           {isEditing ? (
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={designation}
-                onChangeText={onChangeDesignation}
-                placeholder="e.g. Senior Lecturer"
-                placeholderTextColor={PROFILE_COLORS.mutedText}
-                accessible={true}
-                accessibilityLabel="Faculty Designation Input"
-              />
-            </View>
+            <TextInput
+              style={styles.editInput}
+              value={designation}
+              onChangeText={onChangeDesignation}
+              placeholder="e.g. Lecturer"
+              placeholderTextColor={PROFILE_COLORS.mutedText}
+              accessible={true}
+              accessibilityLabel="Faculty Designation Input"
+            />
           ) : (
-            <Text style={styles.valueText}>{profile.designation || "Not provided"}</Text>
+            <Text style={styles.fieldValue} numberOfLines={1}>
+              {profile.designation || "Not provided"}
+            </Text>
           )}
         </View>
       </View>
 
       <View style={styles.divider} />
 
-      {/* Department */}
+      {/* Row 2: Department */}
       <View style={styles.infoRow}>
         <View style={styles.iconCircle}>
-          <Feather name="book" size={16} color={theme.iconColor} />
+          <Ionicons name="business-outline" size={16} color={theme.primaryText} />
         </View>
-        <View style={styles.rowContent}>
-          <Text style={styles.label}>Department</Text>
+        <View style={styles.fieldContent}>
+          <Text style={styles.fieldLabel}>Department</Text>
           {isEditing ? (
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={department}
-                onChangeText={onChangeDepartment}
-                placeholder="e.g. Computer Science and Engineering"
-                placeholderTextColor={PROFILE_COLORS.mutedText}
-                accessible={true}
-                accessibilityLabel="Faculty Department Input"
-              />
-            </View>
+            <TextInput
+              style={styles.editInput}
+              value={department}
+              onChangeText={onChangeDepartment}
+              placeholder="e.g. Computer Science and Engineering"
+              placeholderTextColor={PROFILE_COLORS.mutedText}
+              accessible={true}
+              accessibilityLabel="Faculty Department Input"
+            />
           ) : (
-            <Text style={styles.valueText}>{profile.department || "Not provided"}</Text>
+            <Text style={styles.fieldValue} numberOfLines={2}>
+              {profile.department || "Not provided"}
+            </Text>
           )}
         </View>
       </View>
 
       <View style={styles.divider} />
 
-      {/* Office Room */}
+      {/* Row 3: Office Room */}
       <View style={styles.infoRow}>
         <View style={styles.iconCircle}>
-          <Feather name="map-pin" size={16} color={theme.iconColor} />
+          <Feather name="map-pin" size={16} color={theme.primaryText} />
         </View>
-        <View style={styles.rowContent}>
-          <Text style={styles.label}>Office Room</Text>
+        <View style={styles.fieldContent}>
+          <Text style={styles.fieldLabel}>Office Room</Text>
           {isEditing ? (
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={officeRoom}
-                onChangeText={onChangeOfficeRoom}
-                placeholder="e.g. Room 402, Building A"
-                placeholderTextColor={PROFILE_COLORS.mutedText}
-                accessible={true}
-                accessibilityLabel="Faculty Office Room Input"
-              />
-            </View>
+            <TextInput
+              style={styles.editInput}
+              value={officeRoom}
+              onChangeText={onChangeOfficeRoom}
+              placeholder="e.g. Office: 1803"
+              placeholderTextColor={PROFILE_COLORS.mutedText}
+              accessible={true}
+              accessibilityLabel="Faculty Office Room Input"
+            />
           ) : (
-            <Text style={styles.valueText}>{displayOfficeRoom}</Text>
+            <Text style={styles.fieldValue} numberOfLines={1}>
+              {displayOfficeRoom}
+            </Text>
           )}
         </View>
       </View>
 
       <View style={styles.divider} />
 
-      {/* Consultation Hours */}
-      <View style={[styles.infoRow, { marginBottom: 0 }]}>
+      {/* Row 4: Consultation Hours */}
+      <View style={styles.infoRow}>
         <View style={styles.iconCircle}>
-          <Feather name="clock" size={16} color={theme.iconColor} />
+          <Feather name="clock" size={16} color={theme.primaryText} />
         </View>
-        <View style={styles.rowContent}>
-          <Text style={styles.label}>Consultation Hours</Text>
+        <View style={styles.fieldContent}>
+          <Text style={styles.fieldLabel}>Consultation Hours</Text>
           {isEditing ? (
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={consultationHours}
-                onChangeText={onChangeConsultationHours}
-                placeholder="e.g. Sun-Tue 11:00 AM - 1:00 PM"
-                placeholderTextColor={PROFILE_COLORS.mutedText}
-                accessible={true}
-                accessibilityLabel="Faculty Consultation Hours Input"
-              />
-            </View>
+            <TextInput
+              style={styles.editInput}
+              value={consultationHours}
+              onChangeText={onChangeConsultationHours}
+              placeholder="e.g. 11:00 pm"
+              placeholderTextColor={PROFILE_COLORS.mutedText}
+              accessible={true}
+              accessibilityLabel="Faculty Consultation Hours Input"
+            />
           ) : (
-            <Text style={styles.valueText}>{displayHours}</Text>
+            <Text style={styles.fieldValue} numberOfLines={1}>
+              {displayHours}
+            </Text>
           )}
         </View>
       </View>
@@ -165,29 +179,43 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: SECTION_THEMES.FACULTY_ACADEMIC.badgeBg, // #fefce8
+    backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
-    padding: SPACING.xl,
     marginBottom: SPACING.cardGap,
-    borderWidth: 1,
-    borderColor: SECTION_THEMES.FACULTY_ACADEMIC.badgeBorder,
-    shadowColor: "#854d0e",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowColor: PROFILE_COLORS.deepNavy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.02)",
+    padding: SPACING.lg,
+    position: "relative",
+    overflow: "hidden",
   },
-  headerRow: {
+  watermarkContainer: {
+    position: "absolute",
+    right: 0,
+    bottom: -8,
+    zIndex: 0,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: SPACING.lg,
+    zIndex: 1,
+  },
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: SPACING.lg,
   },
-  headerIconBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: SECTION_THEMES.FACULTY_ACADEMIC.iconCircleBg,
+  sectionIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: SECTION_THEMES.ACADEMIC.badgeBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -195,60 +223,60 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: SECTION_THEMES.FACULTY_ACADEMIC.primaryText,
+    color: SECTION_THEMES.ACADEMIC.primaryText,
     letterSpacing: 0.8,
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 4,
+    zIndex: 1,
   },
   iconCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
-    backgroundColor: SECTION_THEMES.FACULTY_ACADEMIC.iconCircleBg, // #fef9c3
+    borderRadius: 18,
+    backgroundColor: "#eff6ff",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 14,
   },
-  rowContent: {
+  fieldContent: {
     flex: 1,
+    paddingRight: 28, // Clear right watermark
   },
-  label: {
+  fieldLabel: {
     fontFamily,
-    fontSize: 10.5,
-    fontWeight: "600",
-    color: "#a16207",
-    letterSpacing: 0.5,
-    marginBottom: 2,
+    fontSize: 11.5,
+    fontWeight: "500",
+    color: PROFILE_COLORS.subtleText,
+    marginBottom: 3,
   },
-  valueText: {
+  fieldValue: {
     fontFamily,
-    fontSize: 14,
-    fontWeight: "600",
-    color: SECTION_THEMES.FACULTY_ACADEMIC.primaryText, // #854d0e
+    fontSize: 14.5,
+    fontWeight: "700",
+    color: PROFILE_COLORS.deepNavy,
+    lineHeight: 19,
   },
   divider: {
     height: 1,
-    backgroundColor: SECTION_THEMES.FACULTY_ACADEMIC.divider,
-    marginVertical: 8,
+    backgroundColor: "rgba(19, 27, 46, 0.05)",
+    marginVertical: 6,
+    marginLeft: 50,
   },
-  inputWrapper: {
-    backgroundColor: "#ffffff",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(202, 138, 4, 0.25)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 2,
-  },
-  input: {
+  editInput: {
     fontFamily,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "600",
-    color: SECTION_THEMES.FACULTY_ACADEMIC.primaryText,
-    padding: 0,
+    color: PROFILE_COLORS.deepNavy,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.15)",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 2,
     outlineStyle: "none" as any,
   },
 });

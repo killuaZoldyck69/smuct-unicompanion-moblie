@@ -149,6 +149,38 @@ export const PROFILE_COLORS = {
   },
 } as const;
 
+export const FACULTY_THEME = {
+  background: "#F7F5EF", // Warm ivory / cream canvas
+  surface: "#FFFFFF",
+  cardRadius: 22,
+  pillRadius: 9999,
+  primaryNavy: "#131b2e",
+  secondaryText: "#64748b",
+  subtleBorder: "rgba(19, 27, 46, 0.08)",
+  cardBorder: "rgba(19, 27, 46, 0.06)",
+  shadow: {
+    shadowColor: "#131b2e",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  accents: {
+    academic: "#3B82F6",
+    academicBg: "#EFF6FF",
+    expertise: "#10B981",
+    expertiseBg: "#ECFDF5",
+    qualifications: "#2563EB",
+    qualificationsBg: "#EFF6FF",
+    blood: "#EF4444",
+    bloodBg: "#FEF2F2",
+    phone: "#F97316",
+    phoneBg: "#FFF7ED",
+    social: "#2563EB",
+    socialBg: "#EFF6FF",
+  },
+} as const;
+
 // Unified font: Aligns with Bento theme / ExploreHeader
 export const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",

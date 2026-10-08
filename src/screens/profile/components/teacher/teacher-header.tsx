@@ -21,55 +21,77 @@ export const TeacherHeader = React.memo(function TeacherHeader({
   onSave,
 }: TeacherHeaderProps) {
   return (
-    <View style={[styles.topActions, { paddingTop: insetsTop + 12 }]}>
-      <Text style={styles.screenTitle}>Faculty Profile</Text>
+    <View style={[styles.header, { paddingTop: insetsTop + 14 }]}>
+      {/* Title + Subtitle */}
+      <View style={styles.titleBlock}>
+        <Text style={styles.screenTitle}>My Profile</Text>
+        {!isEditing && (
+          <Text style={styles.subtitle} numberOfLines={2}>
+            View your details, academic position and professional information.
+          </Text>
+        )}
+      </View>
 
-      <View style={styles.actionButtonsRow}>
-        {isEditing && (
+      {/* Action Controls */}
+      <View style={styles.controlsRow}>
+        {isEditing ? (
+          <>
+            <TouchableOpacity
+              onPress={onCancel}
+              style={[styles.pillBtn, styles.cancelBtn]}
+              activeOpacity={0.75}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel editing faculty profile"
+            >
+              <Feather name="x" size={13} color="#dc2626" />
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={onSave}
+              style={[styles.pillBtn, styles.saveBtn]}
+              activeOpacity={0.75}
+              disabled={isUpdating}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Save faculty profile changes"
+            >
+              <Feather name="check" size={13} color="#ffffff" />
+              <Text style={styles.saveBtnText}>
+                {isUpdating ? "Saving..." : "Save"}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
           <TouchableOpacity
-            onPress={onCancel}
-            style={[styles.topBtn, styles.cancelBtn]}
+            onPress={onEdit}
+            style={styles.circleBtn}
             activeOpacity={0.75}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Cancel editing faculty profile"
+            accessibilityLabel="Edit faculty profile"
           >
-            <Feather name="x" size={15} color="#dc2626" />
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Feather name="edit-2" size={16} color={PROFILE_COLORS.deepNavy} />
           </TouchableOpacity>
         )}
-
-        <TouchableOpacity
-          onPress={() => (isEditing ? onSave() : onEdit())}
-          style={[styles.topBtn, isEditing && styles.saveBtnActive]}
-          activeOpacity={0.75}
-          disabled={isUpdating}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={isEditing ? "Save changes to faculty profile" : "Edit faculty profile"}
-        >
-          <Feather
-            name={isEditing ? "check" : "edit-2"}
-            size={15}
-            color={isEditing ? "#ffffff" : PROFILE_COLORS.deepNavy}
-          />
-          <Text style={[styles.topBtnText, isEditing && styles.saveBtnTextActive]}>
-            {isUpdating ? "Saving..." : isEditing ? "Save" : "Edit Profile"}
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  topActions: {
+  header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.md,
+    paddingBottom: SPACING.lg,
     backgroundColor: PROFILE_COLORS.background,
+  },
+  titleBlock: {
+    flex: 1,
+    marginRight: SPACING.md,
   },
   screenTitle: {
     fontFamily,
@@ -77,44 +99,65 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: PROFILE_COLORS.deepNavy,
     letterSpacing: -0.6,
+    marginBottom: 4,
   },
-  actionButtonsRow: {
+  subtitle: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "500",
+    color: PROFILE_COLORS.subtleText,
+    lineHeight: 18,
+  },
+  controlsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: SPACING.sm,
+    gap: 8,
+    paddingTop: 4,
   },
-  topBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+  circleBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: PROFILE_COLORS.white,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: PROFILE_COLORS.deepNavy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    position: "relative",
+  },
+  pillBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 32,
     borderRadius: PROFILE_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: PROFILE_COLORS.border,
-    gap: 6,
-  },
-  topBtnText: {
-    fontFamily,
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: PROFILE_COLORS.deepNavy,
+    gap: 4,
+    paddingHorizontal: 12,
   },
   cancelBtn: {
-    borderColor: "#fecaca",
     backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
   },
-  cancelText: {
+  cancelBtnText: {
     fontFamily,
-    fontSize: 13.5,
+    fontSize: 12,
     fontWeight: "700",
     color: "#dc2626",
   },
-  saveBtnActive: {
+  saveBtn: {
     backgroundColor: PROFILE_COLORS.deepNavy,
     borderColor: PROFILE_COLORS.deepNavy,
   },
-  saveBtnTextActive: {
-    color: PROFILE_COLORS.white,
+  saveBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
   },
 });
