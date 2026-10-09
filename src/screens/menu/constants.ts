@@ -283,7 +283,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/soccer-field.png"),
     fallbackIcon: "check-square",
     roles: ["ADMIN"],
-    route: "/admin/field-booking" as Href,
+    route: "/(tabs)/field-booking" as Href,
   },
   {
     id: "manage_forum",

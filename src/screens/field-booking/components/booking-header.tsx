@@ -24,6 +24,8 @@ interface BookingHeaderProps {
   settings?: FieldBookingSettings | null;
   onBookField?: () => void;
   canBook?: boolean;
+  isAdmin?: boolean;
+  onManageGround?: () => void;
 }
 
 export const BookingHeader = memo(function BookingHeader({
@@ -31,6 +33,8 @@ export const BookingHeader = memo(function BookingHeader({
   settings,
   onBookField,
   canBook = true,
+  isAdmin = false,
+  onManageGround,
 }: BookingHeaderProps) {
   const isClosed = !isLoadingSettings && settings?.isBookingOpen === false;
   const closureReason =
@@ -61,12 +65,6 @@ export const BookingHeader = memo(function BookingHeader({
             {!isClosed ? (
               <View style={styles.groundOpenChip}>
                 <View style={styles.livePulseDot} />
-                <Feather
-                  name="map-pin"
-                  size={11}
-                  color={BENTO.emerald}
-                  style={styles.chipIcon}
-                />
                 <Text style={styles.groundOpenText} numberOfLines={1}>
                   Ground open for reservations
                 </Text>
@@ -74,12 +72,6 @@ export const BookingHeader = memo(function BookingHeader({
             ) : (
               <View style={styles.groundClosedChip}>
                 <View style={styles.closedPulseDot} />
-                <Feather
-                  name="alert-circle"
-                  size={11}
-                  color={BENTO.rose}
-                  style={styles.chipIcon}
-                />
                 <Text style={styles.groundClosedText} numberOfLines={1}>
                   Reservations closed
                 </Text>
@@ -87,24 +79,45 @@ export const BookingHeader = memo(function BookingHeader({
             )}
           </View>
 
-          {canBook && onBookField && (
-            <TouchableOpacity
-              style={styles.bookFieldHeaderBtn}
-              onPress={onBookField}
-              activeOpacity={0.85}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Book campus sports field"
-            >
-              <Feather
-                name="plus"
-                size={13}
-                color="#ffffff"
-                style={styles.bookFieldBtnIcon}
-              />
-              <Text style={styles.bookFieldHeaderBtnText}>Book Field</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.headerRightActions}>
+            {isAdmin && onManageGround && (
+              <TouchableOpacity
+                style={styles.manageGroundBtn}
+                onPress={onManageGround}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Manage ground status and notice"
+              >
+                <Feather
+                  name="sliders"
+                  size={12.5}
+                  color={BENTO.navy}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.manageGroundText}>Manage</Text>
+              </TouchableOpacity>
+            )}
+
+            {!isAdmin && canBook && onBookField && (
+              <TouchableOpacity
+                style={styles.bookFieldHeaderBtn}
+                onPress={onBookField}
+                activeOpacity={0.85}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Book campus sports field"
+              >
+                <Feather
+                  name="plus"
+                  size={13}
+                  color="#ffffff"
+                  style={styles.bookFieldBtnIcon}
+                />
+                <Text style={styles.bookFieldHeaderBtnText}>Book Field</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
@@ -183,14 +196,11 @@ const styles = StyleSheet.create({
     borderColor: BENTO.emeraldBorder,
   },
   livePulseDot: {
-    width: 6.5,
-    height: 6.5,
+    width: 7,
+    height: 7,
     borderRadius: 3.5,
     backgroundColor: BENTO.emerald,
-    marginRight: 6,
-  },
-  chipIcon: {
-    marginRight: 4,
+    marginRight: 6.5,
   },
   groundOpenText: {
     fontSize: 11.5,
@@ -208,16 +218,36 @@ const styles = StyleSheet.create({
     borderColor: BENTO.roseBorder,
   },
   closedPulseDot: {
-    width: 6.5,
-    height: 6.5,
+    width: 7,
+    height: 7,
     borderRadius: 3.5,
     backgroundColor: BENTO.rose,
-    marginRight: 6,
+    marginRight: 6.5,
   },
   groundClosedText: {
     fontSize: 11.5,
     fontWeight: "700",
     color: BENTO.rose,
+  },
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  manageGroundBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO.slateSubtle,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BENTO.border,
+  },
+  manageGroundText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: BENTO.navy,
   },
   bookFieldHeaderBtn: {
     flexDirection: "row",

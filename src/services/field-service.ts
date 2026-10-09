@@ -62,7 +62,8 @@ export interface UpdateBookingStatusInput {
 
 export interface UpdateFieldSettingsInput {
   isBookingOpen?: boolean;
-  closureReason?: string;
+  closedNotice?: string | null;
+  closureReason?: string | null;
   maxAdvanceDays?: number;
   openTime?: string;
   closeTime?: string;
@@ -77,7 +78,12 @@ export const getFieldSettingsAPI = getFieldSettings;
 export const updateFieldSettings = async (
   data: UpdateFieldSettingsInput,
 ) => {
-  const res = await api.patch("/field/settings", data);
+  const payload = {
+    ...data,
+    closedNotice:
+      data.closedNotice !== undefined ? data.closedNotice : data.closureReason,
+  };
+  const res = await api.patch("/field/settings", payload);
   return res.data?.data;
 };
 export const updateFieldSettingsAPI = updateFieldSettings;

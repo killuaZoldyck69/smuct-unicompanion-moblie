@@ -34,10 +34,11 @@ export interface CreateFieldBookingInput {
 
 export interface UpdateFieldSettingsInput {
   isBookingOpen?: boolean;
+  closedNotice?: string | null;
+  closureReason?: string | null;
   maxAdvanceDays?: number;
   openTime?: string;
   closeTime?: string;
-  closureReason?: string;
 }
 
 export interface UpdateBookingStatusInput {

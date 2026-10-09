@@ -36,10 +36,11 @@ export const useFieldSchedule = () => {
   });
 };
 
-export const useAllFieldBookingsAdmin = () => {
+export const useAllFieldBookingsAdmin = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["allFieldBookings"],
     queryFn: getAllFieldBookingsAdminAPI,
+    enabled: options?.enabled,
   });
 };
 
@@ -65,11 +66,25 @@ export const useUpdateFieldSettings = () => {
   });
 };
 
-export const useUpdateFieldBookingStatus = (id: string) => {
+export const useUpdateFieldBookingStatus = (fixedId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: UpdateBookingStatusInput) =>
-      updateFieldBookingStatusAPI(id, data),
+    mutationFn: (
+      variables:
+        | UpdateBookingStatusInput
+        | { id: string; data: UpdateBookingStatusInput },
+    ) => {
+      const targetId =
+        (variables as { id?: string }).id || fixedId;
+      if (!targetId) {
+        throw new Error("Booking ID is required to update status");
+      }
+      const data =
+        "data" in variables
+          ? (variables as { data: UpdateBookingStatusInput }).data
+          : (variables as UpdateBookingStatusInput);
+      return updateFieldBookingStatusAPI(targetId, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allFieldBookings"] });
       queryClient.invalidateQueries({ queryKey: ["myFieldBookings"] });

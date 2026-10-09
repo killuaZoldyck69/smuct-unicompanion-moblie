@@ -7,6 +7,8 @@ import type { TabType } from "../types";
 interface BookingTabsProps {
   activeTab: TabType;
   onSelectTab: (tab: TabType) => void;
+  isAdmin?: boolean;
+  pendingRequestsCount?: number;
   myBookingsCount?: number;
   scheduleCount?: number;
 }
@@ -14,11 +16,105 @@ interface BookingTabsProps {
 export const BookingTabs = memo(function BookingTabs({
   activeTab,
   onSelectTab,
+  isAdmin = false,
+  pendingRequestsCount,
   myBookingsCount,
   scheduleCount,
 }: BookingTabsProps) {
-  const isMyBookings = activeTab === "MY_BOOKINGS";
+  const isRequests = activeTab === "REQUESTS";
   const isSchedule = activeTab === "SCHEDULE";
+  const isMyBookings = activeTab === "MY_BOOKINGS";
+
+  if (isAdmin) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.segmentedTrack}>
+          {/* Admin Tab 1: Requests */}
+          <TouchableOpacity
+            style={[styles.segment, isRequests && styles.segmentActive]}
+            onPress={() => onSelectTab("REQUESTS")}
+            activeOpacity={0.8}
+            accessible={true}
+            accessibilityRole="tab"
+            accessibilityLabel="All Requests tab"
+            accessibilityState={{ selected: isRequests }}
+          >
+            <Feather
+              name="inbox"
+              size={13.5}
+              color={isRequests ? BENTO.navy : BENTO.slate}
+              style={styles.tabIcon}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                isRequests && styles.segmentTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              Requests
+            </Text>
+            {typeof pendingRequestsCount === "number" && pendingRequestsCount > 0 && (
+              <View
+                style={[
+                  styles.countBadge,
+                  styles.countBadgePending,
+                ]}
+              >
+                <Text style={styles.countTextPending}>
+                  {pendingRequestsCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Admin Tab 2: Public Schedule */}
+          <TouchableOpacity
+            style={[styles.segment, isSchedule && styles.segmentActive]}
+            onPress={() => onSelectTab("SCHEDULE")}
+            activeOpacity={0.8}
+            accessible={true}
+            accessibilityRole="tab"
+            accessibilityLabel="Public Schedule tab"
+            accessibilityState={{ selected: isSchedule }}
+          >
+            <Feather
+              name="globe"
+              size={13.5}
+              color={isSchedule ? BENTO.navy : BENTO.slate}
+              style={styles.tabIcon}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                isSchedule && styles.segmentTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              Schedule
+            </Text>
+            {typeof scheduleCount === "number" && scheduleCount > 0 && (
+              <View
+                style={[
+                  styles.countBadge,
+                  isSchedule ? styles.countBadgeActive : styles.countBadgeInactive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.countText,
+                    isSchedule ? styles.countTextActive : styles.countTextInactive,
+                  ]}
+                >
+                  {scheduleCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -180,6 +276,14 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   countTextActive: {
+    color: "#ffffff",
+  },
+  countBadgePending: {
+    backgroundColor: BENTO.amber,
+  },
+  countTextPending: {
+    fontSize: 10,
+    fontWeight: "800",
     color: "#ffffff",
   },
   countTextInactive: {

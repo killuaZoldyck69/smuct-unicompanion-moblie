@@ -1,6 +1,6 @@
 import { TIME_SLOT_PRESETS } from "./constants";
 
-export type TabType = "MY_BOOKINGS" | "SCHEDULE";
+export type TabType = "REQUESTS" | "SCHEDULE" | "MY_BOOKINGS";
 
 export type NativePickerMode = "date" | "start" | "end" | null;
 
