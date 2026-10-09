@@ -16,6 +16,7 @@ import {
   formatTime,
   getBookingDuration,
   formatPurposeWithEmoji,
+  isPastBooking,
 } from "../utils";
 import { BookingStatusBadge } from "./booking-status-badge";
 
@@ -32,26 +33,32 @@ export const BookingCard = memo(function BookingCard({
   onDelete,
   isDeleting,
 }: BookingCardProps) {
+  const isPast = isPastBooking(item);
   const duration = getBookingDuration(item);
   const dateDisplay = formatDate(item.bookingDate || item.startTime);
   const requestedDate = formatRequestedDate(item.createdAt);
 
   const statusNorm = (item.status || "").toUpperCase();
-  const leftAccentColor =
-    statusNorm === "APPROVED"
+  const leftAccentColor = isPast
+    ? "#94a3b8"
+    : statusNorm === "APPROVED"
       ? BENTO.emerald
       : statusNorm === "REJECTED"
-      ? BENTO.rose
-      : BENTO.amber;
+        ? BENTO.rose
+        : BENTO.amber;
 
   return (
     <TouchableOpacity
-      style={[styles.card, { borderLeftColor: leftAccentColor }]}
+      style={[
+        styles.card,
+        { borderLeftColor: leftAccentColor },
+        isPast && styles.cardPast,
+      ]}
       onPress={onPress}
       activeOpacity={onPress ? 0.75 : 1}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`Booking for ${item.purpose}, ${statusNorm}, on ${dateDisplay}`}
+      accessibilityLabel={`Booking for ${item.purpose}, ${statusNorm}, on ${dateDisplay}${isPast ? ", past booking" : ""}`}
     >
       {/* Row 1: Date & Status Badge */}
       <View style={styles.cardHeader}>
@@ -59,31 +66,42 @@ export const BookingCard = memo(function BookingCard({
           <Feather
             name="calendar"
             size={13.5}
-            color={BENTO.navy}
+            color={isPast ? BENTO.slateLight : BENTO.navy}
             style={styles.calendarIcon}
           />
-          <Text style={styles.dateText}>{dateDisplay}</Text>
+          <Text style={[styles.dateText, isPast && styles.dateTextPast]}>
+            {dateDisplay}
+          </Text>
+          {isPast && (
+            <View style={styles.pastBadge}>
+              <Text style={styles.pastBadgeText}>PAST</Text>
+            </View>
+          )}
         </View>
         <BookingStatusBadge status={item.status} />
       </View>
 
       {/* Row 2: Booking Title */}
       <View style={styles.titleRow}>
-        <Text style={styles.purposeTitle} numberOfLines={2} ellipsizeMode="tail">
+        <Text
+          style={[styles.purposeTitle, isPast && styles.purposeTitlePast]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
           {formatPurposeWithEmoji(item.purpose)}
         </Text>
       </View>
 
       {/* Row 3: Time Slot & Duration Pill */}
       <View style={styles.timeRow}>
-        <View style={styles.timePill}>
+        <View style={[styles.timePill, isPast && styles.timePillPast]}>
           <Feather
             name="clock"
             size={12.5}
-            color={BENTO.indigo}
+            color={isPast ? BENTO.slate : BENTO.indigo}
             style={styles.clockIcon}
           />
-          <Text style={styles.timeText}>
+          <Text style={[styles.timeText, isPast && styles.timeTextPast]}>
             {formatTime(item.startTime)} – {formatTime(item.endTime)}
           </Text>
         </View>
@@ -189,6 +207,11 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
+  cardPast: {
+    opacity: 0.6,
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0",
+  },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -207,6 +230,24 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: BENTO.navySecondary,
   },
+  dateTextPast: {
+    color: BENTO.slate,
+  },
+  pastBadge: {
+    backgroundColor: BENTO.slateSubtle,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginLeft: 6,
+    borderWidth: 1,
+    borderColor: BENTO.border,
+  },
+  pastBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: BENTO.slate,
+    letterSpacing: 0.3,
+  },
   titleRow: {
     marginBottom: 10,
   },
@@ -220,6 +261,9 @@ const styles = StyleSheet.create({
       Platform.OS === "web"
         ? "var(--font-heading), 'Plus Jakarta Sans', system-ui, sans-serif"
         : undefined,
+  },
+  purposeTitlePast: {
+    color: BENTO.slate,
   },
   timeRow: {
     flexDirection: "row",
@@ -236,6 +280,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 10,
   },
+  timePillPast: {
+    backgroundColor: BENTO.slateSubtle,
+  },
   clockIcon: {
     marginRight: 5,
   },
@@ -243,6 +290,9 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: "600",
     color: BENTO.indigo,
+  },
+  timeTextPast: {
+    color: BENTO.slate,
   },
   durationPill: {
     backgroundColor: BENTO.slateSubtle,

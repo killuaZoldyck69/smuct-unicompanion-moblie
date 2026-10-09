@@ -195,3 +195,133 @@ export function getSportIcon(purpose: string): SportIconData {
   }
   return { type: "general", label: "Sports Field" };
 }
+
+export function getBookingDateKey(item: FieldBookingItem): string {
+  const raw = item.bookingDate || item.startTime;
+  if (!raw) return "";
+  if (typeof raw === "string" && raw.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return raw.substring(0, 10);
+  }
+  try {
+    const d = new Date(raw);
+    return toISODateString(d);
+  } catch {
+    return "";
+  }
+}
+
+export function formatFullHeaderDate(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  try {
+    const cleanStr =
+      typeof dateStr === "string" && dateStr.includes("T")
+        ? dateStr.split("T")[0]
+        : String(dateStr).trim();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      const [y, m, d] = cleanStr.split("-").map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      if (!isNaN(dateObj.getTime())) {
+        return dateObj.toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+      }
+    }
+
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+    return String(dateStr);
+  } catch {
+    return String(dateStr);
+  }
+}
+
+export function isPastBooking(item: FieldBookingItem): boolean {
+  try {
+    // 1. If endTime has full ISO date-time string
+    if (item.endTime) {
+      const endD = new Date(item.endTime);
+      if (!isNaN(endD.getTime()) && item.endTime.includes("T")) {
+        return endD.getTime() < Date.now();
+      }
+    }
+
+    // 2. If bookingDate is present
+    const rawDate = item.bookingDate || item.startTime;
+    if (rawDate) {
+      const datePart =
+        typeof rawDate === "string" && rawDate.includes("T")
+          ? rawDate.split("T")[0]
+          : String(rawDate).substring(0, 10);
+
+      // If time part exists in endTime (e.g. "17:30" or "17:30:00")
+      if (item.endTime && /^\d{1,2}:\d{2}/.test(item.endTime)) {
+        const [h, m] = item.endTime.split(":").map(Number);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+          const [y, mon, d] = datePart.split("-").map(Number);
+          const bookingEnd = new Date(y, mon - 1, d, h, m, 0);
+          if (!isNaN(bookingEnd.getTime())) {
+            return bookingEnd.getTime() < Date.now();
+          }
+        }
+      }
+
+      // Check end of the booking calendar day (23:59:59)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        const [y, mon, d] = datePart.split("-").map(Number);
+        const dayEnd = new Date(y, mon - 1, d, 23, 59, 59);
+        if (!isNaN(dayEnd.getTime())) {
+          return dayEnd.getTime() < Date.now();
+        }
+      }
+
+      const parsed = new Date(rawDate);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.getTime() < Date.now();
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export interface CalendarStripDay {
+  date: Date;
+  dateString: string;
+  dayName: string;
+  dayNumber: number;
+  isToday: boolean;
+  isWeekend: boolean;
+}
+
+const DAY_NAMES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+export function getScheduleWeekDates(startDate: Date, count = 14): CalendarStripDay[] {
+  const todayStr = toISODateString(new Date());
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    const dateString = toISODateString(d);
+    const dow = d.getDay();
+    return {
+      date: d,
+      dateString,
+      dayName: DAY_NAMES[dow],
+      dayNumber: d.getDate(),
+      isToday: dateString === todayStr,
+      isWeekend: dow === 5 || dow === 6,
+    };
+  });
+}

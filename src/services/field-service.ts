@@ -11,6 +11,30 @@ export interface FieldBookingSettings {
   maxAdvanceDays?: number;
 }
 
+export interface FieldBookingUser {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+  role?: string | null;
+  phoneNumber?: string | null;
+  studentProfile?: {
+    studentId?: string;
+    department?: string;
+    program?: string;
+    batch?: string;
+    currentSemester?: number;
+    section?: string;
+  } | null;
+  teacherProfile?: {
+    teacherId?: string;
+    designation?: string;
+    department?: string;
+    faculty?: string;
+    officeRoom?: string | null;
+  } | null;
+}
+
 export interface FieldBookingItem {
   id: string;
   purpose: string;
@@ -21,12 +45,7 @@ export interface FieldBookingItem {
   adminFeedback?: string | null;
   createdAt: string;
   userId?: string;
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    phoneNumber?: string | null;
-  };
+  user?: FieldBookingUser;
 }
 
 export interface CreateFieldBookingInput {

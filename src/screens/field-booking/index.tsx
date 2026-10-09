@@ -23,11 +23,11 @@ import type { TabType } from "./types";
 import { BookingHeader } from "./components/booking-header";
 import { BookingTabs } from "./components/booking-tabs";
 import { BookingCard } from "./components/booking-card";
-import { ScheduleCard } from "./components/schedule-card";
 import { BookingSkeletonList } from "./components/booking-skeleton";
 import { BookingEmptyState } from "./components/booking-empty-state";
 import { BookingComposeModal } from "./components/compose/booking-compose-modal";
 import { DeleteBookingModal } from "./components/delete-booking-modal";
+import { PublicScheduleView } from "./components/public-schedule-view";
 
 export function FieldBooking() {
   const insets = useSafeAreaInsets();
@@ -127,11 +127,6 @@ export function FieldBooking() {
     [handleOpenDeleteModal, isDeletingBooking, deletingItem],
   );
 
-  const renderScheduleItem = useCallback(
-    ({ item }: { item: FieldBookingItem }) => <ScheduleCard item={item} />,
-    [],
-  );
-
   const canBook = settings?.isBookingOpen !== false;
   // Extra clearance for the bottom floating tab bar (height ~72 + margin)
   const listBottomPadding = Math.max(insets.bottom, 16) + 96;
@@ -222,36 +217,14 @@ export function FieldBooking() {
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : !publicSchedule || publicSchedule.length === 0 ? (
-          <BookingEmptyState
-            iconName="sun"
-            iconColor={BENTO.amber}
-            title="Ground is completely free"
-            subtitle="No approved reservations currently scheduled. The field is clear and open for practice or new booking requests!"
-            actionText={canBook ? "+ Book Field" : undefined}
-            actionIcon="calendar"
-            onAction={openComposeIfAllowed}
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-          />
         ) : (
-          <FlatList
-            data={publicSchedule}
-            keyExtractor={keyExtractor}
-            renderItem={renderScheduleItem}
-            contentContainerStyle={[
-              styles.listContent,
-              { paddingBottom: listBottomPadding },
-            ]}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                colors={[BENTO.navy]}
-                tintColor={BENTO.navy}
-              />
-            }
+          <PublicScheduleView
+            schedule={publicSchedule || []}
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            onBookField={openComposeIfAllowed}
+            canBook={canBook}
+            contentBottomPadding={listBottomPadding}
           />
         )}
 
