@@ -5,6 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
   Alert,
   StyleSheet,
 } from "react-native";
@@ -16,9 +17,9 @@ import Toast from "react-native-toast-message";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   useFieldSettings,
-  useMyFieldBookings,
+  useInfiniteMyFieldBookings,
   useFieldSchedule,
-  useAllFieldBookingsAdmin,
+  useFieldBookingCounts,
   useUpdateFieldBookingStatus,
   useUpdateFieldSettings,
   useDeleteFieldBooking,
@@ -70,7 +71,6 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
   const [isManageGroundVisible, setIsManageGroundVisible] = useState(false);
   const [selectedReserverBooking, setSelectedReserverBooking] =
     useState<FieldBookingItem | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingItem, setDeletingItem] = useState<FieldBookingItem | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
@@ -80,26 +80,37 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
     isLoading: isLoadingSettings,
   } = useFieldSettings();
 
+  // Member Infinite Query for My Bookings
   const {
-    data: myBookings,
+    data: myBookingsData,
     isLoading: isLoadingBookings,
     isError: isErrorBookings,
     refetch: refetchBookings,
-  } = useMyFieldBookings();
+    fetchNextPage: fetchNextMyBookings,
+    hasNextPage: hasNextMyBookings,
+    isFetchingNextPage: isFetchingNextMyBookings,
+    isRefetching: isRefetchingMyBookings,
+  } = useInfiniteMyFieldBookings(
+    { limit: 15 },
+    { enabled: !isAdmin && activeTab === "MY_BOOKINGS" },
+  );
 
+  const myBookingsList = useMemo(() => {
+    if (!myBookingsData?.pages) return [];
+    return myBookingsData.pages.flatMap((page) => page.data);
+  }, [myBookingsData?.pages]);
+
+  // Public approved schedule query
   const {
     data: publicSchedule,
     isLoading: isLoadingSchedule,
     isError: isErrorSchedule,
     refetch: refetchSchedule,
+    isRefetching: isRefetchingSchedule,
   } = useFieldSchedule();
 
-  const {
-    data: allBookings,
-    isLoading: isLoadingAllBookings,
-    isError: isErrorAllBookings,
-    refetch: refetchAllBookings,
-  } = useAllFieldBookingsAdmin({ enabled: isAdmin });
+  // Lightweight status count query for admin requests tab badge
+  const { data: countsData } = useFieldBookingCounts({ enabled: isAdmin });
 
   // Mutations
   const { mutate: deleteBooking, isPending: isDeletingBooking } =
@@ -110,13 +121,8 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
   const { mutate: updateSettings, isPending: isUpdatingSettings } =
     useUpdateFieldSettings();
 
-  // Pending count badge for admin tab
-  const pendingRequestsCount = useMemo(() => {
-    if (!allBookings) return 0;
-    return allBookings.filter(
-      (b) => (b.status || "").toUpperCase() === "PENDING",
-    ).length;
-  }, [allBookings]);
+  // Pending count badge for admin tab (instant & query-optimized)
+  const pendingRequestsCount = countsData?.pending ?? 0;
 
   // Modals & Handlers
   const handleOpenDeleteModal = useCallback((item: FieldBookingItem) => {
@@ -243,22 +249,25 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
   );
 
   const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const promises: Promise<any>[] = [
-        queryClient.invalidateQueries({ queryKey: ["fieldSettings"] }),
-        queryClient.invalidateQueries({ queryKey: ["myFieldBookings"] }),
-        queryClient.invalidateQueries({ queryKey: ["fieldSchedule"] }),
-      ];
-      if (isAdmin) {
-        promises.push(
-          queryClient.invalidateQueries({ queryKey: ["allFieldBookings"] }),
-        );
-      }
-      await Promise.all(promises);
-    } finally {
-      setIsRefreshing(false);
+    const promises: Promise<any>[] = [
+      queryClient.invalidateQueries({ queryKey: ["fieldSettings"] }),
+      queryClient.invalidateQueries({ queryKey: ["fieldSchedule"] }),
+    ];
+    if (isAdmin) {
+      promises.push(
+        queryClient.invalidateQueries({
+          queryKey: ["allFieldBookingsAdminInfinite"],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["fieldBookingCounts"] }),
+      );
+    } else {
+      promises.push(
+        queryClient.invalidateQueries({
+          queryKey: ["myFieldBookingsInfinite"],
+        }),
+      );
     }
+    await Promise.all(promises);
   }, [queryClient, isAdmin]);
 
   const openComposeIfAllowed = useCallback(() => {
@@ -287,6 +296,22 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
     [handleOpenDeleteModal, isDeletingBooking, deletingItem],
   );
 
+  const handleEndReachedMyBookings = useCallback(() => {
+    if (hasNextMyBookings && !isFetchingNextMyBookings) {
+      fetchNextMyBookings();
+    }
+  }, [hasNextMyBookings, isFetchingNextMyBookings, fetchNextMyBookings]);
+
+  const renderMyBookingsFooter = useCallback(() => {
+    if (!isFetchingNextMyBookings) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={BENTO.navy} />
+        <Text style={styles.footerLoaderText}>Loading more bookings...</Text>
+      </View>
+    );
+  }, [isFetchingNextMyBookings]);
+
   const canBook = !isAdmin && settings?.isBookingOpen !== false;
   // Extra clearance for bottom floating tab bar
   const listBottomPadding = Math.max(insets.bottom, 16) + 96;
@@ -310,7 +335,7 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
           onSelectTab={setActiveTab}
           isAdmin={isAdmin}
           pendingRequestsCount={pendingRequestsCount}
-          myBookingsCount={myBookings?.length}
+          myBookingsCount={myBookingsData?.pages?.[0]?.meta?.total ?? myBookingsList.length}
           scheduleCount={publicSchedule?.length}
         />
 
@@ -318,37 +343,15 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
         {isAdmin ? (
           /* Admin Mode: Requests or Schedule */
           activeTab === "REQUESTS" ? (
-            isLoadingAllBookings ? (
-              <BookingSkeletonList />
-            ) : isErrorAllBookings ? (
-              <View style={styles.centerContainer}>
-                <Feather name="alert-circle" size={36} color={BENTO.rose} />
-                <Text style={styles.errorTitle}>Unable to load booking requests</Text>
-                <Text style={styles.errorSubtitle}>
-                  Please check your network connection and administrative privileges.
-                </Text>
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={() => refetchAllBookings()}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <AdminRequestsView
-                bookings={allBookings || []}
-                isRefreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                onApprove={handleApprove}
-                onReject={handleReject}
-                onDelete={handleOpenDeleteModal}
-                onViewProfile={setSelectedReserverBooking}
-                updatingId={updatingStatusId}
-                deletingId={isDeletingBooking ? deletingItem?.id || null : null}
-                contentBottomPadding={listBottomPadding}
-              />
-            )
+            <AdminRequestsView
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onDelete={handleOpenDeleteModal}
+              onViewProfile={setSelectedReserverBooking}
+              updatingId={updatingStatusId}
+              deletingId={isDeletingBooking ? deletingItem?.id || null : null}
+              contentBottomPadding={listBottomPadding}
+            />
           ) : isLoadingSchedule ? (
             <BookingSkeletonList />
           ) : isErrorSchedule ? (
@@ -369,7 +372,7 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
           ) : (
             <PublicScheduleView
               schedule={publicSchedule || []}
-              isRefreshing={isRefreshing}
+              isRefreshing={isRefetchingSchedule}
               onRefresh={handleRefresh}
               onBookField={openComposeIfAllowed}
               canBook={false}
@@ -377,7 +380,7 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
             />
           )
         ) : activeTab === "MY_BOOKINGS" ? (
-          /* Member Mode: My Bookings */
+          /* Member Mode: My Bookings (Infinite Paginated FlatList) */
           isLoadingBookings ? (
             <BookingSkeletonList />
           ) : isErrorBookings ? (
@@ -395,19 +398,19 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          ) : !myBookings || myBookings.length === 0 ? (
+          ) : myBookingsList.length === 0 ? (
             <BookingEmptyState
               iconName="calendar"
               title="No bookings yet"
               subtitle="Reserve a university field for your next match, practice session, or event."
               actionText={canBook ? "+ Book Field" : undefined}
               onAction={openComposeIfAllowed}
-              refreshing={isRefreshing}
+              refreshing={isRefetchingMyBookings}
               onRefresh={handleRefresh}
             />
           ) : (
             <FlatList
-              data={myBookings}
+              data={myBookingsList}
               keyExtractor={keyExtractor}
               renderItem={renderMyBookingItem}
               contentContainerStyle={[
@@ -415,9 +418,15 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
                 { paddingBottom: listBottomPadding },
               ]}
               showsVerticalScrollIndicator={false}
+              onEndReached={handleEndReachedMyBookings}
+              onEndReachedThreshold={0.4}
+              ListFooterComponent={renderMyBookingsFooter}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={7}
               refreshControl={
                 <RefreshControl
-                  refreshing={isRefreshing}
+                  refreshing={isRefetchingMyBookings && !isFetchingNextMyBookings}
                   onRefresh={handleRefresh}
                   colors={[BENTO.navy]}
                   tintColor={BENTO.navy}
@@ -446,7 +455,7 @@ export function FieldBooking({ initialTab }: FieldBookingProps = {}) {
         ) : (
           <PublicScheduleView
             schedule={publicSchedule || []}
-            isRefreshing={isRefreshing}
+            isRefreshing={isRefetchingSchedule}
             onRefresh={handleRefresh}
             onBookField={openComposeIfAllowed}
             canBook={canBook}
@@ -537,5 +546,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#ffffff",
+  },
+  footerLoader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    gap: 8,
+  },
+  footerLoaderText: {
+    fontSize: 12,
+    color: BENTO.slate,
+    fontWeight: "600",
   },
 });

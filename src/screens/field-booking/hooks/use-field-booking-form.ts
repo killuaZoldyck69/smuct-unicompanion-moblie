@@ -86,12 +86,12 @@ export function useFieldBookingForm(
   }, []);
 
   const handleSubmit = useCallback(() => {
-    const cleanPurpose = purpose.trim().slice(0, 80);
-    if (!cleanPurpose) {
+    const cleanPurpose = purpose.trim().slice(0, 250);
+    if (!cleanPurpose || cleanPurpose.length < 2) {
       Toast.show({
         type: "error",
-        text1: "Missing Purpose",
-        text2: "Please specify the purpose or match name.",
+        text1: "Invalid Purpose",
+        text2: "Please specify a purpose of at least 2 characters.",
       });
       return;
     }
@@ -111,6 +111,15 @@ export function useFieldBookingForm(
 
     const start = new Date(sy, sm - 1, sd, sh, smin, 0);
     const end = new Date(sy, sm - 1, sd, eh, emin, 0);
+
+    if (start.getTime() < Date.now() - 5 * 60 * 1000) {
+      Toast.show({
+        type: "error",
+        text1: "Past Time Slot",
+        text2: "Cannot book a date or time that has already passed.",
+      });
+      return;
+    }
 
     createBookingMutation.mutate(
       {

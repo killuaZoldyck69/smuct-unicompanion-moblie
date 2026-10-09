@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -49,8 +50,15 @@ export const ReserverProfileModal = memo(function ReserverProfileModal({
   onClose,
 }: ReserverProfileModalProps) {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
 
   if (!booking) return null;
+
+  // Compute a responsive, bounded height so the middle ScrollView always gets ample room
+  const modalHeight = Math.min(
+    Math.max(Math.round(windowHeight * 0.76), 460),
+    620,
+  );
 
   const user = booking.user;
   const userName = user?.name || "University Member";
@@ -63,7 +71,6 @@ export const ReserverProfileModal = memo(function ReserverProfileModal({
 
   const isTeacher = Boolean(tp || user?.role === "TEACHER");
   const isAdmin = user?.role === "ADMIN";
-  const isStudent = Boolean(sp || user?.role === "STUDENT" || (!isTeacher && !isAdmin));
 
   const roleLabel = isAdmin
     ? "Admin"
@@ -85,6 +92,18 @@ export const ReserverProfileModal = memo(function ReserverProfileModal({
   const section = sp?.section || null;
   const program = sp?.program || null;
   const officeRoom = tp?.officeRoom || null;
+
+  const hasAcademicDetails = Boolean(
+    department ||
+      program ||
+      studentId ||
+      teacherId ||
+      designation ||
+      officeRoom ||
+      batch ||
+      semesterStr ||
+      section,
+  );
 
   const handleCall = () => {
     if (!phone) return;
@@ -142,169 +161,195 @@ export const ReserverProfileModal = memo(function ReserverProfileModal({
           accessible={false}
         />
 
-        <View style={styles.modalCard}>
-          {/* Close Button */}
+        <View style={[styles.modalCard, { height: modalHeight }]}>
+          {/* Close Button (Fixed Top-Right) */}
           <TouchableOpacity
             style={styles.closeBtn}
             onPress={onClose}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Close profile details"
           >
-            <Feather name="x" size={18} color={BENTO.navy} />
+            <Feather name="x" size={17} color={BENTO.navy} />
           </TouchableOpacity>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollBody}
-          >
-            {/* Reserver Header */}
-            <View style={styles.headerSection}>
-              {user?.image ? (
-                <Image
-                  source={{ uri: user.image }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <Text style={styles.avatarFallbackText}>{userInitial}</Text>
-                </View>
-              )}
+          {/* 1. FIXED HEADER: Reserver Image, Name, and Role Badge */}
+          <View style={styles.fixedHeader}>
+            {user?.image ? (
+              <Image
+                source={{ uri: user.image }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarFallbackText}>{userInitial}</Text>
+              </View>
+            )}
 
-              <Text style={styles.userNameText} numberOfLines={2}>
-                {userName}
-              </Text>
+            <Text style={styles.userNameText} numberOfLines={1}>
+              {userName}
+            </Text>
 
-              {/* Role Badge */}
-              <View
-                style={[
-                  styles.roleBadge,
+            {/* Role Badge */}
+            <View
+              style={[
+                styles.roleBadge,
+                isAdmin
+                  ? styles.roleBadgeAdmin
+                  : isTeacher
+                    ? styles.roleBadgeTeacher
+                    : styles.roleBadgeStudent,
+              ]}
+            >
+              <Feather
+                name={isAdmin ? "shield" : isTeacher ? "award" : "book-open"}
+                size={12}
+                color={
                   isAdmin
-                    ? styles.roleBadgeAdmin
+                    ? "#7c3aed"
                     : isTeacher
-                      ? styles.roleBadgeTeacher
-                      : styles.roleBadgeStudent,
+                      ? BENTO.emerald
+                      : BENTO.indigo
+                }
+                style={{ marginRight: 5 }}
+              />
+              <Text
+                style={[
+                  styles.roleBadgeText,
+                  isAdmin
+                    ? styles.roleTextAdmin
+                    : isTeacher
+                      ? styles.roleTextTeacher
+                      : styles.roleTextStudent,
                 ]}
               >
-                <Feather
-                  name={isAdmin ? "shield" : isTeacher ? "award" : "book-open"}
-                  size={12}
-                  color={
-                    isAdmin
-                      ? "#7c3aed"
-                      : isTeacher
-                        ? BENTO.emerald
-                        : BENTO.indigo
-                  }
-                  style={{ marginRight: 5 }}
-                />
-                <Text
-                  style={[
-                    styles.roleBadgeText,
-                    isAdmin
-                      ? styles.roleTextAdmin
-                      : isTeacher
-                        ? styles.roleTextTeacher
-                        : styles.roleTextStudent,
-                  ]}
-                >
-                  {roleLabel}
-                </Text>
-              </View>
+                {roleLabel}
+              </Text>
             </View>
+          </View>
 
+          {/* 2. SCROLLABLE MIDDLE INFO: Academic, Reservation & Contact Details */}
+          <ScrollView
+            style={styles.scrollArea}
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={styles.scrollBody}
+            nestedScrollEnabled={true}
+            bounces={true}
+          >
             {/* Academic & Identity Box */}
             <View style={styles.sectionCard}>
               <Text style={styles.sectionHeading}>Academic Details</Text>
 
-              {department && (
-                <View style={styles.infoRow}>
-                  <View style={styles.iconBox}>
-                    <Feather name="layers" size={14} color={BENTO.navy} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Department</Text>
-                    <Text style={styles.infoValue}>{department}</Text>
-                  </View>
-                </View>
-              )}
+              {hasAcademicDetails ? (
+                <>
+                  {department && (
+                    <View style={styles.infoRow}>
+                      <View style={styles.iconBox}>
+                        <Feather name="layers" size={14} color={BENTO.navy} />
+                      </View>
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Department</Text>
+                        <Text style={styles.infoValue}>{department}</Text>
+                      </View>
+                    </View>
+                  )}
 
-              {program && (
-                <View style={styles.infoRow}>
-                  <View style={styles.iconBox}>
-                    <Feather name="bookmark" size={14} color={BENTO.navy} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Program</Text>
-                    <Text style={styles.infoValue}>{program}</Text>
-                  </View>
-                </View>
-              )}
+                  {program && (
+                    <View style={styles.infoRow}>
+                      <View style={styles.iconBox}>
+                        <Feather name="bookmark" size={14} color={BENTO.navy} />
+                      </View>
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Program</Text>
+                        <Text style={styles.infoValue}>{program}</Text>
+                      </View>
+                    </View>
+                  )}
 
-              {studentId && (
-                <View style={styles.infoRow}>
-                  <View style={styles.iconBox}>
-                    <Feather name="hash" size={14} color={BENTO.navy} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Student ID</Text>
-                    <Text style={styles.infoValue}>{studentId}</Text>
-                  </View>
-                </View>
-              )}
+                  {studentId && (
+                    <View style={styles.infoRow}>
+                      <View style={styles.iconBox}>
+                        <Feather name="hash" size={14} color={BENTO.navy} />
+                      </View>
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Student ID</Text>
+                        <Text style={styles.infoValue}>{studentId}</Text>
+                      </View>
+                    </View>
+                  )}
 
-              {teacherId && (
-                <View style={styles.infoRow}>
-                  <View style={styles.iconBox}>
-                    <Feather name="hash" size={14} color={BENTO.navy} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Faculty ID</Text>
-                    <Text style={styles.infoValue}>{teacherId}</Text>
-                  </View>
-                </View>
-              )}
+                  {teacherId && (
+                    <View style={styles.infoRow}>
+                      <View style={styles.iconBox}>
+                        <Feather name="hash" size={14} color={BENTO.navy} />
+                      </View>
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Faculty ID</Text>
+                        <Text style={styles.infoValue}>{teacherId}</Text>
+                      </View>
+                    </View>
+                  )}
 
-              {designation && (
-                <View style={styles.infoRow}>
-                  <View style={styles.iconBox}>
-                    <Feather name="briefcase" size={14} color={BENTO.navy} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Designation</Text>
-                    <Text style={styles.infoValue}>{designation}</Text>
-                  </View>
-                </View>
-              )}
+                  {designation && (
+                    <View style={styles.infoRow}>
+                      <View style={styles.iconBox}>
+                        <Feather
+                          name="briefcase"
+                          size={14}
+                          color={BENTO.navy}
+                        />
+                      </View>
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Designation</Text>
+                        <Text style={styles.infoValue}>{designation}</Text>
+                      </View>
+                    </View>
+                  )}
 
-              {officeRoom && (
-                <View style={styles.infoRow}>
-                  <View style={styles.iconBox}>
-                    <Feather name="map-pin" size={14} color={BENTO.navy} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Office Room</Text>
-                    <Text style={styles.infoValue}>{officeRoom}</Text>
-                  </View>
-                </View>
-              )}
+                  {officeRoom && (
+                    <View style={styles.infoRow}>
+                      <View style={styles.iconBox}>
+                        <Feather name="map-pin" size={14} color={BENTO.navy} />
+                      </View>
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Office Room</Text>
+                        <Text style={styles.infoValue}>{officeRoom}</Text>
+                      </View>
+                    </View>
+                  )}
 
-              {(batch || semesterStr || section) && (
-                <View style={styles.infoRow}>
+                  {(batch || semesterStr || section) && (
+                    <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                      <View style={styles.iconBox}>
+                        <Feather name="users" size={14} color={BENTO.navy} />
+                      </View>
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Cohort</Text>
+                        <Text style={styles.infoValue}>
+                          {[
+                            batch ? `Batch ${batch}` : null,
+                            semesterStr,
+                            section ? `Sec ${section}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" • ")}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
                   <View style={styles.iconBox}>
-                    <Feather name="users" size={14} color={BENTO.navy} />
+                    <Feather name="info" size={14} color={BENTO.slate} />
                   </View>
                   <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Cohort</Text>
-                    <Text style={styles.infoValue}>
-                      {[
-                        batch ? `Batch ${batch}` : null,
-                        semesterStr,
-                        section ? `Sec ${section}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" • ")}
+                    <Text style={styles.infoLabel}>Profile Info</Text>
+                    <Text
+                      style={[styles.infoValue, { color: BENTO.slate }]}
+                    >
+                      Academic details not yet registered
                     </Text>
                   </View>
                 </View>
@@ -316,7 +361,12 @@ export const ReserverProfileModal = memo(function ReserverProfileModal({
               <Text style={styles.sectionHeading}>Reservation Details</Text>
 
               <View style={styles.infoRow}>
-                <View style={[styles.iconBox, { backgroundColor: BENTO.emeraldBg }]}>
+                <View
+                  style={[
+                    styles.iconBox,
+                    { backgroundColor: BENTO.emeraldBg },
+                  ]}
+                >
                   <Feather name="calendar" size={14} color={BENTO.emerald} />
                 </View>
                 <View style={styles.infoContent}>
@@ -326,7 +376,12 @@ export const ReserverProfileModal = memo(function ReserverProfileModal({
               </View>
 
               <View style={styles.infoRow}>
-                <View style={[styles.iconBox, { backgroundColor: BENTO.indigoBg }]}>
+                <View
+                  style={[
+                    styles.iconBox,
+                    { backgroundColor: BENTO.indigoBg },
+                  ]}
+                >
                   <Feather name="clock" size={14} color={BENTO.indigo} />
                 </View>
                 <View style={styles.infoContent}>
@@ -348,31 +403,86 @@ export const ReserverProfileModal = memo(function ReserverProfileModal({
               </View>
             </View>
 
-            {/* Quick Actions (Call / Email) */}
-            <View style={styles.actionRow}>
-              {email ? (
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionBtnOutline]}
-                  onPress={handleEmail}
-                  activeOpacity={0.8}
-                >
-                  <Feather name="mail" size={15} color={BENTO.navy} />
-                  <Text style={styles.actionBtnOutlineText}>Send Email</Text>
-                </TouchableOpacity>
-              ) : null}
+            {/* Contact Details Information Box */}
+            {(email || phone) ? (
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionHeading}>Contact Information</Text>
 
-              {phone ? (
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionBtnPrimary]}
-                  onPress={handleCall}
-                  activeOpacity={0.8}
-                >
-                  <Feather name="phone-call" size={15} color="#ffffff" />
-                  <Text style={styles.actionBtnPrimaryText}>Call Reserver</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
+                {email && (
+                  <View
+                    style={[
+                      styles.infoRow,
+                      !phone && { borderBottomWidth: 0 },
+                    ]}
+                  >
+                    <View style={styles.iconBox}>
+                      <Feather name="mail" size={14} color={BENTO.navy} />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Email Address</Text>
+                      <Text
+                        style={[styles.infoValue, { fontSize: 12.5 }]}
+                        numberOfLines={1}
+                      >
+                        {email}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {phone && (
+                  <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                    <View style={styles.iconBox}>
+                      <Feather name="phone" size={14} color={BENTO.navy} />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Phone Number</Text>
+                      <Text style={styles.infoValue}>{phone}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            ) : null}
           </ScrollView>
+
+          {/* 3. FIXED FOOTER: Quick Action Buttons (Call / Email) */}
+          {(email || phone) ? (
+            <View style={styles.fixedFooter}>
+              <View style={styles.actionRow}>
+                {email ? (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.actionBtnOutline]}
+                    onPress={handleEmail}
+                    activeOpacity={0.8}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Send email to reserver"
+                  >
+                    <Feather name="mail" size={15} color={BENTO.navy} />
+                    <Text style={styles.actionBtnOutlineText}>
+                      Send Email
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                {phone ? (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.actionBtnPrimary]}
+                    onPress={handleCall}
+                    activeOpacity={0.8}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Call reserver"
+                  >
+                    <Feather name="phone-call" size={15} color="#ffffff" />
+                    <Text style={styles.actionBtnPrimaryText}>
+                      Call Reserver
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -390,13 +500,14 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 390,
-    maxHeight: "92%",
     backgroundColor: BENTO.card,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: BENTO.border,
     overflow: "hidden",
     position: "relative",
+    display: "flex",
+    flexDirection: "column",
     ...Platform.select({
       web: {
         boxShadow: "0 16px 40px rgba(15, 23, 42, 0.2)",
@@ -412,63 +523,64 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     position: "absolute",
-    top: 16,
-    right: 16,
+    top: 14,
+    right: 14,
     zIndex: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: BENTO.slateSubtle,
     alignItems: "center",
     justifyContent: "center",
   },
-  scrollBody: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-  headerSection: {
+  fixedHeader: {
     alignItems: "center",
-    marginBottom: 18,
+    paddingTop: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: BENTO.card,
   },
   avatarImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    marginBottom: 10,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    marginBottom: 7,
     borderWidth: 2.5,
     borderColor: BENTO.emerald,
   },
   avatarFallback: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: BENTO.navy,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: 7,
     borderWidth: 2.5,
     borderColor: BENTO.border,
   },
   avatarFallbackText: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "800",
     color: "#ffffff",
   },
   userNameText: {
-    fontSize: 18,
+    fontSize: 16.5,
     fontWeight: "800",
     color: BENTO.navy,
     textAlign: "center",
     letterSpacing: -0.3,
-    marginBottom: 6,
+    marginBottom: 5,
+    paddingHorizontal: 28,
   },
   roleBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 11,
-    paddingVertical: 4.5,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
+    borderRadius: 8,
     borderWidth: 1,
   },
   roleBadgeStudent: {
@@ -484,7 +596,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(124, 58, 237, 0.2)",
   },
   roleBadgeText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: "700",
   },
   roleTextStudent: {
@@ -496,6 +608,14 @@ const styles = StyleSheet.create({
   roleTextAdmin: {
     color: "#7c3aed",
   },
+  scrollArea: {
+    flex: 1,
+  },
+  scrollBody: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 14,
+  },
   sectionCard: {
     backgroundColor: BENTO.canvas,
     borderRadius: 16,
@@ -503,10 +623,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: BENTO.border,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   sectionHeading: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: "800",
     color: BENTO.slate,
     textTransform: "uppercase",
@@ -541,22 +661,28 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   infoValue: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "600",
     color: BENTO.navy,
+  },
+  fixedFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: BENTO.card,
   },
   actionRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 4,
-    marginBottom: 6,
   },
   actionBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 11,
+    paddingVertical: 10,
     borderRadius: 12,
     gap: 7,
   },

@@ -69,6 +69,42 @@ export interface UpdateFieldSettingsInput {
   closeTime?: string;
 }
 
+export interface BookingCountsSummary {
+  all: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+  counts?: BookingCountsSummary;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
+export interface GetBookingsQueryParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface GetScheduleQueryParams {
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+}
+
 export const getFieldSettings = async (): Promise<FieldBookingSettings> => {
   const res = await api.get("/field/settings");
   return res.data?.data;
@@ -88,21 +124,43 @@ export const updateFieldSettings = async (
 };
 export const updateFieldSettingsAPI = updateFieldSettings;
 
-export const getMyFieldBookings = async (): Promise<FieldBookingItem[]> => {
-  const res = await api.get("/field/my-bookings");
-  return res.data?.data || [];
+export const getMyFieldBookings = async (
+  params?: GetBookingsQueryParams,
+): Promise<PaginatedResponse<FieldBookingItem>> => {
+  const res = await api.get("/field/my-bookings", { params });
+  const data = Array.isArray(res.data?.data) ? res.data.data : [];
+  const meta: PaginationMeta = res.data?.meta || {
+    page: params?.page || 1,
+    limit: params?.limit || data.length,
+    total: data.length,
+    totalPages: 1,
+    hasMore: false,
+  };
+  return { data, meta };
 };
 export const getMyFieldBookingsAPI = getMyFieldBookings;
 
-export const getFieldSchedule = async (): Promise<FieldBookingItem[]> => {
-  const res = await api.get("/field/schedule");
-  return res.data?.data || [];
+export const getFieldSchedule = async (
+  params?: GetScheduleQueryParams,
+): Promise<FieldBookingItem[]> => {
+  const res = await api.get("/field/schedule", { params });
+  return Array.isArray(res.data?.data) ? res.data.data : [];
 };
 export const getFieldScheduleAPI = getFieldSchedule;
 
-export const getAllFieldBookingsAdmin = async (): Promise<FieldBookingItem[]> => {
-  const res = await api.get("/field/bookings");
-  return res.data?.data || [];
+export const getAllFieldBookingsAdmin = async (
+  params?: GetBookingsQueryParams,
+): Promise<PaginatedResponse<FieldBookingItem>> => {
+  const res = await api.get("/field/bookings", { params });
+  const data = Array.isArray(res.data?.data) ? res.data.data : [];
+  const meta: PaginationMeta = res.data?.meta || {
+    page: params?.page || 1,
+    limit: params?.limit || data.length,
+    total: data.length,
+    totalPages: 1,
+    hasMore: false,
+  };
+  return { data, meta };
 };
 export const getAllFieldBookingsAdminAPI = getAllFieldBookingsAdmin;
 

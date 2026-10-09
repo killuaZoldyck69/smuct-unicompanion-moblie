@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo } from "react";
+import React, { useState, useMemo, memo, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,18 +6,19 @@ import {
   TextInput,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { FieldBookingItem } from "@/services/field-service";
+import { useInfiniteAllFieldBookingsAdmin } from "@/features/field-booking/useFieldBooking";
+import { useDebounce } from "../../hooks/use-debounce";
 import { BENTO } from "../../constants";
+import { BookingSkeletonList } from "../booking-skeleton";
 import { AdminBookingCard } from "./admin-booking-card";
 import { AdminFilterModal, type FilterStatus } from "./admin-filter-modal";
 
 interface AdminRequestsViewProps {
-  bookings: FieldBookingItem[];
-  isRefreshing: boolean;
-  onRefresh: () => void;
   onApprove: (item: FieldBookingItem) => void;
   onReject: (item: FieldBookingItem) => void;
   onDelete: (item: FieldBookingItem) => void;
@@ -28,9 +29,6 @@ interface AdminRequestsViewProps {
 }
 
 export const AdminRequestsView = memo(function AdminRequestsView({
-  bookings,
-  isRefreshing,
-  onRefresh,
   onApprove,
   onReject,
   onDelete,
@@ -43,8 +41,38 @@ export const AdminRequestsView = memo(function AdminRequestsView({
   const [searchQuery, setSearchQuery] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Counts
+  // Debounce search query by 300ms to eliminate server thrashing & unnecessary re-renders
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Infinite paginated query with server-side filters & debounced search
+  const {
+    data,
+    isLoading,
+    isError,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+    isRefetching,
+  } = useInfiniteAllFieldBookingsAdmin({
+    status: activeFilter === "ALL" ? undefined : activeFilter,
+    search: debouncedSearch.trim() || undefined,
+    limit: 15,
+  });
+
+  // Flatten infinite query pages
+  const bookings = useMemo(() => {
+    if (!data?.pages) return [];
+    return data.pages.flatMap((page) => page.data);
+  }, [data?.pages]);
+
+  // Real-time aggregate counts from backend meta
   const counts = useMemo(() => {
+    const metaCounts = data?.pages?.[0]?.meta?.counts;
+    if (metaCounts) {
+      return metaCounts;
+    }
+    // Fallback calculation from loaded items if meta not yet available
     let pending = 0;
     let approved = 0;
     let rejected = 0;
@@ -60,49 +88,40 @@ export const AdminRequestsView = memo(function AdminRequestsView({
       approved,
       rejected,
     };
-  }, [bookings]);
+  }, [data?.pages, bookings]);
 
-  // Filtered & searched data
-  const filteredBookings = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return bookings.filter((b) => {
-      const status = (b.status || "").toUpperCase();
-      if (activeFilter === "PENDING" && status !== "PENDING") return false;
-      if (activeFilter === "APPROVED" && status !== "APPROVED") return false;
-      if (activeFilter === "REJECTED" && status !== "REJECTED") return false;
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-      if (!q) return true;
-      const purpose = (b.purpose || "").toLowerCase();
-      const userName = (b.user?.name || "").toLowerCase();
-      const studentId = (b.user?.studentProfile?.studentId || "").toLowerCase();
-      const teacherId = (b.user?.teacherProfile?.teacherId || "").toLowerCase();
-      const dept = (
-        b.user?.studentProfile?.department ||
-        b.user?.teacherProfile?.department ||
-        ""
-      ).toLowerCase();
-
-      return (
-        purpose.includes(q) ||
-        userName.includes(q) ||
-        studentId.includes(q) ||
-        teacherId.includes(q) ||
-        dept.includes(q)
-      );
-    });
-  }, [bookings, activeFilter, searchQuery]);
-
-  const renderItem = ({ item }: { item: FieldBookingItem }) => (
-    <AdminBookingCard
-      item={item}
-      onApprove={onApprove}
-      onReject={onReject}
-      onDelete={onDelete}
-      onViewProfile={onViewProfile}
-      isUpdatingStatus={updatingId === item.id}
-      isDeleting={deletingId === item.id}
-    />
+  const renderItem = useCallback(
+    ({ item }: { item: FieldBookingItem }) => (
+      <AdminBookingCard
+        item={item}
+        onApprove={onApprove}
+        onReject={onReject}
+        onDelete={onDelete}
+        onViewProfile={onViewProfile}
+        isUpdatingStatus={updatingId === item.id}
+        isDeleting={deletingId === item.id}
+      />
+    ),
+    [onApprove, onReject, onDelete, onViewProfile, updatingId, deletingId],
   );
+
+  const keyExtractor = useCallback((item: FieldBookingItem) => item.id, []);
+
+  const renderListFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={BENTO.navy} />
+        <Text style={styles.footerLoaderText}>Loading more requests...</Text>
+      </View>
+    );
+  }, [isFetchingNextPage]);
 
   return (
     <View style={styles.container}>
@@ -122,6 +141,7 @@ export const AdminRequestsView = memo(function AdminRequestsView({
             value={searchQuery}
             onChangeText={setSearchQuery}
             clearButtonMode="while-editing"
+            autoCorrect={false}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity
@@ -183,48 +203,75 @@ export const AdminRequestsView = memo(function AdminRequestsView({
         </View>
       )}
 
-      {/* List of Requests */}
-      <FlatList
-        data={filteredBookings}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: contentBottomPadding },
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={[BENTO.navy]}
-            tintColor={BENTO.navy}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-              <Feather
-                name={activeFilter === "PENDING" ? "check-circle" : "inbox"}
-                size={28}
-                color={activeFilter === "PENDING" ? BENTO.emerald : BENTO.slate}
-              />
+      {/* Main Content Area: Loading / Error / Paginated FlatList */}
+      {isLoading ? (
+        <BookingSkeletonList />
+      ) : isError ? (
+        <View style={styles.emptyContainer}>
+          <Feather name="alert-circle" size={36} color={BENTO.rose} />
+          <Text style={styles.emptyTitle}>Unable to load booking requests</Text>
+          <Text style={styles.emptySubtitle}>
+            Please check your connection and privileges.
+          </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => refetch()}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={bookings}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: contentBottomPadding },
+          ]}
+          showsVerticalScrollIndicator={false}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={renderListFooter}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching && !isFetchingNextPage}
+              onRefresh={refetch}
+              colors={[BENTO.navy]}
+              tintColor={BENTO.navy}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Feather
+                  name={activeFilter === "PENDING" ? "check-circle" : "inbox"}
+                  size={28}
+                  color={
+                    activeFilter === "PENDING" ? BENTO.emerald : BENTO.slate
+                  }
+                />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {activeFilter === "PENDING"
+                  ? "All Requests Reviewed"
+                  : "No Bookings Found"}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {activeFilter === "PENDING"
+                  ? "There are no pending ground reservation requests waiting for approval."
+                  : searchQuery
+                    ? "No results matching your search query. Try searching with different keywords."
+                    : `There are currently no ${activeFilter.toLowerCase()} booking records.`}
+              </Text>
             </View>
-            <Text style={styles.emptyTitle}>
-              {activeFilter === "PENDING"
-                ? "All Requests Reviewed"
-                : "No Bookings Found"}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {activeFilter === "PENDING"
-                ? "There are no pending ground reservation requests waiting for approval."
-                : searchQuery
-                  ? "No results matching your search query. Try searching with different keywords."
-                  : `There are currently no ${activeFilter.toLowerCase()} booking records.`}
-            </Text>
-          </View>
-        }
-      />
+          }
+        />
+      )}
 
       {/* Filter Modal */}
       <AdminFilterModal
@@ -357,5 +404,29 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
     maxWidth: 290,
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: BENTO.navy,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  footerLoader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    gap: 8,
+  },
+  footerLoaderText: {
+    fontSize: 12,
+    color: BENTO.slate,
+    fontWeight: "600",
   },
 });
