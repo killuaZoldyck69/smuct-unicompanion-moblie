@@ -95,3 +95,9 @@ export const updateFieldBookingStatus = async (
   return res.data?.data;
 };
 export const updateFieldBookingStatusAPI = updateFieldBookingStatus;
+
+export const deleteFieldBooking = async (id: string) => {
+  const res = await api.delete(`/field/bookings/${id}`);
+  return res.data;
+};
+export const deleteFieldBookingAPI = deleteFieldBooking;

@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  ActivityIndicator,
   StyleSheet,
   Platform,
 } from "react-native";
@@ -14,22 +15,23 @@ import {
   formatRequestedDate,
   formatTime,
   getBookingDuration,
-  getSportIcon,
+  formatPurposeWithEmoji,
 } from "../utils";
 import { BookingStatusBadge } from "./booking-status-badge";
-import { CardSportMotif } from "./card-sport-motifs";
-import { SportIcon } from "./sport-icon";
 
 interface BookingCardProps {
   item: FieldBookingItem;
   onPress?: () => void;
+  onDelete?: (item: FieldBookingItem) => void;
+  isDeleting?: boolean;
 }
 
 export const BookingCard = memo(function BookingCard({
   item,
   onPress,
+  onDelete,
+  isDeleting,
 }: BookingCardProps) {
-  const sport = getSportIcon(item.purpose);
   const duration = getBookingDuration(item);
   const dateDisplay = formatDate(item.bookingDate || item.startTime);
   const requestedDate = formatRequestedDate(item.createdAt);
@@ -51,9 +53,6 @@ export const BookingCard = memo(function BookingCard({
       accessibilityRole="button"
       accessibilityLabel={`Booking for ${item.purpose}, ${statusNorm}, on ${dateDisplay}`}
     >
-      {/* Subtle Bottom-Right Sports Motif Art */}
-      <CardSportMotif type={sport.type} />
-
       {/* Row 1: Date & Status Badge */}
       <View style={styles.cardHeader}>
         <View style={styles.dateRow}>
@@ -68,31 +67,14 @@ export const BookingCard = memo(function BookingCard({
         <BookingStatusBadge status={item.status} />
       </View>
 
-      {/* Row 2: Booking Title + Chevron */}
+      {/* Row 2: Booking Title */}
       <View style={styles.titleRow}>
         <Text style={styles.purposeTitle} numberOfLines={2} ellipsizeMode="tail">
-          {item.purpose}
+          {formatPurposeWithEmoji(item.purpose)}
         </Text>
-        <Feather
-          name="chevron-right"
-          size={18}
-          color={BENTO.slateLight}
-          style={styles.chevron}
-        />
       </View>
 
-      {/* Row 3: Sport Category Metadata */}
-      <View style={styles.sportRow}>
-        <SportIcon
-          type={sport.type}
-          size={14}
-          color={BENTO.slate}
-          style={styles.sportIcon}
-        />
-        <Text style={styles.sportLabel}>{sport.label}</Text>
-      </View>
-
-      {/* Row 4: Time Slot & Duration Pill */}
+      {/* Row 3: Time Slot & Duration Pill */}
       <View style={styles.timeRow}>
         <View style={styles.timePill}>
           <Feather
@@ -140,20 +122,50 @@ export const BookingCard = memo(function BookingCard({
         </View>
       ) : null}
 
-      {/* Row 5: Secondary Requested Date */}
-      {requestedDate ? (
-        <View style={styles.requestedRow}>
-          <Feather
-            name="user"
-            size={12}
-            color={BENTO.slateLight}
-            style={styles.requestedIcon}
-          />
-          <Text style={styles.requestedText}>
-            Requested {requestedDate}
-          </Text>
-        </View>
-      ) : null}
+      {/* Footer: Secondary Requested Date & Delete Action */}
+      <View style={styles.cardFooterRow}>
+        {requestedDate ? (
+          <View style={styles.requestedRow}>
+            <Feather
+              name="user"
+              size={12}
+              color={BENTO.slateLight}
+              style={styles.requestedIcon}
+            />
+            <Text style={styles.requestedText}>
+              Requested {requestedDate}
+            </Text>
+          </View>
+        ) : (
+          <View />
+        )}
+
+        {onDelete ? (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => onDelete(item)}
+            activeOpacity={0.7}
+            disabled={isDeleting}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete booking for ${item.purpose}`}
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color={BENTO.rose} />
+            ) : (
+              <>
+                <Feather
+                  name="trash-2"
+                  size={12.5}
+                  color={BENTO.rose}
+                  style={styles.deleteIcon}
+                />
+                <Text style={styles.deleteText}>Delete</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </TouchableOpacity>
   );
 });
@@ -196,14 +208,9 @@ const styles = StyleSheet.create({
     color: BENTO.navySecondary,
   },
   titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 4,
-    paddingRight: 4,
+    marginBottom: 10,
   },
   purposeTitle: {
-    flex: 1,
     fontSize: 18,
     fontWeight: "700",
     color: BENTO.navy,
@@ -213,23 +220,6 @@ const styles = StyleSheet.create({
       Platform.OS === "web"
         ? "var(--font-heading), 'Plus Jakarta Sans', system-ui, sans-serif"
         : undefined,
-  },
-  chevron: {
-    marginLeft: 8,
-    marginTop: 2,
-  },
-  sportRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  sportIcon: {
-    marginRight: 5,
-  },
-  sportLabel: {
-    fontSize: 12.5,
-    fontWeight: "500",
-    color: BENTO.slate,
   },
   timeRow: {
     flexDirection: "row",
@@ -289,10 +279,16 @@ const styles = StyleSheet.create({
     color: BENTO.slate,
     flex: 1,
   },
+  cardFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    minHeight: 28,
+  },
   requestedRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 2,
   },
   requestedIcon: {
     marginRight: 5,
@@ -301,5 +297,23 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: "500",
     color: BENTO.slateLight,
+  },
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO.roseBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: BENTO.roseBorder,
+  },
+  deleteIcon: {
+    marginRight: 4,
+  },
+  deleteText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: BENTO.rose,
   },
 });

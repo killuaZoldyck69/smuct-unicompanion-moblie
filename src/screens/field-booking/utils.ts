@@ -124,6 +124,45 @@ export function getBookingDuration(item: FieldBookingItem): string {
   }
 }
 
+export function getSportEmoji(purpose: string): string {
+  const p = (purpose || "").toLowerCase();
+  if (p.includes("cricket")) return "🏏";
+  if (p.includes("football") || p.includes("soccer")) return "⚽";
+  if (p.includes("badminton") || p.includes("tennis")) return "🏸";
+  if (
+    p.includes("fest") ||
+    p.includes("cultural") ||
+    p.includes("event") ||
+    p.includes("concert")
+  ) {
+    return "🎉";
+  }
+  if (
+    p.includes("sports") ||
+    p.includes("athletic") ||
+    p.includes("race") ||
+    p.includes("run")
+  ) {
+    return "🏃";
+  }
+  if (p.includes("photo") || p.includes("shoot") || p.includes("film")) {
+    return "📸";
+  }
+  return "🏟️";
+}
+
+export function formatPurposeWithEmoji(purpose?: string | null): string {
+  if (!purpose) return "";
+  const trimmed = purpose.trim();
+  const startsWithEmoji =
+    /^(\p{Extended_Pictographic}|\p{Emoji_Presentation})/u.test(trimmed);
+  if (startsWithEmoji) {
+    return trimmed;
+  }
+  const emoji = getSportEmoji(trimmed);
+  return `${emoji} ${trimmed}`;
+}
+
 export function getSportIcon(purpose: string): SportIconData {
   const p = (purpose || "").toLowerCase();
   if (p.includes("cricket")) {

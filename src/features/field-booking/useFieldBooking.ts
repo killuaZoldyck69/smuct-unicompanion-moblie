@@ -7,6 +7,7 @@ import {
   getAllFieldBookingsAdminAPI,
   createFieldBookingAPI,
   updateFieldBookingStatusAPI,
+  deleteFieldBookingAPI,
 } from "@/services/field-service";
 import {
   CreateFieldBookingInput,
@@ -73,6 +74,18 @@ export const useUpdateFieldBookingStatus = (id: string) => {
       queryClient.invalidateQueries({ queryKey: ["allFieldBookings"] });
       queryClient.invalidateQueries({ queryKey: ["myFieldBookings"] });
       queryClient.invalidateQueries({ queryKey: ["fieldSchedule"] });
+    },
+  });
+};
+
+export const useDeleteFieldBooking = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteFieldBookingAPI(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myFieldBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["fieldSchedule"] });
+      queryClient.invalidateQueries({ queryKey: ["allFieldBookings"] });
     },
   });
 };

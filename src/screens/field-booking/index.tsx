@@ -15,6 +15,7 @@ import {
   useFieldSettings,
   useMyFieldBookings,
   useFieldSchedule,
+  useDeleteFieldBooking,
 } from "@/features/field-booking/useFieldBooking";
 import type { FieldBookingItem } from "@/services/field-service";
 import { BENTO } from "./constants";
@@ -26,6 +27,7 @@ import { ScheduleCard } from "./components/schedule-card";
 import { BookingSkeletonList } from "./components/booking-skeleton";
 import { BookingEmptyState } from "./components/booking-empty-state";
 import { BookingComposeModal } from "./components/compose/booking-compose-modal";
+import { DeleteBookingModal } from "./components/delete-booking-modal";
 
 export function FieldBooking() {
   const insets = useSafeAreaInsets();
@@ -34,6 +36,7 @@ export function FieldBooking() {
   const [activeTab, setActiveTab] = useState<TabType>("MY_BOOKINGS");
   const [isComposeVisible, setIsComposeVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<FieldBookingItem | null>(null);
 
   // TanStack Query Hooks with unified feature cache keys
   const {
@@ -54,6 +57,36 @@ export function FieldBooking() {
     isError: isErrorSchedule,
     refetch: refetchSchedule,
   } = useFieldSchedule();
+
+  const { mutate: deleteBooking, isPending: isDeletingBooking } =
+    useDeleteFieldBooking();
+
+  const handleOpenDeleteModal = useCallback((item: FieldBookingItem) => {
+    setDeletingItem(item);
+  }, []);
+
+  const handleCloseDeleteModal = useCallback(() => {
+    if (!isDeletingBooking) {
+      setDeletingItem(null);
+    }
+  }, [isDeletingBooking]);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!deletingItem) return;
+    deleteBooking(deletingItem.id, {
+      onSuccess: () => {
+        setDeletingItem(null);
+      },
+      onError: (err: any) => {
+        Alert.alert(
+          "Error",
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to delete booking.",
+        );
+      },
+    });
+  }, [deletingItem, deleteBooking]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -84,8 +117,14 @@ export function FieldBooking() {
   const keyExtractor = useCallback((item: FieldBookingItem) => item.id, []);
 
   const renderMyBookingItem = useCallback(
-    ({ item }: { item: FieldBookingItem }) => <BookingCard item={item} />,
-    [],
+    ({ item }: { item: FieldBookingItem }) => (
+      <BookingCard
+        item={item}
+        onDelete={handleOpenDeleteModal}
+        isDeleting={isDeletingBooking && deletingItem?.id === item.id}
+      />
+    ),
+    [handleOpenDeleteModal, isDeletingBooking, deletingItem],
   );
 
   const renderScheduleItem = useCallback(
@@ -220,6 +259,15 @@ export function FieldBooking() {
         <BookingComposeModal
           visible={isComposeVisible}
           onClose={() => setIsComposeVisible(false)}
+        />
+
+        {/* Booking Deletion Confirmation Modal */}
+        <DeleteBookingModal
+          visible={!!deletingItem}
+          item={deletingItem}
+          onClose={handleCloseDeleteModal}
+          onConfirm={handleConfirmDelete}
+          isDeleting={isDeletingBooking}
         />
       </View>
     </SafeAreaView>

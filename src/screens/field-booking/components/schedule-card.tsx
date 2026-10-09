@@ -7,10 +7,8 @@ import {
   formatDate,
   formatTime,
   getBookingDuration,
-  getSportIcon,
+  formatPurposeWithEmoji,
 } from "../utils";
-import { CardSportMotif } from "./card-sport-motifs";
-import { SportIcon } from "./sport-icon";
 
 interface ScheduleCardProps {
   item: FieldBookingItem;
@@ -19,7 +17,6 @@ interface ScheduleCardProps {
 export const ScheduleCard = memo(function ScheduleCard({
   item,
 }: ScheduleCardProps) {
-  const sport = getSportIcon(item.purpose);
   const duration = getBookingDuration(item);
   const dateDisplay = formatDate(item.bookingDate || item.startTime);
   const userName = item.user?.name || "University Member";
@@ -27,9 +24,6 @@ export const ScheduleCard = memo(function ScheduleCard({
 
   return (
     <View style={styles.card}>
-      {/* Subtle sport motif */}
-      <CardSportMotif type={sport.type} />
-
       {/* Row 1: Date & Reserved Slot Pill */}
       <View style={styles.cardHeader}>
         <View style={styles.dateRow}>
@@ -56,22 +50,11 @@ export const ScheduleCard = memo(function ScheduleCard({
       {/* Row 2: Event Title */}
       <View style={styles.titleRow}>
         <Text style={styles.purposeTitle} numberOfLines={2} ellipsizeMode="tail">
-          {item.purpose}
+          {formatPurposeWithEmoji(item.purpose)}
         </Text>
       </View>
 
-      {/* Row 3: Sport Category */}
-      <View style={styles.sportRow}>
-        <SportIcon
-          type={sport.type}
-          size={14}
-          color={BENTO.slate}
-          style={styles.sportIcon}
-        />
-        <Text style={styles.sportLabel}>{sport.label}</Text>
-      </View>
-
-      {/* Row 4: Time Slot & Duration */}
+      {/* Row 3: Time Slot & Duration */}
       <View style={styles.timeRow}>
         <View style={styles.timePill}>
           <Feather
@@ -163,7 +146,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   titleRow: {
-    marginBottom: 4,
+    marginBottom: 10,
   },
   purposeTitle: {
     fontSize: 18,
@@ -175,19 +158,6 @@ const styles = StyleSheet.create({
       Platform.OS === "web"
         ? "var(--font-heading), 'Plus Jakarta Sans', system-ui, sans-serif"
         : undefined,
-  },
-  sportRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  sportIcon: {
-    marginRight: 5,
-  },
-  sportLabel: {
-    fontSize: 12.5,
-    fontWeight: "500",
-    color: BENTO.slate,
   },
   timeRow: {
     flexDirection: "row",
