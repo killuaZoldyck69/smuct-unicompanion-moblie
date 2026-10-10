@@ -23,6 +23,8 @@ import {
   uploadMultipleFilesToCloudinary,
   deleteFileFromCloudinaryApi,
 } from "@/services/cloudinary-service";
+import { useGoogleDrive } from "@/hooks/use-google-drive";
+import { GoogleDriveConnectPrompt } from "./GoogleDriveConnectPrompt";
 import {
   CreateMaterialPayload,
   MaterialAttachment,
@@ -61,6 +63,7 @@ interface UploadMaterialModalProps {
 export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.memo(
   ({ isVisible, onClose, onSubmit, isPending, canManage, initialTab }) => {
     const insets = useSafeAreaInsets();
+    const googleDrive = useGoogleDrive();
     const [title, setTitle] = useState("");
     const [isStudentNote, setIsStudentNote] = useState(!canManage || initialTab === "STUDENT_NOTES");
     const [attachedFiles, setAttachedFiles] = useState<StagedAttachment[]>([]);
@@ -200,30 +203,95 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
 
           let newUploadedResults: MaterialAttachment[] = [];
           if (filesNeedingUpload.length > 0) {
-            setUploadProgressText("Uploading attachments...");
-            const uploaded = await uploadMultipleFilesToCloudinary(
-              filesNeedingUpload.map((f) => ({
-                uri: f.localUri,
-                name: f.name,
-                mimeType: f.mimeType,
-                size: f.size,
-              }))
-            );
+            if (isStudentNote) {
+              // 1. Student Resources: Upload to student's Google Drive (0 Cloudinary quota used)
+              if (!googleDrive.isConnected && googleDrive.hasClientIdConfigured) {
+                setUploadProgressText("Connecting Google Drive...");
+                const connected = await googleDrive.connect();
+                if (!connected) {
+                  setIsUploadingFiles(false);
+                  setUploadProgressText(null);
+                  return;
+                }
+              }
 
-            // Update attachedFiles with uploaded URLs so subsequent retry doesn't re-upload
-            setAttachedFiles((prev) =>
-              prev.map((item) => {
-                const match = uploaded.find((u) => u.name === item.name);
-                return match ? { ...item, uploadedUrl: match.secureUrl } : item;
-              })
-            );
+              if (googleDrive.isConnected) {
+                setUploadProgressText("Uploading to your Google Drive...");
+                const uploadedDrive = await googleDrive.uploadFiles(
+                  filesNeedingUpload.map((f) => ({
+                    uri: f.localUri,
+                    name: f.name,
+                    mimeType: f.mimeType,
+                    size: f.size,
+                  })),
+                  (progress) => setUploadProgressText(progress)
+                );
 
-            newUploadedResults = uploaded.map((u) => ({
-              name: u.name,
-              url: u.secureUrl,
-              size: u.size,
-              type: u.type,
-            }));
+                setAttachedFiles((prev) =>
+                  prev.map((item) => {
+                    const match = uploadedDrive.find((u) => u.name === item.name);
+                    return match ? { ...item, uploadedUrl: match.url } : item;
+                  })
+                );
+
+                newUploadedResults = uploadedDrive.map((u) => ({
+                  name: u.name,
+                  url: u.url,
+                  size: u.size,
+                  type: u.type,
+                }));
+              } else {
+                // Fallback to Cloudinary if Google Client ID is not configured
+                setUploadProgressText("Uploading attachments...");
+                const uploaded = await uploadMultipleFilesToCloudinary(
+                  filesNeedingUpload.map((f) => ({
+                    uri: f.localUri,
+                    name: f.name,
+                    mimeType: f.mimeType,
+                    size: f.size,
+                  }))
+                );
+
+                setAttachedFiles((prev) =>
+                  prev.map((item) => {
+                    const match = uploaded.find((u) => u.name === item.name);
+                    return match ? { ...item, uploadedUrl: match.secureUrl } : item;
+                  })
+                );
+
+                newUploadedResults = uploaded.map((u) => ({
+                  name: u.name,
+                  url: u.secureUrl,
+                  size: u.size,
+                  type: u.type,
+                }));
+              }
+            } else {
+              // 2. Official Staff Materials: Cloudinary
+              setUploadProgressText("Uploading attachments...");
+              const uploaded = await uploadMultipleFilesToCloudinary(
+                filesNeedingUpload.map((f) => ({
+                  uri: f.localUri,
+                  name: f.name,
+                  mimeType: f.mimeType,
+                  size: f.size,
+                }))
+              );
+
+              setAttachedFiles((prev) =>
+                prev.map((item) => {
+                  const match = uploaded.find((u) => u.name === item.name);
+                  return match ? { ...item, uploadedUrl: match.secureUrl } : item;
+                })
+              );
+
+              newUploadedResults = uploaded.map((u) => ({
+                name: u.name,
+                url: u.secureUrl,
+                size: u.size,
+                type: u.type,
+              }));
+            }
           }
 
           finalAttachments = [
@@ -399,6 +467,18 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                       </TouchableOpacity>
                     </View>
                   </View>
+                )}
+
+                {/* Google Drive BYOS Prompt when publishing as Student Shared Resource */}
+                {isStudentNote && (
+                  <GoogleDriveConnectPrompt
+                    isConnected={googleDrive.isConnected}
+                    userEmail={googleDrive.email}
+                    isConnecting={googleDrive.isConnecting}
+                    onConnect={googleDrive.connect}
+                    onDisconnect={googleDrive.disconnect}
+                    hasClientIdConfigured={googleDrive.hasClientIdConfigured}
+                  />
                 )}
 
                 {/* Title Field */}

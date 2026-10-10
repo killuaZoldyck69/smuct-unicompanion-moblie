@@ -64,17 +64,23 @@ export function Login() {
         (data as any)?.token ||
         (data as any)?.session?.token;
 
-      if (Platform.OS !== "web" && rawToken) {
-        await SecureStore.setItemAsync("better-auth.session_token", rawToken);
-        const cookiePayload = JSON.stringify({
-          "better-auth.session_token": {
-            value: rawToken,
-            expires: new Date(
-              Date.now() + 30 * 24 * 60 * 60 * 1000,
-            ).toISOString(),
-          },
-        });
-        await SecureStore.setItemAsync("better-auth_cookie", cookiePayload);
+      if (rawToken) {
+        if (Platform.OS === "web") {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("better-auth.session_token", rawToken);
+          }
+        } else {
+          await SecureStore.setItemAsync("better-auth.session_token", rawToken);
+          const cookiePayload = JSON.stringify({
+            "better-auth.session_token": {
+              value: rawToken,
+              expires: new Date(
+                Date.now() + 30 * 24 * 60 * 60 * 1000,
+              ).toISOString(),
+            },
+          });
+          await SecureStore.setItemAsync("better-auth_cookie", cookiePayload);
+        }
       }
 
       const sessionRes = await authClient.getSession();
@@ -82,8 +88,14 @@ export function Login() {
       const rawSession = sessionRes.data?.session || (data as any)?.session;
       const sessionToken = (rawSession as any)?.token || rawToken;
 
-      if (Platform.OS !== "web" && sessionToken) {
-        await SecureStore.setItemAsync("better-auth.session_token", sessionToken);
+      if (sessionToken) {
+        if (Platform.OS === "web") {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("better-auth.session_token", sessionToken);
+          }
+        } else {
+          await SecureStore.setItemAsync("better-auth.session_token", sessionToken);
+        }
       }
 
       if (rawUser) {
@@ -91,7 +103,14 @@ export function Login() {
           user: rawUser,
           session: rawSession,
         });
-        if (Platform.OS !== "web") {
+        if (Platform.OS === "web") {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(
+              "better-auth_session_data",
+              JSON.stringify({ user: rawUser, session: rawSession }),
+            );
+          }
+        } else {
           await SecureStore.setItemAsync(
             "better-auth_session_data",
             JSON.stringify({ user: rawUser, session: rawSession }),

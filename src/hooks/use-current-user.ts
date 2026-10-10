@@ -21,7 +21,14 @@ export const useCurrentUser = (): CurrentUserResult => {
       try {
         const sessionRes = await authClient.getSession();
         if (sessionRes.data?.user) {
-          if (Platform.OS !== "web") {
+          if (Platform.OS === "web") {
+            if (typeof localStorage !== "undefined") {
+              localStorage.setItem(
+                "better-auth_session_data",
+                JSON.stringify(sessionRes.data),
+              );
+            }
+          } else {
             await SecureStore.setItemAsync(
               "better-auth_session_data",
               JSON.stringify(sessionRes.data),
@@ -30,11 +37,21 @@ export const useCurrentUser = (): CurrentUserResult => {
           return sessionRes.data;
         }
       } catch (e) {
-        // Fallback to local SecureStore if offline or fast recovery
+        // Fallback to local storage if offline or fast recovery
       }
 
-      // 2. Fallback to SecureStore cached session data
-      if (Platform.OS !== "web") {
+      // 2. Fallback to cached session data
+      if (Platform.OS === "web") {
+        try {
+          if (typeof localStorage !== "undefined") {
+            const cachedJson = localStorage.getItem("better-auth_session_data");
+            if (cachedJson) {
+              const parsed = JSON.parse(cachedJson);
+              if (parsed?.user) return parsed;
+            }
+          }
+        } catch {}
+      } else {
         try {
           const cachedJson = await SecureStore.getItemAsync(
             "better-auth_session_data",

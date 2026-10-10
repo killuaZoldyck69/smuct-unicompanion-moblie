@@ -17,8 +17,11 @@ export const authClient = createAuthClient({
     headers:
       Platform.OS !== "web" ? { Origin: "smuct-unicompanion://" } : undefined,
     onRequest: async (context) => {
-      if (Platform.OS !== "web") {
-        let token = await SecureStore.getItemAsync("better-auth.session_token");
+      let token: string | null = null;
+      if (Platform.OS === "web") {
+        token = typeof localStorage !== "undefined" ? localStorage.getItem("better-auth.session_token") : null;
+      } else {
+        token = await SecureStore.getItemAsync("better-auth.session_token");
         if (!token) {
           const cookieJson = await SecureStore.getItemAsync("better-auth_cookie");
           if (cookieJson) {
@@ -30,19 +33,29 @@ export const authClient = createAuthClient({
             } catch {}
           }
         }
-        if (token) {
-          context.headers.set("Authorization", `Bearer ${token}`);
+      }
+
+      if (token) {
+        context.headers.set("Authorization", `Bearer ${token}`);
+        if (Platform.OS !== "web") {
           context.headers.set("cookie", `better-auth.session_token=${token}`);
         }
+      }
+
+      if (Platform.OS !== "web") {
         context.headers.set("Origin", "smuct-unicompanion://");
       }
     },
     onSuccess: async (context) => {
-      if (Platform.OS !== "web") {
-        const rawToken =
-          (context.data as any)?.token ||
-          (context.data as any)?.session?.token;
-        if (rawToken) {
+      const rawToken =
+        (context.data as any)?.token ||
+        (context.data as any)?.session?.token;
+      if (rawToken) {
+        if (Platform.OS === "web") {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("better-auth.session_token", rawToken);
+          }
+        } else {
           await SecureStore.setItemAsync("better-auth.session_token", rawToken);
           const cookiePayload = JSON.stringify({
             "better-auth.session_token": {

@@ -3,6 +3,10 @@ import { StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as WebBrowser from "expo-web-browser";
+
+// Complete any pending web auth sessions (for Google OAuth popups on web)
+WebBrowser.maybeCompleteAuthSession();
 
 const queryClient = new QueryClient({
   defaultOptions: {

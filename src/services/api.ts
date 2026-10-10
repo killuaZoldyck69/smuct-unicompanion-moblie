@@ -28,21 +28,32 @@ async function getAuthCredentials(): Promise<{
   cookie?: string;
 }> {
   try {
+    // 1. Web platform: immediate localStorage resolution
+    if (Platform.OS === "web") {
+      const token =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("better-auth.session_token") || undefined
+          : undefined;
+      return { token };
+    }
+
     let cookie = (authClient as any).getCookie?.();
     let token: string | undefined;
 
-    // 1. If authClient returns formatted cookie string, parse session token
-    if (cookie) {
+    // 2. If authClient returns formatted cookie string, parse session token
+    if (typeof cookie === "string") {
       const match = cookie.match(
         /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=([^;]+)/,
       );
       if (match && match[1]) {
         token = decodeURIComponent(match[1]);
       }
+    } else {
+      cookie = undefined;
     }
 
     // 2. Fallback to SecureStore stored cookie map
-    if (!token && Platform.OS !== "web") {
+    if (!token) {
       const storedCookieJson = await SecureStore.getItemAsync("better-auth_cookie");
       if (storedCookieJson) {
         try {
@@ -63,7 +74,7 @@ async function getAuthCredentials(): Promise<{
     }
 
     // 3. Fallback to SecureStore session cache
-    if (!token && Platform.OS !== "web") {
+    if (!token) {
       const storedSessionJson = await SecureStore.getItemAsync(
         "better-auth_session_data",
       );
@@ -83,7 +94,7 @@ async function getAuthCredentials(): Promise<{
     }
 
     // 4. Legacy fallback
-    if (!token && Platform.OS !== "web") {
+    if (!token) {
       const legacyToken = await SecureStore.getItemAsync(
         "better-auth.session_token",
       );
@@ -105,15 +116,13 @@ async function getAuthCredentials(): Promise<{
 api.interceptors.request.use(
   async (config) => {
     try {
-      if (Platform.OS !== "web") {
-        const { token, cookie } = await getAuthCredentials();
+      const { token, cookie } = await getAuthCredentials();
 
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        if (cookie && !config.headers.cookie) {
-          config.headers.cookie = cookie;
-        }
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      if (cookie && !config.headers.cookie && Platform.OS !== "web") {
+        config.headers.cookie = cookie;
       }
     } catch (error) {
       console.error("Error attaching auth headers:", error);
