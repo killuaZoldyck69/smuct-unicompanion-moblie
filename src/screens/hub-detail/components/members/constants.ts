@@ -3,7 +3,7 @@ import { Feather } from "@expo/vector-icons";
 import { CourseHubMember, HubRole } from "@/types/member.types";
 
 export const BENTO = {
-  canvas: "#f8fafc",
+  canvas: "#f7f9fb",
   card: "#ffffff",
   navy: "#0f172a",
   slate: "#64748b",

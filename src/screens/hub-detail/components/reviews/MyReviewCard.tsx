@@ -131,7 +131,7 @@ export const MyReviewCard: React.FC<MyReviewCardProps> = React.memo(
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 20,
+    borderRadius: 12,
     padding: 18,
     borderWidth: 1.5,
     borderColor: "#c7d2fe",

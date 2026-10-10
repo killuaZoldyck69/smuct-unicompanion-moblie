@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     backgroundColor: "#ffffff",
-    borderRadius: 20,
+    borderRadius: 12,
     padding: 30,
     alignItems: "center",
     justifyContent: "center",

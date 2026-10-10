@@ -9,11 +9,14 @@ import {
   Platform,
   Linking,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-toast-message";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HubCardTheme } from "@/features/hubs/hub-themes";
+import { resolveCourseTheme } from "@/screens/hubs/theme/course-theme-resolver";
+import { HubHeaderBackdrop } from "./hub-header-backdrop";
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -129,13 +132,24 @@ export default function HubHeader({
     }
   };
 
+  const insets = useSafeAreaInsets();
+  const resolvedVisualTheme = resolveCourseTheme(hubDetails);
+  const accentColor = resolvedVisualTheme.accent || "#059669";
+  const headerBg = theme?.bg || resolvedVisualTheme.bg || "#d1fae5";
+
   return (
     <View
       style={[
         styles.container,
-        theme?.bg ? { backgroundColor: theme.bg } : null,
+        {
+          backgroundColor: headerBg,
+          paddingTop: Math.max(insets.top, 0) + 8,
+        },
       ]}
     >
+      {/* 0. Background Architecture & Academic Doodles Watermark */}
+      <HubHeaderBackdrop accentColor={accentColor} topOffset={insets.top} />
+
       {/* 1. Top Navigation Row: Back, Centered Course Title, Settings Button */}
       <View style={styles.topRow}>
         <TouchableOpacity
@@ -169,38 +183,94 @@ export default function HubHeader({
       <View style={styles.pillsRow}>
         {hubDetails?.courseCode ? (
           <View style={styles.pill}>
+            <Feather
+              name="book-open"
+              size={11}
+              color="#0f172a"
+              style={styles.pillIcon}
+            />
             <Text style={styles.pillText}>{hubDetails.courseCode}</Text>
           </View>
         ) : null}
 
         <View style={styles.pill}>
+          <Feather
+            name="calendar"
+            size={11}
+            color="#0f172a"
+            style={styles.pillIcon}
+          />
           <Text style={styles.pillText}>{semesterDisplay}</Text>
         </View>
 
         {cleanSection ? (
           <View style={styles.pill}>
+            <Feather
+              name="users"
+              size={11}
+              color="#0f172a"
+              style={styles.pillIcon}
+            />
             <Text style={styles.pillText}>Sec {cleanSection}</Text>
           </View>
         ) : null}
       </View>
 
-      {/* 3. Tag Row 2: [Department] [Batch] [Course Credit] */}
-      <View style={[styles.pillsRow, styles.pillsRowSecond]}>
+      {/* 3. Inline Metadata Row: [Department] • [Batch] • [Course Credit] */}
+      <View style={styles.inlineMetaRow}>
         {hubDetails?.department ? (
-          <View style={styles.pill}>
-            <Text style={styles.pillText}>{hubDetails.department}</Text>
+          <View style={styles.inlineMetaItem}>
+            <Ionicons
+              name="business-outline"
+              size={12}
+              color="#334155"
+              style={styles.inlineMetaIcon}
+            />
+            <Text
+              style={styles.inlineMetaText}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {hubDetails.department}
+            </Text>
           </View>
+        ) : null}
+
+        {hubDetails?.department && hubDetails?.batch ? (
+          <Text style={styles.inlineMetaDot}>•</Text>
         ) : null}
 
         {hubDetails?.batch ? (
-          <View style={styles.pill}>
-            <Text style={styles.pillText}>Batch {hubDetails.batch}</Text>
+          <View style={[styles.inlineMetaItem, styles.inlineMetaItemFixed]}>
+            <Feather
+              name="users"
+              size={11.5}
+              color="#334155"
+              style={styles.inlineMetaIcon}
+            />
+            <Text style={styles.inlineMetaText}>
+              Batch {hubDetails.batch}
+            </Text>
           </View>
         ) : null}
 
+        {(hubDetails?.department || hubDetails?.batch) &&
+        hubDetails?.credit !== undefined &&
+        hubDetails?.credit !== null ? (
+          <Text style={styles.inlineMetaDot}>•</Text>
+        ) : null}
+
         {hubDetails?.credit !== undefined && hubDetails?.credit !== null ? (
-          <View style={styles.pill}>
-            <Text style={styles.pillText}>{hubDetails.credit} Credits</Text>
+          <View style={[styles.inlineMetaItem, styles.inlineMetaItemFixed]}>
+            <Ionicons
+              name="school-outline"
+              size={12.5}
+              color="#334155"
+              style={styles.inlineMetaIcon}
+            />
+            <Text style={styles.inlineMetaText}>
+              {hubDetails.credit} {Number(hubDetails.credit) === 1 ? "Credit" : "Credits"}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -333,7 +403,7 @@ export default function HubHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#d6f5e3", // Soft pastel mint fallback
+    backgroundColor: "#d1fae5", // Soft pastel mint fallback
     paddingTop: 8,
     paddingBottom: 16,
     paddingHorizontal: 16,
@@ -345,6 +415,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
+    position: "relative",
+    overflow: "hidden",
   },
   topRow: {
     flexDirection: "row",
@@ -384,12 +456,11 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 5,
   },
-  pillsRowSecond: {
-    marginBottom: 11,
-  },
   pill: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#ffffff",
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 9999,
     shadowColor: "#000",
@@ -398,41 +469,95 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
+  pillIcon: {
+    marginRight: 3.5,
+  },
   pillText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: "#0f172a",
   },
+  inlineMetaRow: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    paddingHorizontal: 8,
+    marginTop: 2,
+    marginBottom: 13,
+    gap: 6,
+  },
+  inlineMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
+  inlineMetaItemFixed: {
+    flexShrink: 0,
+  },
+  inlineMetaIcon: {
+    marginRight: 4,
+    opacity: 0.85,
+  },
+  inlineMetaText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#334155",
+    letterSpacing: -0.1,
+  },
+  inlineMetaDot: {
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "400",
+    opacity: 0.65,
+    marginHorizontal: 1,
+  },
   instructorsRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   instructorCol: {
     flexDirection: "row",
     alignItems: "center",
   },
   avatarImg: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#ffffff",
-    marginRight: 8,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    marginRight: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   avatarFallback: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#ffffff",
+    borderWidth: 2,
+    borderColor: "#ffffff",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   avatarLetter: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 18,
     fontWeight: "800",
     color: "#0f172a",
   },
@@ -446,11 +571,11 @@ const styles = StyleSheet.create({
     color: "#64748b",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    marginBottom: 1,
+    marginBottom: 2,
   },
   instructorName: {
     fontFamily,
-    fontSize: 13.5,
+    fontSize: 14.5,
     fontWeight: "800",
     color: "#0f172a",
   },

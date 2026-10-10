@@ -115,7 +115,7 @@ export const ReviewMetricsCard: React.FC<ReviewMetricsCardProps> = React.memo(
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 22,
+    borderRadius: 12,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fafaf9",
-    borderRadius: 16,
+    borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderWidth: 1,
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#eff6ff",
-    borderRadius: 14,
+    borderRadius: 10,
     padding: 12,
     marginTop: 14,
     borderWidth: 1,

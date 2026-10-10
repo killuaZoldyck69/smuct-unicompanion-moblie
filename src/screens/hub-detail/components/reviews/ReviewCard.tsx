@@ -89,7 +89,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = React.memo(({ item, reviewQ
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 18,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,

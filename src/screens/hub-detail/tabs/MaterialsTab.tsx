@@ -47,15 +47,6 @@ export default function MaterialsTab({
     return Array.isArray(resources) ? (resources as MaterialItem[]) : [];
   }, [resources]);
 
-  // Section item counts
-  const officialCount = useMemo(() => {
-    return resourceList.filter((r) => !r.isStudentNote).length;
-  }, [resourceList]);
-
-  const studentNotesCount = useMemo(() => {
-    return resourceList.filter((r) => r.isStudentNote).length;
-  }, [resourceList]);
-
   // Filtered resources for the active tab
   const displayedResources = useMemo(() => {
     if (activeSection === "OFFICIAL") {
@@ -138,8 +129,6 @@ export default function MaterialsTab({
       <MaterialsFilterTabs
         activeTab={activeSection}
         onTabChange={setActiveSection}
-        officialCount={officialCount}
-        studentNotesCount={studentNotesCount}
       />
 
       {/* 2. Materials List with Section Header */}

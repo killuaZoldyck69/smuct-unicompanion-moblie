@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     backgroundColor: "#ffffff",
-    borderRadius: 20,
+    borderRadius: 12,
     padding: 18,
     borderWidth: 1,
     borderColor: "#fde68a",
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f1f5f9",
-    borderRadius: 16,
+    borderRadius: 10,
     padding: 14,
   },
   closedCardText: {

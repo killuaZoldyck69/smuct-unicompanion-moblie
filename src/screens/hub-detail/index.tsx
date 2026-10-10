@@ -8,8 +8,8 @@ import {
   ScrollView,
   Platform,
   BackHandler,
+  StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
@@ -17,6 +17,7 @@ import Toast from "react-native-toast-message";
 // Header
 import HubHeader from "./components/hub-header";
 import { getHubTheme } from "@/features/hubs/hub-themes";
+import { resolveCourseTheme } from "@/screens/hubs/theme/course-theme-resolver";
 
 // 5 Bento Content Tabs
 import StreamTab from "./tabs/StreamTab";
@@ -139,6 +140,21 @@ export function HubDetail({ hubId }: HubDetailProps) {
     }
     return getHubTheme(hubId, colorIdx);
   }, [searchParams.colorIndex, myHubs, hubId]);
+
+  const resolvedVisualTheme = useMemo(
+    () => resolveCourseTheme(hubDetails),
+    [hubDetails]
+  );
+  const headerBg = hubTheme?.bg || resolvedVisualTheme?.bg || "#d1fae5";
+
+  // Restore transparent status bar on unmount
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === "android") {
+        StatusBar.setBackgroundColor("transparent", true);
+      }
+    };
+  }, []);
 
   // --- Mutations ---
   const updateHubMutation = useUpdateHub(hubId);
@@ -306,6 +322,11 @@ export function HubDetail({ hubId }: HubDetailProps) {
   if (isLoadingHub) {
     return (
       <View style={styles.centerContainer}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={headerBg}
+          translucent={true}
+        />
         <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
         <Text style={styles.loadingText}>Loading course workspace...</Text>
       </View>
@@ -313,7 +334,12 @@ export function HubDetail({ hubId }: HubDetailProps) {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={headerBg}
+        translucent={true}
+      />
       {/* 1. COMPACT BENTO COURSE HEADER */}
       <View style={styles.headerWrapper}>
         <HubHeader
@@ -454,7 +480,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
         onDeleteHub={handleDeleteHub}
         onLeaveHub={handleLeaveHub}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

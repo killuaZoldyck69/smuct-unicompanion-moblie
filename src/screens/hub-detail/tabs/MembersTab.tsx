@@ -173,7 +173,7 @@ export default function MembersTab({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BENTO.card,
+    backgroundColor: "#f7f9fb",
   },
   listContent: {
     paddingHorizontal: 16,

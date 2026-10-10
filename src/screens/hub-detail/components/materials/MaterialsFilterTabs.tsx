@@ -12,12 +12,12 @@ const fontFamily = Platform.select({
 interface MaterialsFilterTabsProps {
   activeTab: MaterialSectionTab;
   onTabChange: (tab: MaterialSectionTab) => void;
-  officialCount: number;
-  studentNotesCount: number;
+  officialCount?: number;
+  studentNotesCount?: number;
 }
 
 export const MaterialsFilterTabs: React.FC<MaterialsFilterTabsProps> = React.memo(
-  ({ activeTab, onTabChange, officialCount, studentNotesCount }) => {
+  ({ activeTab, onTabChange }) => {
     return (
       <View style={styles.container}>
         <View style={styles.tabsTrack}>
@@ -31,7 +31,7 @@ export const MaterialsFilterTabs: React.FC<MaterialsFilterTabsProps> = React.mem
             activeOpacity={0.8}
             accessible={true}
             accessibilityRole="tab"
-            accessibilityLabel={`Course Material tab, ${officialCount} items`}
+            accessibilityLabel="Course Material tab"
             accessibilityState={{ selected: activeTab === "OFFICIAL" }}
           >
             <Feather
@@ -49,21 +49,6 @@ export const MaterialsFilterTabs: React.FC<MaterialsFilterTabsProps> = React.mem
             >
               Course Material
             </Text>
-            <View
-              style={[
-                styles.badge,
-                activeTab === "OFFICIAL" ? styles.badgeActiveOfficial : styles.badgeInactive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  activeTab === "OFFICIAL" ? styles.badgeTextActiveOfficial : styles.badgeTextInactive,
-                ]}
-              >
-                {officialCount}
-              </Text>
-            </View>
           </TouchableOpacity>
 
           {/* Tab 2: Student Resources */}
@@ -76,7 +61,7 @@ export const MaterialsFilterTabs: React.FC<MaterialsFilterTabsProps> = React.mem
             activeOpacity={0.8}
             accessible={true}
             accessibilityRole="tab"
-            accessibilityLabel={`Student Resources tab, ${studentNotesCount} items`}
+            accessibilityLabel="Student Resources tab"
             accessibilityState={{ selected: activeTab === "STUDENT_NOTES" }}
           >
             <Feather
@@ -94,21 +79,6 @@ export const MaterialsFilterTabs: React.FC<MaterialsFilterTabsProps> = React.mem
             >
               Student Resources
             </Text>
-            <View
-              style={[
-                styles.badge,
-                activeTab === "STUDENT_NOTES" ? styles.badgeActiveStudent : styles.badgeInactive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  activeTab === "STUDENT_NOTES" ? styles.badgeTextActiveStudent : styles.badgeTextInactive,
-                ]}
-              >
-                {studentNotesCount}
-              </Text>
-            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -119,7 +89,7 @@ export const MaterialsFilterTabs: React.FC<MaterialsFilterTabsProps> = React.mem
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 4,
   },
   tabsTrack: {
     flexDirection: "row",
@@ -148,41 +118,12 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontFamily,
-    fontSize: 12.5,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: "#64748b",
-    marginRight: 6,
   },
   tabTextActive: {
     color: "#0f172a",
     fontWeight: "800",
-  },
-  badge: {
-    paddingHorizontal: 6.5,
-    paddingVertical: 1.5,
-    borderRadius: 9999,
-  },
-  badgeInactive: {
-    backgroundColor: "#e2e8f0",
-  },
-  badgeActiveOfficial: {
-    backgroundColor: "#eff6ff",
-  },
-  badgeActiveStudent: {
-    backgroundColor: "#f0fdf4",
-  },
-  badgeText: {
-    fontFamily,
-    fontSize: 10.5,
-    fontWeight: "700",
-  },
-  badgeTextInactive: {
-    color: "#64748b",
-  },
-  badgeTextActiveOfficial: {
-    color: "#2563eb",
-  },
-  badgeTextActiveStudent: {
-    color: "#16a34a",
   },
 });
