@@ -163,6 +163,16 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     roles: ["STUDENT"],
     route: "/(tabs)/cgpa-calculator" as Href,
   },
+  {
+    id: "faculty_directory",
+    title: "Faculty Directory",
+    desc: "Browse teachers & contact info",
+    category: "ACADEMIC",
+    assetIcon: require("@/assets/icons/teacher.png"),
+    fallbackIcon: "users",
+    roles: ["STUDENT", "TEACHER", "ADMIN"],
+    route: "/directory" as Href,
+  },
 
   // -------------------------------------------------------------
   // Campus Life (5 Features)
