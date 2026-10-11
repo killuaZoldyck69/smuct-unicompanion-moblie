@@ -148,7 +148,11 @@ export default function HubHeader({
       ]}
     >
       {/* 0. Background Architecture & Academic Doodles Watermark */}
-      <HubHeaderBackdrop accentColor={accentColor} topOffset={insets.top} />
+      <HubHeaderBackdrop
+        accentColor={accentColor}
+        topOffset={insets.top}
+        theme={resolvedVisualTheme}
+      />
 
       {/* 1. Top Navigation Row: Back, Centered Course Title, Settings Button */}
       <View style={styles.topRow}>

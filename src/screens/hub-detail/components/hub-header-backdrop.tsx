@@ -1,16 +1,27 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import Svg, { Path, Circle, Rect, Ellipse } from "react-native-svg";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { CourseVisualTheme } from "@/screens/hubs/theme/course-theme-types";
 
 interface HubHeaderBackdropProps {
   accentColor?: string;
   topOffset?: number;
+  theme?: CourseVisualTheme;
+  iconName?: string;
+  iconFamily?: "Feather" | "MaterialCommunityIcons";
 }
 
 export const HubHeaderBackdrop = React.memo(function HubHeaderBackdrop({
   accentColor = "#059669",
   topOffset = 0,
+  theme,
+  iconName,
+  iconFamily,
 }: HubHeaderBackdropProps) {
+  const effectiveIconName = iconName || theme?.iconName || "book-open";
+  const effectiveIconFamily = iconFamily || theme?.iconFamily || "Feather";
+  const effectiveAccent = theme?.accent || accentColor;
   return (
     <View
       style={[
@@ -279,6 +290,58 @@ export const HubHeaderBackdrop = React.memo(function HubHeaderBackdrop({
           />
         </Svg>
       </View>
+
+      {/* 10. Course Theme Signature Watermark (Bottom Left Side) */}
+      <View style={styles.bottomLeftDecorWrap}>
+        {/* Soft Radial Ambient Glow */}
+        <View
+          style={[
+            styles.bottomLeftAmbientCircle,
+            { backgroundColor: effectiveAccent },
+          ]}
+        />
+
+        {/* 3/4 (75%) Dashed Orbital Accent Arc */}
+        <View style={styles.bottomLeftDashedRing}>
+          <Svg width={74} height={74} viewBox="0 0 74 74" fill="none">
+            <Path
+              d="M 37 6 A 31 31 0 1 1 6 37"
+              stroke={effectiveAccent}
+              strokeWidth="1.6"
+              strokeDasharray="4 4"
+            />
+          </Svg>
+        </View>
+
+        {/* Subtle Ambient Dots (matching Course Card top right) */}
+        <View style={styles.bottomLeftDotsContainer}>
+          <View style={[styles.bottomLeftDot, { backgroundColor: effectiveAccent }]} />
+          <View style={[styles.bottomLeftDot, { backgroundColor: effectiveAccent }]} />
+          <View style={[styles.bottomLeftDot, { backgroundColor: effectiveAccent }]} />
+          <View style={[styles.bottomLeftDot, { backgroundColor: effectiveAccent }]} />
+          <View style={[styles.bottomLeftDot, { backgroundColor: effectiveAccent }]} />
+          <View style={[styles.bottomLeftDot, { backgroundColor: effectiveAccent }]} />
+        </View>
+
+        {/* Faint Signature Watermark Icon from Course Card */}
+        <View style={styles.bottomLeftWatermarkContainer}>
+          {effectiveIconFamily === "MaterialCommunityIcons" ? (
+            <MaterialCommunityIcons
+              name={effectiveIconName as any}
+              size={86}
+              color={effectiveAccent}
+              style={styles.bottomLeftWatermarkIcon}
+            />
+          ) : (
+            <Feather
+              name={effectiveIconName as any}
+              size={84}
+              color={effectiveAccent}
+              style={styles.bottomLeftWatermarkIcon}
+            />
+          )}
+        </View>
+      </View>
     </View>
   );
 });
@@ -353,5 +416,50 @@ const styles = StyleSheet.create({
     bottom: 84,
     right: 4,
     opacity: 0.20,
+  },
+  bottomLeftDecorWrap: {
+    position: "absolute",
+    bottom: 25,
+    left: -8,
+    width: 140,
+    height: 140,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bottomLeftAmbientCircle: {
+    position: "absolute",
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    opacity: 0.05,
+  },
+  bottomLeftDashedRing: {
+    position: "absolute",
+    width: 74,
+    height: 74,
+    opacity: 0.16,
+    transform: [{ rotate: "-15deg" }],
+  },
+  bottomLeftDotsContainer: {
+    position: "absolute",
+    top: 26,
+    left: 20,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: 28,
+    gap: 5,
+    opacity: 0.16,
+  },
+  bottomLeftDot: {
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 2,
+  },
+  bottomLeftWatermarkContainer: {
+    position: "absolute",
+    opacity: 0.15,
+  },
+  bottomLeftWatermarkIcon: {
+    transform: [{ rotate: "-6deg" }],
   },
 });
