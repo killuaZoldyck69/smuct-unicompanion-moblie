@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { CourseVisualTheme } from "../theme/course-theme-types";
 
 interface CourseDecorativeBackdropProps {
@@ -9,7 +9,7 @@ interface CourseDecorativeBackdropProps {
 
 export const CourseDecorativeBackdrop = React.memo(
   function CourseDecorativeBackdrop({ theme }: CourseDecorativeBackdropProps) {
-    const { motif, accent, iconName } = theme;
+    const { motif, accent, iconName, iconFamily } = theme;
 
     return (
       <View style={styles.container} pointerEvents="none">
@@ -104,14 +104,23 @@ export const CourseDecorativeBackdrop = React.memo(
           />
         )}
 
-        {/* Faint Low-Opacity Signature Watermark Icon */}
+        {/* Faint Signature Watermark Icon */}
         <View style={styles.watermarkContainer}>
-          <Feather
-            name={iconName}
-            size={76}
-            color={accent}
-            style={styles.watermarkIcon}
-          />
+          {iconFamily === "MaterialCommunityIcons" ? (
+            <MaterialCommunityIcons
+              name={iconName as any}
+              size={86}
+              color={accent}
+              style={styles.watermarkIcon}
+            />
+          ) : (
+            <Feather
+              name={iconName as any}
+              size={84}
+              color={accent}
+              style={styles.watermarkIcon}
+            />
+          )}
         </View>
       </View>
     );
@@ -219,9 +228,9 @@ const styles = StyleSheet.create({
   },
   watermarkContainer: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    opacity: 0.07,
+    top: 10,
+    right: 12,
+    opacity: 0.12,
   },
   watermarkIcon: {
     transform: [{ rotate: "-6deg" }],

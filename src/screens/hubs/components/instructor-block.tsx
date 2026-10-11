@@ -23,6 +23,7 @@ export const InstructorBlock = React.memo(function InstructorBlock({
 
   return (
     <View style={styles.container}>
+      {/* Instructor Avatar */}
       {image ? (
         <Image
           source={{ uri: image }}
@@ -35,6 +36,10 @@ export const InstructorBlock = React.memo(function InstructorBlock({
         </View>
       )}
 
+      {/* Subtle Vertical Divider */}
+      <View style={styles.verticalDivider} />
+
+      {/* Text Info */}
       <View style={styles.textColumn}>
         <Text style={styles.label}>INSTRUCTOR</Text>
         <Text style={styles.name} numberOfLines={1}>
@@ -49,38 +54,46 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.65)",
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: 14,
-    marginBottom: 11,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 20,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.6)",
+    borderColor: "rgba(15, 23, 42, 0.04)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
+    elevation: 1,
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "#e2e8f0",
   },
   avatarFallback: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#ffffff",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.08)",
   },
   fallbackText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#1e293b",
   },
+  verticalDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "#e2e8f0",
+    marginHorizontal: 12,
+  },
   textColumn: {
-    marginLeft: 10,
     flex: 1,
   },
   label: {
@@ -90,13 +103,13 @@ const styles = StyleSheet.create({
     color: "#64748b",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    marginBottom: 1,
+    marginBottom: 2,
   },
   name: {
     fontFamily,
-    fontSize: 13.5,
-    fontWeight: "700",
+    fontSize: 14.5,
+    fontWeight: "800",
     color: "#0f172a",
-    lineHeight: 18,
+    lineHeight: 19,
   },
 });

@@ -15,13 +15,17 @@ export interface CourseVisualTheme {
   cardBorderColor: string;
   accent: string;
   accentSoft: string;
+  squircleBg: string;
   textPrimary: string;
   textSecondary: string;
   tagBg: string;
   tagText: string;
+  codeBadgeBg: string;
+  codeBadgeText: string;
   caughtUpBg: string;
   caughtUpText: string;
-  iconName: keyof typeof Feather.glyphMap;
+  iconFamily?: "Feather" | "MaterialCommunityIcons";
+  iconName: string;
   motif: CourseGeometryMotif;
   colorIndex: number;
 }

@@ -1,8 +1,14 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { fontFamily } from "../constants";
 import { CourseVisualTheme } from "../theme/course-theme-types";
+
+const COURSEWORK_ICONS = {
+  assignment: require("@/assets/icons/assignment.png"),
+  quiz: require("@/assets/icons/quiz.png"),
+  presentation: require("@/assets/icons/presentation.png"),
+} as const;
 
 interface CourseStatusPillProps {
   upcomingAssessment?: {
@@ -27,12 +33,23 @@ export const CourseStatusPill = React.memo(function CourseStatusPill({
       timeLeft?.includes("1h") ||
       timeLeft?.includes("2h");
 
-    const iconName =
-      upcomingAssessment.type === "QUIZ"
-        ? "help-circle"
-        : upcomingAssessment.type === "PRESENTATION"
-          ? "airplay"
-          : "file-text";
+    const typeStr = (upcomingAssessment.type || "").toUpperCase();
+    const isQuiz = typeStr.includes("QUIZ") || typeStr.includes("CT");
+    const isPresentation = typeStr.includes("PRESENTATION");
+
+    const courseworkAsset = isQuiz
+      ? COURSEWORK_ICONS.quiz
+      : isPresentation
+        ? COURSEWORK_ICONS.presentation
+        : COURSEWORK_ICONS.assignment;
+
+    const squircleBg = isDueSoon
+      ? "#fee2e2"
+      : isQuiz
+        ? "#eff6ff"
+        : isPresentation
+          ? "#ecfdf5"
+          : "#e0f2fe";
 
     return (
       <View
@@ -44,30 +61,34 @@ export const CourseStatusPill = React.memo(function CourseStatusPill({
         accessibilityRole="text"
         accessibilityLabel={`Upcoming task: ${upcomingAssessment.title}${timeLeft ? `, ${timeLeft}` : ""}`}
       >
+        {/* Coursework Squircle Icon Box */}
         <View
           style={[
             styles.taskIconBox,
-            { backgroundColor: isDueSoon ? "#fee2e2" : "#f1f5f9" },
+            { backgroundColor: squircleBg },
           ]}
         >
-          <Feather
-            name={iconName}
-            size={13}
-            color={isDueSoon ? "#dc2626" : "#475569"}
+          <Image
+            source={courseworkAsset}
+            style={styles.courseworkIconImage}
+            resizeMode="contain"
           />
         </View>
 
+        {/* Task Title */}
         <Text style={styles.taskTitle} numberOfLines={1}>
           {upcomingAssessment.title}
         </Text>
 
+        {/* Right Section: Blue Countdown Pill */}
         {timeLeft ? (
           <View
             style={[
               styles.timeBadge,
-              { backgroundColor: isDueSoon ? "#dc2626" : "#0284c7" },
+              { backgroundColor: isDueSoon ? "#dc2626" : "#1d72fe" },
             ]}
           >
+            <Feather name="clock" size={12} color="#ffffff" />
             <Text style={styles.timeBadgeText}>{timeLeft}</Text>
           </View>
         ) : null}
@@ -75,16 +96,28 @@ export const CourseStatusPill = React.memo(function CourseStatusPill({
     );
   }
 
-  // All caught up state
+  // All caught up state matching the pill design
   return (
     <View
-      style={[styles.caughtUpContainer, { backgroundColor: theme.caughtUpBg }]}
+      style={[
+        styles.caughtUpContainer,
+        { backgroundColor: theme.caughtUpBg || "#dbeafe" },
+      ]}
       accessible={true}
       accessibilityRole="text"
       accessibilityLabel="All caught up, no pending tasks"
     >
-      <Feather name="check-circle" size={13} color={theme.caughtUpText} />
-      <Text style={[styles.caughtUpText, { color: theme.caughtUpText }]}>
+      <Feather
+        name="check-circle"
+        size={14}
+        color={theme.caughtUpText || "#0284c7"}
+      />
+      <Text
+        style={[
+          styles.caughtUpText,
+          { color: theme.caughtUpText || "#0284c7" },
+        ]}
+      >
         All caught up
       </Text>
     </View>
@@ -92,52 +125,59 @@ export const CourseStatusPill = React.memo(function CourseStatusPill({
 });
 
 const styles = StyleSheet.create({
-  // Active Assessment Status Pill
+  // Active Assessment Status Card
   taskContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    borderRadius: 12,
-    paddingVertical: 7,
-    paddingHorizontal: 9,
-    gap: 8,
+    borderRadius: 16,
+    paddingVertical: 6.5,
+    paddingHorizontal: 10,
+    borderWidth: 1,
     shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
     elevation: 1,
   },
   taskNormalBorder: {
-    borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.07)",
+    borderColor: "rgba(15, 23, 42, 0.04)",
   },
   taskDueSoonBorder: {
-    borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.2)",
+    borderColor: "rgba(220, 38, 38, 0.25)",
   },
   taskIconBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 9,
+  },
+  courseworkIconImage: {
+    width: 20,
+    height: 20,
   },
   taskTitle: {
     flex: 1,
     fontFamily,
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: "700",
     color: "#0f172a",
+    marginRight: 8,
   },
   timeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 16,
+    gap: 4,
   },
   timeBadgeText: {
     fontFamily,
-    fontSize: 10.5,
-    fontWeight: "800",
+    fontSize: 11.5,
+    fontWeight: "700",
     color: "#ffffff",
   },
 
@@ -153,7 +193,7 @@ const styles = StyleSheet.create({
   },
   caughtUpText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: "700",
   },
 });

@@ -77,8 +77,34 @@ export function useStudentSubmissionForm({
   isSubmitting,
   onSubmit,
 }: UseStudentSubmissionFormProps) {
+  // Determine allowed submission methods from assessment configuration
+  const isOfflineAssessment =
+    assessment.submissionType === "HAND" ||
+    assessment.submissionType === "OFFLINE";
+
+  const allowOnline = !isOfflineAssessment;
+  const allowOffline = isOfflineAssessment;
+
+  const initialMethod: SubmissionMethod =
+    allowOffline && !allowOnline
+      ? "OFFLINE"
+      : allowOnline && !allowOffline
+      ? "ONLINE"
+      : mySub?.status === "HAND_SUBMISSION"
+      ? "OFFLINE"
+      : "ONLINE";
+
   // Method State: ONLINE vs OFFLINE
-  const [submissionMethod, setSubmissionMethod] = useState<SubmissionMethod>("ONLINE");
+  const [submissionMethod, setSubmissionMethodRaw] = useState<SubmissionMethod>(initialMethod);
+
+  const setSubmissionMethod = useCallback(
+    (next: SubmissionMethod) => {
+      if (next === "ONLINE" && !allowOnline) return;
+      if (next === "OFFLINE" && !allowOffline) return;
+      setSubmissionMethodRaw(next);
+    },
+    [allowOnline, allowOffline]
+  );
 
   // Submission Data State
   const [files, setFiles] = useState<StagedSubmissionAttachment[]>([]);
@@ -95,10 +121,10 @@ export function useStudentSubmissionForm({
   // Synchronize initial data from existing submission or assessment defaults
   useEffect(() => {
     if (mySub) {
-      if (mySub.status === "HAND_SUBMISSION") {
-        setSubmissionMethod("OFFLINE");
-      } else {
-        setSubmissionMethod("ONLINE");
+      if (mySub.status === "HAND_SUBMISSION" && allowOffline) {
+        setSubmissionMethodRaw("OFFLINE");
+      } else if (allowOnline) {
+        setSubmissionMethodRaw("ONLINE");
       }
 
       if (Array.isArray(mySub.attachments) && mySub.attachments.length > 0) {
@@ -112,10 +138,12 @@ export function useStudentSubmissionForm({
       if (mySub.content) {
         setNoteContent(mySub.content);
       }
-    } else if (assessment.submissionType === "HAND" || assessment.submissionType === "OFFLINE") {
-      setSubmissionMethod("OFFLINE");
+    } else if (allowOffline && !allowOnline) {
+      setSubmissionMethodRaw("OFFLINE");
+    } else if (allowOnline && !allowOffline) {
+      setSubmissionMethodRaw("ONLINE");
     }
-  }, [mySub, assessment.submissionType]);
+  }, [mySub, allowOffline, allowOnline]);
 
   // Pick Files with Security & Size Validation (Deferred Upload)
   const handlePickFiles = useCallback(async () => {
@@ -351,6 +379,8 @@ export function useStudentSubmissionForm({
   }, [assessment.attachments, assessment.links]);
 
   return {
+    allowOnline,
+    allowOffline,
     submissionMethod,
     setSubmissionMethod,
     files,

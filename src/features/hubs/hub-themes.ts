@@ -5,56 +5,38 @@ export interface HubCardTheme {
   caughtUpText: string;
 }
 
-// 🎨 Expanded Soft Campus Bento Color Themes (8 Colors)
+// 🎨 Soft Bento UI Campus Color Themes (5 Colors: Light Green, Blue, Purple, Yellow, Orange)
 export const CARD_THEMES: HubCardTheme[] = [
   {
     bg: "#d1fae5",
     tagBg: "#ffffff",
     caughtUpBg: "#a7f3d0",
     caughtUpText: "#065f46",
-  }, // Mint
-  {
-    bg: "#fce7f3",
-    tagBg: "#ffffff",
-    caughtUpBg: "#fbcfe8",
-    caughtUpText: "#831843",
-  }, // Pink
-  {
-    bg: "#e0e7ff",
-    tagBg: "#ffffff",
-    caughtUpBg: "#c7d2fe",
-    caughtUpText: "#3730a3",
-  }, // Indigo
-  {
-    bg: "#fef08a",
-    tagBg: "#ffffff",
-    caughtUpBg: "#fde047",
-    caughtUpText: "#854d0e",
-  }, // Yellow
+  }, // 0: Light Green / Mint
   {
     bg: "#e0f2fe",
     tagBg: "#ffffff",
     caughtUpBg: "#bae6fd",
     caughtUpText: "#0369a1",
-  }, // Sky Blue
-  {
-    bg: "#ffedd5",
-    tagBg: "#ffffff",
-    caughtUpBg: "#fed7aa",
-    caughtUpText: "#9a3412",
-  }, // Peach
+  }, // 1: Blue / Sky Blue
   {
     bg: "#f3e8ff",
     tagBg: "#ffffff",
     caughtUpBg: "#e9d5ff",
     caughtUpText: "#581c87",
-  }, // Lavender
+  }, // 2: Purple / Lavender
   {
-    bg: "#ffe4e6",
+    bg: "#fef08a",
     tagBg: "#ffffff",
-    caughtUpBg: "#fecdd3",
-    caughtUpText: "#9f1239",
-  }, // Rose
+    caughtUpBg: "#fde047",
+    caughtUpText: "#854d0e",
+  }, // 3: Yellow
+  {
+    bg: "#ffedd5",
+    tagBg: "#ffffff",
+    caughtUpBg: "#fed7aa",
+    caughtUpText: "#9a3412",
+  }, // 4: Orange / Peach
 ];
 
 /**

@@ -38,6 +38,8 @@ interface StudentSubmissionViewProps {
 export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React.memo(
   ({ assessment, typeConfig, mySub, isSubmitting, onSubmit }) => {
     const {
+      allowOnline,
+      allowOffline,
       submissionMethod,
       setSubmissionMethod,
       files,
@@ -101,6 +103,8 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
               <SubmissionMethodRadio
                 method={submissionMethod}
                 disabled={isClosed}
+                allowOnline={allowOnline}
+                allowOffline={allowOffline}
                 onSelect={setSubmissionMethod}
               />
 

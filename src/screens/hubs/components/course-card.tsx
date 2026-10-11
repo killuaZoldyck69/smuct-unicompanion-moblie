@@ -4,9 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { fontFamily, getOrdinalSuffix } from "../constants";
@@ -102,6 +101,11 @@ export const CourseCard = React.memo(function CourseCard({
 
   const semesterVal = hub.semesterNumber || hub.semester;
 
+  // Bento Pill Colors aligned with the screenshot
+  const isBlueCard = theme.colorIndex === 1;
+  const semesterBadgeBg = isBlueCard ? "#dcfce7" : "#e0f2fe";
+  const semesterBadgeColor = isBlueCard ? "#059669" : "#0284c7";
+
   return (
     <TouchableOpacity
       style={[
@@ -135,50 +139,88 @@ export const CourseCard = React.memo(function CourseCard({
         </View>
       )}
 
-      {/* 2. COURSE TITLE WITH CATEGORY ICON */}
+      {/* 2. COURSE TITLE WITH VIBRANT SQUIRCLE ICON */}
       <View style={styles.titleRow}>
-        <Feather
-          name={theme.iconName}
-          size={24}
-          color={theme.accent}
-          style={styles.courseIcon}
-        />
+        <View
+          style={[
+            styles.squircleIconBox,
+            { backgroundColor: theme.squircleBg || theme.accent },
+          ]}
+        >
+          {theme.iconFamily === "MaterialCommunityIcons" ? (
+            <MaterialCommunityIcons
+              name={theme.iconName as any}
+              size={24}
+              color="#ffffff"
+            />
+          ) : (
+            <Feather
+              name={theme.iconName as any}
+              size={22}
+              color="#ffffff"
+            />
+          )}
+        </View>
 
         <Text style={styles.courseTitle} numberOfLines={2}>
           {hub.courseName || "Untitled Course"}
         </Text>
       </View>
 
-      {/* 3. METADATA ROW: CODE, SEMESTER, SECTION, CREDIT */}
+      {/* 3. METADATA ROW: COLORFUL BENTO PILLS (CODE, SEMESTER, SECTION) */}
       <View style={styles.metaRow}>
         {hub.courseCode ? (
-          <View style={[styles.metaBadge, { backgroundColor: theme.tagBg }]}>
-            <Text style={styles.codeText}>{hub.courseCode}</Text>
+          <View style={[styles.metaBadge, styles.codeBadge]}>
+            <Feather
+              name="code"
+              size={12}
+              color={theme.accent}
+            />
+            <Text
+              style={[
+                styles.badgeText,
+                { color: theme.accent },
+              ]}
+            >
+              {hub.courseCode}
+            </Text>
           </View>
         ) : null}
 
         {semesterVal ? (
-          <View style={[styles.metaBadge, { backgroundColor: theme.tagBg }]}>
-            <Text style={styles.metaText}>
+          <View
+            style={[
+              styles.metaBadge,
+              { backgroundColor: semesterBadgeBg },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="school"
+              size={13}
+              color={semesterBadgeColor}
+            />
+            <Text
+              style={[
+                styles.badgeText,
+                { color: semesterBadgeColor },
+              ]}
+            >
               {getOrdinalSuffix(semesterVal)} Sem
             </Text>
           </View>
         ) : null}
 
         {hub.section ? (
-          <View style={[styles.metaBadge, { backgroundColor: theme.tagBg }]}>
-            <Text style={styles.metaText}>Sec {hub.section}</Text>
-          </View>
-        ) : null}
-
-        {hub.credit !== undefined && hub.credit !== null ? (
           <View
             style={[
               styles.metaBadge,
-              { backgroundColor: "rgba(255, 255, 255, 0.75)" },
+              { backgroundColor: "#f3e8ff" },
             ]}
           >
-            <Text style={styles.creditText}>{hub.credit} Cr</Text>
+            <Feather name="users" size={12} color="#7c3aed" />
+            <Text style={[styles.badgeText, { color: "#6b21a8" }]}>
+              Sec {hub.section}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -207,9 +249,10 @@ const styles = StyleSheet.create({
     position: "relative",
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
     elevation: 2,
+    overflow: "hidden",
   },
 
   // Live Class Badge
@@ -241,16 +284,24 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Course Title Row (Category Icon + Title)
+  // Course Title Row (Squircle + Title)
   titleRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 12,
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
   },
-  courseIcon: {
-    marginTop: Platform.OS === "android" ? 2 : 1,
-    flexShrink: 0,
+  squircleIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   courseTitle: {
     flex: 1,
@@ -262,37 +313,36 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
 
-  // 3. Metadata Badges Row
+  // Metadata Badges Row (Bento Pills)
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 7,
     flexWrap: "wrap",
-    marginBottom: 13,
+    marginBottom: 14,
   },
   metaBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 9,
-    paddingVertical: 4.5,
-    borderRadius: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    gap: 5,
   },
-  codeText: {
+  codeBadge: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.08)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  badgeText: {
     fontFamily,
     fontSize: 12,
-    fontWeight: "800",
-    color: "#0f172a",
-    letterSpacing: 0.3,
-  },
-  metaText: {
-    fontFamily,
-    fontSize: 11.5,
     fontWeight: "700",
-    color: "#334155",
-  },
-  creditText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#475569",
   },
 
   // Footer Row
