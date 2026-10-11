@@ -338,7 +338,6 @@ export const parseWeeklySchedule = (
                 authorName: activeNotice.author?.name,
                 authorRole: activeNotice.author?.role,
                 type: activeNotice.type,
-                title: activeNotice.title,
                 message: activeNotice.message,
                 targetDay: activeNotice.targetDay,
                 effectiveDate: String(activeNotice.effectiveDate),

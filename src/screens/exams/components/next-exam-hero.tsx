@@ -25,6 +25,7 @@ export const NextExamHero = React.memo(function NextExamHero({
       <View
         style={[
           styles.heroCard,
+          styles.allClearCard,
           {
             backgroundColor: theme.surface,
             borderColor: theme.cardBorder,
@@ -376,13 +377,20 @@ const styles = StyleSheet.create({
     width: 1,
     height: 22,
   },
+  allClearCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 26,
+    paddingHorizontal: 24,
+  },
   allClearTitle: {
     fontFamily,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
+    letterSpacing: -0.3,
     textAlign: "center",
-    marginBottom: 4,
-    marginTop: 12,
+    marginBottom: 6,
+    marginTop: 0,
   },
   allClearDesc: {
     fontFamily,
@@ -391,6 +399,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: "center",
     paddingHorizontal: 16,
-    marginBottom: 14,
+    marginBottom: 0,
   },
 });

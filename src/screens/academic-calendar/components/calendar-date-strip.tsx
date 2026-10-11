@@ -34,8 +34,8 @@ const DOT_RULES: DotRule[] = [
 ];
 
 const FALLBACK_DOT = "#0284c7";
-const CARD_WIDTH = 58;
-const CARD_GAP = 9;
+const CARD_WIDTH = 60;
+const CARD_GAP = 8;
 const CARD_SPACING = CARD_WIDTH + CARD_GAP;
 
 const getWeekStart = (): Date => {
@@ -186,12 +186,19 @@ export const CalendarDateStrip: React.FC<CalendarDateStripProps> = React.memo(
               >
                 {item.isToday ? (
                   <View style={[styles.todayPill, isSelected && styles.todayPillSelected]}>
-                    <Text style={[styles.todayPillText, isSelected && styles.todayPillTextSelected]}>
+                    <Text
+                      style={[styles.todayPillText, isSelected && styles.todayPillTextSelected]}
+                      numberOfLines={1}
+                      ellipsizeMode="clip"
+                    >
                       TODAY
                     </Text>
                   </View>
                 ) : (
-                  <Text style={[styles.dayName, isSelected && styles.dayNameSelected]}>
+                  <Text
+                    style={[styles.dayName, isSelected && styles.dayNameSelected]}
+                    numberOfLines={1}
+                  >
                     {item.dayName}
                   </Text>
                 )}
@@ -305,15 +312,15 @@ const styles = StyleSheet.create({
   },
   dayCard: {
     width: CARD_WIDTH,
-    height: 80,
-    borderRadius: 22,
+    height: 82,
+    borderRadius: 20,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.06)",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
     ...Platform.select({
       web: { boxShadow: "0 1px 4px rgba(0, 0, 0, 0.03)", cursor: "pointer" } as any,
       default: {
@@ -373,10 +380,12 @@ const styles = StyleSheet.create({
   todayPill: {
     backgroundColor: "#e0f2fe",
     paddingHorizontal: 5,
-    paddingVertical: 1.5,
-    borderRadius: 5,
-    borderWidth: 0.5,
+    paddingVertical: 2,
+    borderRadius: 9999,
+    borderWidth: 1,
     borderColor: "#bae6fd",
+    alignItems: "center",
+    justifyContent: "center",
   },
   todayPillSelected: {
     backgroundColor: "#0284c7",
@@ -384,10 +393,12 @@ const styles = StyleSheet.create({
   },
   todayPillText: {
     fontFamily,
-    fontSize: 8.5,
-    fontWeight: "900",
+    fontSize: 8,
+    fontWeight: "800",
     color: "#0284c7",
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
+    textAlign: "center",
+    includeFontPadding: false,
   },
   todayPillTextSelected: {
     color: "#ffffff",
@@ -398,6 +409,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#64748b",
     letterSpacing: 0.3,
+    textAlign: "center",
+    includeFontPadding: false,
   },
   dayNameSelected: {
     color: "#1e40af",

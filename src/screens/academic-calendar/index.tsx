@@ -150,7 +150,9 @@ const DateGroupHeader = React.memo(function DateGroupHeader({
         </Text>
         {isToday && (
           <View style={subStyles.todayPill}>
-            <Text style={subStyles.todayPillText}>TODAY</Text>
+            <Text style={subStyles.todayPillText} numberOfLines={1}>
+              TODAY
+            </Text>
           </View>
         )}
       </View>

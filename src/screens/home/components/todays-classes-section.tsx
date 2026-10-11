@@ -382,7 +382,7 @@ export const TodaysClassesSection = React.memo(
                             ? `Room: ${notice.newRoom || "Changed"}`
                             : isOnline
                               ? "Held Online Today"
-                              : notice.title || "Notice"}
+                              : notice.message || "Class Notice"}
                       </Text>
 
                       {isOnline && notice.meetUrl && (

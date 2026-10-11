@@ -533,7 +533,6 @@ export interface ClassNoticeItem {
     role?: string;
   };
   type: ClassNoticeType;
-  title?: string | null;
   message: string;
   targetDay: string;
   effectiveDate: string;
@@ -546,7 +545,6 @@ export interface ClassNoticeItem {
 
 export interface CreateClassNoticeInput {
   type: ClassNoticeType;
-  title?: string;
   message?: string;
   targetDay: string;
   effectiveDate: string;
