@@ -60,20 +60,19 @@ export default function MaterialsTab({
   }, [queryClient, hubId]);
 
   const handleUploadSubmit = useCallback(
-    (payload: CreateMaterialPayload) => {
-      createMutation.mutate(payload as any, {
-        onSuccess: () => {
-          setIsUploadModalVisible(false);
-          Toast.show({ type: "success", text1: "Material Published Successfully!" });
-        },
-        onError: (err: any) => {
-          Toast.show({
-            type: "error",
-            text1: "Upload Failed",
-            text2: err.response?.data?.message || err.message,
-          });
-        },
-      });
+    async (payload: CreateMaterialPayload) => {
+      try {
+        await createMutation.mutateAsync(payload as any);
+        setIsUploadModalVisible(false);
+        Toast.show({ type: "success", text1: "Material Published Successfully!" });
+      } catch (err: any) {
+        Toast.show({
+          type: "error",
+          text1: "Publish Failed",
+          text2: err.response?.data?.message || err.message,
+        });
+        throw err;
+      }
     },
     [createMutation]
   );

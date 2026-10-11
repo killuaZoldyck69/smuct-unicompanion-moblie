@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   ScrollView,
   StatusBar,
-  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
@@ -33,8 +32,6 @@ import {
 } from "./types";
 import { formatFileSize, getFileIcon } from "./utils";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
   android: "sans-serif",
@@ -54,7 +51,7 @@ interface StagedAttachment {
 interface UploadMaterialModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSubmit: (payload: CreateMaterialPayload) => void;
+  onSubmit: (payload: CreateMaterialPayload) => Promise<void> | void;
   isPending: boolean;
   canManage: boolean;
   initialTab: MaterialSectionTab;
@@ -65,6 +62,7 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
     const insets = useSafeAreaInsets();
     const googleDrive = useGoogleDrive();
     const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
     const [isStudentNote, setIsStudentNote] = useState(!canManage || initialTab === "STUDENT_NOTES");
     const [attachedFiles, setAttachedFiles] = useState<StagedAttachment[]>([]);
     const [isUploadingFiles, setIsUploadingFiles] = useState(false);
@@ -79,6 +77,7 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
       if (isVisible) {
         setIsStudentNote(!canManage || initialTab === "STUDENT_NOTES");
         setTitle("");
+        setDescription("");
         setAttachedFiles([]);
         setLinks([]);
         setIsLinkDrawerOpen(false);
@@ -88,8 +87,13 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
       }
     }, [isVisible, canManage, initialTab]);
 
-    const applyLightStatusBar = useCallback(() => {
-      StatusBar.setBarStyle("light-content", true);
+    const topSafeInset =
+      Platform.OS === "android"
+        ? Math.max(insets.top, StatusBar.currentHeight ?? 0, 24)
+        : insets.top;
+
+    const applyDarkStatusBar = useCallback(() => {
+      StatusBar.setBarStyle("dark-content", true);
       if (Platform.OS === "android") {
         StatusBar.setBackgroundColor("transparent", true);
         StatusBar.setTranslucent(true);
@@ -98,11 +102,17 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
 
     useEffect(() => {
       if (isVisible) {
-        applyLightStatusBar();
-        const t = setTimeout(applyLightStatusBar, 150);
-        return () => clearTimeout(t);
+        applyDarkStatusBar();
+        const t1 = setTimeout(applyDarkStatusBar, 100);
+        const t2 = setTimeout(applyDarkStatusBar, 250);
+        const t3 = setTimeout(applyDarkStatusBar, 500);
+        return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+          clearTimeout(t3);
+        };
       }
-    }, [isVisible, applyLightStatusBar]);
+    }, [isVisible, applyDarkStatusBar]);
 
     const handleClose = useCallback(() => {
       if (isPending || isUploadingFiles) return;
@@ -137,8 +147,11 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
           };
         });
 
-        setAttachedFiles((prev) => [...prev, ...newItems]);
-        Toast.show({ type: "success", text1: "Files Attached" });
+        setAttachedFiles((prev) => [...prev, ...newItems].slice(0, 15));
+        Toast.show({
+          type: "success",
+          text1: `${newItems.length} File${newItems.length > 1 ? "s" : ""} Attached`,
+        });
       } catch (err: any) {
         Toast.show({
           type: "error",
@@ -216,7 +229,9 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
               }
 
               if (googleDrive.isConnected) {
-                setUploadProgressText("Uploading to your Google Drive...");
+                setUploadProgressText(
+                  `Uploading ${filesNeedingUpload.length} file${filesNeedingUpload.length > 1 ? "s" : ""} to Google Drive...`
+                );
                 const uploadedDrive = await googleDrive.uploadFiles(
                   filesNeedingUpload.map((f) => ({
                     uri: f.localUri,
@@ -227,22 +242,31 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                   (progress) => setUploadProgressText(progress)
                 );
 
+                const driveIdMap = new Map(
+                  filesNeedingUpload.map((f, idx) => [f.id, uploadedDrive[idx]?.url])
+                );
+
                 setAttachedFiles((prev) =>
                   prev.map((item) => {
-                    const match = uploadedDrive.find((u) => u.name === item.name);
-                    return match ? { ...item, uploadedUrl: match.url } : item;
+                    const url = driveIdMap.get(item.id);
+                    return url ? { ...item, uploadedUrl: url } : item;
                   })
                 );
 
-                newUploadedResults = uploadedDrive.map((u) => ({
-                  name: u.name,
-                  url: u.url,
-                  size: u.size,
-                  type: u.type,
-                }));
+                newUploadedResults = uploadedDrive.map((u, idx) => {
+                  const ext = filesNeedingUpload[idx]?.name.split(".").pop()?.toLowerCase();
+                  return {
+                    name: u.name,
+                    url: u.url,
+                    size: u.size,
+                    type: ext || u.type,
+                  };
+                });
               } else {
                 // Fallback to Cloudinary if Google Client ID is not configured
-                setUploadProgressText("Uploading attachments...");
+                setUploadProgressText(
+                  `Uploading ${filesNeedingUpload.length} attachment${filesNeedingUpload.length > 1 ? "s" : ""}...`
+                );
                 const uploaded = await uploadMultipleFilesToCloudinary(
                   filesNeedingUpload.map((f) => ({
                     uri: f.localUri,
@@ -252,23 +276,29 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                   }))
                 );
 
+                const cloudIdMap = new Map(
+                  filesNeedingUpload.map((f, idx) => [f.id, uploaded[idx]?.secureUrl])
+                );
+
                 setAttachedFiles((prev) =>
                   prev.map((item) => {
-                    const match = uploaded.find((u) => u.name === item.name);
-                    return match ? { ...item, uploadedUrl: match.secureUrl } : item;
+                    const url = cloudIdMap.get(item.id);
+                    return url ? { ...item, uploadedUrl: url } : item;
                   })
                 );
 
-                newUploadedResults = uploaded.map((u) => ({
-                  name: u.name,
+                newUploadedResults = uploaded.map((u, idx) => ({
+                  name: u.name || filesNeedingUpload[idx]?.name || "file",
                   url: u.secureUrl,
-                  size: u.size,
-                  type: u.type,
+                  size: u.size || filesNeedingUpload[idx]?.size,
+                  type: u.type || filesNeedingUpload[idx]?.type,
                 }));
               }
             } else {
               // 2. Official Staff Materials: Cloudinary
-              setUploadProgressText("Uploading attachments...");
+              setUploadProgressText(
+                `Uploading ${filesNeedingUpload.length} attachment${filesNeedingUpload.length > 1 ? "s" : ""}...`
+              );
               const uploaded = await uploadMultipleFilesToCloudinary(
                 filesNeedingUpload.map((f) => ({
                   uri: f.localUri,
@@ -278,18 +308,22 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                 }))
               );
 
+              const cloudIdMap = new Map(
+                filesNeedingUpload.map((f, idx) => [f.id, uploaded[idx]?.secureUrl])
+              );
+
               setAttachedFiles((prev) =>
                 prev.map((item) => {
-                  const match = uploaded.find((u) => u.name === item.name);
-                  return match ? { ...item, uploadedUrl: match.secureUrl } : item;
+                  const url = cloudIdMap.get(item.id);
+                  return url ? { ...item, uploadedUrl: url } : item;
                 })
               );
 
-              newUploadedResults = uploaded.map((u) => ({
-                name: u.name,
+              newUploadedResults = uploaded.map((u, idx) => ({
+                name: u.name || filesNeedingUpload[idx]?.name || "file",
                 url: u.secureUrl,
-                size: u.size,
-                type: u.type,
+                size: u.size || filesNeedingUpload[idx]?.size,
+                type: u.type || filesNeedingUpload[idx]?.type,
               }));
             }
           }
@@ -310,11 +344,23 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
           finalAttachments[0]?.url ||
           "https://drive.google.com";
 
+        const totalBytes = finalAttachments.reduce((acc, a) => acc + (a.size || 0), 0);
+        const derivedType =
+          finalAttachments.length === 1
+            ? finalAttachments[0].type
+            : finalAttachments.length > 1
+            ? "multi"
+            : links.length > 0
+            ? "link"
+            : undefined;
+
         setUploadProgressText("Publishing material...");
         await onSubmit({
           title: title.trim(),
-          description: undefined,
+          description: description.trim() || undefined,
           driveUrl: primaryUrl,
+          fileType: derivedType,
+          fileSize: totalBytes > 0 ? totalBytes : undefined,
           isStudentNote: canManage ? isStudentNote : true,
           attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
           links: links.length > 0 ? links : undefined,
@@ -340,12 +386,12 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
         transparent={true}
         statusBarTranslucent={true}
         onRequestClose={handleClose}
-        onShow={applyLightStatusBar}
+        onShow={applyDarkStatusBar}
       >
-        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
-        <ExpoStatusBar style="light" />
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+        <ExpoStatusBar style="dark" />
 
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { paddingTop: topSafeInset }]}>
           {/* Backdrop (tap to close) */}
           <TouchableOpacity
             style={styles.backdrop}
@@ -490,6 +536,21 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                     placeholderTextColor="#94a3b8"
                     value={title}
                     onChangeText={setTitle}
+                  />
+                </View>
+
+                {/* Description Field (Optional) */}
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>DESCRIPTION (OPTIONAL)</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.textAreaInput]}
+                    placeholder="Add brief notes, topics covered, or syllabus context..."
+                    placeholderTextColor="#94a3b8"
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline={true}
+                    numberOfLines={3}
+                    textAlignVertical="top"
                   />
                 </View>
 
@@ -744,12 +805,16 @@ const styles = StyleSheet.create({
   sheetWrap: {
     width: "100%",
     justifyContent: "flex-end",
+    maxHeight: "100%",
+    flexShrink: 1,
   },
   sheetContent: {
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: SCREEN_HEIGHT * 0.88,
+    maxHeight: "100%",
+    flexShrink: 1,
+    overflow: "hidden",
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: -6 },
     shadowOpacity: 0.12,
@@ -815,7 +880,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   formScroll: {
-    maxHeight: SCREEN_HEIGHT * 0.58,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -881,6 +947,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 6,
+  },
+  textAreaInput: {
+    minHeight: 70,
+    paddingTop: 10,
+    textAlignVertical: "top",
   },
   sectionBlock: {
     marginBottom: 4,

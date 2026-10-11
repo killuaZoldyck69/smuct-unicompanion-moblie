@@ -257,13 +257,16 @@ export async function uploadMultipleFilesToCloudinary(
     throw new Error(response.data?.message ?? "Multiple file upload failed");
   }
 
-  return list.map((item: any, idx: number) => ({
-    secureUrl: item.secureUrl,
-    publicId: item.publicId ?? "",
-    name: item.originalName || files[idx]?.name || "file",
-    size: item.size || files[idx]?.size,
-    type: item.format || files[idx]?.mimeType,
-  }));
+  return list.map((item: any, idx: number) => {
+    const ext = files[idx]?.name?.split(".").pop()?.toLowerCase();
+    return {
+      secureUrl: item.secureUrl,
+      publicId: item.publicId ?? "",
+      name: item.originalName || files[idx]?.name || "file",
+      size: item.size || files[idx]?.size,
+      type: item.format || ext || files[idx]?.mimeType || "file",
+    };
+  });
 }
 
 /**

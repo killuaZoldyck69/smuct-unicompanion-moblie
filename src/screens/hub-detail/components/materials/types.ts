@@ -37,6 +37,8 @@ export interface CreateMaterialPayload {
   description?: string;
   driveUrl: string;
   category?: string;
+  fileType?: string;
+  fileSize?: number;
   isStudentNote: boolean;
   attachments?: MaterialAttachment[];
   links?: MaterialLink[];
