@@ -36,6 +36,7 @@ export interface UpdateHubInput {
   title?: string;
   courseCode?: string;
   courseName?: string;
+  credit?: number;
   section?: string;
   semester?: number;
   semesterNumber?: number;

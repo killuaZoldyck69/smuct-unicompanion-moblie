@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import type { DateTimePickerChangeEvent } from "@react-native-community/datetimepicker";
 import {
   formatCourseName,
   formatCourseCode,
@@ -140,10 +141,13 @@ export function useEditHub({ isVisible, hubDetails, onSubmit }: UseEditHubProps)
   );
 
   // --- Native date/time picker ---
+  const handlePickerDismiss = useCallback(() => {
+    setActivePicker(null);
+  }, []);
+
   const handlePickerChange = useCallback(
-    (event: any, selectedDate?: Date) => {
-      // Android fires dismissed as a separate event type
-      if (!selectedDate || event?.type === "dismissed") {
+    (_event: DateTimePickerChangeEvent, selectedDate?: Date) => {
+      if (!selectedDate) {
         setActivePicker(null);
         return;
       }
@@ -238,6 +242,7 @@ export function useEditHub({ isVisible, hubDetails, onSubmit }: UseEditHubProps)
     selectedDayForPicker,
     handleSelectDay,
     handlePickerChange,
+    handlePickerDismiss,
     pickerDateValue,
     handleSubmit,
     isFormValid,

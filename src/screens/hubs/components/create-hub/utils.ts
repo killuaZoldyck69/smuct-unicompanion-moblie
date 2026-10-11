@@ -11,8 +11,7 @@ export const formatCourseName = (text: string): string => {
  * 2. Course Code: Uppercase letters, ensure clean space between alpha prefix and numeric code (e.g. CSE 3311).
  */
 export const formatCourseCode = (text: string): string => {
-  const upper = text.toUpperCase().replace(/[^A-Z0-9\s-]/g, "");
-  return upper.replace(/^([A-Z]+)(\d)/, "$1 $2").replace(/\s+/, " ").slice(0, 15);
+  return text.toUpperCase().replace(/[^A-Z0-9\s-]/g, "").slice(0, 15);
 };
 
 /**

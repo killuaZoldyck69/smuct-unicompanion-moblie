@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect } from "react";
 import {
   Modal,
   View,
@@ -9,7 +9,8 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { BENTO_THEME, DayPickerModal } from "@/screens/hubs/components/create-hub";
@@ -35,6 +36,35 @@ export function EditHubModal({
 }: EditHubModalProps) {
   const insets = useSafeAreaInsets();
 
+  const topPadding =
+    Platform.OS === "android"
+      ? Math.max(insets.top, StatusBar.currentHeight ?? 0, 24)
+      : 0;
+
+  const applyDarkStatusBar = useCallback(() => {
+    StatusBar.setBarStyle("dark-content", true);
+    if (Platform.OS === "android") {
+      StatusBar.setBackgroundColor("transparent", true);
+      StatusBar.setTranslucent(true);
+    }
+  }, []);
+
+  // Ensure status bar icons/text are dark and visible on Android & iOS
+  useEffect(() => {
+    if (isVisible) {
+      applyDarkStatusBar();
+      const t1 = setTimeout(applyDarkStatusBar, 100);
+      const t2 = setTimeout(applyDarkStatusBar, 250);
+      const t3 = setTimeout(applyDarkStatusBar, 500);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+  }, [isVisible, applyDarkStatusBar]);
+
   const {
     form,
     updateField,
@@ -53,6 +83,7 @@ export function EditHubModal({
     selectedDayForPicker,
     handleSelectDay,
     handlePickerChange,
+    handlePickerDismiss,
     pickerDateValue,
     handleSubmit,
     isFormValid,
@@ -68,13 +99,19 @@ export function EditHubModal({
     <Modal
       visible={isVisible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
       onRequestClose={onClose}
-      statusBarTranslucent
+      statusBarTranslucent={true}
+      onShow={applyDarkStatusBar}
     >
-      <SafeAreaView style={s.container} edges={["top", "bottom"]}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <ExpoStatusBar style="dark" />
 
+      <View style={[s.container, { paddingTop: topPadding }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1 }}
@@ -143,7 +180,7 @@ export function EditHubModal({
             />
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
 
       {/* ── Native DateTimePicker (iOS / Android) ── */}
       {Platform.OS !== "web" && activePicker && (
@@ -152,7 +189,9 @@ export function EditHubModal({
           mode={activePicker.target === "schedule" ? "time" : activePicker.mode}
           is24Hour={false}
           display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={handlePickerChange}
+          onValueChange={handlePickerChange}
+          onDismiss={handlePickerDismiss}
+          onNeutralButtonPress={handlePickerDismiss}
         />
       )}
 
