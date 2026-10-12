@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Platform,
-  Image,
-} from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { BENTO, fontFamily } from "../constants";
 
 interface AlumniHeaderProps {
