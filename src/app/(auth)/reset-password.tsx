@@ -17,6 +17,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { authClient } from "@/services/auth-client";
+import { validatePassword } from "@/utils/password-validator";
 import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
 import { spacing, rounded } from "@/theme/layout";
@@ -58,11 +59,13 @@ export default function ResetPasswordScreen() {
       return;
     }
 
-    if (newPassword.length < 8) {
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
       Toast.show({
         type: "error",
-        text1: "Password too short",
-        text2: "Must be at least 8 characters.",
+        text1: "Password Requirement",
+        text2: passwordValidation.error,
+        visibilityTime: 4000,
       });
       return;
     }
@@ -199,13 +202,29 @@ export default function ResetPasswordScreen() {
                 style={styles.input}
                 placeholder="Re-enter new password"
                 placeholderTextColor={colors.outlineVariant}
-                secureTextEntry={!showPassword}
+                secureTextEntry={!showConfirmPassword}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 editable={!isSubmitting}
                 accessible={true}
                 accessibilityLabel="Confirm Password"
               />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showConfirmPassword
+                    ? "Hide confirm password"
+                    : "Show confirm password"
+                }
+              >
+                <Feather
+                  name={showConfirmPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color={colors.outline}
+                />
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity

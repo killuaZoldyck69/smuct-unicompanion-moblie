@@ -1,400 +1,257 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
+  TouchableOpacity,
+  StatusBar,
   Platform,
   ScrollView,
-  StatusBar,
-  Image,
   Keyboard,
+  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
-import Toast from "react-native-toast-message";
-import { authClient } from "@/services/auth-client";
+
+import { REGISTER_COLORS, REGISTER_STRINGS } from "./constants";
+import { RegisterBackgroundDecorations } from "./components/register-background-decorations";
+import {
+  RegisterHeroIllustration,
+  ILLUSTRATION_HEIGHT,
+} from "./components/register-hero-illustration";
+import { RegisterCard } from "./components/register-card";
+import { useRegisterForm } from "./hooks/use-register-form";
 
 export function Register() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const form = useRegisterForm();
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  const [isNameFocused, setIsNameFocused] = useState(false);
-  const [isEmailFocused, setIsEmailFocused] = useState(false);
-  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
-  const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] =
-    useState(false);
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Smooth animation drivers to collapse hero illustration when keyboard is active
+  const heroHeightAnim = useRef(new Animated.Value(ILLUSTRATION_HEIGHT)).current;
+  const heroOpacityAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const height = e?.endCoordinates?.height ?? 0;
+      setKeyboardHeight(height);
+
+      Animated.parallel([
+        Animated.timing(heroHeightAnim, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: false,
+        }),
+        Animated.timing(heroOpacityAnim, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+
+      Animated.parallel([
+        Animated.timing(heroHeightAnim, {
+          toValue: ILLUSTRATION_HEIGHT,
+          duration: 220,
+          useNativeDriver: false,
+        }),
+        Animated.timing(heroOpacityAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: false,
+        }),
+      ]).start();
+
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
     return () => {
-      Keyboard.dismiss();
+      showSub.remove();
+      hideSub.remove();
     };
-  }, []);
+  }, [heroHeightAnim, heroOpacityAnim]);
 
-  const handleRegister = async () => {
-    Keyboard.dismiss();
-    if (!fullName || !email || !password || !confirmPassword) {
-      Toast.show({ type: "error", text1: "Please fill all fields" });
-      return;
+  // Ensure active input is scrolled into clear view above keyboard
+  useEffect(() => {
+    if (keyboardHeight > 0) {
+      if (form.isConfirmPasswordFocused) {
+        scrollViewRef.current?.scrollTo({ y: 190, animated: true });
+      } else if (form.isPasswordFocused) {
+        scrollViewRef.current?.scrollTo({ y: 130, animated: true });
+      } else if (form.isEmailFocused) {
+        scrollViewRef.current?.scrollTo({ y: 60, animated: true });
+      } else if (form.isNameFocused) {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      }
     }
-    if (password !== confirmPassword) {
-      Toast.show({ type: "error", text1: "Passwords do not match" });
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-
-      const { error } = await authClient.signUp.email({
-        email,
-        password,
-        name: fullName,
-      });
-
-      if (error) throw new Error(error.message);
-
-      Keyboard.dismiss();
-      Toast.show({
-        type: "success",
-        text1: "Account Created!",
-        text2: "Please check your email to verify your account.",
-        visibilityTime: 4000,
-      });
-
-      router.replace("/(auth)/login");
-    } catch (error: any) {
-      Toast.show({
-        type: "error",
-        text1: "Registration Failed",
-        text2: error.message || "An error occurred.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  }, [
+    keyboardHeight,
+    form.isNameFocused,
+    form.isEmailFocused,
+    form.isPasswordFocused,
+    form.isConfirmPasswordFocused,
+  ]);
 
   return (
-    <View
-      style={[
-        styles.safeArea,
-        {
-          paddingTop: insets.top,
-          paddingBottom: Math.max(insets.bottom, 16),
-        },
-      ]}
-    >
+    <View style={styles.container}>
       <StatusBar
         barStyle="dark-content"
         backgroundColor="transparent"
         translucent={true}
       />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
+      {/* 1. FIXED BACKGROUND DECORATIONS (Pastel shapes & sprout) */}
+      <RegisterBackgroundDecorations />
+
+      {/* 2. TOP HERO SECTION (Smoothly collapses when keyboard is open) */}
+      <Animated.View
+        style={[
+          styles.fixedHeroContainer,
+          {
+            paddingTop: insets.top + 2,
+            height: heroHeightAnim.interpolate({
+              inputRange: [0, ILLUSTRATION_HEIGHT],
+              outputRange: [0, ILLUSTRATION_HEIGHT + insets.top + 2],
+            }),
+            opacity: heroOpacityAnim,
+            overflow: "hidden",
+          },
+        ]}
+      >
+        <RegisterHeroIllustration />
+      </Animated.View>
+
+      {/* 3. SCROLLABLE FORM SECTION (Lifted directly above keyboard) */}
+      <View
+        style={[
+          styles.keyboardContainer,
+          {
+            paddingBottom: keyboardHeight > 0 ? keyboardHeight : 0,
+          },
+        ]}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          ref={scrollViewRef}
+          style={styles.formScrollView}
+          contentContainerStyle={[
+            styles.formScrollContent,
+            {
+              paddingTop: keyboardHeight > 0 ? insets.top + 8 : 4,
+              paddingBottom: Math.max(insets.bottom + 12, 24),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          bounces={Platform.OS === "ios"}
         >
-          <View style={styles.illustrationContainer}>
-            <Image
-              source={require("@/assets/register.png")}
-              style={styles.illustration}
-              resizeMode="contain"
-              accessible={true}
-              accessibilityLabel="UniCompanion registration illustration"
-            />
+          {/* Header Title & Subtitle */}
+          <View style={styles.typographyContainer}>
+            <Text style={styles.title}>{REGISTER_STRINGS.TITLE}</Text>
+            <Text style={styles.subtitle}>{REGISTER_STRINGS.SUBTITLE}</Text>
           </View>
 
-          <Text style={styles.pageTitle}>Create new account</Text>
-
-          <View style={styles.bentoFormContainer}>
-            <View
-              style={[
-                styles.inputWrapper,
-                isNameFocused && styles.inputFocused,
-              ]}
-            >
-              <Feather
-                name="user"
-                size={20}
-                color="#76777d"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Full Name"
-                placeholderTextColor="#76777d"
-                autoCapitalize="words"
-                value={fullName}
-                onChangeText={setFullName}
-                onFocus={() => setIsNameFocused(true)}
-                onBlur={() => setIsNameFocused(false)}
-                editable={!isSubmitting}
-                accessible={true}
-                accessibilityLabel="Full Name"
-              />
-            </View>
-
-            <View
-              style={[
-                styles.inputWrapper,
-                isEmailFocused && styles.inputFocused,
-              ]}
-            >
-              <Feather
-                name="mail"
-                size={20}
-                color="#76777d"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="University Email"
-                placeholderTextColor="#76777d"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                onFocus={() => setIsEmailFocused(true)}
-                onBlur={() => setIsEmailFocused(false)}
-                editable={!isSubmitting}
-                accessible={true}
-                accessibilityLabel="University Email"
-              />
-            </View>
-
-            <View
-              style={[
-                styles.inputWrapper,
-                isPasswordFocused && styles.inputFocused,
-              ]}
-            >
-              <Feather
-                name="lock"
-                size={20}
-                color="#76777d"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#76777d"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-                onFocus={() => setIsPasswordFocused(true)}
-                onBlur={() => setIsPasswordFocused(false)}
-                editable={!isSubmitting}
-                accessible={true}
-                accessibilityLabel="Password"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-              >
-                <Feather
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#76777d"
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={[
-                styles.inputWrapper,
-                isConfirmPasswordFocused && styles.inputFocused,
-              ]}
-            >
-              <Feather
-                name="check-circle"
-                size={20}
-                color="#76777d"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor="#76777d"
-                secureTextEntry={!showConfirmPassword}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                onFocus={() => setIsConfirmPasswordFocused(true)}
-                onBlur={() => setIsConfirmPasswordFocused(false)}
-                editable={!isSubmitting}
-                accessible={true}
-                accessibilityLabel="Confirm Password"
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeIcon}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-              >
-                <Feather
-                  name={showConfirmPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#76777d"
-                />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.registerButton,
-                isSubmitting && styles.registerButtonDisabled,
-              ]}
-              onPress={handleRegister}
-              disabled={isSubmitting}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Sign Up"
-            >
-              <Text style={styles.registerButtonText}>
-                {isSubmitting ? "Creating Account..." : "Sign Up"}
-              </Text>
-            </TouchableOpacity>
+          {/* Elevated Register Card */}
+          <View style={styles.cardWrapper}>
+            <RegisterCard form={form} />
           </View>
 
-          <View style={styles.footerContainer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+          {/* Already have an account? Sign in */}
+          <View style={styles.loginRow}>
+            <Text style={styles.footerText}>
+              {REGISTER_STRINGS.ALREADY_ACCOUNT}
+            </Text>
             <TouchableOpacity
               onPress={() => router.push("/(auth)/login")}
+              activeOpacity={0.7}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Log in to existing account"
+              accessibilityLabel="Sign in to existing account"
             >
-              <Text style={styles.loginLink}>Log in</Text>
+              <Text style={styles.loginLink}>{REGISTER_STRINGS.SIGN_IN}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
 
+export default Register;
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#f7f9fb",
-  },
   container: {
     flex: 1,
+    backgroundColor: REGISTER_COLORS.background,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    alignItems: "center",
-  },
-  illustrationContainer: {
-    width: 200,
-    height: 180,
-    backgroundColor: "transparent",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  illustration: {
-    width: 140,
-    height: 140,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#131b2e",
-    textAlign: "center",
-    lineHeight: 34,
-    letterSpacing: -0.5,
-    marginBottom: 24,
-  },
-  bentoFormContainer: {
+  fixedHeroContainer: {
     width: "100%",
-    backgroundColor: "#d0e4ff",
-    borderRadius: 32,
-    padding: 24,
-    marginBottom: 24,
-  },
-  inputWrapper: {
-    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 9999,
-    paddingHorizontal: 20,
-    height: 56,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  inputFocused: {
-    borderColor: "#131b2e",
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#191c1e",
-    height: "100%",
-  },
-  eyeIcon: {
-    padding: 4,
-  },
-  registerButton: {
-    backgroundColor: "#131b2e",
-    borderRadius: 9999,
-    height: 56,
     justifyContent: "center",
+    zIndex: 1,
+  },
+  keyboardContainer: {
+    flex: 1,
+    zIndex: 2,
+  },
+  formScrollView: {
+    flex: 1,
+  },
+  formScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 22,
     alignItems: "center",
-    marginTop: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
   },
-  registerButtonDisabled: {
-    opacity: 0.7,
+  typographyContainer: {
+    width: "100%",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    paddingHorizontal: 2,
   },
-  registerButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#ffffff",
+  title: {
+    fontSize: 32,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    color: REGISTER_COLORS.titleText,
+    marginBottom: 4,
   },
-  footerContainer: {
+  subtitle: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: REGISTER_COLORS.subtitleText,
+    lineHeight: 21,
+  },
+  cardWrapper: {
+    width: "100%",
+    marginBottom: 14,
+  },
+  loginRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    justifyContent: "center",
+    marginTop: 2,
+    paddingBottom: 8,
   },
   footerText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#76777d",
+    fontWeight: "500",
+    color: REGISTER_COLORS.subtitleText,
   },
   loginLink: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#131b2e",
+    color: REGISTER_COLORS.accentBlue,
   },
 });
