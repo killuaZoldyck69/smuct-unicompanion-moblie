@@ -1,19 +1,53 @@
-import React, { memo } from "react";
+import React, { memo, useState, useEffect, useMemo } from "react";
 import { View, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ONBOARD_COLORS } from "../constants";
 
 interface OnboardAvatarPickerProps {
   imageUri: string | null;
+  imageBase64?: string | null;
+  imageMimeType?: string;
   onPickImage: () => void;
   hasError?: boolean;
 }
 
 export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
   imageUri,
+  imageBase64,
+  imageMimeType,
   onPickImage,
   hasError,
 }: OnboardAvatarPickerProps) {
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    setLoadError(false);
+  }, [imageUri, imageBase64]);
+
+  const source = useMemo(() => {
+    if (loadError) {
+      if (imageBase64) {
+        return {
+          uri: imageBase64.startsWith("data:")
+            ? imageBase64
+            : `data:${imageMimeType || "image/jpeg"};base64,${imageBase64}`,
+        };
+      }
+      return null;
+    }
+    if (imageUri) {
+      return { uri: imageUri };
+    }
+    if (imageBase64) {
+      return {
+        uri: imageBase64.startsWith("data:")
+          ? imageBase64
+          : `data:${imageMimeType || "image/jpeg"};base64,${imageBase64}`,
+      };
+    }
+    return null;
+  }, [imageUri, imageBase64, imageMimeType, loadError]);
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
@@ -25,11 +59,18 @@ export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
         accessibilityLabel="Choose profile photo"
       >
         <View style={[styles.imageCircle, hasError && styles.imageCircleError]}>
-          {imageUri ? (
+          {source ? (
             <Image
-              source={{ uri: imageUri }}
+              source={source}
               style={styles.profileImage}
               resizeMode="cover"
+              onError={(e) => {
+                console.warn(
+                  "Image failed to render from primary URI, trying base64 fallback:",
+                  e.nativeEvent.error
+                );
+                setLoadError(true);
+              }}
               accessible={true}
               accessibilityLabel="Selected profile photo preview"
             />
@@ -48,7 +89,7 @@ export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
             hasError && { backgroundColor: ONBOARD_COLORS.errorBorder },
           ]}
         >
-          <Feather name={imageUri ? "edit-2" : "plus"} size={16} color="#FFF" />
+          <Feather name={source ? "edit-2" : "plus"} size={16} color="#FFF" />
         </View>
       </TouchableOpacity>
     </View>
@@ -79,8 +120,9 @@ const styles = StyleSheet.create({
     borderColor: ONBOARD_COLORS.errorBorder,
   },
   profileImage: {
-    width: "100%",
-    height: "100%",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
   imageEditBadge: {
     position: "absolute",

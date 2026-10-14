@@ -69,6 +69,11 @@ export const BloodGroupModal = memo(function BloodGroupModal({
           accessible={false}
         />
         <SafeAreaView edges={["bottom"]} style={styles.modalContent}>
+          {/* Subtle Top Drag Indicator */}
+          <View style={styles.dragIndicatorWrapper}>
+            <View style={styles.dragIndicator} />
+          </View>
+
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Blood Group</Text>
             <TouchableOpacity
@@ -86,7 +91,7 @@ export const BloodGroupModal = memo(function BloodGroupModal({
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+            contentContainerStyle={{ paddingBottom: 24 }}
           />
         </SafeAreaView>
       </View>
@@ -97,7 +102,7 @@ export const BloodGroupModal = memo(function BloodGroupModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(19, 27, 46, 0.4)",
+    backgroundColor: "rgba(19, 27, 46, 0.45)",
     justifyContent: "flex-end",
   },
   modalContent: {
@@ -105,14 +110,31 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     height: "60%",
-    paddingTop: 24,
+    maxHeight: "75%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  dragIndicatorWrapper: {
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  dragIndicator: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#CBD5E1",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingTop: 4,
+    paddingBottom: 16,
   },
   modalTitle: {
     fontSize: 24,

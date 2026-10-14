@@ -7,8 +7,9 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Dimensions,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { universityPrograms } from "@/data/programs";
 import type { AcademicProgram } from "../types";
@@ -69,9 +70,27 @@ export const ProgramSelectModal = memo(function ProgramSelectModal({
       animationType="slide"
       transparent={true}
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
       <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
-        <View style={styles.modalContent}>
+        {/* Backdrop Dismiss */}
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={() => {
+            setSearchQuery("");
+            onClose();
+          }}
+          accessible={false}
+        />
+
+        {/* Sheet Content with Bottom Safe Area Edge */}
+        <SafeAreaView edges={["bottom"]} style={styles.modalContent}>
+          {/* Subtle Top Drag Indicator */}
+          <View style={styles.dragIndicatorWrapper}>
+            <View style={styles.dragIndicator} />
+          </View>
+
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Program</Text>
             <TouchableOpacity
@@ -110,14 +129,16 @@ export const ProgramSelectModal = memo(function ProgramSelectModal({
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+            contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No programs matched "{searchQuery}"</Text>
+                <Text style={styles.emptyText}>
+                  No programs matched "{searchQuery}"
+                </Text>
               </View>
             }
           />
-        </View>
+        </SafeAreaView>
       </View>
     </Modal>
   );
@@ -126,22 +147,42 @@ export const ProgramSelectModal = memo(function ProgramSelectModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(19, 27, 46, 0.4)",
+    backgroundColor: "rgba(19, 27, 46, 0.45)",
     justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: ONBOARD_COLORS.background,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    height: "75%",
-    paddingTop: 24,
+    height: "82%",
+    maxHeight: "88%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  dragIndicatorWrapper: {
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  dragIndicator: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#CBD5E1",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
+    paddingTop: 4,
     paddingBottom: 16,
+  },
+  listContent: {
+    paddingBottom: 24,
   },
   modalTitle: {
     fontSize: 24,

@@ -39,6 +39,8 @@ export function Onboard() {
     handlePhoneNumberChange,
     bloodGroup,
     imageUri,
+    imageBase64,
+    imageMimeType,
     errorField,
     isSubmitting,
     isProgramModalVisible,
@@ -90,6 +92,8 @@ export function Onboard() {
           {/* Profile Picture Avatar Picker */}
           <OnboardAvatarPicker
             imageUri={imageUri}
+            imageBase64={imageBase64}
+            imageMimeType={imageMimeType}
             onPickImage={pickImage}
             hasError={errorField === "image"}
           />

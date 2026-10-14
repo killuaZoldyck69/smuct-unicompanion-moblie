@@ -326,6 +326,8 @@ export function useOnboardForm() {
     handlePhoneNumberChange,
     bloodGroup,
     imageUri,
+    imageBase64,
+    imageMimeType,
     errorField,
     isSubmitting,
     isProgramModalVisible,
