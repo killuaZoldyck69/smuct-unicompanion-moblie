@@ -111,17 +111,17 @@ export const CATEGORY_LABELS: Record<MenuCategoryKey, string> = {
 
 export const ALL_MENU_ITEMS: MenuItemConfig[] = [
   // -------------------------------------------------------------
-  // Academic Services (5 Features)
+  // Academic Services (6 Features)
   // -------------------------------------------------------------
   {
-    id: "exam_routines",
-    title: "Exam Routines",
-    desc: "Mid & final exam timetable",
+    id: "academic_calendar",
+    title: "Academic Calendar",
+    desc: "Semester milestones & dates",
     category: "ACADEMIC",
-    assetIcon: require("@/assets/icons/exam-time.png"),
-    fallbackIcon: "award",
-    roles: ["STUDENT"],
-    route: "/(tabs)/exams" as Href,
+    assetIcon: require("@/assets/icons/calendar.png"),
+    fallbackIcon: "calendar",
+    roles: ["STUDENT", "TEACHER"],
+    route: "/academic_calendar" as Href,
   },
   {
     id: "class_routines",
@@ -134,24 +134,14 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     route: "/(tabs)/my-schedule" as Href,
   },
   {
-    id: "academic_calendar",
-    title: "Academic Calendar",
-    desc: "Semester milestones & dates",
+    id: "exam_routines",
+    title: "Exam Routines",
+    desc: "Mid & final exam timetable",
     category: "ACADEMIC",
-    assetIcon: require("@/assets/icons/calendar.png"),
-    fallbackIcon: "calendar",
-    roles: ["STUDENT", "TEACHER"],
-    route: "/academic_calendar" as Href,
-  },
-  {
-    id: "course_eval",
-    title: "Course Hub",
-    desc: "Hub ratings & assessments",
-    category: "ACADEMIC",
-    assetIcon: require("@/assets/icons/lecture.png"),
-    fallbackIcon: "star",
+    assetIcon: require("@/assets/icons/exam-time.png"),
+    fallbackIcon: "award",
     roles: ["STUDENT"],
-    route: "/(tabs)/hubs" as Href,
+    route: "/(tabs)/exams" as Href,
   },
   {
     id: "cgpa_calculator",
@@ -162,6 +152,16 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     fallbackIcon: "percent",
     roles: ["STUDENT"],
     route: "/(tabs)/cgpa-calculator" as Href,
+  },
+  {
+    id: "course_eval",
+    title: "Course Hub",
+    desc: "Hub ratings & assessments",
+    category: "ACADEMIC",
+    assetIcon: require("@/assets/icons/lecture.png"),
+    fallbackIcon: "star",
+    roles: ["STUDENT"],
+    route: "/(tabs)/hubs" as Href,
   },
   {
     id: "faculty_directory",

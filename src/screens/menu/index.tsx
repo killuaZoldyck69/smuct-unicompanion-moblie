@@ -1,9 +1,5 @@
 import React, { useMemo } from "react";
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-} from "react-native";
+import { View, StyleSheet, ScrollView } from "react-native";
 
 import {
   SafeAreaView,
@@ -34,7 +30,7 @@ export {
 // ─────────────────────────────────────────────────────────────
 const CATEGORY_ORDER = ["ACADEMIC", "CAMPUS", "SUPPORT", "ADMIN"] as const;
 
-type CategoryKey = typeof CATEGORY_ORDER[number];
+type CategoryKey = (typeof CATEGORY_ORDER)[number];
 
 function groupByCategory(
   items: MenuItemConfig[],
@@ -68,10 +64,7 @@ function GridSection({ items }: { items: MenuItemConfig[] }) {
       {rows.map((row, idx) => {
         const isLastOdd = !row.right;
         return (
-          <View
-            key={row.left.id}
-            style={[grid.row, idx > 0 && grid.rowGap]}
-          >
+          <View key={row.left.id} style={[grid.row, idx > 0 && grid.rowGap]}>
             {isLastOdd ? (
               <FeatureCard item={row.left} fullWidth />
             ) : (
@@ -83,6 +76,109 @@ function GridSection({ items }: { items: MenuItemConfig[] }) {
           </View>
         );
       })}
+    </View>
+  );
+}
+
+/**
+ * Renders the Academic section with the requested alternating layout:
+ * 1. Academic Calendar (Top, single row, full width)
+ * 2. Class Routine & Exam Routine (Single row, 2 columns)
+ * 3. CGPA Calculator (Single row in single column, full width)
+ * 4. Course Hub & Faculty Directory (Single row, 2 columns)
+ */
+function AcademicGridSection({ items }: { items: MenuItemConfig[] }) {
+  const itemMap = new Map<string, MenuItemConfig>();
+  items.forEach((item) => itemMap.set(item.id, item));
+
+  // 1. Academic Calendar (Top, single row, full width)
+  const academicCal = itemMap.get("academic_calendar");
+
+  // 2. Class Routine & Exam Routine (Single row, 2 columns)
+  const classRoutine = itemMap.get("class_routines");
+  const examRoutine = itemMap.get("exam_routines");
+  const row2Items = [classRoutine, examRoutine].filter(
+    (x): x is MenuItemConfig => !!x,
+  );
+
+  // 3. CGPA Calculator (Single row in single column, full width)
+  const cgpaCalc = itemMap.get("cgpa_calculator");
+
+  // 4. Course Hub & Faculty Directory (Single row, 2 columns)
+  const courseHub = itemMap.get("course_eval");
+  const facultyDir = itemMap.get("faculty_directory");
+  const row4Items = [courseHub, facultyDir].filter(
+    (x): x is MenuItemConfig => !!x,
+  );
+
+  // Fallback for any extra items not in the primary 6
+  const handledIds = new Set([
+    "academic_calendar",
+    "class_routines",
+    "exam_routines",
+    "cgpa_calculator",
+    "course_eval",
+    "faculty_directory",
+  ]);
+  const extraItems = items.filter((item) => !handledIds.has(item.id));
+
+  type LayoutRow =
+    | { type: "full"; item: MenuItemConfig }
+    | { type: "pair"; left: MenuItemConfig; right?: MenuItemConfig };
+
+  const rows: LayoutRow[] = [];
+
+  if (academicCal) {
+    rows.push({ type: "full", item: academicCal });
+  }
+
+  if (row2Items.length === 2) {
+    rows.push({ type: "pair", left: row2Items[0], right: row2Items[1] });
+  } else if (row2Items.length === 1) {
+    rows.push({ type: "full", item: row2Items[0] });
+  }
+
+  if (cgpaCalc) {
+    rows.push({ type: "full", item: cgpaCalc });
+  }
+
+  if (row4Items.length === 2) {
+    rows.push({ type: "pair", left: row4Items[0], right: row4Items[1] });
+  } else if (row4Items.length === 1) {
+    rows.push({ type: "full", item: row4Items[0] });
+  }
+
+  for (let i = 0; i < extraItems.length; i += 2) {
+    if (extraItems[i + 1]) {
+      rows.push({ type: "pair", left: extraItems[i], right: extraItems[i + 1] });
+    } else {
+      rows.push({ type: "full", item: extraItems[i] });
+    }
+  }
+
+  return (
+    <View style={grid.container}>
+      {rows.map((row, idx) => (
+        <View
+          key={
+            row.type === "full"
+              ? row.item.id
+              : `${row.left.id}-${row.right?.id}`
+          }
+          style={[grid.row, idx > 0 && grid.rowGap]}
+        >
+          {row.type === "full" ? (
+            <FeatureCard item={row.item} fullWidth />
+          ) : row.right ? (
+            <>
+              <FeatureCard item={row.left} />
+              <FeatureCard item={row.right} />
+            </>
+          ) : (
+            <FeatureCard item={row.left} fullWidth />
+          )}
+        </View>
+      ))}
     </View>
   );
 }
@@ -118,26 +214,21 @@ export function Menu() {
   // Filter by role then group by category
   const sections = useMemo(() => {
     const role = userRole || "STUDENT";
-    const filtered = ALL_MENU_ITEMS.filter((item) =>
-      item.roles.includes(role),
-    );
+    const filtered = ALL_MENU_ITEMS.filter((item) => item.roles.includes(role));
     return groupByCategory(filtered);
   }, [userRole]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* ── Header ── */}
-      <ExploreHeader
-        roleBadgeText={roleBadgeText}
-      />
+      <ExploreHeader roleBadgeText={roleBadgeText} />
 
       {/* ── Scrollable Content ── */}
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingBottom:
-              insets.bottom > 0 ? insets.bottom + 120 : 132,
+            paddingBottom: insets.bottom > 0 ? insets.bottom + 120 : 132,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -150,8 +241,12 @@ export function Menu() {
               isFirst={sectionIndex === 0}
             />
 
-            {/* Feature Cards — 2-column grid */}
-            <GridSection items={section.items} />
+            {/* Feature Cards */}
+            {section.category === "ACADEMIC" ? (
+              <AcademicGridSection items={section.items} />
+            ) : (
+              <GridSection items={section.items} />
+            )}
           </View>
         ))}
       </ScrollView>
