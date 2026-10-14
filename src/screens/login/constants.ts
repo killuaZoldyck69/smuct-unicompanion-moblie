@@ -4,7 +4,7 @@ export const LOGIN_STRINGS = {
   EMAIL_PLACEHOLDER: "Email Address",
   PASSWORD_PLACEHOLDER: "Password",
   FORGOT_PASSWORD: "Forgot password?",
-  SIGN_IN_BUTTON: "Login",
+  SIGN_IN_BUTTON: "Log In",
   NO_ACCOUNT: "Don't have an account? ",
   REGISTER: "Register",
 };
