@@ -76,9 +76,7 @@ export const updateStudentProfileImage = async (imageUriOrUrl: string) => {
   }
 
   const formData = await createSingleImageFormData(imageUriOrUrl, "image");
-  const response = await api.patch("/students/profile/image", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await api.patch("/students/profile/image", formData);
   return response.data?.user ?? response.data?.data;
 };
 export const updateStudentProfileImageAPI = updateStudentProfileImage;

@@ -1,33 +1,63 @@
 import React, { memo } from "react";
-import { View, TextInput, StyleSheet } from "react-native";
+import { View, Text, TextInput, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ONBOARD_COLORS, MAX_SECTION_LENGTH } from "../constants";
 
 interface OnboardClassBoxProps {
   currentSemester: string;
   onChangeSemester: (text: string) => void;
+  hasSemesterError?: boolean;
   section: string;
   onChangeSection: (text: string) => void;
-  batch: string;
-  onChangeBatch: (text: string) => void;
+  hasSectionError?: boolean;
+  phoneNumber: string;
+  onChangePhoneNumber: (text: string) => void;
+  hasPhoneError?: boolean;
 }
 
 export const OnboardClassBox = memo(function OnboardClassBox({
   currentSemester,
   onChangeSemester,
+  hasSemesterError,
   section,
   onChangeSection,
-  batch,
-  onChangeBatch,
+  hasSectionError,
+  phoneNumber,
+  onChangePhoneNumber,
+  hasPhoneError,
 }: OnboardClassBoxProps) {
+  // Strip country code (+880 or 880) and leading zero so user always inputs the 10 digits
+  const handlePhoneChange = (text: string) => {
+    let digits = text.replace(/[^0-9]/g, "");
+    if (digits.startsWith("880")) {
+      digits = digits.slice(3);
+    }
+    if (digits.startsWith("0")) {
+      digits = digits.slice(1);
+    }
+    onChangePhoneNumber(digits.slice(0, 10));
+  };
+
   return (
     <View style={styles.bentoBox}>
+      {/* 1. SEMESTER AND SECTION (ROW) */}
       <View style={styles.row}>
-        <View style={[styles.inputWrapper, styles.halfFlex]}>
+        {/* Semester: Integer only, 1 to 12 */}
+        <View
+          style={[
+            styles.inputWrapper,
+            styles.halfFlex,
+            hasSemesterError && styles.inputWrapperError,
+          ]}
+        >
           <Feather
             name="calendar"
-            size={20}
-            color={ONBOARD_COLORS.placeholderText}
+            size={18}
+            color={
+              hasSemesterError
+                ? ONBOARD_COLORS.errorBorder
+                : ONBOARD_COLORS.placeholderText
+            }
             style={styles.inputIcon}
           />
           <TextInput
@@ -37,17 +67,28 @@ export const OnboardClassBox = memo(function OnboardClassBox({
             keyboardType="number-pad"
             maxLength={2}
             value={currentSemester}
-            onChangeText={onChangeSemester}
+            onChangeText={(text) => onChangeSemester(text.replace(/[^0-9]/g, ""))}
             accessible={true}
             accessibilityLabel="Current Semester (1 to 12)"
           />
         </View>
 
-        <View style={[styles.inputWrapper, styles.halfFlex]}>
+        {/* Section: Exactly 1 uppercase character */}
+        <View
+          style={[
+            styles.inputWrapper,
+            styles.halfFlex,
+            hasSectionError && styles.inputWrapperError,
+          ]}
+        >
           <Feather
             name="grid"
-            size={20}
-            color={ONBOARD_COLORS.placeholderText}
+            size={18}
+            color={
+              hasSectionError
+                ? ONBOARD_COLORS.errorBorder
+                : ONBOARD_COLORS.placeholderText
+            }
             style={styles.inputIcon}
           />
           <TextInput
@@ -57,28 +98,50 @@ export const OnboardClassBox = memo(function OnboardClassBox({
             autoCapitalize="characters"
             maxLength={MAX_SECTION_LENGTH}
             value={section}
-            onChangeText={onChangeSection}
+            onChangeText={(text) =>
+              onChangeSection(
+                text.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 1)
+              )
+            }
             accessible={true}
-            accessibilityLabel="Class Section"
+            accessibilityLabel="Class Section (single uppercase letter)"
           />
         </View>
       </View>
 
-      <View style={styles.inputWrapper}>
+      {/* 2. PHONE NUMBER WITH +880 BD COUNTRY CODE (10 DIGITS) */}
+      <View
+        style={[
+          styles.inputWrapper,
+          hasPhoneError && styles.inputWrapperError,
+        ]}
+      >
         <Feather
-          name="users"
-          size={20}
-          color={ONBOARD_COLORS.placeholderText}
+          name="phone"
+          size={18}
+          color={
+            hasPhoneError
+              ? ONBOARD_COLORS.errorBorder
+              : ONBOARD_COLORS.placeholderText
+          }
           style={styles.inputIcon}
         />
+        {/* Country Code Prefix */}
+        <View style={styles.countryCodeContainer}>
+          <Text style={styles.countryCodeText}>+880</Text>
+        </View>
+
+        {/* 10-digit Phone Number Input */}
         <TextInput
           style={styles.input}
-          placeholder="Batch"
+          placeholder="1XXXXXXXXX"
           placeholderTextColor={ONBOARD_COLORS.placeholderText}
-          value={batch}
-          onChangeText={onChangeBatch}
+          keyboardType="number-pad"
+          maxLength={10}
+          value={phoneNumber}
+          onChangeText={handlePhoneChange}
           accessible={true}
-          accessibilityLabel="Academic Batch"
+          accessibilityLabel="10 digit Phone Number"
         />
       </View>
     </View>
@@ -88,10 +151,10 @@ export const OnboardClassBox = memo(function OnboardClassBox({
 const styles = StyleSheet.create({
   bentoBox: {
     width: "100%",
-    borderRadius: 32,
-    padding: 24,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 16,
-    gap: 16,
+    gap: 14,
     backgroundColor: ONBOARD_COLORS.mintBox,
   },
   row: {
@@ -100,21 +163,41 @@ const styles = StyleSheet.create({
   },
   halfFlex: {
     flex: 1,
+    paddingHorizontal: 12,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: ONBOARD_COLORS.white,
-    borderRadius: 9999,
-    paddingHorizontal: 20,
-    height: 56,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 54,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  inputWrapperError: {
+    borderColor: ONBOARD_COLORS.errorBorder,
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: 8,
+  },
+  countryCodeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 10,
+    marginRight: 10,
+    borderRightWidth: 1,
+    borderRightColor: ONBOARD_COLORS.borderLight,
+  },
+  countryCodeText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: ONBOARD_COLORS.neutralText,
+    letterSpacing: 0.2,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14.5,
     fontWeight: "500",
     color: ONBOARD_COLORS.neutralText,
     height: "100%",

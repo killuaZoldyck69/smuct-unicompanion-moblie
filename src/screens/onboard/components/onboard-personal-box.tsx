@@ -6,11 +6,13 @@ import { ONBOARD_COLORS, BLOOD_GROUPS } from "../constants";
 interface OnboardPersonalBoxProps {
   bloodGroup: string;
   onOpenBloodGroupModal: () => void;
+  hasBloodGroupError?: boolean;
 }
 
 export const OnboardPersonalBox = memo(function OnboardPersonalBox({
   bloodGroup,
   onOpenBloodGroupModal,
+  hasBloodGroupError,
 }: OnboardPersonalBoxProps) {
   const selectedLabel = bloodGroup
     ? BLOOD_GROUPS.find((b) => b.value === bloodGroup)?.label
@@ -19,7 +21,10 @@ export const OnboardPersonalBox = memo(function OnboardPersonalBox({
   return (
     <View style={styles.bentoBox}>
       <TouchableOpacity
-        style={styles.inputWrapper}
+        style={[
+          styles.inputWrapper,
+          hasBloodGroupError && styles.inputWrapperError,
+        ]}
         onPress={onOpenBloodGroupModal}
         accessible={true}
         accessibilityRole="button"
@@ -29,7 +34,7 @@ export const OnboardPersonalBox = memo(function OnboardPersonalBox({
         <Feather
           name="droplet"
           size={20}
-          color={ONBOARD_COLORS.placeholderText}
+          color={hasBloodGroupError ? ONBOARD_COLORS.errorBorder : "#DC2626"}
           style={styles.inputIcon}
         />
         <Text
@@ -39,12 +44,16 @@ export const OnboardPersonalBox = memo(function OnboardPersonalBox({
           ]}
           numberOfLines={1}
         >
-          {selectedLabel || "Blood Group"}
+          {selectedLabel || "Blood Group (Optional)"}
         </Text>
         <Feather
           name="chevron-down"
           size={20}
-          color={ONBOARD_COLORS.placeholderText}
+          color={
+            hasBloodGroupError
+              ? ONBOARD_COLORS.errorBorder
+              : ONBOARD_COLORS.placeholderText
+          }
         />
       </TouchableOpacity>
     </View>
@@ -54,19 +63,24 @@ export const OnboardPersonalBox = memo(function OnboardPersonalBox({
 const styles = StyleSheet.create({
   bentoBox: {
     width: "100%",
-    borderRadius: 32,
-    padding: 24,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 16,
-    gap: 16,
+    gap: 14,
     backgroundColor: ONBOARD_COLORS.roseBox,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: ONBOARD_COLORS.white,
-    borderRadius: 9999,
-    paddingHorizontal: 20,
-    height: 56,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 54,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  inputWrapperError: {
+    borderColor: ONBOARD_COLORS.errorBorder,
   },
   inputIcon: {
     marginRight: 12,

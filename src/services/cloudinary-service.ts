@@ -90,11 +90,7 @@ export async function uploadImageToCloudinary(
   const formData = await createSingleImageFormData(localUri, "image");
   formData.append("folder", folder);
 
-  const response = await api.post("/upload/image", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await api.post("/upload/image", formData);
 
   const data = response.data?.data;
   if (!data?.secureUrl) {
@@ -143,11 +139,7 @@ export async function uploadMultipleImages(
 
   formData.append("folder", folder);
 
-  const response = await api.post("/upload/images", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await api.post("/upload/images", formData);
 
   const list = response.data?.data;
   if (!Array.isArray(list)) {
@@ -198,11 +190,7 @@ export async function uploadFileToCloudinary(
   }
   formData.append("folder", folder);
 
-  const response = await api.post("/upload/file", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await api.post("/upload/file", formData);
 
   const data = response.data?.data;
   if (!data?.secureUrl) {
@@ -246,11 +234,7 @@ export async function uploadMultipleFilesToCloudinary(
   }
   formData.append("folder", folder);
 
-  const response = await api.post("/upload/files", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await api.post("/upload/files", formData);
 
   const list = response.data?.data;
   if (!Array.isArray(list)) {

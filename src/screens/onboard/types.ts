@@ -15,15 +15,33 @@ export interface OnboardFormData {
   currentSemester: string;
   section: string;
   bloodGroup: string;
+  phoneNumber: string;
   imageUri: string | null;
   imageBase64: string | null;
   imageMimeType: string;
 }
 
+export type OnboardFormField =
+  | "image"
+  | "studentId"
+  | "program"
+  | "batch"
+  | "currentSemester"
+  | "section"
+  | "phoneNumber"
+  | "bloodGroup";
+
+export interface FormValidationError {
+  field: OnboardFormField;
+  title: string;
+  message: string;
+}
+
 export interface SanitizedOnboardData {
   payload: OnboardStudentInput;
   bloodGroup?: string;
-  error?: string;
+  phoneNumber: string;
+  error?: FormValidationError;
 }
 
 export type { AcademicProgram, OnboardStudentInput };

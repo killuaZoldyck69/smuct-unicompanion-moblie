@@ -18,7 +18,10 @@ export const onboardStudentAPI = async (data: OnboardStudentInput) => {
   return res.data;
 };
 
-export const uploadProfileImageAPI = async (imageUriOrUrl: string) => {
+export const uploadProfileImageAPI = async (
+  imageUriOrUrl: string,
+  base64Fallback?: string | null
+) => {
   if (!imageUriOrUrl || typeof imageUriOrUrl !== "string" || !imageUriOrUrl.trim()) {
     throw new Error("Invalid image provided.");
   }
@@ -30,23 +33,39 @@ export const uploadProfileImageAPI = async (imageUriOrUrl: string) => {
   }
 
   // Upload local file to backend which stores it in Cloudinary and updates DB
-  const formData = await createSingleImageFormData(imageUriOrUrl, "image");
-  const res = await api.patch("/users/profile/image", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  try {
+    const formData = await createSingleImageFormData(imageUriOrUrl, "image");
+    const res = await api.patch("/users/profile/image", formData);
 
-  return (
-    res.data?.data?.imageUrl ||
-    res.data?.data?.user?.image ||
-    res.data?.data?.image ||
-    ""
-  );
+    return (
+      res.data?.data?.imageUrl ||
+      res.data?.data?.user?.image ||
+      res.data?.data?.image ||
+      ""
+    );
+  } catch (err) {
+    // If multipart upload fails and base64 fallback is present, try base64
+    if (base64Fallback) {
+      const dataUri = base64Fallback.startsWith("data:")
+        ? base64Fallback
+        : `data:image/jpeg;base64,${base64Fallback}`;
+      const res = await api.patch("/users/profile/image", { image: dataUri });
+      return (
+        res.data?.data?.imageUrl ||
+        res.data?.data?.user?.image ||
+        res.data?.data?.image ||
+        ""
+      );
+    }
+    throw err;
+  }
 };
 
-export const updateInitialProfileImageAPI = async (imageUrlOrUri: string) => {
-  return await uploadProfileImageAPI(imageUrlOrUri);
+export const updateInitialProfileImageAPI = async (
+  imageUrlOrUri: string,
+  base64Fallback?: string | null
+) => {
+  return await uploadProfileImageAPI(imageUrlOrUri, base64Fallback);
 };
 
 export const getSessionUser = async () => {

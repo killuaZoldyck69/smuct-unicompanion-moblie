@@ -23,8 +23,14 @@ export const ONBOARD_COLORS = {
   mintBox: "#c3f0d2",
   roseBox: "#ffdad6",
   yellowAvatar: "#f2e580",
+  cornerPurple: "#ede9fe",
+  warningBg: "rgba(255, 255, 255, 0.7)",
+  warningText: "#1e3a8a",
+  warningBorder: "rgba(30, 58, 138, 0.15)",
+  errorBorder: "#ef4444",
+  errorBg: "#fef2f2",
 };
 
 export const MIN_SEMESTER = 1;
 export const MAX_SEMESTER = 12;
-export const MAX_SECTION_LENGTH = 4;
+export const MAX_SECTION_LENGTH = 1;

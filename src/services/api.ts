@@ -124,6 +124,19 @@ api.interceptors.request.use(
       if (cookie && !config.headers.cookie && Platform.OS !== "web") {
         config.headers.cookie = cookie;
       }
+
+      // If data is FormData, remove Content-Type so Axios/React Native automatically generates the multipart header with boundary
+      const isFormData =
+        config.data instanceof FormData ||
+        (config.data &&
+          typeof config.data === "object" &&
+          (typeof (config.data as any).append === "function" ||
+            "_parts" in (config.data as any)));
+
+      if (isFormData && config.headers) {
+        delete config.headers["Content-Type"];
+        delete config.headers["content-type"];
+      }
     } catch (error) {
       console.error("Error attaching auth headers:", error);
     }
