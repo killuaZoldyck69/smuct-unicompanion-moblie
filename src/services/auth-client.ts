@@ -1,5 +1,6 @@
 import { expoClient } from "@better-auth/expo/client";
 import { createAuthClient } from "better-auth/react";
+import { emailOTPClient } from "better-auth/client/plugins";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
@@ -9,6 +10,25 @@ if (!process.env.EXPO_PUBLIC_API_BASE_URL) {
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 const AUTH_URL = `${BASE_URL}/api/auth`;
+
+export interface EmailOtpClientMethods {
+  sendVerificationOtp: (params: {
+    email: string;
+    type: "email-verification" | "forget-password" | "sign-in" | "change-email";
+  }) => Promise<{ data: any; error: any }>;
+  verifyEmail: (params: {
+    email: string;
+    otp: string;
+  }) => Promise<{ data: any; error: any }>;
+  requestPasswordReset: (params: {
+    email: string;
+  }) => Promise<{ data: any; error: any }>;
+  resetPassword: (params: {
+    email: string;
+    otp: string;
+    password: string;
+  }) => Promise<{ data: any; error: any }>;
+}
 
 export const authClient = createAuthClient({
   baseURL: AUTH_URL,
@@ -70,8 +90,14 @@ export const authClient = createAuthClient({
       }
     },
   },
-  plugins:
-    Platform.OS !== "web"
+  plugins: [
+    emailOTPClient(),
+    ...(Platform.OS !== "web"
       ? [expoClient({ scheme: "smuct-unicompanion", storage: SecureStore }) as any]
-      : [],
-});
+      : []),
+  ],
+}) as ReturnType<typeof createAuthClient> & {
+  emailOtp: EmailOtpClientMethods;
+};
+
+

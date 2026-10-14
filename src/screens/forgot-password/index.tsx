@@ -80,9 +80,8 @@ export function ForgotPassword() {
     try {
       setIsSubmitting(true);
 
-      const { error } = await authClient.requestPasswordReset({
+      const { error } = await authClient.emailOtp.requestPasswordReset({
         email: trimmedEmail,
-        redirectTo: "smuct-unicompanion://reset-password",
       });
 
       if (error) throw new Error(error.message);
@@ -90,11 +89,15 @@ export function ForgotPassword() {
       Keyboard.dismiss();
       Toast.show({
         type: "success",
-        text1: "Reset Link Sent!",
-        text2: "Check your inbox for instructions to reset your password.",
+        text1: "Reset Code Sent! 🔑",
+        text2: "We've sent a 6-digit password reset code to your email.",
+        visibilityTime: 4000,
       });
 
-      handleBack();
+      router.push({
+        pathname: "/(auth)/reset-password",
+        params: { email: trimmedEmail },
+      });
     } catch (error: any) {
       Toast.show({
         type: "error",

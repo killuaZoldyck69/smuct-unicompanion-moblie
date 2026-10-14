@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { TextInput, Keyboard } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { authClient } from "@/services/auth-client";
@@ -14,9 +14,11 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export function useRegisterForm(): RegisterFormState {
   const router = useRouter();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const initialEmail = Array.isArray(params.email) ? params.email[0] : params.email || "";
 
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +35,12 @@ export function useRegisterForm(): RegisterFormState {
   const emailInputRef = useRef<TextInput | null>(null);
   const passwordInputRef = useRef<TextInput | null>(null);
   const confirmPasswordInputRef = useRef<TextInput | null>(null);
+
+  useEffect(() => {
+    if (initialEmail && !email) {
+      setEmail(initialEmail);
+    }
+  }, [initialEmail]);
 
   useEffect(() => {
     return () => {
@@ -101,11 +109,14 @@ export function useRegisterForm(): RegisterFormState {
       Toast.show({
         type: "success",
         text1: "Account Created!",
-        text2: "Please check your email to verify your account.",
+        text2: "We've sent a 6-digit verification code to your email.",
         visibilityTime: 4000,
       });
 
-      router.replace("/(auth)/login");
+      router.replace({
+        pathname: "/(auth)/verify-email",
+        params: { email: trimmedEmail },
+      });
     } catch (error: any) {
       const rawMessage: string =
         error?.message || "An unexpected error occurred.";

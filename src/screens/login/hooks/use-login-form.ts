@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { TextInput, Keyboard, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 import * as SecureStore from "expo-secure-store";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,10 +15,18 @@ import { LoginFormState } from "../types";
 export function useLoginForm(): LoginFormState {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const initialEmail = Array.isArray(params.email) ? params.email[0] : params.email || "";
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (initialEmail && !email) {
+      setEmail(initialEmail);
+    }
+  }, [initialEmail]);
 
   const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
@@ -165,10 +173,31 @@ export function useLoginForm(): LoginFormState {
         }
       }
     } catch (error: any) {
+      const rawMessage = error?.message || "An unexpected error occurred.";
+      const lower = rawMessage.toLowerCase();
+
+      if (
+        lower.includes("not verified") ||
+        lower.includes("email_not_verified") ||
+        lower.includes("verify your email")
+      ) {
+        Toast.show({
+          type: "info",
+          text1: "Email Not Verified",
+          text2: "Please enter your 6-digit verification code to activate your account.",
+          visibilityTime: 4000,
+        });
+        router.push({
+          pathname: "/(auth)/verify-email",
+          params: { email: trimmedEmail },
+        });
+        return;
+      }
+
       Toast.show({
         type: "error",
         text1: "Login Failed",
-        text2: error.message || "An unexpected error occurred.",
+        text2: rawMessage,
       });
     } finally {
       setIsSubmitting(false);
