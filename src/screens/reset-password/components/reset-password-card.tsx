@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   RESET_PASSWORD_STRINGS,
   OTP_LENGTH,
 } from "../constants";
+import { getPasswordCriteria } from "@/utils/password-validator";
 
 interface Props {
   otp: string[];
@@ -59,9 +60,12 @@ export function ResetPasswordCard({
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
 
+  const criteria = useMemo(() => getPasswordCriteria(newPassword), [newPassword]);
+  const showCriteria = newPassword.length > 0 || isPasswordFocused;
+
   const isOtpComplete = otp.filter(Boolean).length === OTP_LENGTH;
   const isFormComplete =
-    isOtpComplete && newPassword.length >= 8 && confirmPassword.length >= 8;
+    isOtpComplete && criteria.allValid && confirmPassword.length >= 8;
 
   const minutes = Math.floor(countdown / 60);
   const seconds = countdown % 60;
@@ -120,6 +124,7 @@ export function ResetPasswordCard({
       <View
         style={[
           styles.inputContainer,
+          showCriteria && styles.inputContainerWithCriteria,
           isPasswordFocused && styles.inputContainerFocused,
         ]}
       >
@@ -157,6 +162,127 @@ export function ResetPasswordCard({
           />
         </TouchableOpacity>
       </View>
+
+      {/* LIVE PASSWORD REQUIREMENT CHIPS */}
+      {showCriteria && (
+        <View style={styles.criteriaContainer}>
+          <View style={styles.criteriaHeaderRow}>
+            <Text style={styles.criteriaHeaderTitle}>Password requirements:</Text>
+            {criteria.allValid && (
+              <View style={styles.strongBadge}>
+                <Feather name="check" size={11} color="#059669" />
+                <Text style={styles.strongBadgeText}>Strong</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.criteriaGrid}>
+            <View
+              style={[
+                styles.criteriaChip,
+                criteria.hasMinLength && styles.criteriaChipMet,
+              ]}
+            >
+              <Feather
+                name={criteria.hasMinLength ? "check" : "circle"}
+                size={11}
+                color={criteria.hasMinLength ? "#0D9488" : "#94A3B8"}
+              />
+              <Text
+                style={[
+                  styles.criteriaChipText,
+                  criteria.hasMinLength && styles.criteriaChipTextMet,
+                ]}
+              >
+                8+ characters
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.criteriaChip,
+                criteria.hasUppercase && styles.criteriaChipMet,
+              ]}
+            >
+              <Feather
+                name={criteria.hasUppercase ? "check" : "circle"}
+                size={11}
+                color={criteria.hasUppercase ? "#0D9488" : "#94A3B8"}
+              />
+              <Text
+                style={[
+                  styles.criteriaChipText,
+                  criteria.hasUppercase && styles.criteriaChipTextMet,
+                ]}
+              >
+                Uppercase (A-Z)
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.criteriaChip,
+                criteria.hasLowercase && styles.criteriaChipMet,
+              ]}
+            >
+              <Feather
+                name={criteria.hasLowercase ? "check" : "circle"}
+                size={11}
+                color={criteria.hasLowercase ? "#0D9488" : "#94A3B8"}
+              />
+              <Text
+                style={[
+                  styles.criteriaChipText,
+                  criteria.hasLowercase && styles.criteriaChipTextMet,
+                ]}
+              >
+                Lowercase (a-z)
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.criteriaChip,
+                criteria.hasNumber && styles.criteriaChipMet,
+              ]}
+            >
+              <Feather
+                name={criteria.hasNumber ? "check" : "circle"}
+                size={11}
+                color={criteria.hasNumber ? "#0D9488" : "#94A3B8"}
+              />
+              <Text
+                style={[
+                  styles.criteriaChipText,
+                  criteria.hasNumber && styles.criteriaChipTextMet,
+                ]}
+              >
+                Number (0-9)
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.criteriaChip,
+                criteria.hasSpecialChar && styles.criteriaChipMet,
+              ]}
+            >
+              <Feather
+                name={criteria.hasSpecialChar ? "check" : "circle"}
+                size={11}
+                color={criteria.hasSpecialChar ? "#0D9488" : "#94A3B8"}
+              />
+              <Text
+                style={[
+                  styles.criteriaChipText,
+                  criteria.hasSpecialChar && styles.criteriaChipTextMet,
+                ]}
+              >
+                Special char (!@#$)
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* 4. CONFIRM PASSWORD FIELD */}
       <Text style={styles.fieldLabel}>
@@ -326,6 +452,74 @@ const styles = StyleSheet.create({
   },
   eyeToggle: {
     padding: 6,
+  },
+  inputContainerWithCriteria: {
+    marginBottom: 8,
+  },
+  criteriaContainer: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  criteriaHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  criteriaHeaderTitle: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  strongBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  strongBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  criteriaGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  criteriaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 8,
+    paddingVertical: 4.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 4.5,
+  },
+  criteriaChipMet: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
+  },
+  criteriaChipText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#64748B",
+  },
+  criteriaChipTextMet: {
+    color: "#065F46",
+    fontWeight: "700",
   },
   submitButton: {
     backgroundColor: "#131B2E",
