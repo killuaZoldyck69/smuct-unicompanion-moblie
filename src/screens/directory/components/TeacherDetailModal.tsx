@@ -347,6 +347,36 @@ export const TeacherDetailModal: React.FC<TeacherDetailModalProps> = React.memo(
                 </View>
               </View>
 
+              {/* Advisory Batch */}
+              {profile?.advisoryBatch ? (
+                <View style={styles.detailRow}>
+                  <View style={styles.detailLeft}>
+                    <Feather name="award" size={14} color={DIRECTORY_COLORS.textSecondary} />
+                    <Text style={styles.detailLabel}>Advisory Batch</Text>
+                  </View>
+                  <View style={styles.detailRight}>
+                    <Text style={styles.detailValue}>
+                      Batch {profile.advisoryBatch}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Day Off */}
+              {profile?.dayOff ? (
+                <View style={styles.detailRow}>
+                  <View style={styles.detailLeft}>
+                    <Feather name="coffee" size={14} color={DIRECTORY_COLORS.textSecondary} />
+                    <Text style={styles.detailLabel}>Day Off</Text>
+                  </View>
+                  <View style={styles.detailRight}>
+                    <Text style={styles.detailValue}>
+                      {profile.dayOff}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
               {/* Consultation Hours */}
               <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
                 <View style={styles.detailLeft}>
@@ -354,9 +384,19 @@ export const TeacherDetailModal: React.FC<TeacherDetailModalProps> = React.memo(
                   <Text style={styles.detailLabel}>Consultation</Text>
                 </View>
                 <View style={styles.detailRight}>
-                  <Text style={styles.detailValue}>
-                    {profile?.consultationHours || "By appointment via email"}
-                  </Text>
+                  {profile?.consultationSlots && profile.consultationSlots.length > 0 ? (
+                    <View style={{ gap: 4, alignItems: "flex-end" }}>
+                      {profile.consultationSlots.map((s, idx) => (
+                        <Text key={idx} style={styles.detailValue}>
+                          {s.day}: {s.startTime || "TBD"} – {s.endTime || "TBD"}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.detailValue}>
+                      {profile?.consultationHours || "By appointment via email"}
+                    </Text>
+                  )}
                 </View>
               </View>
             </View>

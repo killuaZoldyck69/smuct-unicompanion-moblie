@@ -8,7 +8,10 @@ export interface TeacherProfileData {
   department: string;
   faculty: string;
   officeRoom?: string | null;
+  advisoryBatch?: number | null;
+  dayOff?: string | null;
   consultationHours?: string | null;
+  consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | null;
   expertiseFields?: string[] | null;
   academicQualifications?: any | null;
   linkedInUrl?: string | null;

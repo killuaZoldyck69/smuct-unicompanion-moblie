@@ -1,6 +1,12 @@
 import api from "./api";
 import { createSingleImageFormData } from "./cloudinary-service";
 
+export interface ConsultationSlot {
+  day: string;
+  startTime: string;
+  endTime: string;
+}
+
 export interface TeacherProfileData {
   id: string;
   name?: string;
@@ -14,10 +20,13 @@ export interface TeacherProfileData {
   faculty?: string;
   roomNumber?: string | null;
   roomNo?: string | null;
+  advisoryBatch?: number | null;
+  dayOff?: string | null;
   researchInterests?: string[];
   education?: string[] | string;
   officeHours?: any[];
   consultationHours?: string | null;
+  consultationSlots?: ConsultationSlot[] | null;
   linkedInUrl?: string | null;
   linkedinUrl?: string | null;
   personalWebsiteUrl?: string | null;
@@ -44,10 +53,13 @@ export interface UpdateTeacherProfileInput {
   department?: string;
   designation?: string;
   faculty?: string;
+  advisoryBatch?: number | null;
+  dayOff?: string | null;
   researchInterests?: string[];
   education?: string[] | string;
   officeHours?: any[];
   consultationHours?: string;
+  consultationSlots?: ConsultationSlot[] | null;
   linkedInUrl?: string;
   linkedinUrl?: string;
   personalWebsiteUrl?: string;

@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { TeacherProfileData, UpdateTeacherProfileInput } from "@/services/teacher-service";
+import {
+  TeacherProfileData,
+  UpdateTeacherProfileInput,
+  ConsultationSlot,
+} from "@/services/teacher-service";
 import { BLOOD_GROUP_TO_UI, BLOOD_GROUP_TO_DB } from "../constants";
 
 export interface TeacherFormData {
@@ -7,6 +11,9 @@ export interface TeacherFormData {
   department: string;
   faculty: string;
   officeRoom: string;
+  advisoryBatch: string;
+  dayOff: string;
+  consultationSlots: ConsultationSlot[];
   consultationHours: string;
   phoneNumber: string;
   bloodGroup: string;
@@ -26,6 +33,9 @@ export function useTeacherProfileForm(
     department: "",
     faculty: "",
     officeRoom: "",
+    advisoryBatch: "",
+    dayOff: "",
+    consultationSlots: [],
     consultationHours: "",
     phoneNumber: "",
     bloodGroup: "",
@@ -58,11 +68,45 @@ export function useTeacherProfileForm(
       });
     }
 
+    let slots: ConsultationSlot[] = [];
+    if (
+      Array.isArray((profile as any).consultationSlots) &&
+      (profile as any).consultationSlots.length > 0
+    ) {
+      slots = (profile as any).consultationSlots.map((s: any) => ({
+        day: s.day || "Sunday",
+        startTime: s.startTime || "",
+        endTime: s.endTime || "",
+      }));
+    } else if (
+      (profile as any).consultationHours &&
+      typeof (profile as any).consultationHours === "string"
+    ) {
+      const parts = (profile as any).consultationHours.split(",");
+      parts.forEach((p: string) => {
+        const [dayPart, timePart] = p.split(":");
+        if (dayPart && timePart) {
+          const times = timePart.split("-");
+          slots.push({
+            day: dayPart.trim(),
+            startTime: times[0]?.trim() || "",
+            endTime: times[1]?.trim() || "",
+          });
+        }
+      });
+    }
+
     setFormData({
       designation: profile.designation || "",
       department: profile.department || "",
       faculty: profile.faculty || "",
       officeRoom: profile.roomNumber || (profile as any).officeRoom || (profile as any).roomNo || "",
+      advisoryBatch:
+        profile.advisoryBatch !== null && profile.advisoryBatch !== undefined
+          ? String(profile.advisoryBatch)
+          : "",
+      dayOff: profile.dayOff || "",
+      consultationSlots: slots,
       consultationHours: (profile as any).consultationHours || (profile as any).officeHours || "",
       phoneNumber: profile.phoneNumber || profile.phone || "",
       bloodGroup: profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] || "" : "",
@@ -83,6 +127,33 @@ export function useTeacherProfileForm(
     },
     []
   );
+
+  const addConsultationSlot = useCallback((slot: ConsultationSlot) => {
+    setFormData((prev) => ({
+      ...prev,
+      consultationSlots: [...prev.consultationSlots, slot],
+    }));
+  }, []);
+
+  const updateConsultationSlot = useCallback(
+    (index: number, slotUpdates: Partial<ConsultationSlot>) => {
+      setFormData((prev) => {
+        const next = [...prev.consultationSlots];
+        if (next[index]) {
+          next[index] = { ...next[index], ...slotUpdates };
+        }
+        return { ...prev, consultationSlots: next };
+      });
+    },
+    []
+  );
+
+  const removeConsultationSlot = useCallback((index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      consultationSlots: prev.consultationSlots.filter((_, i) => i !== index),
+    }));
+  }, []);
 
   const addExpertise = useCallback(
     (field: string) => {
@@ -158,11 +229,25 @@ export function useTeacherProfileForm(
       payload.roomNo = cleanRoom;
     }
 
-    const cleanHours = formData.consultationHours.trim();
-    const currentHours = (profile as any)?.consultationHours || (profile as any)?.officeHours || "";
-    if (cleanHours !== currentHours) {
-      payload.consultationHours = cleanHours;
+    const cleanBatch = formData.advisoryBatch.trim();
+    const batchNum = cleanBatch ? parseInt(cleanBatch, 10) : null;
+    const currentBatch = profile.advisoryBatch ?? null;
+    if (batchNum !== currentBatch) {
+      payload.advisoryBatch = isNaN(batchNum as number) ? null : batchNum;
     }
+
+    const cleanDayOff = formData.dayOff.trim();
+    if (cleanDayOff !== (profile.dayOff || "")) {
+      payload.dayOff = cleanDayOff;
+    }
+
+    // Consultation slots & formatted hours string
+    payload.consultationSlots = formData.consultationSlots;
+    const formattedHours = formData.consultationSlots
+      .filter((s) => s.day && (s.startTime || s.endTime))
+      .map((s) => `${s.day}: ${s.startTime || "TBD"} - ${s.endTime || "TBD"}`)
+      .join(", ");
+    payload.consultationHours = formattedHours || (formData.consultationHours.trim() || undefined);
 
     const cleanPhone = formData.phoneNumber.trim();
     if (cleanPhone !== (profile.phoneNumber || profile.phone || "")) {
@@ -215,6 +300,9 @@ export function useTeacherProfileForm(
     setIsEditing,
     formData,
     updateField,
+    addConsultationSlot,
+    updateConsultationSlot,
+    removeConsultationSlot,
     addExpertise,
     removeExpertise,
     addQualification,

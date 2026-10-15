@@ -81,6 +81,9 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
     setIsEditing,
     formData,
     updateField,
+    addConsultationSlot,
+    updateConsultationSlot,
+    removeConsultationSlot,
     addExpertise,
     removeExpertise,
     addQualification,
@@ -168,13 +171,18 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           designation={formData.designation}
           department={formData.department}
           officeRoom={formData.officeRoom}
+          advisoryBatch={formData.advisoryBatch}
+          dayOff={formData.dayOff}
+          consultationSlots={formData.consultationSlots}
           consultationHours={formData.consultationHours}
           onChangeDesignation={(val) => updateField("designation", val)}
           onChangeDepartment={(val) => updateField("department", val)}
           onChangeOfficeRoom={(val) => updateField("officeRoom", val)}
-          onChangeConsultationHours={(val) =>
-            updateField("consultationHours", val)
-          }
+          onChangeAdvisoryBatch={(val) => updateField("advisoryBatch", val)}
+          onChangeDayOff={(val) => updateField("dayOff", val)}
+          onAddConsultationSlot={addConsultationSlot}
+          onUpdateConsultationSlot={updateConsultationSlot}
+          onRemoveConsultationSlot={removeConsultationSlot}
         />
 
         {/* 3. Professional Expertise Card */}
