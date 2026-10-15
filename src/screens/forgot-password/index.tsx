@@ -77,6 +77,16 @@ export function ForgotPassword() {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid Email",
+        text2: "Please enter a valid email address.",
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -99,10 +109,14 @@ export function ForgotPassword() {
         params: { email: trimmedEmail },
       });
     } catch (error: any) {
+      const msg = error?.message || "Failed to send reset code. Please try again.";
+      const isNotFound = msg.toLowerCase().includes("no account found");
+
       Toast.show({
         type: "error",
-        text1: "Request Failed",
-        text2: error?.message || "Failed to send reset link. Please try again.",
+        text1: isNotFound ? "Account Not Found" : "Request Failed",
+        text2: msg,
+        visibilityTime: 4500,
       });
     } finally {
       setIsSubmitting(false);

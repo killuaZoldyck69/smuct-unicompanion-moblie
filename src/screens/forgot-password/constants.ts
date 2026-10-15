@@ -6,7 +6,7 @@ export const FORGOT_PASSWORD_STRINGS = {
   EMAIL_PLACEHOLDER: "student@smuct.edu.bd",
   BUTTON_TEXT: "Send Reset Link",
   REMEMBER_PASSWORD: "Remember your password? ",
-  SIGN_IN: "Sign In",
+  SIGN_IN: "Login",
 };
 
 export const FORGOT_PASSWORD_COLORS = {
