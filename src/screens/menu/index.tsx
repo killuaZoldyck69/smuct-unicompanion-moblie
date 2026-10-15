@@ -26,14 +26,15 @@ export {
 } from "./constants";
 
 // ─────────────────────────────────────────────────────────────
-// Category ordering — academic first, admin last
+// Category ordering — academic first for student/faculty, admin first for admin
 // ─────────────────────────────────────────────────────────────
-const CATEGORY_ORDER = ["ACADEMIC", "CAMPUS", "SUPPORT", "ADMIN"] as const;
+const DEFAULT_CATEGORY_ORDER = ["ACADEMIC", "CAMPUS", "SUPPORT", "ADMIN"] as const;
 
-type CategoryKey = (typeof CATEGORY_ORDER)[number];
+type CategoryKey = (typeof DEFAULT_CATEGORY_ORDER)[number];
 
 function groupByCategory(
   items: MenuItemConfig[],
+  categoryOrder: readonly CategoryKey[] = DEFAULT_CATEGORY_ORDER,
 ): Array<{ category: CategoryKey; items: MenuItemConfig[] }> {
   const map = new Map<CategoryKey, MenuItemConfig[]>();
   for (const item of items) {
@@ -42,7 +43,7 @@ function groupByCategory(
     map.get(key)!.push(item);
   }
 
-  return CATEGORY_ORDER.filter((k) => map.has(k)).map((k) => ({
+  return categoryOrder.filter((k) => map.has(k)).map((k) => ({
     category: k,
     items: map.get(k)!,
   }));
@@ -211,12 +212,20 @@ export function Menu() {
         ? "Faculty Tools"
         : "Student Services";
 
+  // Category ordering — for ADMIN, show ADMINISTRATION first!
+  const categoryOrder = useMemo(() => {
+    if (userRole === "ADMIN") {
+      return ["ADMIN", "ACADEMIC", "CAMPUS", "SUPPORT"] as const;
+    }
+    return DEFAULT_CATEGORY_ORDER;
+  }, [userRole]);
+
   // Filter by role then group by category
   const sections = useMemo(() => {
     const role = userRole || "STUDENT";
     const filtered = ALL_MENU_ITEMS.filter((item) => item.roles.includes(role));
-    return groupByCategory(filtered);
-  }, [userRole]);
+    return groupByCategory(filtered, categoryOrder);
+  }, [userRole, categoryOrder]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -242,7 +251,7 @@ export function Menu() {
             />
 
             {/* Feature Cards */}
-            {section.category === "ACADEMIC" ? (
+            {section.category === "ACADEMIC" && userRole !== "ADMIN" ? (
               <AcademicGridSection items={section.items} />
             ) : (
               <GridSection items={section.items} />
