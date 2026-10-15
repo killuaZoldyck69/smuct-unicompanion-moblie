@@ -69,6 +69,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── Academic Calendar: calendar grid ─────────────────────
     case "academic_calendar":
+    case "manage_calendar":
       return (
         <View style={d.wrap} pointerEvents="none">
           {/* Calendar header bar */}
@@ -90,6 +91,18 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
               />
             ))
           )}
+        </View>
+      );
+
+    // ── Faculty Directory: rolodex / contact directory card ──
+    case "faculty_directory":
+      return (
+        <View style={d.wrap} pointerEvents="none">
+          <View style={[d.dirCard, { borderColor: c, opacity: 0.13 }]} />
+          <View style={[d.dirAvatar, { borderColor: c, opacity: 0.18 }]} />
+          <View style={[d.dirLine1, { backgroundColor: c, opacity: 0.18 }]} />
+          <View style={[d.dirLine2, { backgroundColor: c, opacity: 0.13 }]} />
+          <View style={[d.dirLine3, { backgroundColor: c, opacity: 0.1 }]} />
         </View>
       );
 
@@ -149,6 +162,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── Noticeboard: bell + wave arcs ────────────────────────
     case "noticeboard":
+    case "upload_notice":
       return (
         <View style={d.wrap} pointerEvents="none">
           {[48, 34, 20].map((size, i) => (
@@ -174,6 +188,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── Bus Schedule: road path arcs ─────────────────────────
     case "bus_schedule":
+    case "manage_buses":
       return (
         <View style={d.wrap} pointerEvents="none">
           {/* Road curve */}
@@ -191,6 +206,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── Campus Events: star + concentric rings ────────────────
     case "campus_events":
+    case "upload_event":
       return (
         <View style={d.wrap} pointerEvents="none">
           {[56, 40, 24].map((size, i) => (
@@ -217,6 +233,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── Campus Forum: chat speech bubbles ────────────────────
     case "campus_forum":
+    case "manage_forum":
       return (
         <View style={d.wrap} pointerEvents="none">
           {/* Large bubble */}
@@ -234,6 +251,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── Book Field: sports field lines ───────────────────────
     case "field_booking":
+    case "admin_field_booking":
       return (
         <View style={d.wrap} pointerEvents="none">
           {/* Outer field boundary */}
@@ -247,6 +265,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── Blood Aid: drop shape ─────────────────────────────────
     case "blood_donation":
+    case "manage_blood":
       return (
         <View style={d.wrap} pointerEvents="none">
           {/* Large soft drop/blob */}
@@ -263,6 +282,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── Alumni Network: connected nodes ──────────────────────
     case "alumni":
+    case "admin_alumni":
       return (
         <View style={d.wrap} pointerEvents="none">
           {/* Node circles */}
@@ -296,6 +316,7 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
 
     // ── My Complaints: document / form lines ─────────────────
     case "complaints":
+    case "admin_complaints":
       return (
         <View style={d.wrap} pointerEvents="none">
           {/* Document outline */}
@@ -310,6 +331,44 @@ const CardBgDecoration = React.memo(function CardBgDecoration({
               ]}
             />
           ))}
+        </View>
+      );
+
+    // ── Admin Users: user hierarchy / profile card badge ─────
+    case "admin_users":
+      return (
+        <View style={d.wrap} pointerEvents="none">
+          <View style={[d.userCardBack, { borderColor: c, opacity: 0.08 }]} />
+          <View style={[d.userCardFront, { borderColor: c, opacity: 0.15 }]} />
+          <View style={[d.userAvatarDot, { backgroundColor: c, opacity: 0.22 }]} />
+          <View style={[d.userShoulderArc, { borderColor: c, opacity: 0.16 }]} />
+          <View style={[d.userBadgeDot, { backgroundColor: c, opacity: 0.25 }]} />
+        </View>
+      );
+
+    // ── Admin System Monitor: server rack & telemetry pulse wave ─
+    case "admin_system_monitor":
+      return (
+        <View style={d.wrap} pointerEvents="none">
+          <View style={[d.serverRack1, { borderColor: c, opacity: 0.14 }]} />
+          <View style={[d.serverRack2, { borderColor: c, opacity: 0.12 }]} />
+          <View style={[d.serverLed1, { backgroundColor: c, opacity: 0.3 }]} />
+          <View style={[d.serverLed2, { backgroundColor: c, opacity: 0.2 }]} />
+          <View style={[d.pulseLineFlat, { backgroundColor: c, opacity: 0.15 }]} />
+          <View style={[d.pulseSpikeUp, { backgroundColor: c, opacity: 0.22 }]} />
+          <View style={[d.pulseSpikeDown, { backgroundColor: c, opacity: 0.22 }]} />
+        </View>
+      );
+
+    // ── Admin Add Faculty: faculty credential badge + circled plus ──
+    case "admin_add_teacher":
+      return (
+        <View style={d.wrap} pointerEvents="none">
+          <View style={[d.facultyCard, { borderColor: c, opacity: 0.12 }]} />
+          <View style={[d.facultyLanyardNotch, { backgroundColor: c, opacity: 0.16 }]} />
+          <View style={[d.plusCircle, { borderColor: c, opacity: 0.2 }]} />
+          <View style={[d.plusBarH, { backgroundColor: c, opacity: 0.25 }]} />
+          <View style={[d.plusBarV, { backgroundColor: c, opacity: 0.25 }]} />
         </View>
       );
 
@@ -571,6 +630,203 @@ const d = StyleSheet.create({
     borderWidth: 1.5,
   },
   docLine: { position: "absolute", left: 8, height: 1.5, borderRadius: 1 },
+
+  // faculty_directory — rolodex contact card
+  dirCard: {
+    position: "absolute",
+    bottom: -6,
+    right: 2,
+    width: 44,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  dirAvatar: {
+    position: "absolute",
+    top: 8,
+    left: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1.5,
+  },
+  dirLine1: {
+    position: "absolute",
+    top: 10,
+    left: 24,
+    width: 14,
+    height: 2,
+    borderRadius: 1,
+  },
+  dirLine2: {
+    position: "absolute",
+    top: 16,
+    left: 24,
+    width: 10,
+    height: 2,
+    borderRadius: 1,
+  },
+  dirLine3: {
+    position: "absolute",
+    top: 28,
+    left: 6,
+    width: 32,
+    height: 2,
+    borderRadius: 1,
+  },
+
+  // admin_users — user hierarchy / profile card badge
+  userCardBack: {
+    position: "absolute",
+    bottom: 8,
+    right: 18,
+    width: 36,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  userCardFront: {
+    position: "absolute",
+    bottom: -8,
+    right: 4,
+    width: 38,
+    height: 46,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  userAvatarDot: {
+    position: "absolute",
+    bottom: 22,
+    right: 18,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  userShoulderArc: {
+    position: "absolute",
+    bottom: 8,
+    right: 12,
+    width: 22,
+    height: 12,
+    borderTopLeftRadius: 11,
+    borderTopRightRadius: 11,
+    borderWidth: 1.5,
+    borderBottomWidth: 0,
+  },
+  userBadgeDot: {
+    position: "absolute",
+    bottom: 24,
+    right: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+
+  // admin_system_monitor — server rack & telemetry pulse wave
+  serverRack1: {
+    position: "absolute",
+    bottom: 26,
+    right: 2,
+    width: 46,
+    height: 12,
+    borderRadius: 3,
+    borderWidth: 1.5,
+  },
+  serverRack2: {
+    position: "absolute",
+    bottom: 10,
+    right: 2,
+    width: 46,
+    height: 12,
+    borderRadius: 3,
+    borderWidth: 1.5,
+  },
+  serverLed1: {
+    position: "absolute",
+    bottom: 30,
+    right: 7,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  serverLed2: {
+    position: "absolute",
+    bottom: 14,
+    right: 7,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  pulseLineFlat: {
+    position: "absolute",
+    bottom: 4,
+    right: 0,
+    width: 50,
+    height: 1.5,
+    borderRadius: 1,
+  },
+  pulseSpikeUp: {
+    position: "absolute",
+    bottom: 4,
+    right: 22,
+    width: 2,
+    height: 14,
+    borderRadius: 1,
+    transform: [{ rotate: "18deg" }],
+  },
+  pulseSpikeDown: {
+    position: "absolute",
+    bottom: -1,
+    right: 18,
+    width: 2,
+    height: 12,
+    borderRadius: 1,
+    transform: [{ rotate: "-22deg" }],
+  },
+
+  // admin_add_teacher — faculty credential badge + circled plus
+  facultyCard: {
+    position: "absolute",
+    bottom: -8,
+    right: 6,
+    width: 42,
+    height: 50,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  facultyLanyardNotch: {
+    position: "absolute",
+    top: 6,
+    right: 20,
+    width: 14,
+    height: 3,
+    borderRadius: 1.5,
+  },
+  plusCircle: {
+    position: "absolute",
+    bottom: 6,
+    right: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+  },
+  plusBarH: {
+    position: "absolute",
+    bottom: 16,
+    right: 17,
+    width: 12,
+    height: 2,
+    borderRadius: 1,
+  },
+  plusBarV: {
+    position: "absolute",
+    bottom: 11,
+    right: 22,
+    width: 2,
+    height: 12,
+    borderRadius: 1,
+  },
 
   // default fallback
   defRing1: {

@@ -17,6 +17,8 @@ const TAB_ICONS = {
   menu: require("@/assets/tab-icons/main-menu.png"),
   group: require("@/assets/tab-icons/group.png"),
   user: require("@/assets/tab-icons/user.png"),
+  userManagement: require("@/assets/icons/user-management.png"),
+  addFaculty: require("@/assets/icons/add-teacher.png"),
 } as const;
 
 interface TabBarIconProps {
@@ -28,20 +30,22 @@ interface TabBarIconProps {
 const TabIcon = React.memo(function TabIcon({
   source,
   focused,
-  size = 25,
+  size = 24,
 }: TabBarIconProps) {
   return (
     <View style={styles.tabIconWrapper}>
-      <Image
-        source={source}
-        style={{
-          width: size,
-          height: size,
-          opacity: focused ? 1 : 0.55,
-          transform: [{ scale: focused ? 1.08 : 1 }],
-        }}
-        resizeMode="contain"
-      />
+      <View style={styles.iconBox}>
+        <Image
+          source={source}
+          style={{
+            width: size,
+            height: size,
+            opacity: focused ? 1 : 0.55,
+            transform: [{ scale: focused ? 1.08 : 1 }],
+          }}
+          resizeMode="contain"
+        />
+      </View>
       <View
         style={[
           styles.activeIndicator,
@@ -112,7 +116,7 @@ export default function TabsLayout() {
           title: "Home",
           tabBarAccessibilityLabel: "Home tab",
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={TAB_ICONS.home} focused={focused} />
+            <TabIcon source={TAB_ICONS.home} focused={focused} size={22} />
           ),
         }}
       />
@@ -125,7 +129,7 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: "Course hubs tab",
           href: userRole === "ADMIN" ? null : "/(tabs)/hubs",
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={TAB_ICONS.lecture} focused={focused} />
+            <TabIcon source={TAB_ICONS.lecture} focused={focused} size={22} />
           ),
         }}
       />
@@ -136,7 +140,7 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: "Manage users tab",
           href: userRole === "ADMIN" ? "/(tabs)/admin_users" : null,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={TAB_ICONS.group} focused={focused} />
+            <TabIcon source={TAB_ICONS.userManagement} focused={focused} size={24} />
           ),
         }}
       />
@@ -167,7 +171,7 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* 4. FORUM (Student & Teacher) / ADD TEACHER (Admin) */}
+      {/* 4. FORUM (Student & Teacher) / ADD FACULTY (Admin) */}
       <Tabs.Screen
         name="forum/index"
         options={{
@@ -175,7 +179,7 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: "Discussions forum tab",
           href: userRole === "ADMIN" ? null : "/(tabs)/forum",
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={TAB_ICONS.group} focused={focused} />
+            <TabIcon source={TAB_ICONS.group} focused={focused} size={22} />
           ),
         }}
       />
@@ -186,11 +190,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="admin_add_teacher"
         options={{
-          title: "Add Staff",
+          title: "Add Faculty",
           tabBarAccessibilityLabel: "Add faculty staff tab",
           href: userRole === "ADMIN" ? "/(tabs)/admin_add_teacher" : null,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={TAB_ICONS.lecture} focused={focused} />
+            <TabIcon source={TAB_ICONS.addFaculty} focused={focused} size={23} />
           ),
         }}
       />
@@ -202,7 +206,7 @@ export default function TabsLayout() {
           title: "Profile",
           tabBarAccessibilityLabel: "User profile tab",
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={TAB_ICONS.user} focused={focused} />
+            <TabIcon source={TAB_ICONS.user} focused={focused} size={26} />
           ),
         }}
       />
@@ -236,6 +240,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  iconBox: {
+    width: 32,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   activeIndicator: {
     width: 4,
     height: 4,
@@ -262,7 +272,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.05 }],
   },
   centerIconImage: {
-    width: 25,
-    height: 25,
+    width: 28,
+    height: 28,
   },
 });

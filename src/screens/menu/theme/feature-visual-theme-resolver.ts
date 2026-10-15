@@ -145,8 +145,17 @@ const FEATURE_OVERRIDES: Record<string, FeatureOverride> = {
     iconBackground: "#fff7ed",
     patternType: "lines",
   },
+  faculty_directory: {
+    icon: "users",
+    accentColor: "#4f46e5",
+    iconBackground: "#eef2ff",
+    patternType: "lines",
+  },
 
   // ─ Admin ─
+  admin_users: { icon: "users", patternType: "grid" },
+  admin_system_monitor: { icon: "activity", patternType: "lines" },
+  admin_add_teacher: { icon: "user-plus", patternType: "rings" },
   admin_complaints: { icon: "inbox", patternType: "lines" },
   admin_alumni: { icon: "database", patternType: "dots" },
   admin_field_booking: { icon: "check-square", patternType: "grid" },
