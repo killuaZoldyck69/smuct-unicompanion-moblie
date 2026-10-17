@@ -22,6 +22,8 @@ interface OfficeAvailabilitySectionProps {
   onOpenSlotModal: () => void;
   onRemoveSlot: (id: string) => void;
   onOpenBatchModal?: () => void;
+  onFocusBatch?: () => void;
+  onBlurBatch?: () => void;
 }
 
 export const OfficeAvailabilitySection = React.memo(
@@ -33,6 +35,8 @@ export const OfficeAvailabilitySection = React.memo(
     setIsExpanded,
     onOpenSlotModal,
     onRemoveSlot,
+    onFocusBatch,
+    onBlurBatch,
   }: OfficeAvailabilitySectionProps) {
     return (
       <View style={styles.card}>
@@ -62,7 +66,7 @@ export const OfficeAvailabilitySection = React.memo(
             </View>
             <Feather
               name={isExpanded ? "chevron-up" : "chevron-down"}
-              size={20}
+              size={18}
               color={FACULTY_COLORS.officeIconColor}
             />
           </View>
@@ -98,7 +102,7 @@ export const OfficeAvailabilitySection = React.memo(
                 accessibilityRole="button"
                 accessibilityLabel="Select official day off"
               >
-                <Text style={styles.miniLabel}>OFFICIAL DAY OFF</Text>
+                <Text style={styles.miniLabel}>DAY OFF</Text>
                 <Text
                   style={[
                     styles.boxValueText,
@@ -184,6 +188,8 @@ export const OfficeAvailabilitySection = React.memo(
                   }
                   keyboardType="numeric"
                   maxLength={10}
+                  onFocus={onFocusBatch}
+                  onBlur={onBlurBatch}
                   accessible={true}
                   accessibilityLabel="Assigned advisory batch"
                 />
@@ -229,9 +235,9 @@ const styles = StyleSheet.create({
     color: FACULTY_COLORS.textPrimary,
   },
   headerRight: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "center",
+    gap: 4,
   },
   badge: {
     backgroundColor: FACULTY_COLORS.officeBadgeBg,
@@ -240,7 +246,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.officeBadgeText,
     letterSpacing: 0.4,
@@ -310,7 +316,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addSlotBtnText: {
-    fontSize: 12,
+    fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.officeIconColor,
   },

@@ -162,10 +162,10 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
 
   // Filtered departments based on selected faculty
   const departmentOptions = useMemo(() => {
-    let progs = universityPrograms;
-    if (formData.faculty) {
-      progs = progs.filter((p) => p.faculty === formData.faculty);
+    if (!formData.faculty) {
+      return [];
     }
+    const progs = universityPrograms.filter((p) => p.faculty === formData.faculty);
     const deps = progs.map((p) => p.department || cleanDepartmentName(p.name));
     return Array.from(new Set(deps)).filter(Boolean).sort();
   }, [formData.faculty]);
@@ -217,11 +217,26 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
       } else if (activeSelector === "designation") {
         updateField("designation", value);
       } else if (activeSelector === "dayOff") {
-        updateField("dayOff", value);
+        updateField("dayOff", formData.dayOff === value ? "" : value);
       }
       setActiveSelector(null);
     },
-    [activeSelector, formData.faculty, updateField]
+    [activeSelector, formData.faculty, formData.dayOff, updateField],
+  );
+
+  const openSelector = useCallback(
+    (type: SelectorType) => {
+      if (type === "department" && !formData.faculty) {
+        Toast.show({
+          type: "info",
+          text1: "Faculty Required",
+          text2: "Please select a faculty first to choose its department.",
+        });
+        return;
+      }
+      setActiveSelector(type);
+    },
+    [formData.faculty]
   );
 
   const closeSelectorModal = useCallback(() => {
@@ -293,6 +308,8 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
 
   // Form Submission
   const handleSubmit = useCallback(async () => {
+    if (isLoading) return;
+
     const trimmedTeacherId = formData.teacherId.trim();
     const trimmedName = formData.name.trim();
     const trimmedEmail = formData.email.trim();
@@ -400,7 +417,7 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
         text2: `${trimmedName} registered successfully.`,
       });
 
-      // Clear form and reset password customization flag
+      // 1. Fully clear all form fields and section states upon successful creation
       isPasswordCustomized.current = false;
       setFormData({
         teacherId: "",
@@ -418,14 +435,27 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
         qualifications: [],
         linkedInUrl: "",
       });
+      setShowPassword(false);
+      setIsAvailabilityExpanded(false);
+      setIsProfileExpanded(false);
+      setActiveSelector(null);
+      setIsSlotModalOpen(false);
+      setIsQualModalOpen(false);
+      setIsExpertiseModalOpen(false);
+      setIsBatchModalOpen(false);
 
       timerRef.current = setTimeout(() => {
         router.back();
       }, 1500);
     } catch (error: any) {
+      // NOTE: Form inputs and expanded section states are strictly preserved on error
+      // so the administrator does NOT lose any data and can simply fix the error.
       const status = error.response?.status;
+      const firstErrorSource = error.response?.data?.errorSources?.[0]?.message;
       const backendMessage =
-        error.response?.data?.message || error.response?.data?.error;
+        firstErrorSource ||
+        error.response?.data?.message ||
+        error.response?.data?.error;
 
       if (status === 409) {
         Toast.show({
@@ -433,6 +463,14 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
           text1: "Account Already Exists",
           text2:
             backendMessage || "This Email or Teacher ID is already registered.",
+        });
+      } else if (status === 401 || status === 403) {
+        Toast.show({
+          type: "error",
+          text1: "Unauthorized Action",
+          text2:
+            backendMessage ||
+            "You do not have administrative permission to create faculty accounts.",
         });
       } else {
         Toast.show({
@@ -445,7 +483,7 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, router]);
+  }, [formData, router, isLoading]);
 
   return {
     formData,
@@ -454,7 +492,7 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
     setShowPassword,
     isLoading,
     activeSelector,
-    setActiveSelector,
+    setActiveSelector: openSelector,
     selectorModalVisible: activeSelector !== null,
     selectorOptions,
     selectorTitle,

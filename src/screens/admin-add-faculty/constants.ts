@@ -82,8 +82,6 @@ export const DESIGNATIONS = [
   "Associate Professor",
   "Professor",
   "Adjunct Faculty",
-  "Dean",
-  "Head of Department (HoD)",
 ];
 
 export const DAYS_OF_WEEK = [
@@ -97,9 +95,11 @@ export const DAYS_OF_WEEK = [
 ];
 
 export const COMMON_DAY_OFF_OPTIONS = [
-  "Thursday (Rest day)",
-  "Friday (Rest day)",
-  "Saturday (Rest day)",
-  "Sunday (Rest day)",
-  "None",
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
 ];

@@ -7,7 +7,7 @@ export interface ConsultationSlot {
 
 export interface Qualification {
   id: string;
-  degree: string;
+  degree?: string;
   field: string;
   institution: string;
 }

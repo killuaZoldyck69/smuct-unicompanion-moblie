@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -32,6 +33,61 @@ export function AdminAddFacultyScreen() {
   const insets = useSafeAreaInsets();
   const { role, isPending, isAuthenticated } = useCurrentUser();
   const form = useAddFacultyForm();
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const isBottomInputFocusedRef = useRef(false);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const height = e.endCoordinates.height;
+      setKeyboardHeight(height);
+      if (isBottomInputFocusedRef.current) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 80);
+      }
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const handleFocusLink = useCallback(() => {
+    isBottomInputFocusedRef.current = true;
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 300);
+  }, []);
+
+  const handleBlurLink = useCallback(() => {
+    isBottomInputFocusedRef.current = false;
+  }, []);
+
+  const handleFocusBatch = useCallback(() => {
+    isBottomInputFocusedRef.current = true;
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  }, []);
+
+  const handleBlurBatch = useCallback(() => {
+    isBottomInputFocusedRef.current = false;
+  }, []);
 
   // Admin authorization guard
   useEffect(() => {
@@ -77,12 +133,17 @@ export function AdminAddFacultyScreen() {
         style={styles.keyboardContainer}
       >
         <ScrollView
+          ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingBottom: Math.max(insets.bottom + 120, 140),
+              paddingBottom:
+                keyboardHeight > 0
+                  ? keyboardHeight + 120
+                  : Math.max(insets.bottom + 120, 140),
             },
           ]}
         >
@@ -113,6 +174,8 @@ export function AdminAddFacultyScreen() {
             setIsExpanded={form.setIsAvailabilityExpanded}
             onOpenSlotModal={() => form.setIsSlotModalOpen(true)}
             onRemoveSlot={form.removeConsultationSlot}
+            onFocusBatch={handleFocusBatch}
+            onBlurBatch={handleBlurBatch}
           />
 
           {/* 5. Academic Profile Card (Optional) */}
@@ -125,6 +188,8 @@ export function AdminAddFacultyScreen() {
             onRemoveExpertise={form.removeExpertiseField}
             onOpenQualModal={() => form.setIsQualModalOpen(true)}
             onRemoveQual={form.removeQualification}
+            onFocusLink={handleFocusLink}
+            onBlurLink={handleBlurLink}
           />
 
           {/* 6. Primary Action Button: Create Faculty Account */}
@@ -162,6 +227,7 @@ export function AdminAddFacultyScreen() {
         selectedValue={currentSelectorValue}
         onSelect={form.handleSelectOption}
         onClose={form.closeSelectorModal}
+        hideSearch={form.activeSelector === "dayOff" || form.activeSelector === "designation"}
       />
 
       {/* Add Consultation Slot Modal */}

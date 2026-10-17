@@ -183,7 +183,7 @@ export const AccountDetailsSection = React.memo(function AccountDetailsSection({
                 size={11}
                 color={FACULTY_COLORS.accountBadgeText}
               />
-              <Text style={styles.autoFillBadgeText}>Auto-generate</Text>
+              <Text style={styles.autoFillBadgeText}>Auto-Generate</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -205,7 +205,7 @@ export const AccountDetailsSection = React.memo(function AccountDetailsSection({
           />
           <TextInput
             style={styles.input}
-            placeholder="Min 8 chars (e.g. 0123@Doe)"
+            placeholder="e.g. 0123@Doe"
             placeholderTextColor={FACULTY_COLORS.textMuted}
             value={formData.password}
             onChangeText={(text) => updateField("password", text)}
@@ -244,7 +244,8 @@ export const AccountDetailsSection = React.memo(function AccountDetailsSection({
           style={styles.infoIcon}
         />
         <Text style={styles.infoText}>
-          Auto-fills with: Last 4 digits of ID + @ + last 3 characters of last name (e.g. 0123@Doe). Can be changed anytime.
+          Auto-fills with: Last 4 digits of ID + @ + last 3 characters of last
+          name (e.g. 0123@Doe). Can be changed anytime.
         </Text>
       </View>
     </View>
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.accountBadgeText,
     letterSpacing: 0.4,
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   autoFillBadgeText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.accountBadgeText,
     letterSpacing: 0.3,

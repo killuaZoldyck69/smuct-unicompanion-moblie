@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import { FACULTY_COLORS } from "../constants";
 import { AddFacultyFormData, SelectorType } from "../types";
 
@@ -14,6 +15,18 @@ export const AcademicPositionSection = React.memo(
     formData,
     setActiveSelector,
   }: AcademicPositionSectionProps) {
+    const handleDepartmentPress = () => {
+      if (!formData.faculty) {
+        Toast.show({
+          type: "info",
+          text1: "Faculty Required",
+          text2: "Please select a faculty first to choose its department.",
+        });
+        return;
+      }
+      setActiveSelector("department");
+    };
+
     return (
       <View style={styles.card}>
         {/* Section Header */}
@@ -75,8 +88,12 @@ export const AcademicPositionSection = React.memo(
             Department <Text style={styles.requiredAsterisk}>*</Text>
           </Text>
           <TouchableOpacity
-            style={styles.selectorWrapper}
-            onPress={() => setActiveSelector("department")}
+            style={[
+              styles.selectorWrapper,
+              !formData.faculty && styles.selectorWrapperDisabled,
+            ]}
+            onPress={handleDepartmentPress}
+            activeOpacity={formData.faculty ? 0.7 : 0.9}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Select Department"
@@ -84,26 +101,47 @@ export const AcademicPositionSection = React.memo(
             <Feather
               name="home"
               size={18}
-              color={FACULTY_COLORS.academicIconColor}
+              color={
+                formData.faculty
+                  ? FACULTY_COLORS.academicIconColor
+                  : FACULTY_COLORS.textMuted
+              }
               style={styles.fieldIcon}
             />
             <Text
               style={[
                 styles.selectorText,
                 !formData.department && styles.placeholderText,
+                !formData.faculty && styles.disabledText,
               ]}
               numberOfLines={1}
             >
-              {formData.department || "Select Department"}
+              {formData.department ||
+                (formData.faculty
+                  ? "Select Department"
+                  : "Select Faculty first")}
             </Text>
             <Feather
               name="chevron-down"
               size={18}
-              color={FACULTY_COLORS.academicIconColor}
+              color={
+                formData.faculty
+                  ? FACULTY_COLORS.academicIconColor
+                  : FACULTY_COLORS.textMuted
+              }
             />
           </TouchableOpacity>
           {!formData.faculty && (
-            <Text style={styles.helperText}>Choose a faculty first</Text>
+            <View style={styles.helperRow}>
+              <Feather
+                name="info"
+                size={13}
+                color={FACULTY_COLORS.academicHelperText}
+              />
+              <Text style={styles.helperText}>
+                Please select a faculty first to choose a department
+              </Text>
+            </View>
           )}
         </View>
 
@@ -186,7 +224,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.academicBadgeText,
     letterSpacing: 0.4,
@@ -227,11 +265,24 @@ const styles = StyleSheet.create({
     color: FACULTY_COLORS.textMuted,
     fontWeight: "400",
   },
+  selectorWrapperDisabled: {
+    backgroundColor: "#F8FAFC",
+    borderColor: "#E2E8F0",
+    opacity: 0.8,
+  },
+  disabledText: {
+    color: FACULTY_COLORS.textMuted,
+  },
+  helperRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+    marginLeft: 2,
+  },
   helperText: {
     fontSize: 12,
     color: FACULTY_COLORS.academicHelperText,
-    marginTop: 6,
-    marginLeft: 2,
     fontWeight: "500",
   },
 });

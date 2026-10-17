@@ -23,6 +23,7 @@ interface SelectionModalProps {
   selectedValue: string;
   onSelect: (value: string) => void;
   onClose: () => void;
+  hideSearch?: boolean;
 }
 
 export const SelectionModal = React.memo(function SelectionModal({
@@ -32,6 +33,7 @@ export const SelectionModal = React.memo(function SelectionModal({
   selectedValue,
   onSelect,
   onClose,
+  hideSearch = false,
 }: SelectionModalProps) {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,7 +101,7 @@ export const SelectionModal = React.memo(function SelectionModal({
             </View>
 
             {/* Search bar if many options */}
-            {options.length > 5 && (
+            {!hideSearch && options.length > 8 && (
               <View style={styles.searchContainer}>
                 <Feather
                   name="search"

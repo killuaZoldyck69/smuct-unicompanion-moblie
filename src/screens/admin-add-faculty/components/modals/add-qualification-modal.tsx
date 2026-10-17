@@ -21,8 +21,6 @@ interface AddQualificationModalProps {
   onClose: () => void;
 }
 
-const COMMON_DEGREES = ["PhD", "M.Sc", "B.Sc", "M.Phil", "MBA", "MA", "BA"];
-
 export const AddQualificationModal = React.memo(
   function AddQualificationModal({
     visible,
@@ -30,16 +28,14 @@ export const AddQualificationModal = React.memo(
     onClose,
   }: AddQualificationModalProps) {
     const insets = useSafeAreaInsets();
-    const [degree, setDegree] = useState("PhD");
     const [field, setField] = useState("");
     const [institution, setInstitution] = useState("");
 
     const handleSave = () => {
-      if (!degree.trim() || !field.trim() || !institution.trim()) {
+      if (!field.trim() || !institution.trim()) {
         return;
       }
       onAdd({
-        degree: degree.trim(),
         field: field.trim(),
         institution: institution.trim(),
       });
@@ -101,43 +97,16 @@ export const AddQualificationModal = React.memo(
                 </TouchableOpacity>
               </View>
 
-              {/* Degree selector chips */}
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Degree Level</Text>
-                <View style={styles.degreeChips}>
-                  {COMMON_DEGREES.map((d) => (
-                    <TouchableOpacity
-                      key={d}
-                      style={[
-                        styles.degreeChip,
-                        degree === d && styles.degreeChipActive,
-                      ]}
-                      onPress={() => setDegree(d)}
-                      accessible={true}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Select ${d}`}
-                    >
-                      <Text
-                        style={[
-                          styles.degreeChipText,
-                          degree === d && styles.degreeChipTextActive,
-                        ]}
-                      >
-                        {d}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>Degree / Program Title</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. Ph.D. in Computer Science & Eng."
+                  placeholder="e.g. B.Sc. in Computer Science & Eng."
                   placeholderTextColor={FACULTY_COLORS.textMuted}
                   value={field}
                   onChangeText={setField}
+                  multiline={false}
+                  numberOfLines={1}
                 />
               </View>
 
@@ -145,10 +114,12 @@ export const AddQualificationModal = React.memo(
                 <Text style={styles.label}>Institution / University</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. Bangladesh Univ. of Eng. & Tech (BUET)"
+                  placeholder="e.g. BUET or University of Dhaka"
                   placeholderTextColor={FACULTY_COLORS.textMuted}
                   value={institution}
                   onChangeText={setInstitution}
+                  multiline={false}
+                  numberOfLines={1}
                 />
               </View>
 
@@ -232,31 +203,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
     marginBottom: 6,
-  },
-  degreeChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  degreeChip: {
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  degreeChipActive: {
-    backgroundColor: FACULTY_COLORS.profileBadgeBg,
-    borderWidth: 1,
-    borderColor: FACULTY_COLORS.profileIconColor,
-  },
-  degreeChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: FACULTY_COLORS.textSecondary,
-  },
-  degreeChipTextActive: {
-    color: FACULTY_COLORS.profileIconColor,
-    fontWeight: "700",
   },
   input: {
     backgroundColor: FACULTY_COLORS.inputBg,

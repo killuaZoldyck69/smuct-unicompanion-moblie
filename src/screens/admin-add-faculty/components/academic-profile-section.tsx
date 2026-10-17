@@ -22,6 +22,8 @@ interface AcademicProfileSectionProps {
   onRemoveExpertise: (field: string) => void;
   onOpenQualModal: () => void;
   onRemoveQual: (id: string) => void;
+  onFocusLink?: () => void;
+  onBlurLink?: () => void;
 }
 
 export const AcademicProfileSection = React.memo(
@@ -34,6 +36,8 @@ export const AcademicProfileSection = React.memo(
     onRemoveExpertise,
     onOpenQualModal,
     onRemoveQual,
+    onFocusLink,
+    onBlurLink,
   }: AcademicProfileSectionProps) {
     return (
       <View style={styles.card}>
@@ -63,7 +67,7 @@ export const AcademicProfileSection = React.memo(
             </View>
             <Feather
               name={isExpanded ? "chevron-up" : "chevron-down"}
-              size={20}
+              size={18}
               color={FACULTY_COLORS.profileIconColor}
             />
           </View>
@@ -136,7 +140,15 @@ export const AcademicProfileSection = React.memo(
                   {formData.qualifications.map((qual: Qualification) => (
                     <View key={qual.id} style={styles.qualCard}>
                       <View style={styles.qualBadge}>
-                        <Text style={styles.qualBadgeText}>{qual.degree}</Text>
+                        {qual.degree ? (
+                          <Text style={styles.qualBadgeText}>{qual.degree}</Text>
+                        ) : (
+                          <Feather
+                            name="award"
+                            size={18}
+                            color={FACULTY_COLORS.qualBadgeText}
+                          />
+                        )}
                       </View>
                       <View style={styles.qualDetails}>
                         <Text style={styles.qualDegreeTitle} numberOfLines={1}>
@@ -184,6 +196,8 @@ export const AcademicProfileSection = React.memo(
                   onChangeText={(text) => updateField("linkedInUrl", text)}
                   autoCapitalize="none"
                   keyboardType="url"
+                  onFocus={onFocusLink}
+                  onBlur={onBlurLink}
                   accessible={true}
                   accessibilityLabel="LinkedIn profile URL"
                 />
@@ -229,9 +243,9 @@ const styles = StyleSheet.create({
     color: FACULTY_COLORS.textPrimary,
   },
   headerRight: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "center",
+    gap: 4,
   },
   badge: {
     backgroundColor: FACULTY_COLORS.profileBadgeBg,
@@ -240,7 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.profileBadgeText,
     letterSpacing: 0.4,
