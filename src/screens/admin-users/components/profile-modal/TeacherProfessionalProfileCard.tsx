@@ -4,6 +4,7 @@ import { FontAwesome5, Feather } from "@expo/vector-icons";
 
 import { TeacherProfile } from "../../types";
 import { handleOpenUrl } from "../../utils";
+import { sortQualifications } from "@/utils/qualification-order";
 
 interface TeacherProfessionalProfileCardProps {
   profile?: TeacherProfile | null;
@@ -46,7 +47,7 @@ export const TeacherProfessionalProfileCard = React.memo(
         try {
           data = JSON.parse(trimmed);
         } catch {
-          return trimmed
+          const fromStr = trimmed
             .split(/[\n;]/)
             .map((line) => line.trim())
             .filter(Boolean)
@@ -60,12 +61,13 @@ export const TeacherProfessionalProfileCard = React.memo(
               }
               return { degree: line, details: "" };
             });
+          return sortQualifications(fromStr, (q) => q.degree, (q) => q.details);
         }
       }
 
       // If array
       if (Array.isArray(data)) {
-        return data
+        const fromArr = data
           .map((q: any) => {
             if (!q) return null;
             if (typeof q === "string") {
@@ -98,11 +100,13 @@ export const TeacherProfessionalProfileCard = React.memo(
             return null;
           })
           .filter((item): item is ParsedQualification => Boolean(item && item.degree));
+
+        return sortQualifications(fromArr, (q) => q.degree, (q) => q.details);
       }
 
       // If object (e.g. Record<string, string>)
       if (typeof data === "object" && data !== null) {
-        return Object.entries(data)
+        const fromObj = Object.entries(data)
           .map(([key, val]) => {
             if (!key) return null;
             if (typeof val === "string") {
@@ -123,6 +127,8 @@ export const TeacherProfessionalProfileCard = React.memo(
             return { degree: key.trim(), details: String(val) };
           })
           .filter((item): item is ParsedQualification => Boolean(item && item.degree));
+
+        return sortQualifications(fromObj, (q) => q.degree, (q) => q.details);
       }
 
       return [];

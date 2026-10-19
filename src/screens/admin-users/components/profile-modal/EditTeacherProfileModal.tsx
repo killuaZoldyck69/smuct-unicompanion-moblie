@@ -26,6 +26,7 @@ import {
   DAY_OFF_OPTIONS,
   FACULTY_OPTIONS,
 } from "../../constants";
+import { sortQualifications } from "@/utils/qualification-order";
 
 interface EditTeacherProfileModalProps {
   visible: boolean;
@@ -176,7 +177,9 @@ export const EditTeacherProfileModal = React.memo(
           });
         });
       }
-      setQualifications(parsedQuals);
+      setQualifications(
+        sortQualifications(parsedQuals, (q) => q.degree, (q) => q.passingYear)
+      );
       setIsAddingQual(false);
       setNewQualDegree("");
       setNewQualInstitution("");
@@ -211,16 +214,22 @@ export const EditTeacherProfileModal = React.memo(
         return;
       }
 
-      setQualifications((prev) => [
-        ...prev,
-        {
-          id: `q_new_${Date.now()}`,
-          degree: cleanDegree,
-          field: "",
-          institution: cleanInst,
-          passingYear: cleanYear,
-        },
-      ]);
+      setQualifications((prev) =>
+        sortQualifications(
+          [
+            ...prev,
+            {
+              id: `q_new_${Date.now()}`,
+              degree: cleanDegree,
+              field: "",
+              institution: cleanInst,
+              passingYear: cleanYear,
+            },
+          ],
+          (q) => q.degree,
+          (q) => q.passingYear,
+        )
+      );
 
       setNewQualDegree("");
       setNewQualInstitution("");
@@ -257,15 +266,18 @@ export const EditTeacherProfileModal = React.memo(
         dbBloodGroup = BLOOD_GROUP_UI_TO_API[bloodGroup];
       }
 
-      // Format qualifications for backend
-      const formattedQuals = qualifications
-        .filter((q) => q.degree.trim() || q.institution.trim())
-        .map((q) => ({
-          degree: q.degree.trim() || "Degree",
-          field: q.field.trim() || q.degree.trim() || "Academics",
-          institution: q.institution.trim() || "University",
-          passingYear: q.passingYear.trim() || undefined,
-        }));
+      // Format qualifications for backend in exact reverse-chronological hierarchy
+      const sortedValidQuals = sortQualifications(
+        qualifications.filter((q) => q.degree.trim() || q.institution.trim()),
+        (q) => q.degree,
+        (q) => q.passingYear,
+      );
+      const formattedQuals = sortedValidQuals.map((q) => ({
+        degree: q.degree.trim() || "Degree",
+        field: q.field.trim() || q.degree.trim() || "Academics",
+        institution: q.institution.trim() || "University",
+        passingYear: q.passingYear.trim() || undefined,
+      }));
 
       const payload: UpdateAdminTeacherProfilePayload = {
         name: cleanName,

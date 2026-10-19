@@ -17,6 +17,7 @@ import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-toast-message";
 import { TeacherDirectoryItem } from "@/services/directory-service";
 import { DIRECTORY_COLORS, fontFamily } from "../constants";
+import { sortQualifications } from "@/utils/qualification-order";
 
 interface TeacherDetailModalProps {
   teacher: TeacherDirectoryItem | null;
@@ -114,14 +115,22 @@ export const TeacherDetailModal: React.FC<TeacherDetailModalProps> = React.memo(
 
       if (Array.isArray(quals)) {
         if (quals.length === 0) return null;
+        const sortedQuals = sortQualifications(
+          quals,
+          (q) => (typeof q === "string" ? q : q?.degree || ""),
+          (q) =>
+            typeof q === "string"
+              ? q
+              : q?.year || q?.passingYear || q?.institution || "",
+        );
         return (
           <View style={styles.qualificationsList}>
-            {quals.map((q: any, idx: number) => {
+            {sortedQuals.map((q: any, idx: number) => {
               const text =
                 typeof q === "string"
                   ? q
                   : q?.degree
-                  ? `${q.degree}${q.institution ? ` - ${q.institution}` : ""}${q.year ? ` (${q.year})` : ""}`
+                  ? `${q.degree}${q.institution ? ` - ${q.institution}` : ""}${q.year || q.passingYear ? ` (${q.year || q.passingYear})` : ""}`
                   : JSON.stringify(q);
               return (
                 <View key={idx} style={styles.qualificationItem}>

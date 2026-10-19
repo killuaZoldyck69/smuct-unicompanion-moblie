@@ -13,6 +13,7 @@ import {
   SPACING,
   fontFamily,
 } from "../../constants";
+import { sortQualificationEntries } from "@/utils/qualification-order";
 
 interface TeacherQualificationsCardProps {
   academicQualifications: Record<string, string>;
@@ -42,7 +43,11 @@ export const TeacherQualificationsCard = React.memo(
       }
     }, [degreeInput, instInput, onAddQualification]);
 
-    const qualEntries = Object.entries(academicQualifications);
+    const qualEntries = React.useMemo(() => {
+      return sortQualificationEntries(
+        Object.entries(academicQualifications || {}),
+      );
+    }, [academicQualifications]);
 
     return (
       <View style={styles.card}>

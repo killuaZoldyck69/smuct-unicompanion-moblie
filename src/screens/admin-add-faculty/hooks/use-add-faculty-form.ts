@@ -23,6 +23,7 @@ import {
   validatePasswordComplexity,
   sanitizeDigitsOnly,
 } from "../utils";
+import { sortQualifications } from "@/utils/qualification-order";
 
 // Helper to extract unique faculties
 const UNIQUE_FACULTIES = Array.from(
@@ -293,10 +294,14 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
       };
       setFormData((prev) => ({
         ...prev,
-        qualifications: [...prev.qualifications, newQual],
+        qualifications: sortQualifications(
+          [...prev.qualifications, newQual],
+          (q) => q.degree || q.field || "",
+          (q) => q.passingYear || q.institution || "",
+        ),
       }));
     },
-    []
+    [],
   );
 
   const removeQualification = useCallback((id: string) => {
@@ -403,7 +408,13 @@ export function useAddFacultyForm(): AddFacultyFormHookReturn {
           ? formData.expertiseFields
           : undefined,
       academicQualifications:
-        formData.qualifications.length > 0 ? formData.qualifications : undefined,
+        formData.qualifications.length > 0
+          ? sortQualifications(
+              formData.qualifications,
+              (q) => q.degree || q.field || "",
+              (q) => q.passingYear || q.institution || "",
+            )
+          : undefined,
       linkedInUrl: formattedUrl || undefined,
     };
 

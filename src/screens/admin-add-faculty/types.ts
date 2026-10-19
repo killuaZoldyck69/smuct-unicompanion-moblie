@@ -10,6 +10,7 @@ export interface Qualification {
   degree?: string;
   field: string;
   institution: string;
+  passingYear?: string | number;
 }
 
 export type SelectorType =

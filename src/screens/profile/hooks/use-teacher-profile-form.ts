@@ -5,6 +5,7 @@ import {
   ConsultationSlot,
 } from "@/services/teacher-service";
 import { BLOOD_GROUP_TO_UI, BLOOD_GROUP_TO_DB } from "../constants";
+import { sortQualificationEntries } from "@/utils/qualification-order";
 
 export interface TeacherFormData {
   designation: string;
@@ -48,25 +49,52 @@ export function useTeacherProfileForm(
   const resetForm = useCallback(() => {
     if (!profile) return;
 
-    let parsedQuals: Record<string, string> = {};
+    let rawParsedQuals: Record<string, string> = {};
     if (
       typeof (profile as any).academicQualifications === "object" &&
       (profile as any).academicQualifications !== null &&
       !Array.isArray((profile as any).academicQualifications)
     ) {
-      parsedQuals = (profile as any).academicQualifications as Record<string, string>;
+      rawParsedQuals = (profile as any).academicQualifications as Record<string, string>;
+    } else if (Array.isArray((profile as any).academicQualifications)) {
+      (profile as any).academicQualifications.forEach((q: any) => {
+        if (!q) return;
+        if (typeof q === "string") {
+          const parts = q.split(" - ");
+          if (parts.length >= 2) {
+            rawParsedQuals[parts[0].trim()] = parts.slice(1).join(" - ").trim();
+          } else {
+            rawParsedQuals[q.trim()] = "Completed";
+          }
+        } else if (typeof q === "object") {
+          const deg =
+            q.degree || q.title || (q.field ? `Degree in ${q.field}` : "") || "Degree";
+          const detailsParts = [
+            q.institution || q.institute || q.university,
+            q.passingYear || q.year,
+          ].filter(Boolean);
+          rawParsedQuals[deg.trim()] = detailsParts.join(" — ").trim() || "Completed";
+        }
+      });
     } else if (Array.isArray(profile.education)) {
       profile.education.forEach((item) => {
         if (typeof item === "string") {
           const parts = item.split(" - ");
           if (parts.length >= 2) {
-            parsedQuals[parts[0].trim()] = parts.slice(1).join(" - ").trim();
+            rawParsedQuals[parts[0].trim()] = parts.slice(1).join(" - ").trim();
           } else {
-            parsedQuals[item.trim()] = "Completed";
+            rawParsedQuals[item.trim()] = "Completed";
           }
         }
       });
     }
+
+    // Sort qualifications in exact reverse-chronological order
+    const sortedEntries = sortQualificationEntries(Object.entries(rawParsedQuals));
+    const parsedQuals: Record<string, string> = {};
+    sortedEntries.forEach(([d, i]) => {
+      parsedQuals[d] = i;
+    });
 
     let slots: ConsultationSlot[] = [];
     if (
@@ -270,8 +298,10 @@ export function useTeacherProfileForm(
       payload.researchInterests = formData.expertiseFields;
     }
 
-    // Qualifications mapping
-    const qualEntries = Object.entries(formData.academicQualifications);
+    // Qualifications mapping sorted in exact reverse-chronological hierarchy
+    const qualEntries = sortQualificationEntries(
+      Object.entries(formData.academicQualifications),
+    );
     const educationArray = qualEntries.map(([d, i]) => `${d} - ${i}`);
     payload.education = educationArray;
 
