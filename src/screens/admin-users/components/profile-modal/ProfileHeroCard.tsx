@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 
 import { THEME } from "../../constants";
 import { AdminUser } from "../../types";
@@ -11,10 +11,13 @@ interface ProfileHeroCardProps {
 
 export const ProfileHeroCard = React.memo(({ user }: ProfileHeroCardProps) => {
   const isStudent = user.role === "STUDENT";
+  const isTeacher = user.role === "TEACHER";
   const hasCR = Boolean(user.studentProfile?.isCR);
+  const teacherDesignation = user.teacherProfile?.designation || "Associate Professor";
 
   return (
     <View style={styles.detailProfileHeroCard}>
+      {/* Avatar Container */}
       <View style={styles.detailAvatarWrapper}>
         <View style={styles.detailAvatarContainer}>
           {user.image ? (
@@ -23,6 +26,10 @@ export const ProfileHeroCard = React.memo(({ user }: ProfileHeroCardProps) => {
               style={styles.detailAvatarImg}
               resizeMode="cover"
             />
+          ) : isTeacher ? (
+            <View style={styles.teacherAvatarFallback}>
+              <FontAwesome5 name="graduation-cap" size={32} color="#B45309" />
+            </View>
           ) : (
             <View style={styles.detailAvatarFallback}>
               <Text style={styles.detailAvatarLetter}>
@@ -38,20 +45,59 @@ export const ProfileHeroCard = React.memo(({ user }: ProfileHeroCardProps) => {
 
       {/* Badges Row */}
       <View style={styles.detailHeroBadgesRow}>
-        <View style={styles.detailRolePill}>
-          <Text style={styles.detailRolePillText}>{user.role}</Text>
-        </View>
-
-        {isStudent && hasCR && (
-          <View style={styles.detailCrPill}>
-            <Ionicons
-              name="ribbon"
-              size={13}
-              color="#854D0E"
-              style={{ marginRight: 4 }}
-            />
-            <Text style={styles.detailCrPillText}>CR</Text>
+        {user.isRestricted && (
+          <View style={styles.detailRestrictedPill}>
+            <Text style={styles.detailRestrictedPillText}>RESTRICTED</Text>
           </View>
+        )}
+        {isTeacher ? (
+          <>
+            {/* Designation Purple Pill */}
+            <View style={styles.detailDesignationPill}>
+              <FontAwesome5
+                name="graduation-cap"
+                size={11}
+                color="#7C3AED"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.detailDesignationPillText}>
+                {teacherDesignation}
+              </Text>
+            </View>
+
+            {/* Leadership Role Pill (e.g. HOD, Dean, Coordinator) */}
+            {Boolean(user.teacherProfile?.administrativeRole) && (
+              <View style={styles.detailAdminRolePill}>
+                <Ionicons
+                  name="shield"
+                  size={12}
+                  color="#B45309"
+                  style={{ marginRight: 5 }}
+                />
+                <Text style={styles.detailAdminRolePillText}>
+                  {user.teacherProfile?.administrativeRole}
+                </Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <>
+            <View style={styles.detailRolePill}>
+              <Text style={styles.detailRolePillText}>{user.role}</Text>
+            </View>
+
+            {isStudent && hasCR && (
+              <View style={styles.detailCrPill}>
+                <Ionicons
+                  name="ribbon"
+                  size={13}
+                  color="#854D0E"
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.detailCrPillText}>CR</Text>
+              </View>
+            )}
+          </>
         )}
       </View>
     </View>
@@ -156,5 +202,57 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: "#854D0E",
+  },
+  teacherAvatarFallback: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  detailDesignationPill: {
+    backgroundColor: "#EDE9FE",
+    borderWidth: 1,
+    borderColor: "#DDD6FE",
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  detailDesignationPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#7C3AED",
+  },
+  detailRestrictedPill: {
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#FECDD3",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  detailRestrictedPillText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#E11D48",
+    letterSpacing: 0.6,
+  },
+  detailAdminRolePill: {
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  detailAdminRolePillText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#B45309",
+    letterSpacing: 0.4,
   },
 });

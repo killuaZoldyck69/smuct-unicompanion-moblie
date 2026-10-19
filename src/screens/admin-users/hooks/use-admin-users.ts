@@ -107,15 +107,35 @@ export function useAdminUsers() {
   }, [data]);
 
   // Mutations
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => await api.delete(`/users/${userId}`),
-    onSuccess: () => {
+  const restrictUserMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      isRestricted,
+    }: {
+      userId: string;
+      isRestricted: boolean;
+    }) => {
+      return await api.patch(`/users/${userId}/restrict`, { isRestricted });
+    },
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      Toast.show({ type: "success", text1: "Account Deleted" });
+      Toast.show({
+        type: "success",
+        text1: variables.isRestricted
+          ? "Account Restricted"
+          : "Account Unrestricted",
+        text2: variables.isRestricted
+          ? "User has been restricted and logged out."
+          : "User access has been restored.",
+      });
       setSelectedUser(null);
     },
     onError: (err: any) =>
-      Toast.show({ type: "error", text1: "Delete Failed", text2: err.message }),
+      Toast.show({
+        type: "error",
+        text1: "Action Failed",
+        text2: err.response?.data?.error || err.message,
+      }),
   });
 
   const updateRoleMutation = useMutation({
@@ -137,33 +157,85 @@ export function useAdminUsers() {
       Toast.show({ type: "error", text1: "Update Failed", text2: err.message }),
   });
 
-  // Handlers
-  const handleDelete = useCallback(
-    (userId: string, name: string) => {
-      if (Platform.OS === "web") {
-        if (
-          window.confirm(
-            `Are you sure you want to permanently delete ${name}'s account?`,
-          )
-        ) {
-          deleteUserMutation.mutate(userId);
-        }
-      } else {
-        Alert.alert(
-          "Delete Account",
-          `Are you sure you want to permanently delete ${name}? This cannot be undone.`,
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Delete",
-              style: "destructive",
-              onPress: () => deleteUserMutation.mutate(userId),
-            },
-          ],
+  const updateTeacherPositionMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      designation,
+      administrativeRole,
+    }: {
+      userId: string;
+      designation?: string;
+      administrativeRole?: string | null;
+    }) => {
+      return await api.patch(`/users/${userId}/teacher-position`, {
+        designation,
+        administrativeRole,
+      });
+    },
+    onSuccess: (response, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["directory"] });
+      const updatedTeacher = response.data?.data;
+      if (updatedTeacher && selectedUser) {
+        setSelectedUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                teacherProfile: {
+                  ...prev.teacherProfile,
+                  ...updatedTeacher,
+                },
+              }
+            : null,
         );
       }
+      Toast.show({
+        type: "success",
+        text1: "Faculty Position Updated",
+        text2: variables.designation
+          ? `Designation set to ${variables.designation}`
+          : variables.administrativeRole
+          ? `Leadership role set to ${variables.administrativeRole}`
+          : "Leadership role cleared",
+      });
     },
-    [deleteUserMutation],
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: err.response?.data?.message || err.message,
+      }),
+  });
+
+  // Handlers
+  const handleToggleRestrict = useCallback(
+    (userId: string, name: string, currentlyRestricted?: boolean) => {
+      const willRestrict = !currentlyRestricted;
+      const title = willRestrict ? "Restrict Account" : "Unrestrict Account";
+      const message = willRestrict
+        ? `Are you sure you want to restrict ${name}? They will be immediately logged out and prevented from accessing the system.`
+        : `Are you sure you want to restore access for ${name}?`;
+
+      if (Platform.OS === "web") {
+        if (window.confirm(message)) {
+          restrictUserMutation.mutate({ userId, isRestricted: willRestrict });
+        }
+      } else {
+        Alert.alert(title, message, [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: willRestrict ? "Restrict Account" : "Restore Access",
+            style: willRestrict ? "destructive" : "default",
+            onPress: () =>
+              restrictUserMutation.mutate({
+                userId,
+                isRestricted: willRestrict,
+              }),
+          },
+        ]);
+      }
+    },
+    [restrictUserMutation],
   );
 
   const handleUpdateRole = useCallback(
@@ -171,6 +243,16 @@ export function useAdminUsers() {
       updateRoleMutation.mutate({ userId, action });
     },
     [updateRoleMutation],
+  );
+
+  const handleUpdateTeacherPosition = useCallback(
+    (
+      userId: string,
+      data: { designation?: string; administrativeRole?: string | null },
+    ) => {
+      updateTeacherPositionMutation.mutate({ userId, ...data });
+    },
+    [updateTeacherPositionMutation],
   );
 
   const resetFilters = useCallback(() => {
@@ -208,12 +290,16 @@ export function useAdminUsers() {
     fetchNextPage,
     refetch,
     isRefetching,
-    handleDelete,
+    handleToggleRestrict,
+    handleDelete: handleToggleRestrict,
     handleUpdateRole,
+    handleUpdateTeacherPosition,
     resetFilters,
     isStudentTab,
     primaryThemeColor,
     isUpdatingRole: updateRoleMutation.isPending,
-    isDeletingUser: deleteUserMutation.isPending,
+    isUpdatingTeacherPosition: updateTeacherPositionMutation.isPending,
+    isRestrictingUser: restrictUserMutation.isPending,
+    isDeletingUser: restrictUserMutation.isPending,
   };
 }

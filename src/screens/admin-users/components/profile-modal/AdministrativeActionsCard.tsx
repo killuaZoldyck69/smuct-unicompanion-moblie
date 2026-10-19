@@ -7,9 +7,11 @@ import { AdminUser, RoleAction } from "../../types";
 interface AdministrativeActionsCardProps {
   user: AdminUser;
   onUpdateRole: (userId: string, action: RoleAction) => void;
-  onDelete: (userId: string, name: string) => void;
+  onDelete?: (userId: string, name: string, isRestricted?: boolean) => void;
+  onToggleRestrict?: (userId: string, name: string, isRestricted?: boolean) => void;
   isUpdatingRole: boolean;
-  isDeletingUser: boolean;
+  isDeletingUser?: boolean;
+  isRestrictingUser?: boolean;
 }
 
 export const AdministrativeActionsCard = React.memo(
@@ -17,11 +19,15 @@ export const AdministrativeActionsCard = React.memo(
     user,
     onUpdateRole,
     onDelete,
+    onToggleRestrict,
     isUpdatingRole,
     isDeletingUser,
+    isRestrictingUser,
   }: AdministrativeActionsCardProps) => {
     const isStudent = user.role === "STUDENT";
     const isCR = user.studentProfile?.isCR;
+    const handleRestrict = onToggleRestrict || onDelete;
+    const isBusy = isRestrictingUser ?? isDeletingUser;
 
     return (
       <View style={styles.detailSectionCard}>
@@ -66,26 +72,48 @@ export const AdministrativeActionsCard = React.memo(
           </TouchableOpacity>
         )}
 
-        {/* Permanently Delete Account (Soft Rose) */}
-        <TouchableOpacity
-          style={styles.adminActionBtnRose}
-          activeOpacity={0.85}
-          onPress={() => onDelete(user.id, user.name)}
-          disabled={isDeletingUser}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Permanently Delete Account"
-        >
-          <Feather
-            name="trash-2"
-            size={17}
-            color="#E11D48"
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.adminActionBtnRoseText}>
-            Permanently Delete Account
-          </Text>
-        </TouchableOpacity>
+        {/* Restrict / Unrestrict Account */}
+        {user.isRestricted ? (
+          <TouchableOpacity
+            style={styles.adminActionBtnEmerald}
+            activeOpacity={0.85}
+            onPress={() => handleRestrict?.(user.id, user.name, user.isRestricted)}
+            disabled={isBusy || isUpdatingRole}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Unrestrict Account"
+          >
+            <Feather
+              name="check-circle"
+              size={17}
+              color="#059669"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.adminActionBtnEmeraldText}>
+              Unrestrict Account
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.adminActionBtnRose}
+            activeOpacity={0.85}
+            onPress={() => handleRestrict?.(user.id, user.name, user.isRestricted)}
+            disabled={isBusy || isUpdatingRole}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Restrict Account"
+          >
+            <Feather
+              name="slash"
+              size={17}
+              color="#E11D48"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.adminActionBtnRoseText}>
+              Restrict Account
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   },
@@ -163,5 +191,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#E11D48",
+  },
+  adminActionBtnEmerald: {
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    borderRadius: 14,
+    paddingVertical: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminActionBtnEmeraldText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#059669",
   },
 });

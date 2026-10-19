@@ -1,9 +1,9 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { FontAwesome5, Feather } from "@expo/vector-icons";
+import { FontAwesome5, Feather, Ionicons } from "@expo/vector-icons";
 
 import { TeacherProfile } from "../../types";
-import { parseOrdinalParts, getFullDepartmentDisplayName } from "../../utils";
+import { getFullDepartmentDisplayName, parseOrdinalParts } from "../../utils";
 
 interface TeacherAcademicCardProps {
   profile?: TeacherProfile | null;
@@ -11,305 +11,248 @@ interface TeacherAcademicCardProps {
 
 export const TeacherAcademicCard = React.memo(
   ({ profile }: TeacherAcademicCardProps) => {
-    const advisoryOrdinal = profile?.advisoryBatch
-      ? parseOrdinalParts(profile.advisoryBatch)
-      : null;
-
-    const expertiseList = profile?.expertiseFields
-      ? Array.isArray(profile.expertiseFields)
-        ? profile.expertiseFields
-        : String(profile.expertiseFields).split(",")
-      : [];
+    const advisoryParts = React.useMemo(() => {
+      if (
+        profile?.advisoryBatch === undefined ||
+        profile?.advisoryBatch === null ||
+        profile?.advisoryBatch === ""
+      ) {
+        return null;
+      }
+      const cleanVal = String(profile.advisoryBatch).replace(/batch/i, "").trim();
+      if (!cleanVal) return null;
+      return parseOrdinalParts(cleanVal);
+    }, [profile?.advisoryBatch]);
 
     return (
-      <View style={styles.academicCardTeacher}>
-        {/* Academic Header */}
-        <View style={styles.academicHeaderRow}>
-          <View style={styles.academicHeaderLeft}>
-            <View style={styles.academicIconBoxIndigo}>
-              <FontAwesome5 name="graduation-cap" size={14} color="#6366F1" />
+      <View style={styles.cardContainer}>
+        {/* Header Row */}
+        <View style={styles.headerRow}>
+          <View style={styles.headerLeft}>
+            <View style={styles.iconBox}>
+              <FontAwesome5 name="briefcase" size={13} color="#D97706" />
             </View>
-            <Text style={styles.academicTitleIndigo}>ACADEMIC INFORMATION</Text>
+            <Text style={styles.headerTitle}>ACADEMIC POSITION</Text>
           </View>
         </View>
 
         {/* Teacher ID */}
-        <View style={styles.academicRowIndigo}>
-          <View style={styles.academicRowLeft}>
-            <Feather
-              name="hash"
-              size={15}
-              color="#6366F1"
-              style={{ marginRight: 8 }}
+        <View style={styles.dataRow}>
+          <View style={styles.rowLeft}>
+            <FontAwesome5
+              name="id-badge"
+              size={14}
+              color="#D97706"
+              style={styles.rowIcon}
             />
-            <Text style={styles.academicLabelIndigo}>Teacher ID</Text>
+            <Text style={styles.rowLabel}>Teacher ID</Text>
           </View>
-          <Text style={styles.academicValueId}>
-            {profile?.teacherId || "N/A"}
-          </Text>
+          <Text style={styles.rowValueBold}>{profile?.teacherId || "N/A"}</Text>
         </View>
 
         {/* Designation */}
-        <View style={styles.academicRowIndigo}>
-          <View style={styles.academicRowLeft}>
-            <Feather
-              name="award"
-              size={15}
-              color="#6366F1"
-              style={{ marginRight: 8 }}
+        <View style={styles.dataRow}>
+          <View style={styles.rowLeft}>
+            <FontAwesome5
+              name="user-tie"
+              size={13}
+              color="#D97706"
+              style={styles.rowIcon}
             />
-            <Text style={styles.academicLabelIndigo}>Designation</Text>
+            <Text style={styles.rowLabel}>Designation</Text>
           </View>
-          <Text style={styles.academicValueIndigoRight} numberOfLines={1}>
+          <Text style={styles.rowValue} numberOfLines={1}>
             {profile?.designation || "Faculty"}
           </Text>
         </View>
 
-        {/* Department (Full Name) */}
-        <View style={styles.academicRowIndigo}>
-          <View style={styles.academicRowLeft}>
+        {/* Leadership Role */}
+        <View style={styles.dataRow}>
+          <View style={styles.rowLeft}>
+            <Ionicons
+              name="shield-checkmark"
+              size={14}
+              color="#D97706"
+              style={styles.rowIcon}
+            />
+            <Text style={styles.rowLabel}>Leadership Role</Text>
+          </View>
+          {profile?.administrativeRole ? (
+            <View style={styles.leadershipPill}>
+              <Text style={styles.leadershipPillText}>
+                {profile.administrativeRole}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.rowValue}>None</Text>
+          )}
+        </View>
+
+        {/* Faculty */}
+        <View style={styles.dataRow}>
+          <View style={styles.rowLeft}>
+            <FontAwesome5
+              name="university"
+              size={13}
+              color="#D97706"
+              style={styles.rowIcon}
+            />
+            <Text style={styles.rowLabel}>Faculty</Text>
+          </View>
+          <Text style={styles.rowValueRight} numberOfLines={2}>
+            {profile?.faculty || "Science & Information Technology"}
+          </Text>
+        </View>
+
+        {/* Department */}
+        <View style={styles.dataRow}>
+          <View style={styles.rowLeft}>
             <Feather
               name="layers"
-              size={15}
-              color="#6366F1"
-              style={{ marginRight: 8 }}
+              size={14}
+              color="#D97706"
+              style={styles.rowIcon}
             />
-            <Text style={styles.academicLabelIndigo}>Department</Text>
+            <Text style={styles.rowLabel}>Department</Text>
           </View>
-          <Text style={styles.academicValueIndigoRight} numberOfLines={2}>
+          <Text style={styles.rowValueRight} numberOfLines={2}>
             {getFullDepartmentDisplayName(profile?.department)}
           </Text>
         </View>
 
-        {/* Office Room (if available) */}
-        {profile?.officeRoom && (
-          <View style={styles.academicRowIndigo}>
-            <View style={styles.academicRowLeft}>
-              <Feather
-                name="map-pin"
-                size={15}
-                color="#6366F1"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.academicLabelIndigo}>Office Room</Text>
-            </View>
-            <Text style={styles.academicValueIndigoRight} numberOfLines={1}>
-              {profile.officeRoom}
-            </Text>
+        {/* Advisory Batch */}
+        <View style={[styles.dataRow, styles.lastDataRow]}>
+          <View style={styles.rowLeft}>
+            <Feather
+              name="users"
+              size={14}
+              color="#D97706"
+              style={styles.rowIcon}
+            />
+            <Text style={styles.rowLabel}>Advisory Batch</Text>
           </View>
-        )}
-
-        {/* Consultation Hours (if available) */}
-        {profile?.consultationHours && (
-          <View style={styles.academicRowIndigo}>
-            <View style={styles.academicRowLeft}>
-              <Feather
-                name="clock"
-                size={15}
-                color="#6366F1"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.academicLabelIndigo}>Consultation</Text>
-            </View>
-            <Text style={styles.academicValueIndigoRight} numberOfLines={1}>
-              {profile.consultationHours}
-            </Text>
-          </View>
-        )}
-
-        {/* 3-Column Pill Grid: DAY OFF, ADVISORY, STATUS */}
-        <View style={styles.metricGridRow}>
-          <View style={styles.metricGridBoxIndigo}>
-            <Text style={styles.metricGridSubtitle}>DAY OFF</Text>
-            <Text style={styles.metricGridValueIndigo} numberOfLines={1}>
-              {profile?.dayOff || "Friday"}
-            </Text>
-          </View>
-
-          <View style={styles.metricGridBoxIndigo}>
-            <Text style={styles.metricGridSubtitle}>ADVISORY</Text>
-            {advisoryOrdinal ? (
-              <View style={styles.metricValueWithSuperscriptRow}>
-                <Text style={styles.metricGridValueIndigo}>
-                  {advisoryOrdinal.numberPart}
+          {advisoryParts ? (
+            <View style={styles.ordinalContainer}>
+              <Text style={styles.rowValueBold}>{advisoryParts.numberPart}</Text>
+              {Boolean(advisoryParts.suffix) && (
+                <Text style={styles.ordinalSuperscript}>
+                  {advisoryParts.suffix}
                 </Text>
-                {!!advisoryOrdinal.suffix && (
-                  <Text style={styles.metricGridSuperscriptIndigo}>
-                    {advisoryOrdinal.suffix}
-                  </Text>
-                )}
-              </View>
-            ) : (
-              <Text style={styles.metricGridValueIndigo}>None</Text>
-            )}
-          </View>
-
-          <View style={styles.metricGridBoxIndigo}>
-            <Text style={styles.metricGridSubtitle}>STATUS</Text>
-            <Text style={styles.metricGridValueIndigo}>Faculty</Text>
-          </View>
-        </View>
-
-        {/* Expertise Fields Chips (if available) */}
-        {expertiseList.length > 0 && (
-          <View style={styles.teacherExpertiseContainer}>
-            <Text style={styles.teacherExpertiseTitle}>AREAS OF EXPERTISE</Text>
-            <View style={styles.teacherExpertiseWrap}>
-              {expertiseList.map((item: string, idx: number) => {
-                const trimmed = item.trim();
-                if (!trimmed) return null;
-                return (
-                  <View key={idx} style={styles.teacherExpertiseChip}>
-                    <Text style={styles.teacherExpertiseChipText}>
-                      {trimmed}
-                    </Text>
-                  </View>
-                );
-              })}
+              )}
             </View>
-          </View>
-        )}
+          ) : (
+            <Text style={styles.rowValue}>None</Text>
+          )}
+        </View>
       </View>
     );
   },
 );
 
 const styles = StyleSheet.create({
-  academicCardTeacher: {
-    backgroundColor: "#F5F3FF",
+  cardContainer: {
+    backgroundColor: "#FEFCE8",
     borderWidth: 1.2,
-    borderColor: "#DDD6FE",
+    borderColor: "#FEF08A",
     borderRadius: 24,
     padding: 18,
     marginBottom: 16,
-    shadowColor: "#6366F1",
+    shadowColor: "#D97706",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 1,
   },
-  academicHeaderRow: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 16,
   },
-  academicHeaderLeft: {
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
   },
-  academicIconBoxIndigo: {
+  iconBox: {
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: "#EDE9FE",
+    backgroundColor: "#FEF3C7",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
   },
-  academicTitleIndigo: {
+  headerTitle: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#4338CA",
+    color: "#854D0E",
     letterSpacing: 0.8,
   },
-  academicRowIndigo: {
+  ordinalContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  ordinalSuperscript: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#0F172A",
+    lineHeight: 14,
+  },
+  dataRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(254, 240, 138, 0.5)",
   },
-  academicRowLeft: {
+  lastDataRow: {
+    borderBottomWidth: 0,
+    paddingBottom: 2,
+  },
+  rowLeft: {
     flexDirection: "row",
     alignItems: "center",
   },
-  academicLabelIndigo: {
+  rowIcon: {
+    width: 20,
+    marginRight: 8,
+  },
+  rowLabel: {
     fontSize: 13,
-    color: "#4338CA",
+    color: "#78350F",
     fontWeight: "500",
   },
-  academicValueId: {
-    fontSize: 15,
+  rowValue: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  rowValueBold: {
+    fontSize: 14.5,
     fontWeight: "800",
     color: "#0F172A",
   },
-  academicValueIndigoRight: {
+  rowValueRight: {
     fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
     textAlign: "right",
     flex: 1,
-    marginLeft: 14,
+    marginLeft: 16,
   },
-  metricGridRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-  metricGridBoxIndigo: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: "center",
+  leadershipPill: {
+    backgroundColor: "#FEF3C7",
     borderWidth: 1,
-    borderColor: "#DDD6FE",
+    borderColor: "#FDE68A",
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
-  metricGridSubtitle: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#94A3B8",
-    letterSpacing: 0.5,
-  },
-  metricGridValueIndigo: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginTop: 3,
-  },
-  metricValueWithSuperscriptRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    marginTop: 3,
-  },
-  metricGridSuperscriptIndigo: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#4338CA",
-    lineHeight: 12,
-    marginLeft: 1,
-    marginTop: 1,
-  },
-  teacherExpertiseContainer: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#EDE9FE",
-  },
-  teacherExpertiseTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#6366F1",
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  teacherExpertiseWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  teacherExpertiseChip: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DDD6FE",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  teacherExpertiseChipText: {
+  leadershipPillText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#4338CA",
+    fontWeight: "800",
+    color: "#92400E",
+    letterSpacing: 0.3,
   },
 });

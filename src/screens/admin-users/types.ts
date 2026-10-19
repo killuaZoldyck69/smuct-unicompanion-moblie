@@ -17,9 +17,22 @@ export interface StudentProfile {
   personalWebsiteUrl?: string | null;
 }
 
+export interface AcademicQualification {
+  degree: string;
+  institution: string;
+  year?: string | number;
+  honors?: string;
+}
+
+export interface ConsultationSlot {
+  days: string;
+  time: string;
+}
+
 export interface TeacherProfile {
   teacherId?: string | null;
   designation?: string | null;
+  administrativeRole?: string | null;
   department?: string | null;
   faculty?: string | null;
   officeRoom?: string | null;
@@ -27,6 +40,8 @@ export interface TeacherProfile {
   dayOff?: string | null;
   advisoryBatch?: string | number | null;
   expertiseFields?: string | string[] | null;
+  consultationSlots?: ConsultationSlot[] | any | null;
+  academicQualifications?: AcademicQualification[] | any | null;
   linkedInUrl?: string | null;
   personalWebsiteUrl?: string | null;
 }
@@ -39,6 +54,7 @@ export interface AdminUser {
   image?: string | null;
   phoneNumber?: string | null;
   bloodGroup?: string | null;
+  isRestricted?: boolean;
   studentProfile?: StudentProfile | null;
   teacherProfile?: TeacherProfile | null;
 }

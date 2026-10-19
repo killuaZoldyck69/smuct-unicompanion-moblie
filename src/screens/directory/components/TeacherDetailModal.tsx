@@ -222,6 +222,20 @@ export const TeacherDetailModal: React.FC<TeacherDetailModalProps> = React.memo(
                   <Text style={styles.verifiedFacultyText}>Faculty Member</Text>
                 </View>
 
+                {profile?.administrativeRole ? (
+                  <View style={styles.adminRolePill}>
+                    <Feather
+                      name="award"
+                      size={11}
+                      color="#B45309"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={styles.adminRolePillText}>
+                      {profile.administrativeRole}
+                    </Text>
+                  </View>
+                ) : null}
+
                 {profile?.teacherId ? (
                   <TouchableOpacity
                     style={styles.idChip}
@@ -641,6 +655,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: DIRECTORY_COLORS.tealDark,
+  },
+  adminRolePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: DIRECTORY_COLORS.pillRadius,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  adminRolePillText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#B45309",
   },
   idChip: {
     flexDirection: "row",

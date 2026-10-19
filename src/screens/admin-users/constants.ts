@@ -53,3 +53,46 @@ export const DEPARTMENT_CHIPS = [
   "MUS",
   "DAN",
 ] as const;
+
+export const DESIGNATION_OPTIONS = [
+  "Lecturer",
+  "Senior Lecturer",
+  "Assistant Professor",
+  "Associate Professor",
+  "Professor",
+  "Adjunct Faculty",
+] as const;
+
+export interface TeacherAdminRoleOption {
+  label: string;
+  value: string | null;
+  description?: string;
+}
+
+export const TEACHER_ADMIN_ROLE_OPTIONS: TeacherAdminRoleOption[] = [
+  {
+    label: "Head of Department (HOD)",
+    value: "HOD",
+    description: "Departmental academic & administrative lead",
+  },
+  {
+    label: "Program Coordinator",
+    value: "Coordinator",
+    description: "Curriculum, batch & academic routine coordinator",
+  },
+  {
+    label: "Dean",
+    value: "Dean",
+    description: "Faculty dean & executive academic head",
+  },
+  {
+    label: "Assistant Dean",
+    value: "Assistant Dean",
+    description: "Deputy faculty dean",
+  },
+  {
+    label: "None (Remove Leadership Role)",
+    value: null,
+    description: "Regular faculty member without administrative role",
+  },
+];

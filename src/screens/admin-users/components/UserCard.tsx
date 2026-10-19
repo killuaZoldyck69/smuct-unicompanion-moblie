@@ -65,9 +65,21 @@ export const UserCard = React.memo(
             <Text style={styles.userName} numberOfLines={1}>
               {item.name}
             </Text>
+            {item.isRestricted && (
+              <View style={styles.badgeRestricted}>
+                <Text style={styles.badgeTextRestricted}>RESTRICTED</Text>
+              </View>
+            )}
             {isCR && (
               <View style={styles.badgeCR}>
                 <Text style={styles.badgeTextCR}>CR</Text>
+              </View>
+            )}
+            {Boolean(item.teacherProfile?.administrativeRole) && (
+              <View style={styles.badgeAdminRole}>
+                <Text style={styles.badgeTextAdminRole}>
+                  {item.teacherProfile?.administrativeRole}
+                </Text>
               </View>
             )}
           </View>
@@ -163,6 +175,34 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     color: THEME.crBadgeText,
+  },
+  badgeRestricted: {
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#FECDD3",
+  },
+  badgeTextRestricted: {
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: "#E11D48",
+    letterSpacing: 0.4,
+  },
+  badgeAdminRole: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  badgeTextAdminRole: {
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: "#92400E",
+    letterSpacing: 0.4,
   },
   userInfo: {
     fontSize: 12,

@@ -16,15 +16,25 @@ import { ProfileHeroCard } from "./ProfileHeroCard";
 import { ContactPersonalCard } from "./ContactPersonalCard";
 import { StudentAcademicCard } from "./StudentAcademicCard";
 import { TeacherAcademicCard } from "./TeacherAcademicCard";
+import { TeacherOfficeAvailabilityCard } from "./TeacherOfficeAvailabilityCard";
+import { TeacherProfessionalProfileCard } from "./TeacherProfessionalProfileCard";
+import { FacultyAdminActionsCard } from "./FacultyAdminActionsCard";
 import { AdministrativeActionsCard } from "./AdministrativeActionsCard";
 
 interface UserProfileModalProps {
   user: AdminUser | null;
   onClose: () => void;
   onUpdateRole: (userId: string, action: RoleAction) => void;
-  onDelete: (userId: string, name: string) => void;
+  onUpdateTeacherPosition?: (
+    userId: string,
+    data: { designation?: string; administrativeRole?: string | null },
+  ) => void;
+  onDelete?: (userId: string, name: string, isRestricted?: boolean) => void;
+  onToggleRestrict?: (userId: string, name: string, isRestricted?: boolean) => void;
   isUpdatingRole: boolean;
-  isDeletingUser: boolean;
+  isUpdatingTeacherPosition?: boolean;
+  isDeletingUser?: boolean;
+  isRestrictingUser?: boolean;
   topInset: number;
   bottomInset: number;
 }
@@ -34,13 +44,22 @@ export const UserProfileModal = React.memo(
     user,
     onClose,
     onUpdateRole,
+    onUpdateTeacherPosition,
     onDelete,
+    onToggleRestrict,
     isUpdatingRole,
+    isUpdatingTeacherPosition,
     isDeletingUser,
+    isRestrictingUser,
     topInset,
     bottomInset,
   }: UserProfileModalProps) => {
     if (!user) return null;
+
+    const isStudent = user.role === "STUDENT";
+    const isTeacher = user.role === "TEACHER";
+    const handleRestrict = onToggleRestrict || onDelete;
+    const isBusy = isRestrictingUser ?? isDeletingUser;
 
     return (
       <Modal
@@ -89,24 +108,41 @@ export const UserProfileModal = React.memo(
             {/* 1. Profile Hero Card */}
             <ProfileHeroCard user={user} />
 
-            {/* 2. Contact & Personal Card */}
-            <ContactPersonalCard user={user} />
+            {/* Teacher Profile Layout */}
+            {isTeacher ? (
+              <>
+                {/* 2. Academic Position Card (Yellow) */}
+                <TeacherAcademicCard profile={user.teacherProfile} />
 
-            {/* 3. Academic Card (Student vs Teacher) */}
-            {user.role === "STUDENT" ? (
-              <StudentAcademicCard profile={user.studentProfile} />
+                {/* 3. Office & Availability Card (Mint) */}
+                <TeacherOfficeAvailabilityCard profile={user.teacherProfile} />
+
+                {/* 4. Professional Profile Card (Lavender) */}
+                <TeacherProfessionalProfileCard profile={user.teacherProfile} />
+
+                {/* 5. Faculty Admin Actions Card */}
+                <FacultyAdminActionsCard
+                  user={user}
+                  onUpdateTeacherPosition={onUpdateTeacherPosition}
+                  isUpdatingPosition={isUpdatingTeacherPosition}
+                  onToggleRestrict={handleRestrict}
+                  isRestrictingUser={isBusy}
+                />
+              </>
             ) : (
-              <TeacherAcademicCard profile={user.teacherProfile} />
+              <>
+                {/* Student Profile Layout */}
+                <ContactPersonalCard user={user} />
+                <StudentAcademicCard profile={user.studentProfile} />
+                <AdministrativeActionsCard
+                  user={user}
+                  onUpdateRole={onUpdateRole}
+                  onToggleRestrict={handleRestrict}
+                  isUpdatingRole={isUpdatingRole}
+                  isRestrictingUser={isBusy}
+                />
+              </>
             )}
-
-            {/* 4. Administrative Actions Card */}
-            <AdministrativeActionsCard
-              user={user}
-              onUpdateRole={onUpdateRole}
-              onDelete={onDelete}
-              isUpdatingRole={isUpdatingRole}
-              isDeletingUser={isDeletingUser}
-            />
           </ScrollView>
         </View>
       </Modal>

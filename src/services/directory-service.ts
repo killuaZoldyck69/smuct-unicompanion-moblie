@@ -5,6 +5,7 @@ export interface TeacherProfileData {
   userId: string;
   teacherId: string;
   designation: string;
+  administrativeRole?: string | null;
   department: string;
   faculty: string;
   officeRoom?: string | null;

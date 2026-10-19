@@ -49,13 +49,15 @@ export function AdminUsersScreen() {
     fetchNextPage,
     refetch,
     isRefetching,
-    handleDelete,
+    handleToggleRestrict,
     handleUpdateRole,
+    handleUpdateTeacherPosition,
     resetFilters,
     isStudentTab,
     primaryThemeColor,
     isUpdatingRole,
-    isDeletingUser,
+    isUpdatingTeacherPosition,
+    isRestrictingUser,
   } = useAdminUsers();
 
   // Edge-to-edge transparent status bar on screen focus
@@ -248,9 +250,11 @@ export function AdminUsersScreen() {
         user={selectedUser}
         onClose={() => setSelectedUser(null)}
         onUpdateRole={handleUpdateRole}
-        onDelete={handleDelete}
+        onUpdateTeacherPosition={handleUpdateTeacherPosition}
+        onToggleRestrict={handleToggleRestrict}
         isUpdatingRole={isUpdatingRole}
-        isDeletingUser={isDeletingUser}
+        isUpdatingTeacherPosition={isUpdatingTeacherPosition}
+        isRestrictingUser={isRestrictingUser}
         topInset={insets.top}
         bottomInset={insets.bottom}
       />
