@@ -15,7 +15,6 @@ export const MemberRowItem = React.memo(function MemberRowItem({
 }: MemberRowItemProps) {
   const isTeacher = member.role === "TEACHER";
   const isCR = member.role === "CR";
-  const isTA = member.role === "TA";
   const subtext = getMemberSubtext(member);
 
   return (
@@ -35,14 +34,14 @@ export const MemberRowItem = React.memo(function MemberRowItem({
             style={[
               styles.avatarFallback,
               isTeacher && styles.avatarTeacher,
-              (isCR || isTA) && styles.avatarLeadership,
+              isCR && styles.avatarLeadership,
             ]}
           >
             <Text
               style={[
                 styles.avatarText,
                 isTeacher && styles.avatarTextTeacher,
-                (isCR || isTA) && styles.avatarTextLeadership,
+                isCR && styles.avatarTextLeadership,
               ]}
             >
               {member.user?.name?.charAt(0)?.toUpperCase() || "U"}
@@ -69,11 +68,6 @@ export const MemberRowItem = React.memo(function MemberRowItem({
         {isCR && (
           <View style={[styles.pill, styles.pillCR]}>
             <Text style={[styles.pillText, styles.pillTextCR]}>CR</Text>
-          </View>
-        )}
-        {isTA && (
-          <View style={[styles.pill, styles.pillTA]}>
-            <Text style={[styles.pillText, styles.pillTextTA]}>TA</Text>
           </View>
         )}
         <Feather name="chevron-right" size={17} color="#cbd5e1" style={styles.chevron} />
@@ -180,13 +174,6 @@ const styles = StyleSheet.create({
   },
   pillTextCR: {
     color: "#0284c7",
-    fontWeight: "700",
-  },
-  pillTA: {
-    backgroundColor: BENTO.purpleSoft,
-  },
-  pillTextTA: {
-    color: BENTO.purpleText,
     fontWeight: "700",
   },
   chevron: {

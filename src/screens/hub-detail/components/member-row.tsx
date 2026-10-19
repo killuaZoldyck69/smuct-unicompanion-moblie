@@ -37,7 +37,7 @@ interface Props {
 
 const MemberRow = ({ item, onPress }: Props) => {
   const isTeacher = item.role === "TEACHER";
-  const isLeader = item.role === "CR" || item.role === "TA";
+  const isLeader = item.role === "CR";
 
   const idDisplay = isTeacher
     ? item.user?.teacherProfile?.teacherId

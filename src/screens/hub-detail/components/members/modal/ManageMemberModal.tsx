@@ -44,15 +44,15 @@ export function ManageMemberModal({
 
   const isSelf = selectedMember.user?.id === myUserId;
   const isTargetTeacher = selectedMember.role === "TEACHER";
-  const isManager = ["TEACHER", "CR", "TA"].includes(myRole);
+  const isManager = ["TEACHER", "CR"].includes(myRole);
 
   const isBlocked = !isSelf && isTargetTeacher && myRole !== "TEACHER";
   const hasNoPermission = !isManager && !isSelf;
 
   const availableRoles: HubRole[] =
     myRole === "TEACHER"
-      ? ["STUDENT", "CR", "TA", "TEACHER"]
-      : ["STUDENT", "CR", "TA"];
+      ? ["STUDENT", "CR", "TEACHER"]
+      : ["STUDENT", "CR"];
 
   const modalTitle = isSelf
     ? "My Profile & Membership"

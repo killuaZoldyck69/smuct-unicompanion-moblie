@@ -16,7 +16,6 @@ export interface StudentProfileData {
   section: string;
   currentTerm?: string | null;
   isCR?: boolean;
-  isTA?: boolean;
   skills?: string[];
   linkedInUrl?: string | null;
   personalWebsiteUrl?: string | null;

@@ -573,7 +573,6 @@ const AnnouncementCard = ({
                   c.author?.hubs?.[0]?.role || c.author?.role;
                 const isTeacher = authorRole === "TEACHER";
                 const isCr = authorRole === "CR";
-                const isTa = authorRole === "TA";
                 const replies = Array.isArray(c.replies) ? c.replies : [];
                 const isCommentAuthor = Boolean(
                   currentUserId &&
@@ -625,11 +624,6 @@ const AnnouncementCard = ({
                           {isCr && (
                             <View style={[styles.roleBadge, styles.roleBadgeCr]}>
                               <Text style={styles.roleBadgeTextCr}>CR</Text>
-                            </View>
-                          )}
-                          {isTa && (
-                            <View style={[styles.roleBadge, styles.roleBadgeTa]}>
-                              <Text style={styles.roleBadgeTextTa}>TA</Text>
                             </View>
                           )}
                         </View>
@@ -709,7 +703,6 @@ const AnnouncementCard = ({
                             reply.author?.hubs?.[0]?.role || reply.author?.role;
                           const isReplyTeacher = replyRole === "TEACHER";
                           const isReplyCr = replyRole === "CR";
-                          const isReplyTa = replyRole === "TA";
                           const isReplyAuthor = Boolean(
                             currentUserId &&
                               (reply.authorId === currentUserId ||
@@ -795,18 +788,6 @@ const AnnouncementCard = ({
                                     >
                                       <Text style={styles.roleBadgeTextCr}>
                                         CR
-                                      </Text>
-                                    </View>
-                                  )}
-                                  {isReplyTa && (
-                                    <View
-                                      style={[
-                                        styles.roleBadge,
-                                        styles.roleBadgeTa,
-                                      ]}
-                                    >
-                                      <Text style={styles.roleBadgeTextTa}>
-                                        TA
                                       </Text>
                                     </View>
                                   )}
@@ -1397,9 +1378,6 @@ const styles = StyleSheet.create({
   roleBadgeCr: {
     backgroundColor: "#cffafe",
   },
-  roleBadgeTa: {
-    backgroundColor: "#d1fae5",
-  },
   roleBadgeTextTeacher: {
     fontFamily,
     fontSize: 9,
@@ -1411,12 +1389,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
     color: "#0e7490",
-  },
-  roleBadgeTextTa: {
-    fontFamily,
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#047857",
   },
 
   // Single Reply Actions (Teacher/CR only)

@@ -54,13 +54,6 @@ export const ROLE_CONFIG: Record<
     color: BENTO.amberText,
     bg: BENTO.amberSoft,
   },
-  TA: {
-    title: "TA",
-    badgeLabel: "TA",
-    icon: "shield",
-    color: BENTO.purpleText,
-    bg: BENTO.purpleSoft,
-  },
   TEACHER: {
     title: "Course Instructor",
     badgeLabel: "Instructor",

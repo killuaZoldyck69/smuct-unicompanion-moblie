@@ -204,7 +204,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
 
   const canPostAnnouncement = isTeacher || isCR;
   const canEditClassLink = isTeacher || isCR;
-  const canManage = canPostAnnouncement || myRole === "TA";
+  const canManage = canPostAnnouncement;
 
   const handleBack = useCallback(() => {
     router.replace("/(tabs)/hubs");

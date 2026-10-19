@@ -8,7 +8,6 @@ export interface StudentProfile {
   currentSemester?: string | number | null;
   section?: string | null;
   isCR?: boolean;
-  isTA?: boolean;
   skills?: string[];
   linkedInUrl?: string | null;
   personalWebsiteUrl?: string | null;

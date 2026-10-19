@@ -78,7 +78,7 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
               sub.student?.studentId ||
               member?.user?.studentProfile?.studentId ||
               member?.user?.studentId ||
-              (member?.role === "STUDENT" || member?.role === "CR" || member?.role === "TA"
+              (member?.role === "STUDENT" || member?.role === "CR"
                 ? member.studentId
                 : null);
 

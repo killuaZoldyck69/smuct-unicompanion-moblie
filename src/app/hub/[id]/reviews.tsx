@@ -69,8 +69,8 @@ export default function HubReviewsScreen() {
   );
   const myRole = myHubMembership?.role;
 
-  const canReview = ["STUDENT", "CR", "TA"].includes(myRole);
-  const canManage = ["TEACHER", "CR", "TA"].includes(myRole);
+  const canReview = ["STUDENT", "CR"].includes(myRole);
+  const canManage = ["TEACHER", "CR"].includes(myRole);
 
   // Sync settings form when hub details load
   useEffect(() => {

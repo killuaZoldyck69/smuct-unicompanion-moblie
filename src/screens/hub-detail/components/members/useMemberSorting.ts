@@ -12,7 +12,7 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
     members.forEach((m) => {
       if (m.role === "TEACHER") {
         teachers.push(m);
-      } else if (m.role === "CR" || m.role === "TA") {
+      } else if (m.role === "CR") {
         leadership.push(m);
       } else {
         students.push(m);
@@ -23,10 +23,9 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
       (a.user?.name || "").localeCompare(b.user?.name || ""),
     );
 
-    leadership.sort((a, b) => {
-      if (a.role !== b.role) return a.role === "CR" ? -1 : 1;
-      return (a.user?.name || "").localeCompare(b.user?.name || "");
-    });
+    leadership.sort((a, b) =>
+      (a.user?.name || "").localeCompare(b.user?.name || ""),
+    );
 
     students.sort((a, b) =>
       (a.user?.name || "").localeCompare(b.user?.name || ""),

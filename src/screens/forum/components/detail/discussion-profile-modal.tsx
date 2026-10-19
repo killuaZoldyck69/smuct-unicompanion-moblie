@@ -247,40 +247,20 @@ export const DiscussionProfileModal = memo(function DiscussionProfileModal({
                   />
                 )}
 
-                {/* CR / TA badges */}
-                {(sp.isCR || sp.isTA) && (
+                {/* CR badge */}
+                {sp.isCR && (
                   <View style={styles.badgeRow}>
-                    {sp.isCR && (
-                      <View style={styles.rolePill}>
-                        <Feather
-                          name="star"
-                          size={10}
-                          color={BENTO_COLORS.primaryBlue}
-                          style={styles.pillIcon}
-                        />
-                        <Text style={styles.rolePillText}>
-                          Class Representative
-                        </Text>
-                      </View>
-                    )}
-                    {sp.isTA && (
-                      <View style={[styles.rolePill, styles.rolePillTA]}>
-                        <Feather
-                          name="zap"
-                          size={10}
-                          color={BENTO_COLORS.emerald}
-                          style={styles.pillIcon}
-                        />
-                        <Text
-                          style={[
-                            styles.rolePillText,
-                            { color: BENTO_COLORS.emerald },
-                          ]}
-                        >
-                          Teaching Assistant
-                        </Text>
-                      </View>
-                    )}
+                    <View style={styles.rolePill}>
+                      <Feather
+                        name="star"
+                        size={10}
+                        color={BENTO_COLORS.primaryBlue}
+                        style={styles.pillIcon}
+                      />
+                      <Text style={styles.rolePillText}>
+                        Class Representative
+                      </Text>
+                    </View>
                   </View>
                 )}
               </View>

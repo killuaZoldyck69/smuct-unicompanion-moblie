@@ -114,10 +114,10 @@ export default function AssessmentCard({
     });
   };
 
-  // Filter students for teachers, excluding self if TA
+  // Filter students for teachers
   const students =
     hubMembers?.filter((m: any) => {
-      const isStudentRole = ["STUDENT", "CR", "TA"].includes(m.role);
+      const isStudentRole = ["STUDENT", "CR"].includes(m.role);
       const isNotSelf = m.user?.id !== myUserId;
       return isStudentRole && isNotSelf;
     }) || [];

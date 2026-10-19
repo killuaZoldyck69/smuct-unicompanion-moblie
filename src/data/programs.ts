@@ -371,3 +371,40 @@ export const programListForDropdown = universityPrograms.map((program) => ({
   department: program.department,
   departmentShortName: program.departmentShortName,
 }));
+
+/**
+ * Returns a human-friendly clean faculty title, e.g. "Design & Technology" instead of "FACULTY OF DESIGN & TECHNOLOGY"
+ */
+export const getCleanFacultyName = (
+  faculty?: string | null,
+  department?: string | null,
+): string => {
+  if (faculty && faculty.trim()) {
+    const cleaned = faculty.replace(/^faculty of\s+/i, "").trim();
+    if (cleaned === cleaned.toUpperCase()) {
+      return cleaned
+        .split(" ")
+        .map((w) =>
+          w === "&"
+            ? "&"
+            : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+        )
+        .join(" ");
+    }
+    return cleaned;
+  }
+
+  if (department) {
+    const trimmedDept = department.trim().toLowerCase();
+    const prog = universityPrograms.find(
+      (p) =>
+        p.department.toLowerCase() === trimmedDept ||
+        p.departmentShortName?.toLowerCase() === trimmedDept,
+    );
+    if (prog?.faculty) {
+      return getCleanFacultyName(prog.faculty);
+    }
+  }
+
+  return "Design & Technology";
+};

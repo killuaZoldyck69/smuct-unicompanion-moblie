@@ -113,7 +113,7 @@ function AssessmentDetailsContent({
   // Submissions Analytics Computation
   const eligibleStudentCount = useMemo(() => {
     const students = hubMembers.filter((m: { role?: string }) =>
-      ["STUDENT", "CR", "TA"].includes(m.role || "")
+      ["STUDENT", "CR"].includes(m.role || "")
     );
     return students.length > 0 ? students.length : Math.max(submissionsList.length, 12);
   }, [hubMembers, submissionsList.length]);
