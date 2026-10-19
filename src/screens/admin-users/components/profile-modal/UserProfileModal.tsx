@@ -20,6 +20,7 @@ import { TeacherOfficeAvailabilityCard } from "./TeacherOfficeAvailabilityCard";
 import { TeacherProfessionalProfileCard } from "./TeacherProfessionalProfileCard";
 import { FacultyAdminActionsCard } from "./FacultyAdminActionsCard";
 import { AdministrativeActionsCard } from "./AdministrativeActionsCard";
+import { RestrictConfirmationModal } from "./RestrictConfirmationModal";
 
 interface UserProfileModalProps {
   user: AdminUser | null;
@@ -60,6 +61,19 @@ export const UserProfileModal = React.memo(
     const isTeacher = user.role === "TEACHER";
     const handleRestrict = onToggleRestrict || onDelete;
     const isBusy = isRestrictingUser ?? isDeletingUser;
+
+    const [isRestrictConfirmVisible, setIsRestrictConfirmVisible] =
+      React.useState(false);
+
+    const handlePromptRestrict = React.useCallback(() => {
+      setIsRestrictConfirmVisible(true);
+    }, []);
+
+    const handleExecuteRestrict = React.useCallback(() => {
+      if (!user) return;
+      handleRestrict?.(user.id, user.name, user.isRestricted);
+      setIsRestrictConfirmVisible(false);
+    }, [user, handleRestrict]);
 
     return (
       <Modal
@@ -115,7 +129,10 @@ export const UserProfileModal = React.memo(
                 <TeacherAcademicCard profile={user.teacherProfile} />
 
                 {/* 3. Office & Availability Card (Mint) */}
-                <TeacherOfficeAvailabilityCard profile={user.teacherProfile} />
+                <TeacherOfficeAvailabilityCard
+                  profile={user.teacherProfile}
+                  phoneNumber={user.phoneNumber}
+                />
 
                 {/* 4. Professional Profile Card (Lavender) */}
                 <TeacherProfessionalProfileCard profile={user.teacherProfile} />
@@ -125,7 +142,7 @@ export const UserProfileModal = React.memo(
                   user={user}
                   onUpdateTeacherPosition={onUpdateTeacherPosition}
                   isUpdatingPosition={isUpdatingTeacherPosition}
-                  onToggleRestrict={handleRestrict}
+                  onToggleRestrict={handlePromptRestrict}
                   isRestrictingUser={isBusy}
                 />
               </>
@@ -137,13 +154,22 @@ export const UserProfileModal = React.memo(
                 <AdministrativeActionsCard
                   user={user}
                   onUpdateRole={onUpdateRole}
-                  onToggleRestrict={handleRestrict}
+                  onToggleRestrict={handlePromptRestrict}
                   isUpdatingRole={isUpdatingRole}
                   isRestrictingUser={isBusy}
                 />
               </>
             )}
           </ScrollView>
+
+          {/* Restrict Confirmation Modal */}
+          <RestrictConfirmationModal
+            visible={isRestrictConfirmVisible}
+            user={user}
+            onClose={() => setIsRestrictConfirmVisible(false)}
+            onConfirm={handleExecuteRestrict}
+            isLoading={isBusy}
+          />
         </View>
       </Modal>
     );

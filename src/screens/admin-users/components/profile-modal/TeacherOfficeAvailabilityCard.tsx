@@ -1,15 +1,18 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Linking } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-toast-message";
 
 import { TeacherProfile } from "../../types";
 
 interface TeacherOfficeAvailabilityCardProps {
   profile?: TeacherProfile | null;
+  phoneNumber?: string | null;
 }
 
 export const TeacherOfficeAvailabilityCard = React.memo(
-  ({ profile }: TeacherOfficeAvailabilityCardProps) => {
+  ({ profile, phoneNumber }: TeacherOfficeAvailabilityCardProps) => {
     const officeRoomDisplay = profile?.officeRoom || "Faculty Room 408";
     const dayOffDisplay = profile?.dayOff || "Thursday";
 
@@ -47,6 +50,28 @@ export const TeacherOfficeAvailabilityCard = React.memo(
       ];
     }, [profile?.consultationSlots, profile?.consultationHours]);
 
+    const handleCall = useCallback(() => {
+      if (!phoneNumber) return;
+      const cleanNumber = phoneNumber.replace(/[^0-9+]/g, "");
+      Linking.openURL(`tel:${cleanNumber}`).catch(() => {
+        Toast.show({
+          type: "error",
+          text1: "Cannot place call",
+          text2: "Unable to dial phone number on this device.",
+        });
+      });
+    }, [phoneNumber]);
+
+    const handleCopy = useCallback(async () => {
+      if (!phoneNumber) return;
+      await Clipboard.setStringAsync(phoneNumber);
+      Toast.show({
+        type: "success",
+        text1: "Phone number copied",
+        text2: phoneNumber,
+      });
+    }, [phoneNumber]);
+
     return (
       <View style={styles.cardContainer}>
         {/* Header Row */}
@@ -76,6 +101,56 @@ export const TeacherOfficeAvailabilityCard = React.memo(
               {dayOffDisplay}
             </Text>
           </View>
+        </View>
+
+        {/* Phone Number Box */}
+        <View style={styles.phoneCardBox}>
+          <View style={styles.phoneLeft}>
+            <View style={styles.phoneIconBox}>
+              <Feather name="phone" size={15} color="#16A34A" />
+            </View>
+            <View style={styles.phoneTextContainer}>
+              <Text style={styles.phoneLabel}>PHONE NUMBER</Text>
+              <Text
+                style={[
+                  styles.phoneValue,
+                  !phoneNumber && styles.phoneValuePlaceholder,
+                ]}
+                numberOfLines={1}
+                selectable={true}
+              >
+                {phoneNumber || "Not provided"}
+              </Text>
+            </View>
+          </View>
+
+          {Boolean(phoneNumber) && (
+            <View style={styles.phoneActionsRow}>
+              <TouchableOpacity
+                style={styles.phoneActionBtnCopy}
+                onPress={handleCopy}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Copy phone number"
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Feather name="copy" size={13} color="#15803D" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.phoneActionBtnCall}
+                onPress={handleCall}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Call phone number"
+              >
+                <Feather name="phone-call" size={12} color="#FFFFFF" />
+                <Text style={styles.phoneActionBtnCallText}>Call</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Weekly Consultation Hours Section */}
@@ -214,5 +289,85 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: "700",
     color: "#15803D",
+  },
+  phoneCardBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 13,
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.15)",
+  },
+  phoneLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 10,
+  },
+  phoneIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  phoneTextContainer: {
+    flex: 1,
+  },
+  phoneLabel: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#94A3B8",
+    letterSpacing: 0.5,
+  },
+  phoneValue: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginTop: 2,
+  },
+  phoneValuePlaceholder: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#94A3B8",
+  },
+  phoneActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  phoneActionBtnCopy: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  phoneActionBtnCall: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#16A34A",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    gap: 5,
+    shadowColor: "#16A34A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  phoneActionBtnCallText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

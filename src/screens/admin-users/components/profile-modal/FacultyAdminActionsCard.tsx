@@ -5,10 +5,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  Pressable,
   ScrollView,
-  ActivityIndicator,
+  Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
 import { AdminUser } from "../../types";
@@ -41,6 +41,7 @@ export const FacultyAdminActionsCard = React.memo(
     isDeletingUser,
     isRestrictingUser,
   }: FacultyAdminActionsCardProps) => {
+    const insets = useSafeAreaInsets();
     const handleRestrict = onToggleRestrict || onDelete;
     const isBusy = isRestrictingUser ?? isDeletingUser;
 
@@ -212,40 +213,60 @@ export const FacultyAdminActionsCard = React.memo(
         <Modal
           visible={isDesignationModalOpen}
           transparent={true}
-          animationType="fade"
+          animationType="slide"
+          statusBarTranslucent={true}
           onRequestClose={() => setIsDesignationModalOpen(false)}
         >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setIsDesignationModalOpen(false)}
+          <View
+            style={[
+              styles.modalOverlay,
+              { paddingTop: Math.max(insets.top, 24) + 16 },
+            ]}
           >
-            <Pressable
-              style={styles.modalCard}
-              onPress={(e) => e.stopPropagation()}
+            {/* Backdrop tap outside to dismiss */}
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setIsDesignationModalOpen(false)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss modal"
+            />
+
+            <View
+              style={[
+                styles.modalCard,
+                {
+                  paddingBottom:
+                    Math.max(insets.bottom, Platform.OS === "android" ? 16 : 12) +
+                    14,
+                },
+              ]}
             >
               <View style={styles.modalHandle} />
 
               <View style={styles.modalHeader}>
-                <View>
-                  <Text style={styles.modalTitle}>Change Designation</Text>
-                  <Text style={styles.modalSubtitle} numberOfLines={1}>
-                    Update academic title for {user.name}
-                  </Text>
-                </View>
+                <Text style={styles.modalTitle} numberOfLines={1}>
+                  Change Designation
+                </Text>
                 <TouchableOpacity
                   onPress={() => setIsDesignationModalOpen(false)}
                   style={styles.modalCloseBtn}
+                  activeOpacity={0.7}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Close designation dialog"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Feather name="x" size={18} color="#64748B" />
                 </TouchableOpacity>
               </View>
 
               <ScrollView
-                showsVerticalScrollIndicator={false}
+                style={styles.optionsScroll}
                 contentContainerStyle={styles.optionsList}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
               >
                 {DESIGNATION_OPTIONS.map((designation) => {
                   const isSelected = designation === currentDesignation;
@@ -288,8 +309,8 @@ export const FacultyAdminActionsCard = React.memo(
                   );
                 })}
               </ScrollView>
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </Modal>
 
         {/* ======================================================== */}
@@ -298,40 +319,60 @@ export const FacultyAdminActionsCard = React.memo(
         <Modal
           visible={isRoleModalOpen}
           transparent={true}
-          animationType="fade"
+          animationType="slide"
+          statusBarTranslucent={true}
           onRequestClose={() => setIsRoleModalOpen(false)}
         >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setIsRoleModalOpen(false)}
+          <View
+            style={[
+              styles.modalOverlay,
+              { paddingTop: Math.max(insets.top, 24) + 16 },
+            ]}
           >
-            <Pressable
-              style={styles.modalCard}
-              onPress={(e) => e.stopPropagation()}
+            {/* Backdrop tap outside to dismiss */}
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setIsRoleModalOpen(false)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss modal"
+            />
+
+            <View
+              style={[
+                styles.modalCard,
+                {
+                  paddingBottom:
+                    Math.max(insets.bottom, Platform.OS === "android" ? 16 : 12) +
+                    14,
+                },
+              ]}
             >
               <View style={styles.modalHandle} />
 
               <View style={styles.modalHeader}>
-                <View>
-                  <Text style={styles.modalTitle}>Assign Leadership Role</Text>
-                  <Text style={styles.modalSubtitle} numberOfLines={1}>
-                    Roles for {user.name} (e.g. HOD, Coordinator, Dean)
-                  </Text>
-                </View>
+                <Text style={styles.modalTitle} numberOfLines={1}>
+                  Assign Leadership Role
+                </Text>
                 <TouchableOpacity
                   onPress={() => setIsRoleModalOpen(false)}
                   style={styles.modalCloseBtn}
+                  activeOpacity={0.7}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Close leadership role dialog"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Feather name="x" size={18} color="#64748B" />
                 </TouchableOpacity>
               </View>
 
               <ScrollView
-                showsVerticalScrollIndicator={false}
+                style={styles.optionsScroll}
                 contentContainerStyle={styles.optionsList}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
               >
                 {TEACHER_ADMIN_ROLE_OPTIONS.map((item: TeacherAdminRoleOption) => {
                   const isSelected =
@@ -384,8 +425,8 @@ export const FacultyAdminActionsCard = React.memo(
                   );
                 })}
               </ScrollView>
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </Modal>
       </View>
     );
@@ -549,12 +590,11 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 32,
-    maxHeight: "80%",
+    maxHeight: "85%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
@@ -579,15 +619,11 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
     color: "#0F172A",
-  },
-  modalSubtitle: {
-    fontSize: 12.5,
-    color: "#64748B",
-    marginTop: 2,
-    fontWeight: "500",
+    letterSpacing: -0.3,
+    flex: 1,
   },
   modalCloseBtn: {
     width: 32,
@@ -596,9 +632,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: 12,
+  },
+  optionsScroll: {
+    flexGrow: 0,
   },
   optionsList: {
-    paddingBottom: 8,
+    paddingBottom: 2,
   },
   optionItem: {
     flexDirection: "row",

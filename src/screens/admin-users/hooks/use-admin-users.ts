@@ -209,31 +209,9 @@ export function useAdminUsers() {
 
   // Handlers
   const handleToggleRestrict = useCallback(
-    (userId: string, name: string, currentlyRestricted?: boolean) => {
+    (userId: string, _name?: string, currentlyRestricted?: boolean) => {
       const willRestrict = !currentlyRestricted;
-      const title = willRestrict ? "Restrict Account" : "Unrestrict Account";
-      const message = willRestrict
-        ? `Are you sure you want to restrict ${name}? They will be immediately logged out and prevented from accessing the system.`
-        : `Are you sure you want to restore access for ${name}?`;
-
-      if (Platform.OS === "web") {
-        if (window.confirm(message)) {
-          restrictUserMutation.mutate({ userId, isRestricted: willRestrict });
-        }
-      } else {
-        Alert.alert(title, message, [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: willRestrict ? "Restrict Account" : "Restore Access",
-            style: willRestrict ? "destructive" : "default",
-            onPress: () =>
-              restrictUserMutation.mutate({
-                userId,
-                isRestricted: willRestrict,
-              }),
-          },
-        ]);
-      }
+      restrictUserMutation.mutate({ userId, isRestricted: willRestrict });
     },
     [restrictUserMutation],
   );
