@@ -96,3 +96,55 @@ export const TEACHER_ADMIN_ROLE_OPTIONS: TeacherAdminRoleOption[] = [
     description: "Regular faculty member without administrative role",
   },
 ];
+
+export const BLOOD_GROUP_OPTIONS = [
+  "A+",
+  "A-",
+  "B+",
+  "B-",
+  "AB+",
+  "AB-",
+  "O+",
+  "O-",
+] as const;
+
+export const BLOOD_GROUP_UI_TO_API: Record<string, string> = {
+  "A+": "A_POSITIVE",
+  "A-": "A_NEGATIVE",
+  "B+": "B_POSITIVE",
+  "B-": "B_NEGATIVE",
+  "AB+": "AB_POSITIVE",
+  "AB-": "AB_NEGATIVE",
+  "O+": "O_POSITIVE",
+  "O-": "O_NEGATIVE",
+};
+
+export const BLOOD_GROUP_API_TO_UI: Record<string, string> = {
+  A_POSITIVE: "A+",
+  A_NEGATIVE: "A-",
+  B_POSITIVE: "B+",
+  B_NEGATIVE: "B-",
+  AB_POSITIVE: "AB+",
+  AB_NEGATIVE: "AB-",
+  O_POSITIVE: "O+",
+  O_NEGATIVE: "O-",
+};
+
+export const DAY_OFF_OPTIONS = [
+  "Friday",
+  "Saturday",
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "DAY OFF",
+] as const;
+
+export const FACULTY_OPTIONS = [
+  "Faculty of Science and Information Technology",
+  "Faculty of Business Administration",
+  "Faculty of Design and Technology",
+  "Faculty of Arts and Social Sciences",
+] as const;
+

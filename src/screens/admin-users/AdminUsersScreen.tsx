@@ -52,11 +52,13 @@ export function AdminUsersScreen() {
     handleToggleRestrict,
     handleUpdateRole,
     handleUpdateTeacherPosition,
+    handleUpdateTeacherProfile,
     resetFilters,
     isStudentTab,
     primaryThemeColor,
     isUpdatingRole,
     isUpdatingTeacherPosition,
+    isUpdatingTeacherProfile,
     isRestrictingUser,
   } = useAdminUsers();
 
@@ -251,9 +253,11 @@ export function AdminUsersScreen() {
         onClose={() => setSelectedUser(null)}
         onUpdateRole={handleUpdateRole}
         onUpdateTeacherPosition={handleUpdateTeacherPosition}
+        onUpdateTeacherProfile={handleUpdateTeacherProfile}
         onToggleRestrict={handleToggleRestrict}
         isUpdatingRole={isUpdatingRole}
         isUpdatingTeacherPosition={isUpdatingTeacherPosition}
+        isUpdatingTeacherProfile={isUpdatingTeacherProfile}
         isRestrictingUser={isRestrictingUser}
         topInset={insets.top}
         bottomInset={insets.bottom}

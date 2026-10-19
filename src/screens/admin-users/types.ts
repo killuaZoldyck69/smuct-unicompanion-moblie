@@ -58,3 +58,22 @@ export interface AdminUser {
   studentProfile?: StudentProfile | null;
   teacherProfile?: TeacherProfile | null;
 }
+
+export interface UpdateAdminTeacherProfilePayload {
+  name?: string;
+  phoneNumber?: string | null;
+  bloodGroup?: string | null;
+  designation?: string;
+  administrativeRole?: string | null;
+  department?: string;
+  faculty?: string;
+  officeRoom?: string | null;
+  dayOff?: string | null;
+  consultationHours?: string | null;
+  advisoryBatch?: number | null;
+  academicQualifications?: any;
+  expertiseFields?: string[];
+  linkedInUrl?: string | null;
+  personalWebsiteUrl?: string | null;
+}
+

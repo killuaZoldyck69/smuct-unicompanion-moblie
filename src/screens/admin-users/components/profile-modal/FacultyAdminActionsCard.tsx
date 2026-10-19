@@ -11,12 +11,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
-import { AdminUser } from "../../types";
+import { AdminUser, UpdateAdminTeacherProfilePayload } from "../../types";
 import {
   DESIGNATION_OPTIONS,
   TEACHER_ADMIN_ROLE_OPTIONS,
   TeacherAdminRoleOption,
 } from "../../constants";
+import { EditTeacherProfileModal } from "./EditTeacherProfileModal";
 
 interface FacultyAdminActionsCardProps {
   user: AdminUser;
@@ -24,7 +25,12 @@ interface FacultyAdminActionsCardProps {
     userId: string,
     data: { designation?: string; administrativeRole?: string | null },
   ) => void;
+  onUpdateTeacherProfile?: (
+    userId: string,
+    data: UpdateAdminTeacherProfilePayload,
+  ) => Promise<any> | void;
   isUpdatingPosition?: boolean;
+  isUpdatingProfile?: boolean;
   onDelete?: (userId: string, name: string, isRestricted?: boolean) => void;
   onToggleRestrict?: (userId: string, name: string, isRestricted?: boolean) => void;
   isDeletingUser?: boolean;
@@ -35,7 +41,9 @@ export const FacultyAdminActionsCard = React.memo(
   ({
     user,
     onUpdateTeacherPosition,
+    onUpdateTeacherProfile,
     isUpdatingPosition = false,
+    isUpdatingProfile = false,
     onDelete,
     onToggleRestrict,
     isDeletingUser,
@@ -45,6 +53,7 @@ export const FacultyAdminActionsCard = React.memo(
     const handleRestrict = onToggleRestrict || onDelete;
     const isBusy = isRestrictingUser ?? isDeletingUser;
 
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDesignationModalOpen, setIsDesignationModalOpen] = useState(false);
     const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
@@ -85,7 +94,35 @@ export const FacultyAdminActionsCard = React.memo(
           </View>
         </View>
 
-        {/* 1. Change Designation Button (Dark Navy) */}
+        {/* 1. Edit Faculty Profile Button (Primary Dark Slate with cyan accent) */}
+        <TouchableOpacity
+          style={styles.actionBtnPrimary}
+          activeOpacity={0.85}
+          onPress={() => setIsEditModalOpen(true)}
+          disabled={isBusy || isUpdatingProfile || isUpdatingPosition}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Edit Faculty Profile"
+        >
+          <View style={styles.btnContentRow}>
+            <View style={styles.btnIconTextGroup}>
+              <View style={styles.primaryIconCircle}>
+                <Feather name="edit-3" size={15} color="#38BDF8" />
+              </View>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={styles.btnTextWhite}>Edit Faculty Profile</Text>
+                <Text style={styles.btnSubtextMuted}>
+                  Personal, Academic, Availability & Links
+                </Text>
+              </View>
+            </View>
+            <View style={styles.actionArrowBadge}>
+              <Feather name="chevron-right" size={15} color="#94A3B8" />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* 2. Change Designation Button (Dark Navy) */}
         <TouchableOpacity
           style={styles.actionBtnNavy}
           activeOpacity={0.85}
@@ -428,6 +465,17 @@ export const FacultyAdminActionsCard = React.memo(
             </View>
           </View>
         </Modal>
+
+        {/* ======================================================== */}
+        {/* MODAL 3: FULL TEACHER PROFILE EDIT                       */}
+        {/* ======================================================== */}
+        <EditTeacherProfileModal
+          visible={isEditModalOpen}
+          user={user}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={onUpdateTeacherProfile || (() => {})}
+          isSaving={isUpdatingProfile}
+        />
       </View>
     );
   },
@@ -474,6 +522,44 @@ const styles = StyleSheet.create({
   },
   btnIcon: {
     marginRight: 8,
+  },
+  actionBtnPrimary: {
+    backgroundColor: "#0F172A",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#1E293B",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  primaryIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "rgba(56, 189, 248, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  btnSubtextMuted: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#94A3B8",
+    marginTop: 2,
+  },
+  actionArrowBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
   actionBtnNavy: {
     backgroundColor: "#1E222B",

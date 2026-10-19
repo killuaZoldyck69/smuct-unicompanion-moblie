@@ -11,7 +11,13 @@ import Toast from "react-native-toast-message";
 import api from "@/services/api";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { THEME } from "../constants";
-import { TabType, RoleStatusTag, RoleAction, AdminUser } from "../types";
+import {
+  TabType,
+  RoleStatusTag,
+  RoleAction,
+  AdminUser,
+  UpdateAdminTeacherProfilePayload,
+} from "../types";
 
 export function useAdminUsers() {
   const router = useRouter();
@@ -207,6 +213,49 @@ export function useAdminUsers() {
       }),
   });
 
+  const updateTeacherProfileMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      data,
+    }: {
+      userId: string;
+      data: UpdateAdminTeacherProfilePayload;
+    }) => {
+      const response = await api.patch(`/users/${userId}/teacher-profile`, data);
+      return response.data?.data;
+    },
+    onSuccess: (updatedUser: any) => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["directory"] });
+      if (updatedUser) {
+        setSelectedUser((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            name: updatedUser.name ?? prev.name,
+            phoneNumber: updatedUser.phoneNumber ?? prev.phoneNumber,
+            bloodGroup: updatedUser.bloodGroup ?? prev.bloodGroup,
+            teacherProfile: {
+              ...prev.teacherProfile,
+              ...(updatedUser.teacherProfile || {}),
+            },
+          };
+        });
+      }
+      Toast.show({
+        type: "success",
+        text1: "Faculty Profile Updated",
+        text2: "Changes saved successfully.",
+      });
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: err.response?.data?.message || err.message,
+      }),
+  });
+
   // Handlers
   const handleToggleRestrict = useCallback(
     (userId: string, _name?: string, currentlyRestricted?: boolean) => {
@@ -231,6 +280,13 @@ export function useAdminUsers() {
       updateTeacherPositionMutation.mutate({ userId, ...data });
     },
     [updateTeacherPositionMutation],
+  );
+
+  const handleUpdateTeacherProfile = useCallback(
+    async (userId: string, data: UpdateAdminTeacherProfilePayload) => {
+      return await updateTeacherProfileMutation.mutateAsync({ userId, data });
+    },
+    [updateTeacherProfileMutation],
   );
 
   const resetFilters = useCallback(() => {
@@ -272,11 +328,13 @@ export function useAdminUsers() {
     handleDelete: handleToggleRestrict,
     handleUpdateRole,
     handleUpdateTeacherPosition,
+    handleUpdateTeacherProfile,
     resetFilters,
     isStudentTab,
     primaryThemeColor,
     isUpdatingRole: updateRoleMutation.isPending,
     isUpdatingTeacherPosition: updateTeacherPositionMutation.isPending,
+    isUpdatingTeacherProfile: updateTeacherProfileMutation.isPending,
     isRestrictingUser: restrictUserMutation.isPending,
     isDeletingUser: restrictUserMutation.isPending,
   };

@@ -11,7 +11,11 @@ import {
 import { Feather } from "@expo/vector-icons";
 
 import { THEME } from "../../constants";
-import { AdminUser, RoleAction } from "../../types";
+import {
+  AdminUser,
+  RoleAction,
+  UpdateAdminTeacherProfilePayload,
+} from "../../types";
 import { ProfileHeroCard } from "./ProfileHeroCard";
 import { ContactPersonalCard } from "./ContactPersonalCard";
 import { StudentAcademicCard } from "./StudentAcademicCard";
@@ -30,10 +34,15 @@ interface UserProfileModalProps {
     userId: string,
     data: { designation?: string; administrativeRole?: string | null },
   ) => void;
+  onUpdateTeacherProfile?: (
+    userId: string,
+    data: UpdateAdminTeacherProfilePayload,
+  ) => Promise<any> | void;
   onDelete?: (userId: string, name: string, isRestricted?: boolean) => void;
   onToggleRestrict?: (userId: string, name: string, isRestricted?: boolean) => void;
   isUpdatingRole: boolean;
   isUpdatingTeacherPosition?: boolean;
+  isUpdatingTeacherProfile?: boolean;
   isDeletingUser?: boolean;
   isRestrictingUser?: boolean;
   topInset: number;
@@ -46,10 +55,12 @@ export const UserProfileModal = React.memo(
     onClose,
     onUpdateRole,
     onUpdateTeacherPosition,
+    onUpdateTeacherProfile,
     onDelete,
     onToggleRestrict,
     isUpdatingRole,
     isUpdatingTeacherPosition,
+    isUpdatingTeacherProfile,
     isDeletingUser,
     isRestrictingUser,
     topInset,
@@ -141,7 +152,9 @@ export const UserProfileModal = React.memo(
                 <FacultyAdminActionsCard
                   user={user}
                   onUpdateTeacherPosition={onUpdateTeacherPosition}
+                  onUpdateTeacherProfile={onUpdateTeacherProfile}
                   isUpdatingPosition={isUpdatingTeacherPosition}
+                  isUpdatingProfile={isUpdatingTeacherProfile}
                   onToggleRestrict={handlePromptRestrict}
                   isRestrictingUser={isBusy}
                 />
