@@ -7,21 +7,24 @@ import {
   RefreshControl,
   Text,
   Platform,
+  StatusBar,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   useInfiniteTeachersDirectory,
   useTeacherDepartments,
 } from "@/features/directory/useDirectory";
 import { TeacherDirectoryItem } from "@/services/directory-service";
+import { THEME, fontFamily } from "./constants";
+import { AmbientBackground } from "./components/AmbientBackground";
+import { DirectoryHeader } from "./components/DirectoryHeader";
+import { ActiveFiltersBar } from "./components/ActiveFiltersBar";
+import { DirectoryFilterModal } from "./components/DirectoryFilterModal";
 import { TeacherCard } from "./components/TeacherCard";
 import { TeacherDetailModal } from "./components/TeacherDetailModal";
-import { TeacherSearchBar } from "./components/TeacherSearchBar";
-import { DepartmentFilterChips } from "./components/DepartmentFilterChips";
-import { TeacherDirectoryHeader } from "./components/TeacherDirectoryHeader";
 import { TeacherDirectorySkeleton } from "./components/TeacherDirectorySkeleton";
 import { TeacherDirectoryEmptyState } from "./components/TeacherDirectoryEmptyState";
-import { DIRECTORY_COLORS, fontFamily } from "./constants";
 
 export interface FacultyDirectoryViewProps {
   onClose?: () => void;
@@ -32,6 +35,7 @@ export interface FacultyDirectoryViewProps {
 export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.memo(
   ({ onClose, isModal = false, initialDepartment = null }) => {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
 
     // Search and filter state
     const [searchQuery, setSearchQuery] = useState("");
@@ -39,25 +43,37 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
     const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
       initialDepartment,
     );
+    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
     // Selected teacher for full-screen detail modal
     const [selectedTeacher, setSelectedTeacher] =
       useState<TeacherDirectoryItem | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-    // Debounce search query by 300ms for high performance & no query flooding
+    // Edge-to-edge transparent status bar on screen focus
+    useFocusEffect(
+      useCallback(() => {
+        StatusBar.setBarStyle("dark-content", true);
+        if (Platform.OS === "android") {
+          StatusBar.setBackgroundColor("transparent", true);
+          StatusBar.setTranslucent(true);
+        }
+      }, []),
+    );
+
+    // Debounce search query by 350ms to minimize network traffic
     useEffect(() => {
       const timer = setTimeout(() => {
         setDebouncedSearch(searchQuery.trim());
-      }, 300);
+      }, 350);
 
       return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    // Query 1: Active departments for filter chips
+    // Query 1: Active distinct departments for filter chips
     const { data: departments = [] } = useTeacherDepartments();
 
-    // Query 2: Infinite paginated teachers directory
+    // Query 2: Server-side infinite paginated teachers directory
     const {
       data,
       isLoading,
@@ -69,7 +85,10 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
       isRefetching,
     } = useInfiniteTeachersDirectory({
       search: debouncedSearch,
-      department: selectedDepartment || undefined,
+      department:
+        selectedDepartment && selectedDepartment !== "All"
+          ? selectedDepartment
+          : undefined,
       limit: 15,
     });
 
@@ -86,7 +105,7 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
     const handleBack = useCallback(() => {
       if (onClose) {
         onClose();
-      } else {
+      } else if (router.canGoBack()) {
         router.back();
       }
     }, [onClose, router]);
@@ -98,7 +117,7 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
 
     const handleCloseDetail = useCallback(() => {
       setIsDetailOpen(false);
-      // Let modal animation finish before clearing object
+      // Wait for modal animation to settle before clearing object
       setTimeout(() => setSelectedTeacher(null), 300);
     }, []);
 
@@ -106,17 +125,24 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
       setSearchQuery("");
       setDebouncedSearch("");
       setSelectedDepartment(null);
+      setIsFilterModalOpen(false);
     }, []);
 
+    // Pagination trigger
     const handleEndReached = useCallback(() => {
       if (hasNextPage && !isFetchingNextPage) {
         fetchNextPage();
       }
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+    // Memoized User Card item renderer
     const renderItem = useCallback(
-      ({ item }: { item: TeacherDirectoryItem }) => (
-        <TeacherCard teacher={item} onPress={handleSelectTeacher} />
+      ({ item, index }: { item: TeacherDirectoryItem; index: number }) => (
+        <TeacherCard
+          teacher={item}
+          index={index}
+          onPress={handleSelectTeacher}
+        />
       ),
       [handleSelectTeacher],
     );
@@ -126,21 +152,23 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
       [],
     );
 
-    // Footer renderer for infinite scroll loading spinner
+    // List footer component for infinite scroll loading spinner
     const renderListFooter = useCallback(() => {
       if (isFetchingNextPage) {
         return (
-          <View style={styles.footerLoader}>
-            <ActivityIndicator size="small" color={DIRECTORY_COLORS.blueBadge} />
-            <Text style={styles.footerLoaderText}>Loading more faculty...</Text>
+          <View style={styles.listFooterLoading}>
+            <ActivityIndicator size="small" color={THEME.primary} />
+            <Text style={styles.listFooterLoadingText}>
+              Loading more faculty members...
+            </Text>
           </View>
         );
       }
 
       if (allTeachers.length > 0 && !hasNextPage) {
         return (
-          <View style={styles.endOfListWrapper}>
-            <Text style={styles.endOfListText}>
+          <View style={styles.listFooterEnd}>
+            <Text style={styles.listFooterEndText}>
               Showing all {totalCount} {totalCount === 1 ? "faculty member" : "faculty members"}
             </Text>
           </View>
@@ -151,75 +179,101 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
     }, [isFetchingNextPage, allTeachers.length, hasNextPage, totalCount]);
 
     const hasActiveFilters = Boolean(
-      debouncedSearch.length > 0 || selectedDepartment !== null,
+      debouncedSearch.length > 0 ||
+        (selectedDepartment && selectedDepartment !== "All"),
     );
 
     return (
       <View style={styles.container}>
-        {/* Header Bar */}
-        <TeacherDirectoryHeader
-          onBack={handleBack}
-          totalCount={totalCount}
-          isModal={isModal}
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="transparent"
+          translucent={true}
         />
 
-        {/* Search Bar */}
-        <TeacherSearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onClear={() => setSearchQuery("")}
-          isSearching={debouncedSearch !== searchQuery}
-        />
+        {/* Dynamic Ambient Background Shapes matching Admin Directory */}
+        <AmbientBackground topInset={insets.top} />
 
-        {/* Department Filter Chips */}
-        <DepartmentFilterChips
-          departments={departments}
+        <View style={[styles.mainWrapper, { paddingTop: insets.top }]}>
+          {/* Header Block with Back Action & Integrated Search + Filter Bar */}
+          <DirectoryHeader
+            searchQuery={searchQuery}
+            debouncedSearch={debouncedSearch}
+            onSearchChange={setSearchQuery}
+            onClearSearch={() => setSearchQuery("")}
+            onOpenFilter={() => setIsFilterModalOpen(true)}
+            hasActiveFilters={Boolean(
+              selectedDepartment && selectedDepartment !== "All",
+            )}
+            totalCount={totalCount}
+            onBack={onClose || isModal || router.canGoBack() ? handleBack : undefined}
+            isModal={isModal}
+          />
+
+          {/* Active Filter Indicators Bar */}
+          <ActiveFiltersBar
+            selectedDepartment={selectedDepartment}
+            onClearDepartment={() => setSelectedDepartment(null)}
+            onClearAll={handleResetFilters}
+          />
+
+          {/* Main List / Skeleton / Error / Empty States */}
+          {isLoading && allTeachers.length === 0 ? (
+            <TeacherDirectorySkeleton />
+          ) : isError ? (
+            <TeacherDirectoryEmptyState
+              hasFilters={hasActiveFilters}
+              onResetFilters={handleResetFilters}
+              isError={true}
+              onRetry={refetch}
+            />
+          ) : allTeachers.length === 0 ? (
+            <TeacherDirectoryEmptyState
+              hasFilters={hasActiveFilters}
+              onResetFilters={handleResetFilters}
+            />
+          ) : (
+            <FlatList
+              data={allTeachers}
+              renderItem={renderItem}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.4}
+              ListFooterComponent={renderListFooter}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefetching && !isFetchingNextPage}
+                  onRefresh={refetch}
+                  colors={[THEME.primary]}
+                  tintColor={THEME.primary}
+                />
+              }
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={Platform.OS === "android"}
+            />
+          )}
+        </View>
+
+        {/* Quick Department Filter Bottom Sheet Modal */}
+        <DirectoryFilterModal
+          visible={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
           selectedDepartment={selectedDepartment}
-          onSelectDepartment={setSelectedDepartment}
-          totalTeachersCount={totalCount}
+          onSelectDepartment={(dept) => {
+            setSelectedDepartment(dept);
+            setIsFilterModalOpen(false);
+          }}
+          onResetAll={handleResetFilters}
+          topInset={insets.top}
+          bottomInset={insets.bottom}
+          activeDepartments={departments}
         />
 
-        {/* Content Body */}
-        {isLoading ? (
-          <TeacherDirectorySkeleton />
-        ) : isError ? (
-          <TeacherDirectoryEmptyState
-            hasFilters={hasActiveFilters}
-            onResetFilters={handleResetFilters}
-            isError={true}
-            onRetry={refetch}
-          />
-        ) : allTeachers.length === 0 ? (
-          <TeacherDirectoryEmptyState
-            hasFilters={hasActiveFilters}
-            onResetFilters={handleResetFilters}
-          />
-        ) : (
-          <FlatList
-            data={allTeachers}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={renderListFooter}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching && !isFetchingNextPage}
-                onRefresh={refetch}
-                colors={[DIRECTORY_COLORS.blueBadge, DIRECTORY_COLORS.tealDark]}
-                tintColor={DIRECTORY_COLORS.blueBadge}
-              />
-            }
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={5}
-            removeClippedSubviews={Platform.OS === "android"}
-          />
-        )}
-
-        {/* Full-Screen Teacher Detail Modal */}
+        {/* Full-Screen Teacher Detail Modal matching Admin Teacher Profile */}
         <TeacherDetailModal
           teacher={selectedTeacher}
           visible={isDetailOpen}
@@ -233,34 +287,37 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DIRECTORY_COLORS.background,
+    backgroundColor: THEME.bg,
+  },
+  mainWrapper: {
+    flex: 1,
   },
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 40,
   },
-  footerLoader: {
-    paddingVertical: 18,
+  listFooterLoading: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 18,
     gap: 8,
   },
-  footerLoaderText: {
+  listFooterLoadingText: {
     fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: "600",
-    color: DIRECTORY_COLORS.textSecondary,
+    color: THEME.textSecondary,
   },
-  endOfListWrapper: {
-    paddingVertical: 20,
+  listFooterEnd: {
     alignItems: "center",
+    paddingVertical: 20,
   },
-  endOfListText: {
+  listFooterEndText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
-    color: DIRECTORY_COLORS.textMuted,
+    color: THEME.textMuted,
   },
 });

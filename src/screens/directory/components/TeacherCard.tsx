@@ -8,253 +8,291 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { TeacherDirectoryItem } from "@/services/directory-service";
-import { DIRECTORY_COLORS, fontFamily } from "../constants";
+import { THEME, AVATAR_PASTELS, fontFamily } from "../constants";
+import { getFullDepartmentDisplayName } from "@/utils/academic-formatters";
 
-interface TeacherCardProps {
+export interface TeacherCardProps {
   teacher: TeacherDirectoryItem;
+  index: number;
   onPress: (teacher: TeacherDirectoryItem) => void;
 }
 
 export const TeacherCard = React.memo(function TeacherCard({
   teacher,
+  index,
   onPress,
 }: TeacherCardProps) {
   const profile = teacher.teacherProfile;
   const initial = teacher.name?.charAt(0)?.toUpperCase() || "T";
+  const pastel = AVATAR_PASTELS[index % AVATAR_PASTELS.length];
 
   return (
     <TouchableOpacity
       style={styles.card}
-      activeOpacity={0.75}
+      activeOpacity={0.85}
       onPress={() => onPress(teacher)}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`Teacher ${teacher.name}, ${profile?.designation || "Faculty Member"}, ${profile?.department || "Department not specified"}`}
-      accessibilityHint="Tap to view full teacher details and contact information"
+      accessibilityLabel={`Faculty Member ${teacher.name}, ${profile?.designation || "Faculty Member"}, ${profile?.department || "Academic Department"}`}
+      accessibilityHint="Tap to view full faculty profile, office location, and contact information"
     >
-      <View style={styles.topRow}>
-        {/* Avatar */}
-        {teacher.image ? (
-          <Image
-            source={{ uri: teacher.image }}
-            style={styles.avatarImage}
-            accessibilityLabel={`${teacher.name}'s photo`}
-          />
-        ) : (
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarText}>{initial}</Text>
-          </View>
-        )}
+      <View style={styles.cardInnerRow}>
+        {/* Pastel Avatar Container */}
+        <View
+          style={[
+            styles.avatarBox,
+            { backgroundColor: pastel.bg, borderColor: pastel.border },
+          ]}
+        >
+          {teacher.image ? (
+            <Image
+              source={{ uri: teacher.image }}
+              style={styles.avatarImage}
+              accessible={true}
+              accessibilityLabel={`${teacher.name}'s photo`}
+            />
+          ) : (
+            <View style={styles.avatarFallbackCircle}>
+              <Text style={styles.avatarFallbackLetter}>{initial}</Text>
+            </View>
+          )}
+        </View>
 
-        {/* Basic Info */}
-        <View style={styles.infoCol}>
+        {/* Content Column */}
+        <View style={styles.cardContent}>
+          {/* Name & Leadership Badge Row */}
           <View style={styles.nameRow}>
             <Text style={styles.nameText} numberOfLines={1}>
               {teacher.name}
             </Text>
-            <View style={styles.verifiedBadge}>
-              <Feather name="check" size={10} color="#ffffff" />
-            </View>
+
+            {Boolean(profile?.administrativeRole) && (
+              <View style={styles.adminRoleBadge}>
+                <Text style={styles.adminRoleBadgeText}>
+                  {profile?.administrativeRole}
+                </Text>
+              </View>
+            )}
           </View>
 
+          {/* Designation */}
           <Text style={styles.designationText} numberOfLines={1}>
             {profile?.designation || "Faculty Member"}
           </Text>
 
+          {/* Department & ID Subtitle */}
           <Text style={styles.departmentText} numberOfLines={1}>
-            {profile?.department || "Academic Faculty"}
+            {profile?.teacherId ? `${profile.teacherId} • ` : ""}
+            {getFullDepartmentDisplayName(profile?.department)}
           </Text>
         </View>
 
-        {/* Chevron */}
-        <View style={styles.chevronWrapper}>
-          <Feather
-            name="chevron-right"
-            size={18}
-            color={DIRECTORY_COLORS.textMuted}
-          />
-        </View>
+        {/* Right Chevron */}
+        <Feather
+          name="chevron-right"
+          size={18}
+          color={THEME.textMuted}
+          style={styles.chevron}
+        />
       </View>
 
-      {/* Meta Pills Row */}
-      <View style={styles.metaRow}>
-        {profile?.teacherId ? (
-          <View style={styles.idBadge}>
-            <Feather
-              name="hash"
-              size={11}
-              color={DIRECTORY_COLORS.blueBadge}
-              style={{ marginRight: 3 }}
-            />
-            <Text style={styles.idBadgeText}>ID: {profile.teacherId}</Text>
-          </View>
-        ) : null}
-
-        {profile?.officeRoom ? (
-          <View style={styles.roomBadge}>
-            <Feather
-              name="map-pin"
-              size={11}
-              color={DIRECTORY_COLORS.tealDark}
-              style={{ marginRight: 3 }}
-            />
-            <Text style={styles.roomBadgeText}>{profile.officeRoom}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.quickContacts}>
-          {teacher.phoneNumber ? (
-            <View style={styles.contactIconPill}>
+      {/* Meta Badges Row (Office Room, Day Off, Quick Contacts) */}
+      {(profile?.officeRoom || profile?.dayOff || teacher.phoneNumber || teacher.email) && (
+        <View style={styles.metaRow}>
+          {profile?.officeRoom ? (
+            <View style={styles.metaPill}>
               <Feather
-                name="phone"
+                name="map-pin"
                 size={11}
-                color={DIRECTORY_COLORS.textSecondary}
+                color={THEME.textSecondary}
+                style={{ marginRight: 4 }}
               />
+              <Text style={styles.metaPillText}>{profile.officeRoom}</Text>
             </View>
           ) : null}
-          {teacher.email ? (
-            <View style={styles.contactIconPill}>
+
+          {profile?.dayOff ? (
+            <View style={styles.dayOffPill}>
               <Feather
-                name="mail"
+                name="coffee"
                 size={11}
-                color={DIRECTORY_COLORS.textSecondary}
+                color="#DC2626"
+                style={{ marginRight: 4 }}
               />
+              <Text style={styles.dayOffPillText}>Off: {profile.dayOff}</Text>
             </View>
           ) : null}
+
+          <View style={styles.quickContactsRow}>
+            {teacher.phoneNumber ? (
+              <View style={styles.contactIconPill}>
+                <Feather
+                  name="phone"
+                  size={11}
+                  color={THEME.textSecondary}
+                />
+              </View>
+            ) : null}
+            {teacher.email ? (
+              <View style={styles.contactIconPill}>
+                <Feather
+                  name="mail"
+                  size={11}
+                  color={THEME.textSecondary}
+                />
+              </View>
+            ) : null}
+          </View>
         </View>
-      </View>
+      )}
     </TouchableOpacity>
   );
 });
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: DIRECTORY_COLORS.surface,
-    borderRadius: DIRECTORY_COLORS.cardRadius,
+    backgroundColor: THEME.cardBg,
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: DIRECTORY_COLORS.cardBorder,
-    padding: 16,
-    marginBottom: 12,
-    ...DIRECTORY_COLORS.cardShadow,
+    borderColor: THEME.cardBorder,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  topRow: {
+  cardInnerRow: {
     flexDirection: "row",
     alignItems: "center",
   },
-  avatarImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: DIRECTORY_COLORS.surfaceMuted,
-  },
-  avatarFallback: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: DIRECTORY_COLORS.blueSoft,
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: DIRECTORY_COLORS.blueBorder,
+    marginRight: 14,
+    overflow: "hidden",
   },
-  avatarText: {
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 14,
+  },
+  avatarFallbackCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  avatarFallbackLetter: {
     fontFamily,
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: "800",
-    color: DIRECTORY_COLORS.blueText,
+    color: "#334155",
   },
-  infoCol: {
+  cardContent: {
     flex: 1,
-    marginLeft: 14,
-    marginRight: 6,
+    marginRight: 8,
   },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    marginBottom: 2,
+    flexWrap: "wrap",
   },
   nameText: {
     fontFamily,
-    fontSize: 16,
-    fontWeight: "800",
-    color: DIRECTORY_COLORS.textPrimary,
-    letterSpacing: -0.2,
+    fontSize: 15,
+    fontWeight: "700",
+    color: THEME.textPrimary,
     flexShrink: 1,
   },
-  verifiedBadge: {
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    backgroundColor: DIRECTORY_COLORS.tealDark,
-    alignItems: "center",
-    justifyContent: "center",
+  adminRoleBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  adminRoleBadgeText: {
+    fontFamily,
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: "#92400E",
+    letterSpacing: 0.3,
   },
   designationText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "700",
-    color: DIRECTORY_COLORS.blueText,
-    marginTop: 2,
+    color: THEME.primary,
+    marginBottom: 1,
   },
   departmentText: {
     fontFamily,
     fontSize: 12,
+    color: THEME.textSecondary,
     fontWeight: "500",
-    color: DIRECTORY_COLORS.textSecondary,
-    marginTop: 1,
   },
-  chevronWrapper: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: DIRECTORY_COLORS.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
+  chevron: {
+    marginLeft: 4,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-    paddingTop: 12,
+    gap: 7,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: DIRECTORY_COLORS.divider,
+    borderTopColor: "#F1F5F9",
   },
-  idBadge: {
+  metaPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: DIRECTORY_COLORS.blueSoft,
+    backgroundColor: "#F8FAFC",
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: DIRECTORY_COLORS.blueBorder,
+    borderColor: "#E2E8F0",
   },
-  idBadgeText: {
+  metaPillText: {
     fontFamily,
     fontSize: 11,
-    fontWeight: "800",
-    color: DIRECTORY_COLORS.blueText,
-    letterSpacing: 0.2,
+    fontWeight: "600",
+    color: THEME.textSecondary,
   },
-  roomBadge: {
+  dayOffPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: DIRECTORY_COLORS.tealSoft,
+    backgroundColor: "#FEE2E2",
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: DIRECTORY_COLORS.tealBorder,
+    borderColor: "#FECDD3",
   },
-  roomBadgeText: {
+  dayOffPillText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: DIRECTORY_COLORS.tealDark,
+    color: "#DC2626",
   },
-  quickContacts: {
+  quickContactsRow: {
     marginLeft: "auto",
     flexDirection: "row",
     alignItems: "center",
@@ -264,7 +302,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: DIRECTORY_COLORS.surfaceMuted,
+    backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },

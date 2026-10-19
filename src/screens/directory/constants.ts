@@ -6,11 +6,58 @@ export const fontFamily = Platform.select({
   default: "sans-serif",
 });
 
+export const THEME = {
+  bg: "#F8FAFC",
+  headerBg: "#F8FAFC",
+  cardBg: "#FFFFFF",
+  cardBorder: "#F1F5F9",
+  textPrimary: "#0F172A",
+  textSecondary: "#64748B",
+  textMuted: "#94A3B8",
+  inputBg: "#FFFFFF",
+  inputBorder: "#E2E8F0",
+  // Primary Teacher Theme Colors (matching Admin Teacher Tab)
+  primary: "#4338CA",
+  primaryBg: "#EEF2FF",
+  pillActive: "#4338CA",
+  pillInactive: "#EDE9FE",
+};
+
+// Pastel container palettes for avatars (alternating soft cards matching Admin Directory)
+export const AVATAR_PASTELS = [
+  { bg: "#E6F9F2", border: "#C1F0DF" }, // Mint / Emerald
+  { bg: "#EFF6FF", border: "#DBEAFE" }, // Soft Sky Blue
+  { bg: "#F5F3FF", border: "#EDE9FE" }, // Soft Lavender
+  { bg: "#FFFBEB", border: "#FEF3C7" }, // Soft Butter Yellow
+  { bg: "#FFF1F2", border: "#FFE4E6" }, // Soft Rose
+];
+
+export const DEPARTMENT_CHIPS = [
+  "All",
+  "CSE",
+  "CSIT",
+  "AMMT",
+  "FDT",
+  "IA",
+  "GDM",
+  "ARCH",
+  "BBA",
+  "ENG",
+  "LAW",
+  "SOC",
+  "BAN",
+  "G&P",
+  "IS",
+  "FA",
+  "MUS",
+  "DAN",
+] as const;
+
 export const DIRECTORY_COLORS = {
   // Foundations
-  background: "#f8f9fa",
-  surface: "#ffffff",
-  surfaceMuted: "#f1f5f9",
+  background: "#F8FAFC",
+  surface: "#FFFFFF",
+  surfaceMuted: "#F1F5F9",
   cardBorder: "rgba(15, 23, 42, 0.07)",
   divider: "rgba(15, 23, 42, 0.06)",
 

@@ -1,8 +1,7 @@
 import React from "react";
-import { Modal, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Modal, StyleSheet, View } from "react-native";
 import { FacultyDirectoryView } from "./FacultyDirectoryView";
-import { DIRECTORY_COLORS } from "./constants";
+import { THEME } from "./constants";
 
 export interface FacultyDirectoryModalProps {
   visible: boolean;
@@ -20,13 +19,13 @@ export const FacultyDirectoryModal: React.FC<FacultyDirectoryModalProps> = React
         onRequestClose={onClose}
         statusBarTranslucent={true}
       >
-        <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <View style={styles.container}>
           <FacultyDirectoryView
             onClose={onClose}
             isModal={true}
             initialDepartment={initialDepartment}
           />
-        </SafeAreaView>
+        </View>
       </Modal>
     );
   },
@@ -35,6 +34,6 @@ export const FacultyDirectoryModal: React.FC<FacultyDirectoryModalProps> = React
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DIRECTORY_COLORS.background,
+    backgroundColor: THEME.bg,
   },
 });
