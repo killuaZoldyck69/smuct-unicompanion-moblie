@@ -15,6 +15,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, FontAwesome5, Ionicons } from "@expo/vector-icons";
 
+import Toast from "react-native-toast-message";
+
 import { AdminUser, UpdateAdminTeacherProfilePayload } from "../../types";
 import {
   DESIGNATION_OPTIONS,
@@ -27,6 +29,25 @@ import {
   FACULTY_OPTIONS,
 } from "../../constants";
 import { sortQualifications } from "@/utils/qualification-order";
+import { SelectionModal } from "@/screens/admin-add-faculty/components/selection-modal";
+import { AddSlotModal } from "@/screens/admin-add-faculty/components/modals/add-slot-modal";
+import { universityPrograms, getDepartmentShortName } from "@/data/programs";
+
+// Helper to extract unique faculties from official university programs
+const UNIQUE_FACULTIES = Array.from(
+  new Set(universityPrograms.map((p) => p.faculty)),
+).sort();
+
+// Helper to clean department names
+const cleanDepartmentName = (name: string) => {
+  return name
+    .replace(
+      /^(Bachelor|Masters|Master|B\.Sc|BSS|BA|MA|MSS|MBA)\s*(\(Hons\))?\s*(of|in)?\s*/i,
+      "",
+    )
+    .replace(/\s*\(.*\)\s*$/, "")
+    .trim();
+};
 
 interface EditTeacherProfileModalProps {
   visible: boolean;
@@ -37,6 +58,13 @@ interface EditTeacherProfileModalProps {
     data: UpdateAdminTeacherProfilePayload,
   ) => Promise<any> | void;
   isSaving?: boolean;
+}
+
+interface EditableConsultationSlot {
+  id: string;
+  day: string;
+  startTime: string;
+  endTime: string;
 }
 
 interface EditableQualification {
@@ -72,10 +100,156 @@ export const EditTeacherProfileModal = React.memo(
     const [faculty, setFaculty] = useState("");
     const [advisoryBatch, setAdvisoryBatch] = useState("");
 
+    // Active selector state for Designation, Faculty, Department modal
+    const [activeSelector, setActiveSelector] = useState<
+      "designation" | "faculty" | "department" | null
+    >(null);
+
+    // Filtered faculties and departments
+    const facultyOptions = React.useMemo(() => {
+      const set = new Set(UNIQUE_FACULTIES);
+      if (
+        faculty &&
+        !Array.from(set).some((f) => f.toLowerCase() === faculty.toLowerCase())
+      ) {
+        set.add(faculty);
+      }
+      return Array.from(set).sort();
+    }, [faculty]);
+
+    const departmentOptions = React.useMemo(() => {
+      if (!faculty) {
+        const allDeps = universityPrograms.map(
+          (p) => p.department || cleanDepartmentName(p.name),
+        );
+        return Array.from(new Set(allDeps)).filter(Boolean).sort();
+      }
+      const cleanFac = faculty.toLowerCase();
+      const progs = universityPrograms.filter((p) => {
+        const pFac = p.faculty.toLowerCase();
+        return (
+          pFac === cleanFac ||
+          pFac.includes(cleanFac) ||
+          cleanFac.includes(pFac)
+        );
+      });
+      let deps = progs.map((p) => p.department || cleanDepartmentName(p.name));
+      if (deps.length === 0) {
+        const allDeps = universityPrograms.map(
+          (p) => p.department || cleanDepartmentName(p.name),
+        );
+        deps = allDeps;
+      }
+      const set = new Set(deps);
+      if (
+        department &&
+        !Array.from(set).some((d) => d.toLowerCase() === department.toLowerCase())
+      ) {
+        set.add(department);
+      }
+      return Array.from(set).filter(Boolean).sort();
+    }, [faculty, department]);
+
+    const selectorTitle = React.useMemo(() => {
+      switch (activeSelector) {
+        case "designation":
+          return "Select Academic Designation";
+        case "faculty":
+          return "Select Faculty Division";
+        case "department":
+          return "Select Department";
+        default:
+          return "";
+      }
+    }, [activeSelector]);
+
+    const selectorOptions = React.useMemo(() => {
+      switch (activeSelector) {
+        case "designation":
+          return [...DESIGNATION_OPTIONS];
+        case "faculty":
+          return facultyOptions;
+        case "department":
+          return departmentOptions;
+        default:
+          return [];
+      }
+    }, [activeSelector, facultyOptions, departmentOptions]);
+
+    const currentSelectorValue = React.useMemo(() => {
+      if (activeSelector === "designation") {
+        return designation;
+      }
+      if (activeSelector === "faculty") {
+        return (
+          facultyOptions.find((f) => f.toLowerCase() === faculty.toLowerCase()) ||
+          faculty
+        );
+      }
+      if (activeSelector === "department") {
+        return (
+          departmentOptions.find(
+            (d) =>
+              d.toLowerCase() === department.toLowerCase() ||
+              getDepartmentShortName(d).toLowerCase() === department.toLowerCase(),
+          ) || department
+        );
+      }
+      return "";
+    }, [activeSelector, designation, faculty, department, facultyOptions, departmentOptions]);
+
+    const handleSelectOption = useCallback(
+      (value: string) => {
+        if (!activeSelector) return;
+        if (activeSelector === "designation") {
+          setDesignation(value);
+        } else if (activeSelector === "faculty") {
+          if (faculty !== value) {
+            setFaculty(value);
+            // If current department is not in the new faculty's departments, reset it
+            const progs = universityPrograms.filter((p) => {
+              const pFac = p.faculty.toLowerCase();
+              const valFac = value.toLowerCase();
+              return (
+                pFac === valFac ||
+                pFac.includes(valFac) ||
+                valFac.includes(pFac)
+              );
+            });
+            const deps = progs.map((p) =>
+              (p.department || cleanDepartmentName(p.name)).toLowerCase(),
+            );
+            if (department && !deps.includes(department.toLowerCase())) {
+              setDepartment("");
+            }
+          }
+        } else if (activeSelector === "department") {
+          setDepartment(value);
+        }
+        setActiveSelector(null);
+      },
+      [activeSelector, faculty, department],
+    );
+
+    const handleDepartmentPress = useCallback(() => {
+      if (!faculty) {
+        Toast.show({
+          type: "info",
+          text1: "Faculty Required",
+          text2: "Please select a faculty first to choose its department.",
+        });
+        return;
+      }
+      setActiveSelector("department");
+    }, [faculty]);
+
     // Office & Availability
     const [officeRoom, setOfficeRoom] = useState("");
     const [dayOff, setDayOff] = useState("");
-    const [consultationHours, setConsultationHours] = useState("");
+    const [consultationSlots, setConsultationSlots] = useState<
+      EditableConsultationSlot[]
+    >([]);
+    const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
 
     // Professional & Social
     const [linkedInUrl, setLinkedInUrl] = useState("");
@@ -94,7 +268,11 @@ export const EditTeacherProfileModal = React.memo(
 
     // Sync initial state when modal opens or user changes
     useEffect(() => {
-      if (!visible) return;
+      if (!visible) {
+        setActiveSelector(null);
+        setIsSlotModalOpen(false);
+        return;
+      }
 
       setName(user.name || "");
       setPhoneNumber(user.phoneNumber || "");
@@ -110,7 +288,7 @@ export const EditTeacherProfileModal = React.memo(
       setAdministrativeRole(profile?.administrativeRole || null);
       setDepartment(profile?.department || "CSE");
       setFaculty(
-        profile?.faculty || "Faculty of Science and Information Technology",
+        profile?.faculty || "",
       );
       setAdvisoryBatch(
         profile?.advisoryBatch !== null && profile?.advisoryBatch !== undefined
@@ -120,7 +298,24 @@ export const EditTeacherProfileModal = React.memo(
 
       setOfficeRoom(profile?.officeRoom || "");
       setDayOff(profile?.dayOff || "");
-      setConsultationHours(profile?.consultationHours || "");
+
+      // Parse Consultation Slots
+      const rawSlots = profile?.consultationSlots;
+      let parsedSlots: EditableConsultationSlot[] = [];
+      if (Array.isArray(rawSlots) && rawSlots.length > 0) {
+        parsedSlots = rawSlots.map((s: any, idx: number) => ({
+          id: s.id || `slot_${idx}_${Date.now()}`,
+          day: s.day || s.days || "Monday",
+          startTime:
+            s.startTime ||
+            (s.time ? s.time.split(/[-–—]/)[0]?.trim() : "10:00 AM"),
+          endTime:
+            s.endTime ||
+            (s.time ? s.time.split(/[-–—]/)[1]?.trim() : "11:00 AM"),
+        }));
+      }
+      setConsultationSlots(parsedSlots);
+      setIsSlotModalOpen(false);
 
       setLinkedInUrl(profile?.linkedInUrl || "");
       setPersonalWebsiteUrl(profile?.personalWebsiteUrl || "");
@@ -242,6 +437,26 @@ export const EditTeacherProfileModal = React.memo(
       setQualifications((prev) => prev.filter((q) => q.id !== id));
     }, []);
 
+    // Add consultation slot
+    const handleAddSlot = useCallback(
+      (newSlot: Omit<EditableConsultationSlot, "id">) => {
+        setConsultationSlots((prev) => [
+          ...prev,
+          {
+            ...newSlot,
+            id: `slot_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          },
+        ]);
+        setIsSlotModalOpen(false);
+      },
+      [],
+    );
+
+    // Remove consultation slot
+    const handleRemoveSlot = useCallback((id: string) => {
+      setConsultationSlots((prev) => prev.filter((s) => s.id !== id));
+    }, []);
+
     // Handle Save
     const handleSave = useCallback(async () => {
       const cleanName = name.trim();
@@ -256,7 +471,16 @@ export const EditTeacherProfileModal = React.memo(
       const cleanFaculty = faculty.trim();
       const cleanRoom = officeRoom.trim();
       const cleanDayOff = dayOff.trim();
-      const cleanConsultation = consultationHours.trim();
+
+
+      const cleanSlots =
+        consultationSlots.length > 0
+          ? consultationSlots.map((s) => ({
+              day: s.day,
+              startTime: s.startTime,
+              endTime: s.endTime,
+            }))
+          : null;
 
       const batchNum = advisoryBatch.trim() ? parseInt(advisoryBatch.trim(), 10) : null;
 
@@ -289,7 +513,7 @@ export const EditTeacherProfileModal = React.memo(
         faculty: cleanFaculty || "Faculty of Science and Information Technology",
         officeRoom: cleanRoom || null,
         dayOff: cleanDayOff || null,
-        consultationHours: cleanConsultation || null,
+        consultationSlots: cleanSlots,
         advisoryBatch: isNaN(batchNum as number) ? null : batchNum,
         expertiseFields: expertiseFields.length > 0 ? expertiseFields : [],
         academicQualifications: formattedQuals.length > 0 ? formattedQuals : null,
@@ -313,7 +537,7 @@ export const EditTeacherProfileModal = React.memo(
       faculty,
       officeRoom,
       dayOff,
-      consultationHours,
+      consultationSlots,
       advisoryBatch,
       expertiseFields,
       qualifications,
@@ -513,32 +737,38 @@ export const EditTeacherProfileModal = React.memo(
 
               {/* Designation Selector */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Academic Designation *</Text>
-                <View style={styles.chipsRow}>
-                  {DESIGNATION_OPTIONS.map((desig) => {
-                    const isSelected = designation === desig;
-                    return (
-                      <TouchableOpacity
-                        key={desig}
-                        style={[
-                          styles.chip,
-                          isSelected && styles.chipDesignationSelected,
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => setDesignation(desig)}
-                      >
-                        <Text
-                          style={[
-                            styles.chipText,
-                            isSelected && styles.chipDesignationTextSelected,
-                          ]}
-                        >
-                          {desig}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <Text style={styles.fieldLabel}>
+                  Academic Designation <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  style={styles.selectorWrapper}
+                  onPress={() => setActiveSelector("designation")}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select Academic Designation"
+                  activeOpacity={0.7}
+                >
+                  <Feather
+                    name="award"
+                    size={18}
+                    color="#D97706"
+                    style={styles.fieldIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.selectorText,
+                      !designation && styles.placeholderText,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {designation || "Select Designation"}
+                  </Text>
+                  <Feather
+                    name="chevron-down"
+                    size={18}
+                    color="#D97706"
+                  />
+                </TouchableOpacity>
               </View>
 
               {/* Leadership Role Selector */}
@@ -584,84 +814,93 @@ export const EditTeacherProfileModal = React.memo(
                 </View>
               </View>
 
-              {/* Department Chips */}
+              {/* Faculty Division */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Department *</Text>
-                <ScrollView
-                  horizontal={true}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.deptScroll}
+                <Text style={styles.fieldLabel}>
+                  Faculty Division <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  style={styles.selectorWrapper}
+                  onPress={() => setActiveSelector("faculty")}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select Faculty Division"
+                  activeOpacity={0.7}
                 >
-                  {DEPARTMENT_CHIPS.filter((d) => d !== "All").map((dept) => {
-                    const isSelected = department.toUpperCase() === dept;
-                    return (
-                      <TouchableOpacity
-                        key={dept}
-                        style={[
-                          styles.chipSmall,
-                          isSelected && styles.chipDeptSelected,
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => setDepartment(dept)}
-                      >
-                        <Text
-                          style={[
-                            styles.chipTextSmall,
-                            isSelected && styles.chipDeptTextSelected,
-                          ]}
-                        >
-                          {dept}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-                <TextInput
-                  style={[styles.input, { marginTop: 8 }]}
-                  value={department}
-                  onChangeText={setDepartment}
-                  placeholder="e.g. CSE, Computer Science..."
-                  placeholderTextColor="#94A3B8"
-                />
+                  <Feather
+                    name="book"
+                    size={18}
+                    color="#D97706"
+                    style={styles.fieldIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.selectorText,
+                      !faculty && styles.placeholderText,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {faculty || "Select Faculty"}
+                  </Text>
+                  <Feather
+                    name="chevron-down"
+                    size={18}
+                    color="#D97706"
+                  />
+                </TouchableOpacity>
               </View>
 
-              {/* Faculty */}
+              {/* Department */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Faculty Division</Text>
-                <TextInput
-                  style={styles.input}
-                  value={faculty}
-                  onChangeText={setFaculty}
-                  placeholder="e.g. Faculty of Science and Information Technology"
-                  placeholderTextColor="#94A3B8"
-                />
-                <View style={[styles.chipsRow, { marginTop: 6 }]}>
-                  {FACULTY_OPTIONS.map((fac) => {
-                    const isSelected = faculty === fac;
-                    const shortName = fac.replace("Faculty of ", "");
-                    return (
-                      <TouchableOpacity
-                        key={fac}
-                        style={[
-                          styles.chipTiny,
-                          isSelected && styles.chipTinySelected,
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => setFaculty(fac)}
-                      >
-                        <Text
-                          style={[
-                            styles.chipTinyText,
-                            isSelected && styles.chipTinyTextSelected,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {shortName}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <Text style={styles.fieldLabel}>
+                  Department <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.selectorWrapper,
+                    !faculty && styles.selectorWrapperDisabled,
+                  ]}
+                  onPress={handleDepartmentPress}
+                  activeOpacity={faculty ? 0.7 : 0.9}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select Department"
+                >
+                  <Feather
+                    name="home"
+                    size={18}
+                    color={faculty ? "#D97706" : "#94A3B8"}
+                    style={styles.fieldIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.selectorText,
+                      !department && styles.placeholderText,
+                      !faculty && styles.disabledText,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {department ||
+                      (faculty ? "Select Department" : "Select Faculty first")}
+                  </Text>
+                  <Feather
+                    name="chevron-down"
+                    size={18}
+                    color={faculty ? "#D97706" : "#94A3B8"}
+                  />
+                </TouchableOpacity>
+                {!faculty && (
+                  <View style={styles.helperRow}>
+                    <Feather
+                      name="info"
+                      size={13}
+                      color="#B45309"
+                    />
+                    <Text style={styles.helperText}>
+                      Please select a faculty first to choose a department
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Advisory Batch */}
@@ -755,23 +994,59 @@ export const EditTeacherProfileModal = React.memo(
               </View>
 
               {/* Consultation Hours */}
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Consultation Hours</Text>
-                <View style={styles.inputWithIcon}>
-                  <Feather
-                    name="clock"
-                    size={15}
-                    color="#64748B"
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.inputInner}
-                    value={consultationHours}
-                    onChangeText={setConsultationHours}
-                    placeholder="e.g. 10:00 AM - 01:00 PM"
-                    placeholderTextColor="#94A3B8"
-                  />
+              <View style={styles.consultationCard}>
+                <View style={styles.consultationHeaderRow}>
+                  <View style={styles.consultationTitleGroup}>
+                    <Feather name="clock" size={14} color="#059669" />
+                    <Text style={styles.consultationHeaderTitle}>
+                      CONSULTATION HOURS
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setIsSlotModalOpen(true)}
+                    style={styles.addSlotBtn}
+                    activeOpacity={0.7}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add consultation slot"
+                  >
+                    <Feather name="plus" size={13} color="#059669" />
+                    <Text style={styles.addSlotBtnText}>Add Slot</Text>
+                  </TouchableOpacity>
                 </View>
+
+                {consultationSlots.length === 0 ? (
+                  <TouchableOpacity
+                    onPress={() => setIsSlotModalOpen(true)}
+                    style={styles.emptySlotContainer}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.emptySlotText}>
+                      No consultation hours added yet. Tap to add.
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.slotsList}>
+                    {consultationSlots.map((slot) => (
+                      <View key={slot.id} style={styles.slotChip}>
+                        <View style={styles.slotDot} />
+                        <Text style={styles.slotChipText} numberOfLines={1}>
+                          {slot.day}: {slot.startTime} – {slot.endTime}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => handleRemoveSlot(slot.id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          style={styles.slotRemoveBtn}
+                          accessible={true}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove slot for ${slot.day}`}
+                        >
+                          <Feather name="x" size={14} color="#059669" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
 
@@ -983,6 +1258,24 @@ export const EditTeacherProfileModal = React.memo(
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Dynamic Dropdown / Selection Bottom Sheet Modal */}
+        <SelectionModal
+          visible={activeSelector !== null}
+          title={selectorTitle}
+          options={selectorOptions}
+          selectedValue={currentSelectorValue}
+          onSelect={handleSelectOption}
+          onClose={() => setActiveSelector(null)}
+          hideSearch={activeSelector === "designation" || activeSelector === "faculty"}
+        />
+
+        {/* Add Consultation Slot Modal */}
+        <AddSlotModal
+          visible={isSlotModalOpen}
+          onAdd={handleAddSlot}
+          onClose={() => setIsSlotModalOpen(false)}
+        />
       </Modal>
     );
   },
@@ -1411,5 +1704,136 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  requiredAsterisk: {
+    color: "#EF4444",
+    fontWeight: "700",
+  },
+  selectorWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
+    borderRadius: 14,
+    height: 52,
+    paddingHorizontal: 14,
+  },
+  fieldIcon: {
+    marginRight: 10,
+  },
+  selectorText: {
+    flex: 1,
+    fontSize: 14.5,
+    fontWeight: "500",
+    color: "#0F172A",
+  },
+  placeholderText: {
+    color: "#94A3B8",
+    fontWeight: "400",
+  },
+  selectorWrapperDisabled: {
+    backgroundColor: "#F8FAFC",
+    borderColor: "#E2E8F0",
+    opacity: 0.8,
+  },
+  disabledText: {
+    color: "#94A3B8",
+  },
+  helperRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  helperText: {
+    fontSize: 12,
+    color: "#B45309",
+    fontWeight: "500",
+  },
+  consultationCard: {
+    backgroundColor: "#F0FDF8",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 4,
+  },
+  consultationHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  consultationTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  consultationHeaderTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#065F46",
+    letterSpacing: 0.5,
+  },
+  addSlotBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#D1FAE5",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  addSlotBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  emptySlotContainer: {
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    borderRadius: 10,
+    borderStyle: "dashed",
+    backgroundColor: "#FFFFFF",
+  },
+  emptySlotText: {
+    fontSize: 12.5,
+    color: "#059669",
+    fontStyle: "italic",
+    fontWeight: "500",
+  },
+  slotsList: {
+    gap: 8,
+  },
+  slotChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#86EFAC",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    gap: 8,
+  },
+  slotDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#10B981",
+  },
+  slotChipText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#047857",
+  },
+  slotRemoveBtn: {
+    padding: 2,
   },
 });

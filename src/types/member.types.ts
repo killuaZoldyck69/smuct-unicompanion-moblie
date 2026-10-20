@@ -15,7 +15,7 @@ export interface TeacherProfileData {
   designation?: string | null;
   faculty?: string | null;
   officeRoom?: string | null;
-  consultationHours?: string | null;
+  consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | any | null;
 }
 
 export interface MemberUserData {

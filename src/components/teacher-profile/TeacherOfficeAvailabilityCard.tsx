@@ -7,7 +7,6 @@ import Toast from "react-native-toast-message";
 export interface TeacherOfficeProfile {
   officeRoom?: string | null;
   dayOff?: string | null;
-  consultationHours?: string | null;
   consultationSlots?: any | null;
 }
 
@@ -30,30 +29,12 @@ export const TeacherOfficeAvailabilityCard = React.memo(
         }));
       }
 
-      if (profile?.consultationHours) {
-        const parts = profile.consultationHours.split(/[;\n]/);
-        if (parts.length > 0 && parts[0].includes(":")) {
-          return parts
-            .map((p) => {
-              const [d, ...t] = p.split(":");
-              return {
-                days: d?.trim() || "Consultation",
-                time: t.join(":").trim() || "By Appointment",
-              };
-            })
-            .filter((item) => item.days && item.time);
-        }
-        return [
-          { days: "Weekly Hours", time: profile.consultationHours },
-        ];
-      }
-
       // Default representation
       return [
         { days: "Mon, Wed", time: "10:00 AM – 12:30 PM" },
         { days: "Sunday", time: "02:00 PM – 04:00 PM" },
       ];
-    }, [profile?.consultationSlots, profile?.consultationHours]);
+    }, [profile?.consultationSlots]);
 
     const handleCall = useCallback(() => {
       if (!phoneNumber) return;

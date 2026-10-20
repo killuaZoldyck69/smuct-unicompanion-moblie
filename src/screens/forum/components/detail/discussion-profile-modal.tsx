@@ -11,6 +11,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../../constants";
 import type { ForumAuthor } from "../../types";
+import { formatConsultationSlots } from "@/utils/consultation-formatter";
 
 interface DiscussionProfileModalProps {
   visible: boolean;
@@ -311,14 +312,14 @@ export const DiscussionProfileModal = memo(function DiscussionProfileModal({
                     iconColor={BENTO_COLORS.sky}
                   />
                 )}
-                {tp.consultationHours && (
+                {formatConsultationSlots(tp.consultationSlots, "") ? (
                   <InfoRow
                     icon="clock"
                     label="Consultation Hours"
-                    value={tp.consultationHours}
+                    value={formatConsultationSlots(tp.consultationSlots, "")}
                     iconColor="#d97706"
                   />
-                )}
+                ) : null}
               </View>
             )}
 

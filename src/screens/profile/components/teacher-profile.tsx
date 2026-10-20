@@ -174,7 +174,6 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           advisoryBatch={formData.advisoryBatch}
           dayOff={formData.dayOff}
           consultationSlots={formData.consultationSlots}
-          consultationHours={formData.consultationHours}
           onChangeDesignation={(val) => updateField("designation", val)}
           onChangeDepartment={(val) => updateField("department", val)}
           onChangeOfficeRoom={(val) => updateField("officeRoom", val)}

@@ -138,7 +138,6 @@ export const DAY_OFF_OPTIONS = [
   "Tuesday",
   "Wednesday",
   "Thursday",
-  "DAY OFF",
 ] as const;
 
 export const FACULTY_OPTIONS = [

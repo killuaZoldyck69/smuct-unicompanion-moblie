@@ -35,7 +35,7 @@ export interface LostFoundAuthor {
     department?: string | null;
     designation?: string | null;
     officeRoom?: string | null;
-    consultationHours?: string | null;
+    consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | any | null;
   } | null;
 }
 

@@ -48,7 +48,6 @@ interface TeacherAcademicCardProps {
   advisoryBatch: string;
   dayOff: string;
   consultationSlots: ConsultationSlot[];
-  consultationHours: string;
   onChangeDesignation: (val: string) => void;
   onChangeDepartment: (val: string) => void;
   onChangeOfficeRoom: (val: string) => void;
@@ -71,7 +70,6 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
   advisoryBatch,
   dayOff,
   consultationSlots,
-  consultationHours,
   onChangeDesignation,
   onChangeDepartment,
   onChangeOfficeRoom,
@@ -98,10 +96,7 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
 
   const displayDayOff = profile.dayOff || dayOff || "Not specified";
 
-  const displayHours =
-    (profile as any).consultationHours ||
-    (profile as any).officeHours ||
-    "Not provided";
+  const displayHours = "Not provided";
 
   return (
     <View style={styles.card}>

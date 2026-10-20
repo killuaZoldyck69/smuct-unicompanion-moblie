@@ -13,6 +13,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
+import { formatConsultationSlots } from "@/utils/consultation-formatter";
 
 const BLOOD_GROUP_LABELS: Record<string, string> = {
   A_POSITIVE: "A+",
@@ -45,7 +46,7 @@ export interface AuthorProfileModalData {
     department?: string | null;
     designation?: string | null;
     officeRoom?: string | null;
-    consultationHours?: string | null;
+    consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | any | null;
   } | null;
 }
 
@@ -109,7 +110,7 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
   );
   const section = author.studentProfile?.section || null;
   const officeRoom = author.teacherProfile?.officeRoom || null;
-  const consultationHours = author.teacherProfile?.consultationHours || null;
+  const consultationSchedule = formatConsultationSlots(author.teacherProfile?.consultationSlots, "");
 
   return (
     <Modal
@@ -247,7 +248,7 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
               </View>
             )}
 
-            {consultationHours && (
+            {consultationSchedule && (
               <View style={styles.detailRow}>
                 <Feather
                   name="clock"
@@ -255,7 +256,7 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
                   color={CAMPUS_HUB_COLORS.subtleText}
                 />
                 <Text style={styles.detailLabel}>Consultation:</Text>
-                <Text style={styles.detailValue}>{consultationHours}</Text>
+                <Text style={styles.detailValue}>{consultationSchedule}</Text>
               </View>
             )}
 

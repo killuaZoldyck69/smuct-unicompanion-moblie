@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import { formatConsultationSlots } from "@/utils/consultation-formatter";
 
 export interface Teacher {
   id: string;
@@ -25,7 +26,7 @@ export interface Teacher {
     designation?: string | null;
     faculty?: string | null;
     officeRoom?: string | null;
-    consultationHours?: string | null;
+    consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | any | null;
     expertiseFields?: string[] | null;
     linkedInUrl?: string | null;
     personalWebsiteUrl?: string | null;
@@ -182,8 +183,10 @@ export default function TeacherProfileModal({
                 <View style={{ flex: 1 }}>
                   <Text style={styles.infoRowLabel}>Consultation Hours</Text>
                   <Text style={styles.infoRowValue}>
-                    {teacher.teacherProfile?.consultationHours ||
-                      "Available by appointment"}
+                    {formatConsultationSlots(
+                      teacher.teacherProfile?.consultationSlots,
+                      "Available by appointment"
+                    )}
                   </Text>
                 </View>
               </View>

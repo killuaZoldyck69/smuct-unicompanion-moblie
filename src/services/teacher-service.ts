@@ -25,7 +25,6 @@ export interface TeacherProfileData {
   researchInterests?: string[];
   education?: string[] | string;
   officeHours?: any[];
-  consultationHours?: string | null;
   consultationSlots?: ConsultationSlot[] | null;
   linkedInUrl?: string | null;
   linkedinUrl?: string | null;
@@ -58,7 +57,6 @@ export interface UpdateTeacherProfileInput {
   researchInterests?: string[];
   education?: string[] | string;
   officeHours?: any[];
-  consultationHours?: string;
   consultationSlots?: ConsultationSlot[] | null;
   linkedInUrl?: string;
   linkedinUrl?: string;

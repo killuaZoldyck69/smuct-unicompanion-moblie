@@ -36,7 +36,6 @@ export interface TeacherProfile {
   department?: string | null;
   faculty?: string | null;
   officeRoom?: string | null;
-  consultationHours?: string | null;
   dayOff?: string | null;
   advisoryBatch?: string | number | null;
   expertiseFields?: string | string[] | null;
@@ -69,11 +68,11 @@ export interface UpdateAdminTeacherProfilePayload {
   faculty?: string;
   officeRoom?: string | null;
   dayOff?: string | null;
-  consultationHours?: string | null;
   advisoryBatch?: number | null;
   academicQualifications?: any;
   expertiseFields?: string[];
   linkedInUrl?: string | null;
   personalWebsiteUrl?: string | null;
+  consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | null;
 }
 

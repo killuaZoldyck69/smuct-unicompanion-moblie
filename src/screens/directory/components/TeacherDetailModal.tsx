@@ -18,6 +18,7 @@ import {
   TeacherOfficeAvailabilityCard,
   TeacherProfessionalProfileCard,
 } from "@/components/teacher-profile";
+import { formatConsultationSlots } from "@/utils/consultation-formatter";
 
 export interface TeacherDetailModalProps {
   teacher: TeacherDirectoryItem | null;
@@ -32,6 +33,7 @@ export const TeacherDetailModal: React.FC<TeacherDetailModalProps> = React.memo(
     const handleShare = useCallback(async () => {
       if (!teacher) return;
       const profile = teacher.teacherProfile;
+      const formattedConsultation = formatConsultationSlots(profile?.consultationSlots, "");
       try {
         await Share.share({
           title: `Faculty Contact: ${teacher.name}`,
@@ -41,8 +43,8 @@ export const TeacherDetailModal: React.FC<TeacherDetailModalProps> = React.memo(
             `Email: ${teacher.email || "N/A"}\n` +
             (teacher.phoneNumber ? `Phone: ${teacher.phoneNumber}\n` : "") +
             (profile?.officeRoom ? `Office: ${profile.officeRoom}\n` : "") +
-            (profile?.consultationHours
-              ? `Consultation: ${profile.consultationHours}\n`
+            (formattedConsultation
+              ? `Consultation: ${formattedConsultation}\n`
               : ""),
         });
       } catch {

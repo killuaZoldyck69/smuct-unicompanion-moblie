@@ -15,7 +15,6 @@ export interface TeacherFormData {
   advisoryBatch: string;
   dayOff: string;
   consultationSlots: ConsultationSlot[];
-  consultationHours: string;
   phoneNumber: string;
   bloodGroup: string;
   expertiseFields: string[];
@@ -37,7 +36,6 @@ export function useTeacherProfileForm(
     advisoryBatch: "",
     dayOff: "",
     consultationSlots: [],
-    consultationHours: "",
     phoneNumber: "",
     bloodGroup: "",
     expertiseFields: [],
@@ -106,22 +104,6 @@ export function useTeacherProfileForm(
         startTime: s.startTime || "",
         endTime: s.endTime || "",
       }));
-    } else if (
-      (profile as any).consultationHours &&
-      typeof (profile as any).consultationHours === "string"
-    ) {
-      const parts = (profile as any).consultationHours.split(",");
-      parts.forEach((p: string) => {
-        const [dayPart, timePart] = p.split(":");
-        if (dayPart && timePart) {
-          const times = timePart.split("-");
-          slots.push({
-            day: dayPart.trim(),
-            startTime: times[0]?.trim() || "",
-            endTime: times[1]?.trim() || "",
-          });
-        }
-      });
     }
 
     setFormData({
@@ -135,7 +117,6 @@ export function useTeacherProfileForm(
           : "",
       dayOff: profile.dayOff || "",
       consultationSlots: slots,
-      consultationHours: (profile as any).consultationHours || (profile as any).officeHours || "",
       phoneNumber: profile.phoneNumber || profile.phone || "",
       bloodGroup: profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] || "" : "",
       expertiseFields: (profile as any).expertiseFields || profile.researchInterests || [],
@@ -269,13 +250,8 @@ export function useTeacherProfileForm(
       payload.dayOff = cleanDayOff;
     }
 
-    // Consultation slots & formatted hours string
+    // Consultation slots
     payload.consultationSlots = formData.consultationSlots;
-    const formattedHours = formData.consultationSlots
-      .filter((s) => s.day && (s.startTime || s.endTime))
-      .map((s) => `${s.day}: ${s.startTime || "TBD"} - ${s.endTime || "TBD"}`)
-      .join(", ");
-    payload.consultationHours = formattedHours || (formData.consultationHours.trim() || undefined);
 
     const cleanPhone = formData.phoneNumber.trim();
     if (cleanPhone !== (profile.phoneNumber || profile.phone || "")) {
