@@ -26,6 +26,8 @@ import { TeacherProfessionalProfileCard } from "./TeacherProfessionalProfileCard
 import { FacultyAdminActionsCard } from "./FacultyAdminActionsCard";
 import { AdministrativeActionsCard } from "./AdministrativeActionsCard";
 import { RestrictConfirmationModal } from "./RestrictConfirmationModal";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
 
 interface UserProfileModalProps {
   user: AdminUser | null;
@@ -192,6 +194,12 @@ export const UserProfileModal = React.memo(
             onClose={() => setIsRestrictConfirmVisible(false)}
             onConfirm={handleExecuteRestrict}
             isLoading={isBusy}
+          />
+
+          {/* Toast Notification for Profile Modal */}
+          <Toast
+            config={toastConfig}
+            topOffset={Math.max(topInset + 8, 44)}
           />
         </View>
       </Modal>
