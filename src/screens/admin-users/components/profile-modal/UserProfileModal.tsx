@@ -15,6 +15,7 @@ import {
   AdminUser,
   RoleAction,
   UpdateAdminTeacherProfilePayload,
+  UpdateAdminStudentProfilePayload,
 } from "../../types";
 import { ProfileHeroCard } from "./ProfileHeroCard";
 import { ContactPersonalCard } from "./ContactPersonalCard";
@@ -38,11 +39,16 @@ interface UserProfileModalProps {
     userId: string,
     data: UpdateAdminTeacherProfilePayload,
   ) => Promise<any> | void;
+  onUpdateStudentProfile?: (
+    userId: string,
+    data: UpdateAdminStudentProfilePayload,
+  ) => Promise<any> | void;
   onDelete?: (userId: string, name: string, isRestricted?: boolean) => void;
   onToggleRestrict?: (userId: string, name: string, isRestricted?: boolean) => void;
   isUpdatingRole: boolean;
   isUpdatingTeacherPosition?: boolean;
   isUpdatingTeacherProfile?: boolean;
+  isUpdatingStudentProfile?: boolean;
   isDeletingUser?: boolean;
   isRestrictingUser?: boolean;
   topInset: number;
@@ -56,25 +62,23 @@ export const UserProfileModal = React.memo(
     onUpdateRole,
     onUpdateTeacherPosition,
     onUpdateTeacherProfile,
+    onUpdateStudentProfile,
     onDelete,
     onToggleRestrict,
     isUpdatingRole,
     isUpdatingTeacherPosition,
     isUpdatingTeacherProfile,
+    isUpdatingStudentProfile = false,
     isDeletingUser,
     isRestrictingUser,
     topInset,
     bottomInset,
   }: UserProfileModalProps) => {
-    if (!user) return null;
-
-    const isStudent = user.role === "STUDENT";
-    const isTeacher = user.role === "TEACHER";
-    const handleRestrict = onToggleRestrict || onDelete;
-    const isBusy = isRestrictingUser ?? isDeletingUser;
-
     const [isRestrictConfirmVisible, setIsRestrictConfirmVisible] =
       React.useState(false);
+
+    const handleRestrict = onToggleRestrict || onDelete;
+    const isBusy = isRestrictingUser ?? isDeletingUser;
 
     const handlePromptRestrict = React.useCallback(() => {
       setIsRestrictConfirmVisible(true);
@@ -85,6 +89,10 @@ export const UserProfileModal = React.memo(
       handleRestrict?.(user.id, user.name, user.isRestricted);
       setIsRestrictConfirmVisible(false);
     }, [user, handleRestrict]);
+
+    if (!user) return null;
+
+    const isTeacher = user.role === "TEACHER";
 
     return (
       <Modal
@@ -162,11 +170,13 @@ export const UserProfileModal = React.memo(
             ) : (
               <>
                 {/* Student Profile Layout */}
-                <ContactPersonalCard user={user} />
                 <StudentAcademicCard profile={user.studentProfile} />
+                <ContactPersonalCard user={user} />
                 <AdministrativeActionsCard
                   user={user}
                   onUpdateRole={onUpdateRole}
+                  onUpdateStudentProfile={onUpdateStudentProfile}
+                  isUpdatingProfile={isUpdatingStudentProfile}
                   onToggleRestrict={handlePromptRestrict}
                   isUpdatingRole={isUpdatingRole}
                   isRestrictingUser={isBusy}

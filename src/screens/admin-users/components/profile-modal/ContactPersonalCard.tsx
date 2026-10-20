@@ -1,6 +1,8 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-toast-message";
 
 import { AdminUser } from "../../types";
 import { formatBloodGroup, handleOpenUrl } from "../../utils";
@@ -20,6 +22,33 @@ export const ContactPersonalCard = React.memo(
       ? user.studentProfile?.personalWebsiteUrl
       : user.teacherProfile?.personalWebsiteUrl;
 
+    const phoneNumber = user.phoneNumber?.trim() || null;
+
+    const handleCall = useCallback(() => {
+      if (!phoneNumber) return;
+      const cleanNumber = phoneNumber.replace(/[^0-9+]/g, "");
+      Linking.openURL(`tel:${cleanNumber}`).catch(() => {
+        Toast.show({
+          type: "error",
+          text1: "Cannot place call",
+          text2: "Unable to dial phone number on this device.",
+        });
+      });
+    }, [phoneNumber]);
+
+    const handleCopy = useCallback(async () => {
+      if (!phoneNumber) return;
+      await Clipboard.setStringAsync(phoneNumber);
+      Toast.show({
+        type: "success",
+        text1: "Phone number copied",
+        text2: phoneNumber,
+      });
+    }, [phoneNumber]);
+
+    const linkedInTarget = linkedInUrl?.trim() || "";
+    const websiteTarget = websiteUrl?.trim() || "";
+
     return (
       <View style={styles.detailSectionCard}>
         <View style={styles.detailSectionHeader}>
@@ -31,17 +60,56 @@ export const ContactPersonalCard = React.memo(
           </View>
         </View>
 
-        {/* Phone Item */}
-        <View style={styles.detailContactItemBox}>
-          <View style={styles.detailContactItemLeft}>
-            <View style={styles.detailContactItemIconBox}>
-              <Feather name="phone" size={15} color="#64748B" />
+        {/* Phone Item with Copy & Call options */}
+        <View style={styles.phoneCardBox}>
+          <View style={styles.phoneLeft}>
+            <View style={styles.phoneIconBox}>
+              <Feather name="phone" size={14} color="#16A34A" />
             </View>
-            <Text style={styles.detailContactItemLabel}>Phone</Text>
+            <View style={styles.phoneTextContainer}>
+              <Text style={styles.phoneLabel}>PHONE NUMBER</Text>
+              <Text
+                style={[
+                  styles.phoneValue,
+                  !phoneNumber && styles.phoneValuePlaceholder,
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                adjustsFontSizeToFit={true}
+                minimumFontScale={0.8}
+              >
+                {phoneNumber || "Not provided"}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.detailContactItemValue} numberOfLines={1}>
-            {user.phoneNumber || "Not provided"}
-          </Text>
+
+          {Boolean(phoneNumber) && (
+            <View style={styles.phoneActionsRow}>
+              <TouchableOpacity
+                style={styles.phoneActionBtnCopy}
+                onPress={handleCopy}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Copy phone number"
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Feather name="copy" size={12} color="#15803D" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.phoneActionBtnCall}
+                onPress={handleCall}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Call phone number"
+              >
+                <Feather name="phone-call" size={11} color="#FFFFFF" />
+                <Text style={styles.phoneActionBtnCallText}>Call</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Blood Group (if provided) */}
@@ -60,87 +128,45 @@ export const ContactPersonalCard = React.memo(
         )}
 
         {/* LinkedIn (if provided) */}
-        {Boolean(linkedInUrl) && (
-          <View style={styles.detailLinkCardBox}>
-            <View style={styles.detailLinkCardHeader}>
-              <View style={styles.detailContactItemLeft}>
-                <View style={styles.detailContactItemIconBox}>
-                  <Feather name="linkedin" size={15} color="#0A66C2" />
-                </View>
-                <Text style={styles.detailContactItemLabel}>LinkedIn</Text>
+        {Boolean(linkedInTarget) && (
+          <TouchableOpacity
+            style={styles.linkCard}
+            activeOpacity={0.8}
+            onPress={() => handleOpenUrl(linkedInTarget)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Open LinkedIn Profile"
+          >
+            <View style={styles.linkLeft}>
+              <View style={styles.linkIconCircleLinkedIn}>
+                <Feather name="linkedin" size={15} color="#0A66C2" />
               </View>
-              <TouchableOpacity
-                style={styles.detailRedirectBtn}
-                onPress={() => handleOpenUrl(linkedInUrl)}
-                activeOpacity={0.7}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Open LinkedIn link"
-              >
-                <Text style={styles.detailRedirectBtnText}>Open</Text>
-                <Feather
-                  name="external-link"
-                  size={12}
-                  color="#0284C7"
-                  style={{ marginLeft: 4 }}
-                />
-              </TouchableOpacity>
+              <Text style={styles.linkLabel}>LinkedIn Profile</Text>
             </View>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={() => handleOpenUrl(linkedInUrl)}
-              style={styles.detailLinkUrlContainer}
-              accessible={true}
-              accessibilityRole="link"
-              accessibilityLabel={`LinkedIn URL: ${linkedInUrl}`}
-            >
-              <Text style={styles.detailLinkFullText} selectable={true}>
-                {linkedInUrl}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            <Feather name="external-link" size={15} color="#94A3B8" />
+          </TouchableOpacity>
         )}
 
         {/* Personal Website (if provided) */}
-        {Boolean(websiteUrl) && (
-          <View style={styles.detailLinkCardBox}>
-            <View style={styles.detailLinkCardHeader}>
-              <View style={styles.detailContactItemLeft}>
-                <View style={styles.detailContactItemIconBox}>
-                  <Feather name="globe" size={15} color="#0284C7" />
-                </View>
-                <Text style={styles.detailContactItemLabel}>Website</Text>
+        {Boolean(websiteTarget) && (
+          <TouchableOpacity
+            style={styles.linkCard}
+            activeOpacity={0.8}
+            onPress={() => handleOpenUrl(websiteTarget)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Open Personal Website"
+          >
+            <View style={styles.linkLeft}>
+              <View style={styles.linkIconCirclePortfolio}>
+                <Feather name="globe" size={15} color="#0D9488" />
               </View>
-              <TouchableOpacity
-                style={styles.detailRedirectBtn}
-                onPress={() => handleOpenUrl(websiteUrl)}
-                activeOpacity={0.7}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Open Website link"
-              >
-                <Text style={styles.detailRedirectBtnText}>Open</Text>
-                <Feather
-                  name="external-link"
-                  size={12}
-                  color="#0284C7"
-                  style={{ marginLeft: 4 }}
-                />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={() => handleOpenUrl(websiteUrl)}
-              style={styles.detailLinkUrlContainer}
-              accessible={true}
-              accessibilityRole="link"
-              accessibilityLabel={`Website URL: ${websiteUrl}`}
-            >
-              <Text style={styles.detailLinkFullText} selectable={true}>
-                {websiteUrl}
+              <Text style={styles.linkLabel}>
+                {isStudent ? "Personal Website" : "Academic Portfolio"}
               </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+            <Feather name="external-link" size={15} color="#94A3B8" />
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -186,6 +212,92 @@ const styles = StyleSheet.create({
     color: "#334155",
     letterSpacing: 0.8,
   },
+  phoneCardBox: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+  },
+  phoneLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  phoneIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    flexShrink: 0,
+  },
+  phoneTextContainer: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+  phoneLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#94A3B8",
+    letterSpacing: 0.5,
+  },
+  phoneValue: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginTop: 1,
+  },
+  phoneValuePlaceholder: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#94A3B8",
+  },
+  phoneActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  phoneActionBtnCopy: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  phoneActionBtnCall: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#16A34A",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 7,
+    gap: 3.5,
+    shadowColor: "#16A34A",
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 2.5,
+    elevation: 2,
+  },
+  phoneActionBtnCallText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
   detailContactItemBox: {
     backgroundColor: "#F8FAFC",
     borderRadius: 14,
@@ -227,45 +339,43 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "right",
   },
-  detailLinkCardBox: {
+  linkCard: {
     backgroundColor: "#F8FAFC",
     borderRadius: 14,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 10,
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
-  detailLinkCardHeader: {
+  linkLeft: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
   },
-  detailRedirectBtn: {
-    flexDirection: "row",
+  linkIconCircleLinkedIn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
-    backgroundColor: "#E0F2FE",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    justifyContent: "center",
+    marginRight: 10,
   },
-  detailRedirectBtnText: {
-    fontSize: 12,
+  linkIconCirclePortfolio: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F0FDF4",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  linkLabel: {
+    fontSize: 13.5,
     fontWeight: "700",
-    color: "#0284C7",
-  },
-  detailLinkUrlContainer: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  detailLinkFullText: {
-    fontSize: 13,
-    color: "#0284C7",
-    fontWeight: "500",
-    lineHeight: 18,
+    color: "#0F172A",
   },
 });

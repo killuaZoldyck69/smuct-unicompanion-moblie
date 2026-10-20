@@ -17,6 +17,7 @@ import {
   RoleAction,
   AdminUser,
   UpdateAdminTeacherProfilePayload,
+  UpdateAdminStudentProfilePayload,
 } from "../types";
 
 export function useAdminUsers() {
@@ -256,6 +257,49 @@ export function useAdminUsers() {
       }),
   });
 
+  const updateStudentProfileMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      data,
+    }: {
+      userId: string;
+      data: UpdateAdminStudentProfilePayload;
+    }) => {
+      const response = await api.patch(`/users/${userId}/student-profile`, data);
+      return response.data?.data;
+    },
+    onSuccess: (updatedUser: any) => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["directory"] });
+      if (updatedUser) {
+        setSelectedUser((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            name: updatedUser.name ?? prev.name,
+            phoneNumber: updatedUser.phoneNumber ?? prev.phoneNumber,
+            bloodGroup: updatedUser.bloodGroup ?? prev.bloodGroup,
+            studentProfile: {
+              ...prev.studentProfile,
+              ...(updatedUser.studentProfile || {}),
+            },
+          };
+        });
+      }
+      Toast.show({
+        type: "success",
+        text1: "Student Profile Updated",
+        text2: "Changes saved successfully.",
+      });
+    },
+    onError: (err: any) =>
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: err.response?.data?.message || err.message,
+      }),
+  });
+
   // Handlers
   const handleToggleRestrict = useCallback(
     (userId: string, _name?: string, currentlyRestricted?: boolean) => {
@@ -287,6 +331,13 @@ export function useAdminUsers() {
       return await updateTeacherProfileMutation.mutateAsync({ userId, data });
     },
     [updateTeacherProfileMutation],
+  );
+
+  const handleUpdateStudentProfile = useCallback(
+    async (userId: string, data: UpdateAdminStudentProfilePayload) => {
+      return await updateStudentProfileMutation.mutateAsync({ userId, data });
+    },
+    [updateStudentProfileMutation],
   );
 
   const resetFilters = useCallback(() => {
@@ -329,12 +380,14 @@ export function useAdminUsers() {
     handleUpdateRole,
     handleUpdateTeacherPosition,
     handleUpdateTeacherProfile,
+    handleUpdateStudentProfile,
     resetFilters,
     isStudentTab,
     primaryThemeColor,
     isUpdatingRole: updateRoleMutation.isPending,
     isUpdatingTeacherPosition: updateTeacherPositionMutation.isPending,
     isUpdatingTeacherProfile: updateTeacherProfileMutation.isPending,
+    isUpdatingStudentProfile: updateStudentProfileMutation.isPending,
     isRestrictingUser: restrictUserMutation.isPending,
     isDeletingUser: restrictUserMutation.isPending,
   };

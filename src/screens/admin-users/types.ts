@@ -76,3 +76,21 @@ export interface UpdateAdminTeacherProfilePayload {
   consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | null;
 }
 
+export interface UpdateAdminStudentProfilePayload {
+  name?: string;
+  phoneNumber?: string | null;
+  bloodGroup?: string | null;
+  studentId?: string;
+  faculty?: string;
+  department?: string;
+  program?: string;
+  batch?: string;
+  currentSemester?: number;
+  section?: string;
+  currentTerm?: string | null;
+  isCR?: boolean;
+  skills?: string[];
+  linkedInUrl?: string | null;
+  personalWebsiteUrl?: string | null;
+}
+

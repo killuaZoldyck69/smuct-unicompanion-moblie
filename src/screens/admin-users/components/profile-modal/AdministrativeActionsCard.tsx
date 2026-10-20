@@ -1,12 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
-import { AdminUser, RoleAction } from "../../types";
+import { AdminUser, RoleAction, UpdateAdminStudentProfilePayload } from "../../types";
+import { EditStudentProfileModal } from "./EditStudentProfileModal";
 
 interface AdministrativeActionsCardProps {
   user: AdminUser;
   onUpdateRole: (userId: string, action: RoleAction) => void;
+  onUpdateStudentProfile?: (
+    userId: string,
+    data: UpdateAdminStudentProfilePayload,
+  ) => Promise<any> | void;
+  isUpdatingProfile?: boolean;
   onDelete?: (userId: string, name: string, isRestricted?: boolean) => void;
   onToggleRestrict?: (userId: string, name: string, isRestricted?: boolean) => void;
   isUpdatingRole: boolean;
@@ -18,6 +24,8 @@ export const AdministrativeActionsCard = React.memo(
   ({
     user,
     onUpdateRole,
+    onUpdateStudentProfile,
+    isUpdatingProfile = false,
     onDelete,
     onToggleRestrict,
     isUpdatingRole,
@@ -28,6 +36,8 @@ export const AdministrativeActionsCard = React.memo(
     const isCR = user.studentProfile?.isCR;
     const handleRestrict = onToggleRestrict || onDelete;
     const isBusy = isRestrictingUser ?? isDeletingUser;
+
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     return (
       <View style={styles.detailSectionCard}>
@@ -43,7 +53,37 @@ export const AdministrativeActionsCard = React.memo(
           </View>
         </View>
 
-        {/* Student Special Roles (CR) */}
+        {/* 1. Edit Student Profile Button (Primary Dark Slate with emerald/cyan accent) */}
+        {isStudent && (
+          <TouchableOpacity
+            style={styles.actionBtnPrimary}
+            activeOpacity={0.85}
+            onPress={() => setIsEditModalOpen(true)}
+            disabled={isBusy || isUpdatingProfile || isUpdatingRole}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Edit Student Profile"
+          >
+            <View style={styles.btnContentRow}>
+              <View style={styles.btnIconTextGroup}>
+                <View style={styles.primaryIconCircle}>
+                  <Feather name="edit-3" size={15} color="#34D399" />
+                </View>
+                <View style={{ flexShrink: 1 }}>
+                  <Text style={styles.btnTextWhite}>Edit Student Profile</Text>
+                  <Text style={styles.btnSubtextMuted}>
+                    Personal, Academic, Roles & Links
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.actionArrowBadge}>
+                <Feather name="chevron-right" size={15} color="#94A3B8" />
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* 2. Student Special Roles (CR) */}
         {isStudent && (
           <TouchableOpacity
             style={styles.adminActionBtnNavy}
@@ -51,7 +91,7 @@ export const AdministrativeActionsCard = React.memo(
             onPress={() =>
               onUpdateRole(user.id, isCR ? "REMOVE_ROLE" : "MAKE_CR")
             }
-            disabled={isUpdatingRole}
+            disabled={isUpdatingRole || isUpdatingProfile}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={
@@ -72,13 +112,13 @@ export const AdministrativeActionsCard = React.memo(
           </TouchableOpacity>
         )}
 
-        {/* Restrict / Unrestrict Account */}
+        {/* 3. Restrict / Unrestrict Account */}
         {user.isRestricted ? (
           <TouchableOpacity
             style={styles.adminActionBtnEmerald}
             activeOpacity={0.85}
             onPress={() => handleRestrict?.(user.id, user.name, user.isRestricted)}
-            disabled={isBusy || isUpdatingRole}
+            disabled={isBusy || isUpdatingRole || isUpdatingProfile}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Unrestrict Account"
@@ -98,7 +138,7 @@ export const AdministrativeActionsCard = React.memo(
             style={styles.adminActionBtnRose}
             activeOpacity={0.85}
             onPress={() => handleRestrict?.(user.id, user.name, user.isRestricted)}
-            disabled={isBusy || isUpdatingRole}
+            disabled={isBusy || isUpdatingRole || isUpdatingProfile}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Restrict Account"
@@ -113,6 +153,17 @@ export const AdministrativeActionsCard = React.memo(
               Restrict Account
             </Text>
           </TouchableOpacity>
+        )}
+
+        {/* Edit Student Profile Modal */}
+        {isStudent && (
+          <EditStudentProfileModal
+            visible={isEditModalOpen}
+            user={user}
+            onClose={() => setIsEditModalOpen(false)}
+            onSave={onUpdateStudentProfile || (() => {})}
+            isSaving={isUpdatingProfile}
+          />
         )}
       </View>
     );
@@ -206,5 +257,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#059669",
+  },
+  actionBtnPrimary: {
+    backgroundColor: "#0F172A",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#1E293B",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  primaryIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "rgba(52, 211, 153, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  btnContentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  btnIconTextGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
+  btnTextWhite: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  btnSubtextMuted: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#94A3B8",
+    marginTop: 2,
+  },
+  actionArrowBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
 });
