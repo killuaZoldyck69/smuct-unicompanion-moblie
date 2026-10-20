@@ -43,12 +43,14 @@ export interface AcademicCalendarItem {
   id: string;
   title: string;
   semester: string;
-  academicYear: number;
+  academicYear?: number;
   status: CalendarStatus;
   isActive: boolean;
-  isGlobal: boolean;
+  isGlobal?: boolean;
   targetFaculties: string[];
-  targetDepartments: string[];
+  targetPrograms?: string[];
+  semesterDuration?: string | null;
+  targetBatch?: string | null;
   publishedAt?: string | null;
   createdBy?: string | null;
   updatedBy?: string | null;
