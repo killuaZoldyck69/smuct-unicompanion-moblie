@@ -63,6 +63,9 @@ export const SMUCT_FACULTIES: FacultyDefinition[] = facultyOrder.map((facKey) =>
 
 export const ALL_SMUCT_PROGRAMS: string[] = SMUCT_FACULTIES.flatMap((f) => f.programs);
 
+export const SMUCT_SEMESTERS = ["Summer", "Winter", "Spring", "Fall"] as const;
+export type SmuctSemester = (typeof SMUCT_SEMESTERS)[number];
+
 export const BENTO_COLORS = {
   background: "#f8fafc",
   cardBg: "#ffffff",

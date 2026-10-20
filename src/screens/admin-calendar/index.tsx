@@ -53,6 +53,7 @@ import { NodeInspectorModal } from "./components/NodeInspectorModal";
 import { EditAudienceModal } from "./components/EditAudienceModal";
 import { CreateCalendarModal } from "./components/CreateCalendarModal";
 import { CsvImportModal } from "./components/CsvImportModal";
+import { AdminConfirmModal, ConfirmModalVariant } from "./components/AdminConfirmModal";
 
 export function AdminCalendarScreen() {
   const router = useRouter();
@@ -71,7 +72,6 @@ export function AdminCalendarScreen() {
   // Stream Filters
   const [selectedCategoryFilter, setSelectedCategoryFilter] =
     useState<string>("ALL");
-  const [isCompactMode, setIsCompactMode] = useState(false);
 
   // Modals State
   const [isMethodChoiceOpen, setIsMethodChoiceOpen] = useState(false);
@@ -79,6 +79,16 @@ export function AdminCalendarScreen() {
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isEditAudienceOpen, setIsEditAudienceOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    variant: ConfirmModalVariant;
+    title: string;
+    message: string;
+    targetBadge?: string;
+    targetBadgeIcon?: React.ComponentProps<typeof Feather>["name"];
+    confirmLabel?: string;
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
 
   // Node Inspector Modal
   const [isNodeInspectorOpen, setIsNodeInspectorOpen] = useState(false);
@@ -218,20 +228,44 @@ export function AdminCalendarScreen() {
     }
   };
 
-  // Archive with explanation
+  // Archive / Restore with explanation
   const handleArchiveCalendar = () => {
     if (!selectedCalendar) return;
-    Alert.alert(
-      "Archive Academic Calendar",
-      `Archiving "${selectedCalendar.title}" will hide it from active student and faculty dashboards while keeping historical archives. You can unarchive it anytime.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Archive Calendar",
-          onPress: () => handleStatusChange(selectedCalendar.id, "ARCHIVED"),
+    const isArchived = selectedCalendar.status === "ARCHIVED";
+    const badgeText =
+      `${selectedCalendar.semester} ${selectedCalendar.academicYear || ""}`.trim() ||
+      selectedCalendar.title;
+
+    if (isArchived) {
+      setConfirmModal({
+        visible: true,
+        variant: "revert",
+        title: "Restore Academic Calendar",
+        targetBadge: badgeText,
+        targetBadgeIcon: "rotate-ccw",
+        message: `Restoring "${selectedCalendar.title}" will move it back to Draft status so it can be managed and published.`,
+        confirmLabel: "Restore to Draft",
+        onConfirm: async () => {
+          setConfirmModal(null);
+          await handleStatusChange(selectedCalendar.id, "DRAFT");
         },
-      ],
-    );
+      });
+      return;
+    }
+
+    setConfirmModal({
+      visible: true,
+      variant: "archive",
+      title: "Archive Academic Calendar",
+      targetBadge: badgeText,
+      targetBadgeIcon: "archive",
+      message: `Archiving "${selectedCalendar.title}" will hide it from active student and faculty dashboards while keeping historical archives. You can unarchive it anytime.`,
+      confirmLabel: "Archive Calendar",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await handleStatusChange(selectedCalendar.id, "ARCHIVED");
+      },
+    });
   };
 
   // Duplicate / Clone Handler
@@ -258,39 +292,50 @@ export function AdminCalendarScreen() {
   };
 
   // Delete Calendar Handler
-  const handleDeleteCalendar = (id: string, title: string) => {
-    Alert.alert(
-      "Delete Academic Calendar",
-      `Are you sure you want to permanently delete "${title}"? This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteCalendarMutation.mutateAsync(id);
-              Toast.show({
-                type: "info",
-                text1: "Calendar Deleted",
-                text2: "Academic calendar removed.",
-              });
-              refetchCalendars();
-              if (selectedCalendarId === id) {
-                setCurrentView("LIST");
-                setSelectedCalendarId(null);
-              }
-            } catch (err: any) {
-              Toast.show({
-                type: "error",
-                text1: "Delete Failed",
-                text2: err.message || "Failed to delete calendar.",
-              });
-            }
-          },
+  const handleDeleteCalendar = async (
+    id: string,
+    title?: string,
+    requireConfirm = false,
+  ) => {
+    const doDelete = async () => {
+      try {
+        await deleteCalendarMutation.mutateAsync(id);
+        Toast.show({
+          type: "info",
+          text1: "Calendar Deleted",
+          text2: "Academic calendar removed.",
+        });
+        refetchCalendars();
+        if (selectedCalendarId === id) {
+          setCurrentView("LIST");
+          setSelectedCalendarId(null);
+        }
+      } catch (err: any) {
+        Toast.show({
+          type: "error",
+          text1: "Delete Failed",
+          text2: err.message || "Failed to delete calendar.",
+        });
+      }
+    };
+
+    if (requireConfirm) {
+      setConfirmModal({
+        visible: true,
+        variant: "delete",
+        title: "Delete Academic Calendar",
+        targetBadge: title || "Academic Calendar",
+        targetBadgeIcon: "calendar",
+        message: `Are you sure you want to permanently delete "${title || "this calendar"}"? This action cannot be undone and will permanently remove all associated calendar dates and event nodes.`,
+        confirmLabel: "Delete Calendar",
+        onConfirm: async () => {
+          setConfirmModal(null);
+          await doDelete();
         },
-      ],
-    );
+      });
+    } else {
+      await doDelete();
+    }
   };
 
   // Export CSV Handler
@@ -378,6 +423,23 @@ export function AdminCalendarScreen() {
     }
   };
 
+  // Prompt confirmation before deleting an event node
+  const promptDeleteEvent = (eventId: string, title: string) => {
+    setConfirmModal({
+      visible: true,
+      variant: "delete",
+      title: "Delete Event Node",
+      targetBadge: title,
+      targetBadgeIcon: "calendar",
+      message: `Are you sure you want to permanently remove "${title}" from the academic schedule?`,
+      confirmLabel: "Delete Event",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await handleDeleteEvent(eventId, title);
+      },
+    });
+  };
+
   // Open Node Inspector for Add
   const handleOpenAddEvent = (weekNum?: number | null) => {
     setEditingEvent(null);
@@ -395,6 +457,8 @@ export function AdminCalendarScreen() {
   // Update Scope & Cohorts & Title
   const handleSaveAudience = async (payload: {
     title?: string;
+    semester?: string;
+    academicYear?: number;
     targetFaculties: string[];
     targetPrograms: string[];
     semesterDuration: string;
@@ -421,9 +485,11 @@ export function AdminCalendarScreen() {
       refetchCalendarDetail();
       refetchCalendars();
     } else {
+      const currentYear = new Date().getFullYear();
       const newCal = await createCalendarMutation.mutateAsync({
-        title: "Academic Calendar (CSV Import)",
-        semester: "Upcoming Semester",
+        title: `Academic Calendar - Summer ${currentYear}`,
+        semester: "Summer",
+        academicYear: currentYear,
       });
       await importCsvMutation.mutateAsync({
         calendarId: newCal.id,
@@ -728,7 +794,7 @@ export function AdminCalendarScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cloneTitle}>{cal.title}</Text>
                       <Text style={styles.cloneSub}>
-                        {cal.semester} • {cal.events?.length || 0} events
+                        {cal.semester} {cal.academicYear ? `• AY ${cal.academicYear}` : ""} • {cal.events?.length || 0} events
                       </Text>
                     </View>
                     <View style={styles.clonePill}>
@@ -766,6 +832,21 @@ export function AdminCalendarScreen() {
           onClose={() => setIsCsvModalOpen(false)}
           onImportSuccess={handleCommitCsvImport}
         />
+
+        {/* Confirmation Modal */}
+        {confirmModal && (
+          <AdminConfirmModal
+            visible={confirmModal.visible}
+            onClose={() => setConfirmModal(null)}
+            onConfirm={confirmModal.onConfirm}
+            variant={confirmModal.variant}
+            title={confirmModal.title}
+            targetBadge={confirmModal.targetBadge}
+            targetBadgeIcon={confirmModal.targetBadgeIcon}
+            message={confirmModal.message}
+            confirmLabel={confirmModal.confirmLabel}
+          />
+        )}
       </View>
     );
   }
@@ -791,43 +872,9 @@ export function AdminCalendarScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerTitleContainer}>
-          <View style={styles.headerSemesterRow}>
-            <Text style={styles.headerSemesterText} numberOfLines={1}>
-              {selectedCalendar?.semester || "Summer 2026"}
-            </Text>
-
-            {/* LIVE / DRAFT status pill */}
-            <View
-              style={[
-                styles.liveBadge,
-                isPub
-                  ? styles.liveBadgeGreen
-                  : isDraft
-                    ? styles.liveBadgeAmber
-                    : styles.liveBadgeSlate,
-              ]}
-            >
-              <View
-                style={[
-                  styles.liveDot,
-                  isPub && { backgroundColor: "#059669" },
-                  isDraft && { backgroundColor: "#d97706" },
-                  !isPub && !isDraft && { backgroundColor: "#64748b" },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.liveBadgeText,
-                  isPub && { color: "#047857" },
-                  isDraft && { color: "#b45309" },
-                  !isPub && !isDraft && { color: "#475569" },
-                ]}
-              >
-                {isPub ? "LIVE" : selectedCalendar?.status || "DRAFT"}
-              </Text>
-            </View>
-          </View>
-
+          <Text style={styles.headerSemesterText} numberOfLines={1}>
+            {selectedCalendar ? `${selectedCalendar.semester} ${selectedCalendar.academicYear || ""}`.trim() : "Summer 2026"}
+          </Text>
           <Text style={styles.headerSubtitleText}>
             Academic Cohort Calendar
           </Text>
@@ -863,9 +910,10 @@ export function AdminCalendarScreen() {
               onImport={() => setIsCsvModalOpen(true)}
               onPreview={() => setIsPreviewOpen(true)}
               onArchive={handleArchiveCalendar}
+              isArchived={selectedCalendar.status === "ARCHIVED"}
             />
 
-            {/* 4. TIMELINE STREAM HEADER & COMPACT TOGGLE */}
+            {/* 4. TIMELINE STREAM HEADER */}
             <View style={styles.streamHeaderRow}>
               <View style={styles.streamTitleLeft}>
                 <View style={styles.streamDot} />
@@ -876,17 +924,6 @@ export function AdminCalendarScreen() {
                   </Text>
                 </View>
               </View>
-
-              <TouchableOpacity
-                style={styles.compactToggleBtn}
-                onPress={() => setIsCompactMode((prev) => !prev)}
-                activeOpacity={0.8}
-              >
-                <Feather name="shuffle" size={12} color="#475569" />
-                <Text style={styles.compactToggleText}>
-                  {isCompactMode ? "Detailed" : "Compact"}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* 5. HORIZONTAL CATEGORY FILTER STRIP */}
@@ -1078,7 +1115,7 @@ export function AdminCalendarScreen() {
                     group={group}
                     onAddEventToWeek={handleOpenAddEvent}
                     onEditEvent={handleOpenEditEvent}
-                    onDeleteEvent={(ev) => handleDeleteEvent(ev.id, ev.title)}
+                    onDeleteEvent={(ev) => promptDeleteEvent(ev.id, ev.title)}
                   />
                 ))
               )}
@@ -1152,6 +1189,21 @@ export function AdminCalendarScreen() {
           <AcademicCalendarScreen />
         </View>
       </Modal>
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <AdminConfirmModal
+          visible={confirmModal.visible}
+          onClose={() => setConfirmModal(null)}
+          onConfirm={confirmModal.onConfirm}
+          variant={confirmModal.variant}
+          title={confirmModal.title}
+          targetBadge={confirmModal.targetBadge}
+          targetBadgeIcon={confirmModal.targetBadgeIcon}
+          message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel}
+        />
+      )}
     </View>
   );
 }

@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AcademicCalendarItem, CalendarStatus } from "@/services/calendar-service";
 import { BENTO_COLORS, SMUCT_FACULTIES } from "../constants";
+import { AdminConfirmModal, ConfirmModalVariant } from "./AdminConfirmModal";
 
 interface CalendarListCardProps {
   calendar: AcademicCalendarItem;
@@ -29,6 +29,14 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    variant: ConfirmModalVariant;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const isPub = calendar.status === "PUBLISHED";
   const isDraft = calendar.status === "DRAFT";
@@ -56,33 +64,62 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
 
   const handleArchive = () => {
     setIsMenuVisible(false);
-    Alert.alert(
-      "Archive Academic Calendar",
-      `Archiving "${calendar.title}" will hide it from active student and faculty dashboards while keeping historical archives. You can unarchive it anytime.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Archive Calendar",
-          onPress: () => onStatusChange(calendar.id, "ARCHIVED"),
-        },
-      ],
-    );
+    setConfirmModal({
+      visible: true,
+      variant: "archive",
+      title: "Archive Academic Calendar",
+      message: `Archiving "${calendar.title}" will hide it from active student and faculty dashboards while keeping historical archives. You can unarchive it anytime.`,
+      confirmLabel: "Archive Calendar",
+      onConfirm: () => {
+        setConfirmModal(null);
+        onStatusChange(calendar.id, "ARCHIVED");
+      },
+    });
   };
 
   const handleDelete = () => {
     setIsMenuVisible(false);
-    Alert.alert(
-      "Delete Academic Calendar",
-      `Permanently delete "${calendar.title}" and its ${eventCount} events? This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => onDelete(calendar.id, calendar.title),
-        },
-      ],
-    );
+    setConfirmModal({
+      visible: true,
+      variant: "delete",
+      title: "Delete Academic Calendar",
+      message: `Permanently delete "${calendar.title}" and its ${eventCount} events? This action cannot be undone.`,
+      confirmLabel: "Delete Calendar",
+      onConfirm: () => {
+        setConfirmModal(null);
+        onDelete(calendar.id, calendar.title);
+      },
+    });
+  };
+
+  const handlePublish = () => {
+    setIsMenuVisible(false);
+    setConfirmModal({
+      visible: true,
+      variant: "publish",
+      title: "Publish Academic Calendar",
+      message: `Publishing "${calendar.title}" will immediately make this calendar LIVE across all targeted student and faculty dashboards.`,
+      confirmLabel: "Publish Live",
+      onConfirm: () => {
+        setConfirmModal(null);
+        onStatusChange(calendar.id, "PUBLISHED");
+      },
+    });
+  };
+
+  const handleRevert = () => {
+    setIsMenuVisible(false);
+    setConfirmModal({
+      visible: true,
+      variant: "revert",
+      title: "Revert Calendar to Draft",
+      message: `Reverting "${calendar.title}" will temporarily hide it from students while you make administrative updates.`,
+      confirmLabel: "Revert to Draft",
+      onConfirm: () => {
+        setConfirmModal(null);
+        onStatusChange(calendar.id, "DRAFT");
+      },
+    });
   };
 
   return (
@@ -147,7 +184,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
         {/* Title & Semester */}
         <Text style={styles.title}>{calendar.title}</Text>
         <Text style={styles.semester}>
-          {calendar.semester}
+          {calendar.semester} {calendar.academicYear ? `${calendar.academicYear}` : ""}
           {calendar.semesterDuration ? ` • ${calendar.semesterDuration}` : ""}
           {calendar.targetBatch ? ` • ${calendar.targetBatch}` : ""}
         </Text>
@@ -242,10 +279,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
             {isDraft && (
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => {
-                  setIsMenuVisible(false);
-                  onStatusChange(calendar.id, "PUBLISHED");
-                }}
+                onPress={handlePublish}
               >
                 <Feather name="check-circle" size={16} color="#047857" />
                 <Text style={[styles.menuItemText, { color: "#047857" }]}>
@@ -257,10 +291,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
             {isPub && (
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => {
-                  setIsMenuVisible(false);
-                  onStatusChange(calendar.id, "DRAFT");
-                }}
+                onPress={handleRevert}
               >
                 <Feather name="corner-up-left" size={16} color="#b45309" />
                 <Text style={[styles.menuItemText, { color: "#b45309" }]}>
@@ -273,10 +304,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
               <>
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => {
-                    setIsMenuVisible(false);
-                    onStatusChange(calendar.id, "DRAFT");
-                  }}
+                  onPress={handleRevert}
                 >
                   <Feather name="rotate-ccw" size={16} color="#0369a1" />
                   <Text style={[styles.menuItemText, { color: "#0369a1" }]}>
@@ -286,10 +314,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
 
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => {
-                    setIsMenuVisible(false);
-                    onStatusChange(calendar.id, "PUBLISHED");
-                  }}
+                  onPress={handlePublish}
                 >
                   <Feather name="send" size={16} color="#047857" />
                   <Text style={[styles.menuItemText, { color: "#047857" }]}>
@@ -316,6 +341,20 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <AdminConfirmModal
+          visible={confirmModal.visible}
+          onClose={() => setConfirmModal(null)}
+          onConfirm={confirmModal.onConfirm}
+          variant={confirmModal.variant}
+          title={confirmModal.title}
+          targetBadge={calendar.title}
+          message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel}
+        />
+      )}
     </>
   );
 };

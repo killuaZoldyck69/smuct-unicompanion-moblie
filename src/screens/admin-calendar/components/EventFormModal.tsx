@@ -26,6 +26,7 @@ import {
   CATEGORY_VISUALS,
 } from "../constants";
 import { cleanDateYmd } from "../utils/date-helpers";
+import { AdminConfirmModal } from "./AdminConfirmModal";
 
 interface EventFormModalProps {
   visible: boolean;
@@ -55,6 +56,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
   const [isAllDay, setIsAllDay] = useState(true);
   const [remarks, setRemarks] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -126,21 +128,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
 
   const handleDelete = () => {
     if (!editingEvent || !onDelete) return;
-    Alert.alert(
-      "Delete Event",
-      `Are you sure you want to delete "${editingEvent.title}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            onDelete(editingEvent.id, editingEvent.title);
-            onClose();
-          },
-        },
-      ],
-    );
+    setIsDeleteConfirmOpen(true);
   };
 
   return (
@@ -402,6 +390,23 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <AdminConfirmModal
+        visible={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        variant="delete"
+        title="Delete Calendar Event"
+        targetBadge={editingEvent?.title}
+        message={`Are you sure you want to permanently remove "${editingEvent?.title}"?`}
+        confirmLabel="Delete Event"
+        onConfirm={() => {
+          setIsDeleteConfirmOpen(false);
+          if (editingEvent && onDelete) {
+            onDelete(editingEvent.id, editingEvent.title);
+            onClose();
+          }
+        }}
+      />
     </Modal>
   );
 };

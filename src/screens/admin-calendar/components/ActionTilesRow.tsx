@@ -7,6 +7,7 @@ interface ActionTilesRowProps {
   onImport: () => void;
   onPreview: () => void;
   onArchive: () => void;
+  isArchived?: boolean;
 }
 
 export const ActionTilesRow: React.FC<ActionTilesRowProps> = ({
@@ -14,6 +15,7 @@ export const ActionTilesRow: React.FC<ActionTilesRowProps> = ({
   onImport,
   onPreview,
   onArchive,
+  isArchived = false,
 }) => {
   return (
     <View style={styles.container}>
@@ -62,19 +64,39 @@ export const ActionTilesRow: React.FC<ActionTilesRowProps> = ({
         <Text style={[styles.tileText, { color: "#0284c7" }]}>Preview</Text>
       </TouchableOpacity>
 
-      {/* 4. Archive (Slate) */}
+      {/* 4. Archive / Restore (Slate / Amber) */}
       <TouchableOpacity
-        style={[styles.tile, styles.archiveTile]}
+        style={[
+          styles.tile,
+          styles.archiveTile,
+          isArchived && { backgroundColor: "#fffbeb", borderColor: "#fde68a" },
+        ]}
         onPress={onArchive}
         activeOpacity={0.75}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel="Archive calendar"
+        accessibilityLabel={isArchived ? "Restore calendar" : "Archive calendar"}
       >
-        <View style={styles.iconCircleSlate}>
-          <Feather name="archive" size={17} color="#475569" />
+        <View
+          style={[
+            styles.iconCircleSlate,
+            isArchived && { backgroundColor: "#fef3c7" },
+          ]}
+        >
+          <Feather
+            name={isArchived ? "rotate-ccw" : "archive"}
+            size={17}
+            color={isArchived ? "#d97706" : "#475569"}
+          />
         </View>
-        <Text style={[styles.tileText, { color: "#475569" }]}>Archive</Text>
+        <Text
+          style={[
+            styles.tileText,
+            { color: isArchived ? "#d97706" : "#475569" },
+          ]}
+        >
+          {isArchived ? "Restore" : "Archive"}
+        </Text>
       </TouchableOpacity>
     </View>
   );

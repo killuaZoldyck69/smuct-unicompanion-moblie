@@ -33,12 +33,11 @@ export interface AcademicCalendarItem {
   id: string;
   title: string;
   semester: string;
-  academicYear?: number;
+  academicYear: number;
   status: CalendarStatus;
   isActive: boolean;
   isGlobal?: boolean;
   targetFaculties: string[];
-  targetDepartments?: string[];
   targetPrograms?: string[];
   semesterDuration?: "6 Months" | "4 Months" | string | null;
   targetBatch?: string | null;
@@ -56,6 +55,7 @@ export interface AcademicCalendarItem {
 export interface CreateAcademicCalendarInput {
   title: string;
   semester: string;
+  academicYear: number;
   targetFaculties?: string[];
   targetPrograms?: string[];
   semesterDuration?: "6 Months" | "4 Months" | string | null;
@@ -67,6 +67,7 @@ export interface CreateAcademicCalendarInput {
 export interface UpdateAcademicCalendarInput {
   title?: string;
   semester?: string;
+  academicYear?: number;
   targetFaculties?: string[];
   targetPrograms?: string[];
   semesterDuration?: "6 Months" | "4 Months" | string | null;

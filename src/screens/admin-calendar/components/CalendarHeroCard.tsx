@@ -43,7 +43,9 @@ export const CalendarHeroCard: React.FC<CalendarHeroCardProps> = ({
       <View style={styles.topRow}>
         <View style={styles.semesterBadge}>
           <Feather name="calendar" size={12} color="#94a3b8" />
-          <Text style={styles.semesterBadgeText}>{calendar.semester}</Text>
+          <Text style={styles.semesterBadgeText}>
+            {calendar.semester} {calendar.academicYear ? `• AY ${calendar.academicYear}` : ""}
+          </Text>
         </View>
 
         <View style={styles.rightBadges}>

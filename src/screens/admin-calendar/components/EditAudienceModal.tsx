@@ -14,7 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AcademicCalendarItem } from "@/services/calendar-service";
 import { FacultyProgramSelector } from "./FacultyProgramSelector";
-import { BENTO_COLORS } from "../constants";
+import { BENTO_COLORS, SMUCT_SEMESTERS, SmuctSemester } from "../constants";
 
 interface EditAudienceModalProps {
   visible: boolean;
@@ -22,6 +22,8 @@ interface EditAudienceModalProps {
   onClose: () => void;
   onSave: (payload: {
     title?: string;
+    semester?: string;
+    academicYear?: number;
     targetFaculties: string[];
     targetPrograms: string[];
     semesterDuration: string;
@@ -37,6 +39,8 @@ export const EditAudienceModal: React.FC<EditAudienceModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState("");
+  const [semester, setSemester] = useState<SmuctSemester>("Summer");
+  const [academicYear, setAcademicYear] = useState<string>("2026");
   const [isGlobal, setIsGlobal] = useState(true);
   const [selectedFaculties, setSelectedFaculties] = useState<string[]>([]);
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -47,6 +51,11 @@ export const EditAudienceModal: React.FC<EditAudienceModalProps> = ({
   useEffect(() => {
     if (visible && calendar) {
       setTitle(calendar.title || "");
+      const validSemester = (SMUCT_SEMESTERS as readonly string[]).includes(calendar.semester)
+        ? (calendar.semester as SmuctSemester)
+        : "Summer";
+      setSemester(validSemester);
+      setAcademicYear((calendar.academicYear || 2026).toString());
       const isAudienceGlobal =
         calendar.isGlobal ??
         (!calendar.targetPrograms?.length && !calendar.targetFaculties?.length);
@@ -61,8 +70,16 @@ export const EditAudienceModal: React.FC<EditAudienceModalProps> = ({
   const handleSave = async () => {
     try {
       setIsSaving(true);
+      const parsedYear = parseInt(academicYear, 10);
+      const finalYear =
+        !isNaN(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100
+          ? parsedYear
+          : calendar.academicYear || 2026;
+
       await onSave({
         title: title.trim() || calendar.title,
+        semester,
+        academicYear: finalYear,
         targetFaculties: isGlobal ? [] : selectedFaculties,
         targetPrograms: isGlobal ? [] : selectedPrograms,
         semesterDuration,
@@ -102,7 +119,7 @@ export const EditAudienceModal: React.FC<EditAudienceModalProps> = ({
             <View>
               <Text style={styles.sheetTitle}>Edit Scope & Term Structure</Text>
               <Text style={styles.sheetSubtitle}>
-                {calendar.semester}
+                {calendar.semester} {calendar.academicYear ? `• AY ${calendar.academicYear}` : ""}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -128,6 +145,53 @@ export const EditAudienceModal: React.FC<EditAudienceModalProps> = ({
                 value={title}
                 onChangeText={setTitle}
               />
+            </View>
+
+            {/* Semester & Academic Year Edit */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Semester & Academic Year</Text>
+              <Text style={styles.sectionSubtitle}>
+                Select the university term and 4-digit academic year
+              </Text>
+
+              <View style={styles.semesterRow}>
+                {SMUCT_SEMESTERS.map((s) => {
+                  const isSelected = semester === s;
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      style={[
+                        styles.semesterPill,
+                        isSelected && styles.semesterPillActive,
+                      ]}
+                      onPress={() => setSemester(s)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.semesterPillText,
+                          isSelected && styles.semesterPillTextActive,
+                        ]}
+                      >
+                        {s}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.inputSubLabel}>Academic Year</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="e.g. 2026"
+                  placeholderTextColor="#94a3b8"
+                  value={academicYear}
+                  onChangeText={(val) => setAcademicYear(val.replace(/[^0-9]/g, ""))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
             </View>
 
             <FacultyProgramSelector
@@ -233,6 +297,40 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#64748b",
     marginBottom: 10,
+  },
+  inputSubLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#475569",
+    marginBottom: 6,
+  },
+  semesterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 4,
+  },
+  semesterPill: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  semesterPillActive: {
+    backgroundColor: BENTO_COLORS.deepNavy,
+    borderColor: BENTO_COLORS.deepNavy,
+  },
+  semesterPillText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  semesterPillTextActive: {
+    color: "#ffffff",
   },
   textInput: {
     backgroundColor: "#f8fafc",

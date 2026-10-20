@@ -14,7 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CreateAcademicCalendarInput } from "@/services/calendar-service";
 import { FacultyProgramSelector } from "./FacultyProgramSelector";
-import { BENTO_COLORS } from "../constants";
+import { BENTO_COLORS, SMUCT_SEMESTERS, SmuctSemester } from "../constants";
 
 interface CreateCalendarModalProps {
   visible: boolean;
@@ -28,8 +28,11 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
   onCreate,
 }) => {
   const insets = useSafeAreaInsets();
-  const [title, setTitle] = useState("");
-  const [semester, setSemester] = useState("");
+  const currentYear = new Date().getFullYear();
+  const [title, setTitle] = useState("Summer 2026");
+  const [semester, setSemester] = useState<SmuctSemester>("Summer");
+  const [academicYear, setAcademicYear] = useState<string>(currentYear.toString());
+  const [hasCustomTitle, setHasCustomTitle] = useState(false);
   const [isGlobal, setIsGlobal] = useState(true);
   const [selectedFaculties, setSelectedFaculties] = useState<string[]>([]);
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -37,20 +40,39 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
   const [targetBatch, setTargetBatch] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
+  const handleSelectSemester = (s: SmuctSemester) => {
+    setSemester(s);
+    if (!hasCustomTitle) {
+      setTitle(`${s} ${academicYear || currentYear}`);
+    }
+  };
+
+  const handleYearChange = (val: string) => {
+    const clean = val.replace(/[^0-9]/g, "");
+    setAcademicYear(clean);
+    if (!hasCustomTitle) {
+      setTitle(`${semester} ${clean}`);
+    }
+  };
+
   const handleCreate = async () => {
-    if (!title.trim() || !semester.trim()) {
+    const finalYear = parseInt(academicYear, 10);
+    if (!finalYear || isNaN(finalYear) || finalYear < 2000 || finalYear > 2100) {
       Alert.alert(
-        "Required Fields",
-        "Please provide both a calendar title and semester.",
+        "Invalid Academic Year",
+        "Please enter a valid 4-digit academic year (e.g. 2026).",
       );
       return;
     }
 
+    const finalTitle = title.trim() || `${semester} ${finalYear}`;
+
     try {
       setIsCreating(true);
       await onCreate({
-        title: title.trim(),
-        semester: semester.trim(),
+        title: finalTitle,
+        semester,
+        academicYear: finalYear,
         targetFaculties: isGlobal ? [] : selectedFaculties,
         targetPrograms: isGlobal ? [] : selectedPrograms,
         semesterDuration,
@@ -59,8 +81,10 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
       });
       onClose();
       // Reset form
-      setTitle("");
-      setSemester("");
+      setTitle(`Summer ${currentYear}`);
+      setSemester("Summer");
+      setAcademicYear(currentYear.toString());
+      setHasCustomTitle(false);
       setIsGlobal(true);
       setSelectedFaculties([]);
       setSelectedPrograms([]);
@@ -111,29 +135,71 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {/* Semester Selector (4 options) */}
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>
+                Semester Term <Text style={styles.requiredAsterisk}>*</Text>
+              </Text>
+              <Text style={styles.fieldHint}>
+                Select one of the 4 university term schedules
+              </Text>
+              <View style={styles.semesterRow}>
+                {SMUCT_SEMESTERS.map((s) => {
+                  const isSelected = semester === s;
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      style={[
+                        styles.semesterPill,
+                        isSelected && styles.semesterPillActive,
+                      ]}
+                      onPress={() => handleSelectSemester(s)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.semesterPillText,
+                          isSelected && styles.semesterPillTextActive,
+                        ]}
+                      >
+                        {s}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Academic Year Input */}
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>
+                Academic Year <Text style={styles.requiredAsterisk}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. 2026"
+                placeholderTextColor="#94a3b8"
+                value={academicYear}
+                onChangeText={handleYearChange}
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+            </View>
+
+            {/* Calendar Title */}
             <View style={styles.fieldBlock}>
               <Text style={styles.fieldLabel}>
                 Calendar Title <Text style={styles.requiredAsterisk}>*</Text>
               </Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Academic Calendar - Summer 2026"
+                placeholder={`e.g. ${semester} ${academicYear || currentYear}`}
                 placeholderTextColor="#94a3b8"
                 value={title}
-                onChangeText={setTitle}
-              />
-            </View>
-
-            <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>
-                Semester <Text style={styles.requiredAsterisk}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g. Summer Semester 2026"
-                placeholderTextColor="#94a3b8"
-                value={semester}
-                onChangeText={setSemester}
+                onChangeText={(t) => {
+                  setTitle(t);
+                  setHasCustomTitle(t.trim().length > 0);
+                }}
               />
             </View>
 
@@ -245,6 +311,39 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     fontSize: 14,
     color: "#0f172a",
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: "#64748b",
+    marginBottom: 8,
+  },
+  semesterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 4,
+  },
+  semesterPill: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  semesterPillActive: {
+    backgroundColor: BENTO_COLORS.deepNavy,
+    borderColor: BENTO_COLORS.deepNavy,
+  },
+  semesterPillText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  semesterPillTextActive: {
+    color: "#ffffff",
   },
   twoColRow: {
     flexDirection: "row",

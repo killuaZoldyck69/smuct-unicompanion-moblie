@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AcademicCalendarItem, CalendarStatus } from "@/services/calendar-service";
 import { BENTO_COLORS } from "../constants";
+import { AdminConfirmModal, ConfirmModalVariant } from "./AdminConfirmModal";
 
 interface CalendarActionBarProps {
   calendar: AcademicCalendarItem;
@@ -35,6 +35,14 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    variant: ConfirmModalVariant;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const isPub = calendar.status === "PUBLISHED";
   const isDraft = calendar.status === "DRAFT";
@@ -42,18 +50,65 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
 
   const handleArchiveWithConfirmation = () => {
     setIsMenuOpen(false);
-    Alert.alert(
-      "Archive Academic Calendar",
-      "Archiving this calendar will hide it from active student and teacher dashboards while preserving all historical schedule records for accreditation and audit. You can unarchive it anytime.\n\nDo you want to proceed?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Archive Calendar",
-          style: "default",
-          onPress: () => onStatusChange("ARCHIVED"),
-        },
-      ],
-    );
+    setConfirmModal({
+      visible: true,
+      variant: "archive",
+      title: "Archive Academic Calendar",
+      message:
+        "Archiving this calendar will hide it from active student and faculty dashboards while preserving all historical schedule records for accreditation and audit. You can unarchive it anytime.",
+      confirmLabel: "Archive Calendar",
+      onConfirm: () => {
+        setConfirmModal(null);
+        onStatusChange("ARCHIVED");
+      },
+    });
+  };
+
+  const handlePublishWithConfirmation = () => {
+    setIsMenuOpen(false);
+    setConfirmModal({
+      visible: true,
+      variant: "publish",
+      title: "Publish Academic Calendar",
+      message:
+        "Publishing will immediately make this calendar LIVE across all targeted student and faculty dashboards.",
+      confirmLabel: "Publish Live",
+      onConfirm: () => {
+        setConfirmModal(null);
+        onStatusChange("PUBLISHED");
+      },
+    });
+  };
+
+  const handleRevertWithConfirmation = () => {
+    setIsMenuOpen(false);
+    setConfirmModal({
+      visible: true,
+      variant: "revert",
+      title: "Revert Calendar to Draft",
+      message:
+        "Reverting to Draft will take this calendar offline from students while you make administrative adjustments.",
+      confirmLabel: "Revert to Draft",
+      onConfirm: () => {
+        setConfirmModal(null);
+        onStatusChange("DRAFT");
+      },
+    });
+  };
+
+  const handleDeleteWithConfirmation = () => {
+    setIsMenuOpen(false);
+    setConfirmModal({
+      visible: true,
+      variant: "delete",
+      title: "Delete Academic Calendar",
+      message: `Permanently delete "${calendar.title}" and its ${calendar.events?.length || 0} events? This action cannot be undone.`,
+      confirmLabel: "Delete Calendar",
+      onConfirm: () => {
+        setConfirmModal(null);
+        onDeleteCalendar();
+      },
+    });
   };
 
   return (
@@ -131,7 +186,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
               <View>
                 <Text style={styles.sheetTitle}>Calendar Actions</Text>
                 <Text style={styles.sheetSubtitle}>
-                  {calendar.semester}
+                  {calendar.semester} {calendar.academicYear ? `• AY ${calendar.academicYear}` : ""}
                 </Text>
               </View>
               <TouchableOpacity
@@ -189,10 +244,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
               {isDraft && (
                 <TouchableOpacity
                   style={styles.actionItem}
-                  onPress={() => {
-                    setIsMenuOpen(false);
-                    onStatusChange("PUBLISHED");
-                  }}
+                  onPress={handlePublishWithConfirmation}
                 >
                   <View style={[styles.actionIconBox, { backgroundColor: "#d1fae5" }]}>
                     <Feather name="check-circle" size={16} color="#047857" />
@@ -212,10 +264,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
               {isPub && (
                 <TouchableOpacity
                   style={styles.actionItem}
-                  onPress={() => {
-                    setIsMenuOpen(false);
-                    onStatusChange("DRAFT");
-                  }}
+                  onPress={handleRevertWithConfirmation}
                 >
                   <View style={[styles.actionIconBox, { backgroundColor: "#fef3c7" }]}>
                     <Feather name="corner-up-left" size={16} color="#b45309" />
@@ -236,10 +285,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
                 <>
                   <TouchableOpacity
                     style={styles.actionItem}
-                    onPress={() => {
-                      setIsMenuOpen(false);
-                      onStatusChange("DRAFT");
-                    }}
+                    onPress={handleRevertWithConfirmation}
                   >
                     <View style={[styles.actionIconBox, { backgroundColor: "#e0f2fe" }]}>
                       <Feather name="rotate-ccw" size={16} color="#0369a1" />
@@ -257,10 +303,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
 
                   <TouchableOpacity
                     style={styles.actionItem}
-                    onPress={() => {
-                      setIsMenuOpen(false);
-                      onStatusChange("PUBLISHED");
-                    }}
+                    onPress={handlePublishWithConfirmation}
                   >
                     <View style={[styles.actionIconBox, { backgroundColor: "#d1fae5" }]}>
                       <Feather name="send" size={16} color="#047857" />
@@ -297,10 +340,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
               {/* Delete Calendar */}
               <TouchableOpacity
                 style={[styles.actionItem, styles.deleteActionItem]}
-                onPress={() => {
-                  setIsMenuOpen(false);
-                  onDeleteCalendar();
-                }}
+                onPress={handleDeleteWithConfirmation}
               >
                 <View style={[styles.actionIconBox, { backgroundColor: "#fee2e2" }]}>
                   <Feather name="trash-2" size={16} color="#dc2626" />
@@ -319,6 +359,20 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <AdminConfirmModal
+          visible={confirmModal.visible}
+          onClose={() => setConfirmModal(null)}
+          onConfirm={confirmModal.onConfirm}
+          variant={confirmModal.variant}
+          title={confirmModal.title}
+          targetBadge={calendar.title}
+          message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel}
+        />
+      )}
     </>
   );
 };

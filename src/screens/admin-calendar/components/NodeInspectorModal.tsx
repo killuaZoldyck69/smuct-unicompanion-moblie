@@ -22,6 +22,7 @@ import {
 } from "@/services/calendar-service";
 import { cleanDateYmd } from "../utils/date-helpers";
 import { BENTO_COLORS } from "../constants";
+import { AdminConfirmModal } from "./AdminConfirmModal";
 
 interface NodeInspectorModalProps {
   visible: boolean;
@@ -77,6 +78,7 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
   const [weekNumber, setWeekNumber] = useState("");
   const [remarks, setRemarks] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Native Picker States
   const [showStartPicker, setShowStartPicker] = useState(false);
@@ -141,21 +143,7 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
 
   const handleDelete = () => {
     if (!editingEvent || !onDelete) return;
-    Alert.alert(
-      "Delete Node",
-      `Are you sure you want to remove "${editingEvent.title}" from this calendar stream?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            onDelete(editingEvent.id, editingEvent.title);
-            onClose();
-          },
-        },
-      ],
-    );
+    setIsDeleteConfirmOpen(true);
   };
 
   const getStartDateObj = () => {
@@ -405,6 +393,23 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <AdminConfirmModal
+        visible={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        variant="delete"
+        title="Delete Calendar Node"
+        targetBadge={editingEvent?.title}
+        message={`Are you sure you want to permanently remove "${editingEvent?.title}" from this schedule stream?`}
+        confirmLabel="Delete Node"
+        onConfirm={() => {
+          setIsDeleteConfirmOpen(false);
+          if (editingEvent && onDelete) {
+            onDelete(editingEvent.id, editingEvent.title);
+            onClose();
+          }
+        }}
+      />
     </Modal>
   );
 };
