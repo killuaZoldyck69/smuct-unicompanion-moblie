@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { CourseHubMember } from "@/types/member.types";
 import { BENTO, fontFamily, formatSemester } from "../constants";
+import { formatConsultationSlots } from "@/utils/consultation-formatter";
 
 interface ProfileDetailsGridProps {
   member: CourseHubMember;
@@ -88,7 +89,7 @@ export const ProfileDetailsGrid = React.memo(function ProfileDetailsGrid({
             <View style={styles.textCol}>
               <Text style={styles.label}>CONSULTATION HOURS</Text>
               <Text style={styles.value} numberOfLines={2}>
-                {teacherProfile?.consultationHours || "Not specified"}
+                {formatConsultationSlots(teacherProfile?.consultationSlots)}
               </Text>
             </View>
           </View>
