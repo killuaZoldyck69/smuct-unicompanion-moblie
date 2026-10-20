@@ -21,12 +21,10 @@ import { AdminUser, UpdateAdminTeacherProfilePayload } from "../../types";
 import {
   DESIGNATION_OPTIONS,
   TEACHER_ADMIN_ROLE_OPTIONS,
-  DEPARTMENT_CHIPS,
   BLOOD_GROUP_OPTIONS,
   BLOOD_GROUP_UI_TO_API,
   BLOOD_GROUP_API_TO_UI,
   DAY_OFF_OPTIONS,
-  FACULTY_OPTIONS,
 } from "../../constants";
 import { sortQualifications } from "@/utils/qualification-order";
 import { SelectionModal } from "@/screens/admin-add-faculty/components/selection-modal";
@@ -553,8 +551,14 @@ export const EditTeacherProfileModal = React.memo(
       try {
         await onSave(user.id, payload);
         onClose();
-      } catch {
-        // Error toast handled in mutation
+      } catch (err: any) {
+        const errorMsg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.response?.data?.errorSources?.[0]?.message ||
+          err?.message ||
+          "Failed to save faculty profile changes. Please try again.";
+        Alert.alert("Update Failed", errorMsg);
       }
     }, [
       name,

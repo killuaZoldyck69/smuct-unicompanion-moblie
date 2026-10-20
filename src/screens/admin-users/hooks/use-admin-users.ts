@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Alert, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import {
   useInfiniteQuery,
@@ -113,6 +112,19 @@ export function useAdminUsers() {
     return data?.pages.flatMap((page) => page.users) || [];
   }, [data]);
 
+  const extractErrorMessage = (
+    err: any,
+    fallback: string = "An unexpected error occurred.",
+  ): string => {
+    return (
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      err?.response?.data?.errorSources?.[0]?.message ||
+      err?.message ||
+      fallback
+    );
+  };
+
   // Mutations
   const restrictUserMutation = useMutation({
     mutationFn: async ({
@@ -126,6 +138,7 @@ export function useAdminUsers() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["directory"] });
       Toast.show({
         type: "success",
         text1: variables.isRestricted
@@ -141,7 +154,7 @@ export function useAdminUsers() {
       Toast.show({
         type: "error",
         text1: "Action Failed",
-        text2: err.response?.data?.error || err.message,
+        text2: extractErrorMessage(err, "Failed to update account restriction status."),
       }),
   });
 
@@ -155,13 +168,36 @@ export function useAdminUsers() {
     }) => {
       return await api.patch(`/users/${userId}/role`, { action });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      Toast.show({ type: "success", text1: "User Role Updated" });
-      setSelectedUser(null);
+      queryClient.invalidateQueries({ queryKey: ["directory"] });
+      const isCR = variables.action === "MAKE_CR";
+      setSelectedUser((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          studentProfile: prev.studentProfile
+            ? {
+                ...prev.studentProfile,
+                isCR,
+              }
+            : prev.studentProfile,
+        };
+      });
+      Toast.show({
+        type: "success",
+        text1: isCR ? "Assigned as Class Representative" : "Role Removed",
+        text2: isCR
+          ? "Student designated as Class Representative."
+          : "Class Representative status was cleared.",
+      });
     },
     onError: (err: any) =>
-      Toast.show({ type: "error", text1: "Update Failed", text2: err.message }),
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: extractErrorMessage(err, "Failed to update student role."),
+      }),
   });
 
   const updateTeacherPositionMutation = useMutation({
@@ -210,7 +246,7 @@ export function useAdminUsers() {
       Toast.show({
         type: "error",
         text1: "Update Failed",
-        text2: err.response?.data?.message || err.message,
+        text2: extractErrorMessage(err, "Failed to update faculty position."),
       }),
   });
 
@@ -253,7 +289,7 @@ export function useAdminUsers() {
       Toast.show({
         type: "error",
         text1: "Update Failed",
-        text2: err.response?.data?.message || err.message,
+        text2: extractErrorMessage(err, "Failed to update faculty profile."),
       }),
   });
 
@@ -296,7 +332,7 @@ export function useAdminUsers() {
       Toast.show({
         type: "error",
         text1: "Update Failed",
-        text2: err.response?.data?.message || err.message,
+        text2: extractErrorMessage(err, "Failed to update student profile."),
       }),
   });
 

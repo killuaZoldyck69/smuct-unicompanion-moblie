@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StatusBar,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
@@ -83,8 +84,15 @@ export const UserProfileModal = React.memo(
     const isBusy = isRestrictingUser ?? isDeletingUser;
 
     const handlePromptRestrict = React.useCallback(() => {
+      if (user?.role === "ADMIN") {
+        Alert.alert(
+          "Action Prohibited",
+          "Administrator accounts cannot be restricted.",
+        );
+        return;
+      }
       setIsRestrictConfirmVisible(true);
-    }, []);
+    }, [user?.role]);
 
     const handleExecuteRestrict = React.useCallback(() => {
       if (!user) return;

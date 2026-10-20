@@ -16,7 +16,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import Toast from "react-native-toast-message";
 
 import { AdminUser, UpdateAdminStudentProfilePayload } from "../../types";
 import {
@@ -331,8 +330,14 @@ export const EditStudentProfileModal = React.memo(
       try {
         await onSave(user.id, payload);
         onClose();
-      } catch {
-        // Error toast handled in mutation
+      } catch (err: any) {
+        const errorMsg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.response?.data?.errorSources?.[0]?.message ||
+          err?.message ||
+          "Failed to save student profile changes. Please try again.";
+        Alert.alert("Update Failed", errorMsg);
       }
     }, [
       name,

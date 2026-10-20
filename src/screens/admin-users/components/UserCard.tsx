@@ -24,6 +24,8 @@ export const UserCard = React.memo(
       : item.teacherProfile?.department;
     const isCR = item.studentProfile?.isCR;
     const pastel = AVATAR_PASTELS[index % AVATAR_PASTELS.length];
+    const [imageError, setImageError] = React.useState(false);
+    const hasValidImage = Boolean(item.image && !imageError);
 
     return (
       <TouchableOpacity
@@ -41,11 +43,12 @@ export const UserCard = React.memo(
             { backgroundColor: pastel.bg, borderColor: pastel.border },
           ]}
         >
-          {item.image ? (
+          {hasValidImage ? (
             <View style={styles.avatarImageWrapper}>
               <Image
-                source={{ uri: item.image }}
+                source={{ uri: item.image! }}
                 style={styles.avatarImage}
+                onError={() => setImageError(true)}
                 accessible={true}
                 accessibilityLabel={`${item.name}'s profile photo`}
               />
