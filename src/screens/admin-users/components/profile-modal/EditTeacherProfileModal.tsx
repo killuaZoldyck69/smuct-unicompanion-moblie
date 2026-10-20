@@ -49,6 +49,22 @@ const cleanDepartmentName = (name: string) => {
     .trim();
 };
 
+// Helper to capitalize the first letter of each word
+const capitalizeWords = (str: string): string => {
+  return str.replace(/(^|\s+)([a-z])/g, (_, space, char) => space + char.toUpperCase());
+};
+
+// Helper to normalize and ensure Bangladesh phone number starts with +880
+const normalizeBangladeshPhone = (phone?: string | null): string => {
+  if (!phone) return "+880";
+  const clean = phone.trim();
+  if (!clean) return "+880";
+  if (clean.startsWith("+880")) return clean;
+  if (clean.startsWith("880")) return `+${clean}`;
+  if (clean.startsWith("0")) return `+880${clean.slice(1)}`;
+  return `+880${clean}`;
+};
+
 interface EditTeacherProfileModalProps {
   visible: boolean;
   user: AdminUser;
@@ -72,7 +88,6 @@ interface EditableQualification {
   degree: string;
   field: string;
   institution: string;
-  passingYear: string;
 }
 
 export const EditTeacherProfileModal = React.memo(
@@ -88,8 +103,31 @@ export const EditTeacherProfileModal = React.memo(
 
     // --- Form State ---
     const [name, setName] = useState("");
-    const [phoneNumber, setPhoneNumber] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("+880");
     const [bloodGroup, setBloodGroup] = useState<string | null>(null);
+
+    // Handlers to enforce Title Case for name and +880 prefix for phone
+    const handleNameChange = useCallback((val: string) => {
+      setName(capitalizeWords(val));
+    }, []);
+
+    const handlePhoneChange = useCallback((val: string) => {
+      if (!val.startsWith("+880")) {
+        const digits = val.replace(/[^\d]/g, "");
+        if (digits.startsWith("880")) {
+          setPhoneNumber(`+${digits}`);
+        } else if (digits.startsWith("0")) {
+          setPhoneNumber(`+880${digits.slice(1)}`);
+        } else if (digits.length > 0) {
+          setPhoneNumber(`+880${digits}`);
+        } else {
+          setPhoneNumber("+880");
+        }
+      } else {
+        const suffix = val.slice(4).replace(/[^\d\s]/g, "");
+        setPhoneNumber(`+880${suffix}`);
+      }
+    }, []);
 
     // Academic & Position
     const [designation, setDesignation] = useState("Lecturer");
@@ -263,7 +301,6 @@ export const EditTeacherProfileModal = React.memo(
     >([]);
     const [newQualDegree, setNewQualDegree] = useState("");
     const [newQualInstitution, setNewQualInstitution] = useState("");
-    const [newQualPassingYear, setNewQualPassingYear] = useState("");
     const [isAddingQual, setIsAddingQual] = useState(false);
 
     // Sync initial state when modal opens or user changes
@@ -274,8 +311,8 @@ export const EditTeacherProfileModal = React.memo(
         return;
       }
 
-      setName(user.name || "");
-      setPhoneNumber(user.phoneNumber || "");
+      setName(capitalizeWords(user.name || ""));
+      setPhoneNumber(normalizeBangladeshPhone(user.phoneNumber));
 
       const rawBlood = user.bloodGroup || null;
       if (rawBlood) {
@@ -349,7 +386,6 @@ export const EditTeacherProfileModal = React.memo(
               degree: parts[0]?.trim() || "",
               field: "",
               institution: parts.slice(1).join(" - ").trim() || "",
-              passingYear: "",
             });
           } else if (typeof q === "object") {
             parsedQuals.push({
@@ -357,7 +393,6 @@ export const EditTeacherProfileModal = React.memo(
               degree: q.degree || "",
               field: q.field || "",
               institution: q.institution || q.institute || "",
-              passingYear: q.passingYear ? String(q.passingYear) : q.year ? String(q.year) : "",
             });
           }
         });
@@ -368,17 +403,15 @@ export const EditTeacherProfileModal = React.memo(
             degree: key,
             field: "",
             institution: typeof val === "string" ? val : "",
-            passingYear: "",
           });
         });
       }
       setQualifications(
-        sortQualifications(parsedQuals, (q) => q.degree, (q) => q.passingYear)
+        sortQualifications(parsedQuals, (q) => q.degree)
       );
       setIsAddingQual(false);
       setNewQualDegree("");
       setNewQualInstitution("");
-      setNewQualPassingYear("");
     }, [visible, user, profile]);
 
     // Add expertise chip
@@ -402,7 +435,6 @@ export const EditTeacherProfileModal = React.memo(
     const handleAddQualification = useCallback(() => {
       const cleanDegree = newQualDegree.trim();
       const cleanInst = newQualInstitution.trim();
-      const cleanYear = newQualPassingYear.trim();
 
       if (!cleanDegree && !cleanInst) {
         Alert.alert("Missing Details", "Please enter at least a degree or institution name.");
@@ -418,19 +450,16 @@ export const EditTeacherProfileModal = React.memo(
               degree: cleanDegree,
               field: "",
               institution: cleanInst,
-              passingYear: cleanYear,
             },
           ],
           (q) => q.degree,
-          (q) => q.passingYear,
         )
       );
 
       setNewQualDegree("");
       setNewQualInstitution("");
-      setNewQualPassingYear("");
       setIsAddingQual(false);
-    }, [newQualDegree, newQualInstitution, newQualPassingYear]);
+    }, [newQualDegree, newQualInstitution]);
 
     // Remove qualification
     const handleRemoveQualification = useCallback((id: string) => {
@@ -459,13 +488,15 @@ export const EditTeacherProfileModal = React.memo(
 
     // Handle Save
     const handleSave = useCallback(async () => {
-      const cleanName = name.trim();
+      const cleanName = capitalizeWords(name.trim());
       if (!cleanName) {
         Alert.alert("Invalid Name", "Faculty name cannot be empty.");
         return;
       }
 
-      const cleanPhone = phoneNumber.trim();
+      const rawPhone = phoneNumber.trim();
+      const cleanPhone =
+        rawPhone === "+880" || rawPhone.length <= 4 ? null : rawPhone;
       const cleanDesignation = designation.trim();
       const cleanDept = department.trim();
       const cleanFaculty = faculty.trim();
@@ -494,13 +525,11 @@ export const EditTeacherProfileModal = React.memo(
       const sortedValidQuals = sortQualifications(
         qualifications.filter((q) => q.degree.trim() || q.institution.trim()),
         (q) => q.degree,
-        (q) => q.passingYear,
       );
       const formattedQuals = sortedValidQuals.map((q) => ({
         degree: q.degree.trim() || "Degree",
         field: q.field.trim() || q.degree.trim() || "Academics",
         institution: q.institution.trim() || "University",
-        passingYear: q.passingYear.trim() || undefined,
       }));
 
       const payload: UpdateAdminTeacherProfilePayload = {
@@ -653,7 +682,7 @@ export const EditTeacherProfileModal = React.memo(
                 <TextInput
                   style={styles.input}
                   value={name}
-                  onChangeText={setName}
+                  onChangeText={handleNameChange}
                   placeholder="Faculty member full name"
                   placeholderTextColor="#94A3B8"
                   autoCapitalize="words"
@@ -673,7 +702,7 @@ export const EditTeacherProfileModal = React.memo(
                   <TextInput
                     style={styles.inputInner}
                     value={phoneNumber}
-                    onChangeText={setPhoneNumber}
+                    onChangeText={handlePhoneChange}
                     placeholder="+880 1XXXXXXXXX"
                     placeholderTextColor="#94A3B8"
                     keyboardType="phone-pad"
@@ -1196,9 +1225,7 @@ export const EditTeacherProfileModal = React.memo(
                     <View style={{ flex: 1 }}>
                       <Text style={styles.qualDegree}>{qual.degree}</Text>
                       <Text style={styles.qualInst}>
-                        {[qual.institution, qual.passingYear]
-                          .filter(Boolean)
-                          .join(" — ")}
+                        {qual.institution}
                       </Text>
                     </View>
                   </View>
@@ -1224,20 +1251,11 @@ export const EditTeacherProfileModal = React.memo(
                     placeholderTextColor="#94A3B8"
                   />
                   <TextInput
-                    style={[styles.input, { marginBottom: 8 }]}
+                    style={[styles.input, { marginBottom: 12 }]}
                     value={newQualInstitution}
                     onChangeText={setNewQualInstitution}
                     placeholder="Institution / University"
                     placeholderTextColor="#94A3B8"
-                  />
-                  <TextInput
-                    style={[styles.input, { marginBottom: 12 }]}
-                    value={newQualPassingYear}
-                    onChangeText={setNewQualPassingYear}
-                    placeholder="Passing Year (e.g. 2020)"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="numeric"
-                    maxLength={4}
                   />
                   <View style={styles.addQualActions}>
                     <TouchableOpacity

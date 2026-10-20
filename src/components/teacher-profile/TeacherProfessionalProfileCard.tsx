@@ -139,8 +139,8 @@ export const TeacherProfessionalProfileCard = React.memo(
       return [];
     }, [profile?.academicQualifications]);
 
-    const linkedInTarget = profile?.linkedInUrl || "https://linkedin.com";
-    const portfolioTarget = profile?.personalWebsiteUrl || "https://smuct.ac.bd";
+    const linkedInTarget = (profile?.linkedInUrl || (profile as any)?.linkedinUrl || "").trim();
+    const portfolioTarget = (profile?.personalWebsiteUrl || (profile as any)?.websiteUrl || "").trim();
 
     return (
       <View style={styles.cardContainer}>
@@ -219,39 +219,43 @@ export const TeacherProfessionalProfileCard = React.memo(
         )}
 
         {/* 3. Links (LinkedIn & Academic Portfolio) */}
-        <TouchableOpacity
-          style={styles.linkCard}
-          activeOpacity={0.8}
-          onPress={() => handleOpenUrl(linkedInTarget)}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Open LinkedIn Profile"
-        >
-          <View style={styles.linkLeft}>
-            <View style={styles.linkIconCircleLinkedIn}>
-              <Feather name="linkedin" size={15} color="#0A66C2" />
+        {Boolean(linkedInTarget) && (
+          <TouchableOpacity
+            style={styles.linkCard}
+            activeOpacity={0.8}
+            onPress={() => handleOpenUrl(linkedInTarget)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Open LinkedIn Profile"
+          >
+            <View style={styles.linkLeft}>
+              <View style={styles.linkIconCircleLinkedIn}>
+                <Feather name="linkedin" size={15} color="#0A66C2" />
+              </View>
+              <Text style={styles.linkLabel}>LinkedIn Profile</Text>
             </View>
-            <Text style={styles.linkLabel}>LinkedIn Profile</Text>
-          </View>
-          <Feather name="external-link" size={15} color="#94A3B8" />
-        </TouchableOpacity>
+            <Feather name="external-link" size={15} color="#94A3B8" />
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={styles.linkCard}
-          activeOpacity={0.8}
-          onPress={() => handleOpenUrl(portfolioTarget)}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Open Academic Portfolio"
-        >
-          <View style={styles.linkLeft}>
-            <View style={styles.linkIconCirclePortfolio}>
-              <Feather name="globe" size={15} color="#0D9488" />
+        {Boolean(portfolioTarget) && (
+          <TouchableOpacity
+            style={styles.linkCard}
+            activeOpacity={0.8}
+            onPress={() => handleOpenUrl(portfolioTarget)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Open Academic Portfolio"
+          >
+            <View style={styles.linkLeft}>
+              <View style={styles.linkIconCirclePortfolio}>
+                <Feather name="globe" size={15} color="#0D9488" />
+              </View>
+              <Text style={styles.linkLabel}>Academic Portfolio</Text>
             </View>
-            <Text style={styles.linkLabel}>Academic Portfolio</Text>
-          </View>
-          <Feather name="external-link" size={15} color="#94A3B8" />
-        </TouchableOpacity>
+            <Feather name="external-link" size={15} color="#94A3B8" />
+          </TouchableOpacity>
+        )}
       </View>
     );
   },

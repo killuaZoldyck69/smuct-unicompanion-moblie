@@ -17,23 +17,31 @@ export interface TeacherOfficeAvailabilityCardProps {
 
 export const TeacherOfficeAvailabilityCard = React.memo(
   ({ profile, phoneNumber }: TeacherOfficeAvailabilityCardProps) => {
-    const officeRoomDisplay = profile?.officeRoom || "Faculty Room 408";
-    const dayOffDisplay = profile?.dayOff || "Thursday";
+    const officeRoomDisplay = profile?.officeRoom?.trim() || "Not specified";
+    const dayOffDisplay = profile?.dayOff?.trim() || "None";
 
-    // Parse consultation slots or provide mockup defaults
+    // Parse consultation slots without mock defaults
     const consultationList: Array<{ days: string; time: string }> = React.useMemo(() => {
       if (Array.isArray(profile?.consultationSlots) && profile.consultationSlots.length > 0) {
-        return profile.consultationSlots.map((s: any) => ({
-          days: s.days || s.day || "Mon, Wed",
-          time: s.time || (s.startTime && s.endTime ? `${s.startTime} – ${s.endTime}` : "10:00 AM – 12:30 PM"),
-        }));
+        return profile.consultationSlots
+          .filter((s: any) => s && (s.day || s.days))
+          .map((s: any) => {
+            const days = s.days || s.day;
+            let timeStr = "";
+            if (s.time) {
+              timeStr = s.time;
+            } else if (s.startTime && s.endTime) {
+              timeStr = `${s.startTime} – ${s.endTime}`;
+            } else if (s.startTime) {
+              timeStr = s.startTime;
+            } else {
+              timeStr = "Not specified";
+            }
+            return { days, time: timeStr };
+          });
       }
 
-      // Default representation
-      return [
-        { days: "Mon, Wed", time: "10:00 AM – 12:30 PM" },
-        { days: "Sunday", time: "02:00 PM – 04:00 PM" },
-      ];
+      return [];
     }, [profile?.consultationSlots]);
 
     const handleCall = useCallback(() => {
@@ -93,7 +101,7 @@ export const TeacherOfficeAvailabilityCard = React.memo(
         <View style={styles.phoneCardBox}>
           <View style={styles.phoneLeft}>
             <View style={styles.phoneIconBox}>
-              <Feather name="phone" size={15} color="#16A34A" />
+              <Feather name="phone" size={14} color="#16A34A" />
             </View>
             <View style={styles.phoneTextContainer}>
               <Text style={styles.phoneLabel}>PHONE NUMBER</Text>
@@ -103,7 +111,9 @@ export const TeacherOfficeAvailabilityCard = React.memo(
                   !phoneNumber && styles.phoneValuePlaceholder,
                 ]}
                 numberOfLines={1}
-                selectable={true}
+                ellipsizeMode="tail"
+                adjustsFontSizeToFit={true}
+                minimumFontScale={0.8}
               >
                 {phoneNumber || "Not provided"}
               </Text>
@@ -121,7 +131,7 @@ export const TeacherOfficeAvailabilityCard = React.memo(
                 accessibilityLabel="Copy phone number"
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Feather name="copy" size={13} color="#15803D" />
+                <Feather name="copy" size={12} color="#15803D" />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -132,7 +142,7 @@ export const TeacherOfficeAvailabilityCard = React.memo(
                 accessibilityRole="button"
                 accessibilityLabel="Call phone number"
               >
-                <Feather name="phone-call" size={12} color="#FFFFFF" />
+                <Feather name="phone-call" size={11} color="#FFFFFF" />
                 <Text style={styles.phoneActionBtnCallText}>Call</Text>
               </TouchableOpacity>
             </View>
@@ -142,20 +152,28 @@ export const TeacherOfficeAvailabilityCard = React.memo(
         {/* Weekly Consultation Hours Section */}
         <View style={styles.consultationCardBox}>
           <Text style={styles.consultationTitle}>WEEKLY CONSULTATION HOURS</Text>
-          {consultationList.map((slot, index) => (
-            <View
-              key={index}
-              style={[
-                styles.consultationRow,
-                index === consultationList.length - 1 && styles.lastConsultationRow,
-              ]}
-            >
-              <Text style={styles.consultationDays}>{slot.days}</Text>
-              <View style={styles.timePill}>
-                <Text style={styles.timePillText}>{slot.time}</Text>
+          {consultationList.length > 0 ? (
+            consultationList.map((slot, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.consultationRow,
+                  index === consultationList.length - 1 && styles.lastConsultationRow,
+                ]}
+              >
+                <Text style={styles.consultationDays}>{slot.days}</Text>
+                <View style={styles.timePill}>
+                  <Text style={styles.timePillText}>{slot.time}</Text>
+                </View>
               </View>
+            ))
+          ) : (
+            <View style={styles.emptyConsultationBox}>
+              <Text style={styles.emptyConsultationText}>
+                No consultation hours scheduled
+              </Text>
             </View>
-          ))}
+          )}
         </View>
       </View>
     );
@@ -279,7 +297,8 @@ const styles = StyleSheet.create({
   phoneCardBox: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     marginTop: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -291,46 +310,51 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    marginRight: 10,
+    minWidth: 0,
+    marginRight: 8,
   },
   phoneIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: "#DCFCE7",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 9,
+    flexShrink: 0,
   },
   phoneTextContainer: {
     flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
   },
   phoneLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: "700",
     color: "#94A3B8",
     letterSpacing: 0.5,
   },
   phoneValue: {
-    fontSize: 14.5,
+    fontSize: 13.5,
     fontWeight: "800",
     color: "#0F172A",
-    marginTop: 2,
+    marginTop: 1,
   },
   phoneValuePlaceholder: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "600",
     color: "#94A3B8",
   },
   phoneActionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    flexShrink: 0,
   },
   phoneActionBtnCopy: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 7,
     backgroundColor: "#DCFCE7",
     alignItems: "center",
     justifyContent: "center",
@@ -341,19 +365,37 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#16A34A",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 7,
+    gap: 3.5,
     shadowColor: "#16A34A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 2.5,
     elevation: 2,
   },
   phoneActionBtnCallText: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  emptyConsultationBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.2)",
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  emptyConsultationText: {
+    fontSize: 12,
+    color: "#94A3B8",
+    fontStyle: "italic",
+    textAlign: "center",
   },
 });
