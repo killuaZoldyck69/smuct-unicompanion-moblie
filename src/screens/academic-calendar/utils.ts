@@ -50,21 +50,49 @@ export const getMonthAndDay = (dateStr: string): { month: string; day: string } 
 
 // ─── Calendar meta resolver ──────────────────────────────────────────────────
 
-export const resolveCalendarMeta = (events: AcademicEventItem[]) => {
-  if (!events.length) {
-    return { allEvents: events, currentWeekNumber: 1, totalCount: 0 };
-  }
+export const resolveCurrentWeekNumber = (
+  events: AcademicEventItem[],
+  targetDate: Date = new Date(),
+): number | null => {
+  const targetStr = toISODateString(targetDate);
+  const weekSpans = new Map<number, { start: string; end: string }>();
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  events.forEach((ev) => {
+    if (ev.weekNumber == null || ev.weekNumber <= 0 || !ev.startDate) return;
+    const evStart = ev.startDate.substring(0, 10);
+    const evEnd = ev.endDate ? ev.endDate.substring(0, 10) : evStart;
 
-  const upcoming = events.find((ev) => {
-    const d = parseSafeDate(ev.startDate);
-    return d >= today && ev.weekNumber;
+    const existing = weekSpans.get(ev.weekNumber);
+    if (!existing) {
+      weekSpans.set(ev.weekNumber, { start: evStart, end: evEnd });
+    } else {
+      if (evStart < existing.start) existing.start = evStart;
+      if (evEnd > existing.end) existing.end = evEnd;
+    }
   });
 
-  const currentWeekNumber =
-    upcoming?.weekNumber ?? events[0]?.weekNumber ?? 1;
+  for (const [weekNum, span] of weekSpans.entries()) {
+    let effectiveEnd = span.end;
+    if (effectiveEnd === span.start) {
+      const [y, m, d] = span.start.split("-").map(Number);
+      const endD = new Date(y, m - 1, d + 6);
+      effectiveEnd = toISODateString(endD);
+    }
+
+    if (targetStr >= span.start && targetStr <= effectiveEnd) {
+      return weekNum;
+    }
+  }
+
+  return null;
+};
+
+export const resolveCalendarMeta = (events: AcademicEventItem[]) => {
+  if (!events.length) {
+    return { allEvents: events, currentWeekNumber: null, totalCount: 0 };
+  }
+
+  const currentWeekNumber = resolveCurrentWeekNumber(events, new Date());
 
   return { allEvents: events, currentWeekNumber, totalCount: events.length };
 };
@@ -152,7 +180,7 @@ export interface ChronologicalDateGroup {
 
 export const groupEventsChronologically = (
   events: AcademicEventItem[],
-  currentWeekNumber?: number,
+  currentWeekNumber?: number | null,
 ): ChronologicalDateGroup[] => {
   if (!events.length) return [];
 
@@ -203,18 +231,33 @@ export const groupEventsChronologically = (
     if (weekNumber != null && weekNumber !== lastWeekNumber) {
       weekHeading = {
         weekNumber,
-        isCurrentWeek: currentWeekNumber !== undefined && weekNumber === currentWeekNumber,
+        isCurrentWeek:
+          currentWeekNumber != null && weekNumber === currentWeekNumber,
         hasExam: evList.some((e) => e.category === "EXAM"),
       };
       lastWeekNumber = weekNumber;
     }
 
+    // A group is active today if dateKey is today OR if any of its events span across today
+    const isOngoingToday = evList.some((ev) => isEventOnDate(ev, todayStr));
+    const isToday = dateKey === todayStr || isOngoingToday;
+
+    // A group is only past if all of its events ended before today
+    const isPast =
+      !isToday &&
+      evList.every((ev) => {
+        const end = ev.endDate
+          ? ev.endDate.substring(0, 10)
+          : ev.startDate?.substring(0, 10);
+        return Boolean(end && end < todayStr);
+      });
+
     result.push({
       dateString: dateKey,
       displayDate,
       weekHeading,
-      isToday: dateKey === todayStr,
-      isPast: dateKey < todayStr,
+      isToday,
+      isPast,
       weekNumber,
       events: evList,
     });
@@ -228,10 +271,33 @@ export const findTargetScrollDate = (
   targetDateStr: string,
 ): string | null => {
   if (!groups.length) return null;
+
+  // 1. Exact match on a group's start date
   const exact = groups.find((g) => g.dateString === targetDateStr);
   if (exact) return exact.dateString;
+
+  // 2. Active / ongoing event on targetDateStr:
+  // If targetDateStr falls inside a multi-day event (startDate <= targetDateStr <= endDate),
+  // return the group containing that active event.
+  // If multiple groups contain active events, pick the most recent one (closest to targetDateStr).
+  const activeGroups = groups.filter((g) =>
+    g.events.some((ev) => isEventOnDate(ev, targetDateStr)),
+  );
+
+  if (activeGroups.length > 0) {
+    const pastOrCurrent = activeGroups.filter((g) => g.dateString <= targetDateStr);
+    if (pastOrCurrent.length > 0) {
+      return pastOrCurrent[pastOrCurrent.length - 1].dateString;
+    }
+    return activeGroups[0].dateString;
+  }
+
+  // 3. Upcoming event: next scheduled group starting on or after targetDateStr
   const upcoming = groups.find((g) => g.dateString >= targetDateStr);
-  return upcoming?.dateString ?? groups[0].dateString;
+  if (upcoming) return upcoming.dateString;
+
+  // 4. Past fallback: if targetDateStr is after all events, return the last group
+  return groups[groups.length - 1].dateString;
 };
 
 // ─── Duration helpers ────────────────────────────────────────────────────────

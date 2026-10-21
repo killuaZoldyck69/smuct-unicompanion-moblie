@@ -76,6 +76,15 @@ export const EditAudienceModal: React.FC<EditAudienceModalProps> = ({
           ? parsedYear
           : calendar.academicYear || 2026;
 
+      const trimmedBatch = targetBatch.trim();
+      if (trimmedBatch && (isGlobal || selectedPrograms.length === 0)) {
+        Alert.alert(
+          "Target Program Required",
+          "Targeting a specific batch requires at least one targeted program to be selected. Please disable 'All Faculties & Programs' and select the applicable program(s).",
+        );
+        return;
+      }
+
       await onSave({
         title: title.trim() || calendar.title,
         semester,

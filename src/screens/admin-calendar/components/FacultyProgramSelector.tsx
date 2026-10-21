@@ -134,15 +134,23 @@ export const FacultyProgramSelector: React.FC<FacultyProgramSelectorProps> = ({
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Target Batch (Optional)</Text>
         <Text style={styles.sectionSubtitle}>
-          Specify applicable student intake or cohort
+          Specify applicable student batch (e.g. 22, 64). Leave blank to show to all batches.
         </Text>
         <TextInput
           style={styles.textInput}
-          placeholder="e.g. All Batches or 47th Batch & Onwards"
+          placeholder="e.g. 22 or 64 (Leave blank for all batches)"
           placeholderTextColor="#94a3b8"
           value={targetBatch}
           onChangeText={onChangeTargetBatch}
         />
+        {targetBatch.trim().length > 0 && (isGlobal || selectedPrograms.length === 0) && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 }}>
+            <Feather name="alert-circle" size={13} color="#e11d48" />
+            <Text style={{ fontSize: 11, color: "#e11d48", fontWeight: "600", flex: 1 }}>
+              Targeting a batch requires turning off &quot;All Faculties &amp; Programs&quot; and selecting targeted program(s).
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Global / Target Master Switch */}

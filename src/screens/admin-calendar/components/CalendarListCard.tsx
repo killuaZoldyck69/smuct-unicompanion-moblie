@@ -85,7 +85,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
   const eventCount =
     calendar.events?.length ??
     calendar._count?.events ??
-    (isPub ? 37 : isArchived ? 32 : 0);
+    0;
 
   // Total Weeks
   const totalWeeks = React.useMemo(() => {
@@ -95,7 +95,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
         .filter((w): w is number => typeof w === "number" && w > 0);
       if (weeks.length > 0) return Math.max(...weeks);
     }
-    return 15;
+    return 0;
   }, [calendar.events]);
 
   // Targeted Programs resolved with official short names
@@ -218,51 +218,16 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
     }
 
     if (!commencement) {
-      if (sem.toLowerCase().includes("summer")) {
-        commencement = `Aug 22, ${year}`;
-      } else if (sem.toLowerCase().includes("fall")) {
-        commencement = `Feb 15, ${year}`;
-      } else if (sem.toLowerCase().includes("spring")) {
-        commencement = `May 10, ${year}`;
-      } else {
-        commencement = `Nov 01, ${year}`;
-      }
+      commencement = "Not scheduled yet";
     }
-
     if (!midtermWindow) {
-      if (sem.toLowerCase().includes("summer")) {
-        midtermWindow = `Oct 14–30, ${year}`;
-      } else if (sem.toLowerCase().includes("fall")) {
-        midtermWindow = `Apr 10–25, ${year}`;
-      } else if (sem.toLowerCase().includes("spring")) {
-        midtermWindow = `Jul 05–20, ${year}`;
-      } else {
-        midtermWindow = `Dec 15–30, ${year}`;
-      }
+      midtermWindow = "Not scheduled";
     }
-
     if (!finaltermWindow) {
-      if (sem.toLowerCase().includes("summer")) {
-        finaltermWindow = `Jan 1–15, ${year + 1}`;
-      } else if (sem.toLowerCase().includes("fall")) {
-        finaltermWindow = `Jun 20 – Jul 05, ${year}`;
-      } else if (sem.toLowerCase().includes("spring")) {
-        finaltermWindow = `Sep 10–25, ${year}`;
-      } else {
-        finaltermWindow = `Mar 01–15, ${year + 1}`;
-      }
+      finaltermWindow = "Not scheduled";
     }
-
     if (!termEnd) {
-      if (sem.toLowerCase().includes("summer")) {
-        termEnd = `Jan 28, ${year + 1}`;
-      } else if (sem.toLowerCase().includes("fall")) {
-        termEnd = `Jul 10, ${year}`;
-      } else if (sem.toLowerCase().includes("spring")) {
-        termEnd = `Sep 30, ${year}`;
-      } else {
-        termEnd = `Mar 25, ${year + 1}`;
-      }
+      termEnd = "Not scheduled yet";
     }
 
     return { commencement, midtermWindow, finaltermWindow, termEnd };
@@ -374,6 +339,15 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
                       {calendar.semesterDuration || "6 Months"}
                     </Text>
                   </View>
+
+                  {/* 2b. Batch Chip */}
+                  {Boolean(calendar.targetBatch) && (
+                    <View style={styles.batchChip}>
+                      <Text style={styles.batchChipText}>
+                        Batch {calendar.targetBatch}
+                      </Text>
+                    </View>
+                  )}
 
                   {/* 3. Status Badge (LIVE / DRAFT / ARCHIVED) */}
                   <View
@@ -534,6 +508,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
               <Text style={styles.compactDateMeta}>
                 {academicYearText} • {calendar.semester}
                 {Boolean(semesterDurationText) ? ` • ${semesterDurationText}` : ""}
+                {Boolean(calendar.targetBatch) ? ` • Batch ${calendar.targetBatch}` : ""}
               </Text>
 
               <TouchableOpacity
@@ -563,7 +538,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
           {/* Bottom row */}
           <View style={styles.compactBottomRow}>
             <Text style={styles.compactLeftMeta}>
-              {eventCount > 0 ? `${eventCount} / 28 Milestones` : "0 / 28 Milestones"}
+              {eventCount > 0 ? `${eventCount} Events Scheduled` : "No events scheduled"}
             </Text>
 
             <View style={styles.compactRightAction}>
@@ -619,7 +594,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
           {/* Bottom row */}
           <View style={styles.compactBottomRow}>
             <Text style={styles.compactLeftMeta}>
-              {eventCount > 0 ? `${eventCount} Completed` : "32 Completed"}
+              {eventCount > 0 ? `${eventCount} Events Recorded` : "0 Events"}
             </Text>
 
             <View style={styles.compactRightAction}>
@@ -839,6 +814,20 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "800",
     color: "#7e22ce",
+  },
+  batchChip: {
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+  },
+  batchChipText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#1d4ed8",
+    letterSpacing: 0.2,
   },
   statusChip: {
     flexDirection: "row",

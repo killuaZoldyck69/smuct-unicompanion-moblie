@@ -44,14 +44,33 @@ function getDateBlockInfo(startDateStr: string, endDateStr?: string | null) {
 function getVisualTheme(category: string, isHoliday: boolean, title: string) {
   const t = title.toLowerCase();
 
-  if (isHoliday || category === "HOLIDAY") {
+  // 1. High-priority functional categories
+  // Check for Next Semester Commencement / Future Term Milestone
+  if (
+    t.includes("commencement") ||
+    t.includes("next sem") ||
+    t.includes("next semester")
+  ) {
     return {
-      dateBg: "#d1fae5",
-      dateColor: "#059669",
-      pillBg: "#dcfce7",
-      pillColor: "#15803d",
-      pillLabel: "Holiday",
-      subTag: null,
+      dateBg: "#e0e7ff",
+      dateColor: "#4338ca",
+      pillBg: "#ede9fe",
+      pillColor: "#6d28d9",
+      pillLabel: "Next Term",
+      subTag: t.includes("tentative") ? "Tentative" : null,
+    };
+  }
+
+  if (category === "DEADLINE") {
+    const isStrict = t.includes("drop") || t.includes("retake") || t.includes("registration");
+    const isFee = t.includes("tuition") || t.includes("fee") || t.includes("payment");
+    return {
+      dateBg: "#fee2e2",
+      dateColor: "#dc2626",
+      pillBg: "#ffe4e6",
+      pillColor: "#e11d48",
+      pillLabel: isFee ? "Fee Deadline" : "Deadline",
+      subTag: isStrict ? "STRICT" : null,
     };
   }
 
@@ -66,16 +85,16 @@ function getVisualTheme(category: string, isHoliday: boolean, title: string) {
     };
   }
 
-  if (category === "DEADLINE") {
-    const isStrict = t.includes("drop") || t.includes("retake") || t.includes("registration");
-    const isFee = t.includes("tuition") || t.includes("fee");
+  if (category === "ACADEMIC") {
+    const isPrep = t.includes("prep") || t.includes("leave");
+    const isModeration = t.includes("moderation") || t.includes("question");
     return {
-      dateBg: "#fee2e2",
-      dateColor: "#dc2626",
-      pillBg: "#ffe4e6",
-      pillColor: "#e11d48",
-      pillLabel: isFee ? "Fee Deadline" : "Deadline",
-      subTag: isStrict ? "STRICT" : null,
+      dateBg: isPrep ? "#fef3c7" : "#e0e7ff",
+      dateColor: isPrep ? "#b45309" : "#4338ca",
+      pillBg: isPrep ? "#fef9c3" : "#eef2ff",
+      pillColor: isPrep ? "#92400e" : "#4f46e5",
+      pillLabel: isPrep ? "Prep Leave" : isModeration ? "Moderation" : "Academic",
+      subTag: null,
     };
   }
 
@@ -112,7 +131,19 @@ function getVisualTheme(category: string, isHoliday: boolean, title: string) {
     };
   }
 
-  // CLASS default
+  // 2. Pure holiday category or marked holiday (when not covered by above specific categories)
+  if (category === "HOLIDAY" || isHoliday) {
+    return {
+      dateBg: "#d1fae5",
+      dateColor: "#059669",
+      pillBg: "#dcfce7",
+      pillColor: "#15803d",
+      pillLabel: "Holiday",
+      subTag: null,
+    };
+  }
+
+  // 3. CLASS default
   return {
     dateBg: "#e0f2fe",
     dateColor: "#0284c7",
@@ -228,10 +259,6 @@ export const NestedTimelineEventRow = React.memo(
             <Text style={styles.subtitle}>{event.remarks}</Text>
           ) : event.description ? (
             <Text style={styles.subtitle}>{event.description}</Text>
-          ) : event.category === "CLASS" ? (
-            <Text style={styles.subtitle}>
-              Standard timetable & academic session
-            </Text>
           ) : null}
         </View>
 

@@ -82,6 +82,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
+        tabBarLabelPosition: "beside-icon",
         tabBarActiveTintColor: "#ffffff",
         tabBarInactiveTintColor: "#76777d",
 
@@ -89,15 +90,23 @@ export default function TabsLayout() {
           justifyContent: "center",
           alignItems: "center",
           height: "100%",
+          paddingVertical: 0,
+        },
+
+        tabBarIconStyle: {
+          justifyContent: "center",
+          alignItems: "center",
+          width: 48,
+          height: 48,
         },
 
         tabBarStyle: {
           position: "absolute",
           bottom: insets.bottom > 0 ? insets.bottom + 16 : 24,
           marginHorizontal: 20,
-          height: 72,
+          height: 68,
           backgroundColor: "#131b2e",
-          borderRadius: 20,
+          borderRadius: 24,
           borderTopWidth: 0,
           elevation: 10,
           shadowColor: "#000",
@@ -105,7 +114,7 @@ export default function TabsLayout() {
           shadowOpacity: 0.15,
           shadowRadius: 24,
           paddingBottom: 0,
-          paddingTop: 16,
+          paddingTop: 0,
         },
       }}
     >

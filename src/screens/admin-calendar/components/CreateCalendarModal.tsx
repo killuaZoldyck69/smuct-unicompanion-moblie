@@ -75,6 +75,15 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
 
     const finalTitle = title.trim() || `${semester} ${finalYear}`;
 
+    const trimmedBatch = targetBatch.trim();
+    if (trimmedBatch && (isGlobal || selectedPrograms.length === 0)) {
+      Alert.alert(
+        "Target Program Required",
+        "Targeting a specific batch requires at least one targeted program to be selected. Please disable 'All Faculties & Programs' and select the applicable program(s).",
+      );
+      return;
+    }
+
     try {
       setIsCreating(true);
       await onCreate({

@@ -25,6 +25,7 @@ import {
   groupEventsChronologically,
   findTargetScrollDate,
   calculateSemesterDuration,
+  isEventOnDate,
 } from "./utils";
 import { TimelineEventCard } from "./components/timeline-event-card";
 import { CalendarDateStrip } from "./components/calendar-date-strip";
@@ -454,14 +455,25 @@ export function AcademicCalendarScreen() {
       groupPositions.current[dateString] = y;
       if (!hasAutoScrolled.current && selectedDate) {
         const target = findTargetScrollDate(chronologicalGroups, selectedDate);
-        if (target && target === dateString) {
+        if (target && typeof groupPositions.current[target] === "number") {
           hasAutoScrolled.current = true;
-          setTimeout(() => scrollToTargetDate(target, true), 300);
+          setTimeout(() => scrollToTargetDate(target, true), 250);
         }
       }
     },
     [selectedDate, chronologicalGroups, scrollToTargetDate],
   );
+
+  useEffect(() => {
+    if (!hasAutoScrolled.current && chronologicalGroups.length > 0 && selectedDate) {
+      const target = findTargetScrollDate(chronologicalGroups, selectedDate);
+      if (target && typeof groupPositions.current[target] === "number") {
+        hasAutoScrolled.current = true;
+        const timer = setTimeout(() => scrollToTargetDate(target, true), 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [chronologicalGroups, selectedDate, scrollToTargetDate]);
 
   const handleSelectDate = useCallback(
     (dateStr: string | null) => {
@@ -580,7 +592,10 @@ export function AcademicCalendarScreen() {
             {chronologicalGroups.length > 0 ? (
               <View style={styles.stream}>
                 {chronologicalGroups.map((group: ChronologicalDateGroup, groupIndex) => {
-                  const isSelected = selectedDate === group.dateString;
+                  const isSelected =
+                    Boolean(selectedDate) &&
+                    (selectedDate === group.dateString ||
+                      group.events.some((ev) => isEventOnDate(ev, selectedDate!)));
                   const isLastGroup = groupIndex === chronologicalGroups.length - 1;
 
                   return (

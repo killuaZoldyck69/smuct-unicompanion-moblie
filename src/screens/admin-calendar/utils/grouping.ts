@@ -40,43 +40,146 @@ function extractClassDaysSummary(events: AcademicEventItem[]): string | null {
   return null;
 }
 
+function isCommencementEvent(e: AcademicEventItem): boolean {
+  const t = (e.title || "").toLowerCase();
+  return (
+    t.includes("commencement") ||
+    t.includes("next sem") ||
+    t.includes("next semester")
+  );
+}
+
+function isSemesterBreakEvent(e: AcademicEventItem): boolean {
+  const t = (e.title || "").toLowerCase();
+  return (
+    t.includes("semester break") ||
+    (e.category === "HOLIDAY" && (t.includes("break") || t.includes("recess")))
+  );
+}
+
+function isMidtermEvent(e: AcademicEventItem): boolean {
+  const t = `${e.title || ""} ${e.remarks || ""}`.toLowerCase();
+  return t.includes("mid-term") || t.includes("midterm");
+}
+
+function isFinalExamEvent(e: AcademicEventItem): boolean {
+  const t = `${e.title || ""} ${e.remarks || ""}`.toLowerCase();
+  return (
+    t.includes("final exam") ||
+    t.includes("final examination") ||
+    t.includes("overlapped exam") ||
+    t.includes("tabulation") ||
+    t.includes("marksheet") ||
+    (t.includes("result") && !t.includes("midterm") && !t.includes("mid-term"))
+  );
+}
+
+function isSamePhaseBlock(
+  currentEvents: AcademicEventItem[],
+  nextEvent: AcademicEventItem,
+): boolean {
+  // 1. Next Semester Commencement should always be its own separate block
+  const hasCommence = currentEvents.some(isCommencementEvent);
+  const nextCommence = isCommencementEvent(nextEvent);
+  if (hasCommence !== nextCommence) return false;
+
+  // 2. Semester Break should always be its own separate block
+  const hasBreak = currentEvents.some(isSemesterBreakEvent);
+  const nextBreak = isSemesterBreakEvent(nextEvent);
+  if (hasBreak !== nextBreak) return false;
+
+  // 3. Mid-Term Assessment vs Final Examination should NEVER be in the same phase block
+  const hasMidterm = currentEvents.some(isMidtermEvent);
+  const nextMidterm = isMidtermEvent(nextEvent);
+  const hasFinal = currentEvents.some(isFinalExamEvent);
+  const nextFinal = isFinalExamEvent(nextEvent);
+
+  if (hasMidterm && nextFinal) return false;
+  if (hasFinal && nextMidterm) return false;
+
+  // 4. Date Proximity / Continuity check:
+  // If there is a noticeable time gap (> 7 days) between the current group and nextEvent,
+  // they belong to completely separate phases in the semester timeline.
+  let maxCurrentEnd = cleanDateYmd(currentEvents[0].endDate || currentEvents[0].startDate);
+  for (let i = 1; i < currentEvents.length; i++) {
+    const e = cleanDateYmd(currentEvents[i].endDate || currentEvents[i].startDate);
+    if (e > maxCurrentEnd) maxCurrentEnd = e;
+  }
+  const nextStart = cleanDateYmd(nextEvent.startDate);
+
+  try {
+    const endMs = new Date(maxCurrentEnd).getTime();
+    const startMs = new Date(nextStart).getTime();
+    if (!isNaN(endMs) && !isNaN(startMs)) {
+      const gapDays = Math.round((startMs - endMs) / (1000 * 60 * 60 * 24));
+      if (gapDays > 7) {
+        return false;
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  return true;
+}
+
 /**
  * Determines a human-readable title for consecutive null-week event blocks.
+ * Dynamically derives the title from the events themselves rather than hardcoded static text.
  */
 function determinePhaseTitle(
   events: AcademicEventItem[],
   previousWeekNumber: number | null,
 ): string {
-  const allText = events
-    .map((e) => `${e.title} ${e.remarks || ""} ${e.category}`)
-    .join(" ")
-    .toLowerCase();
+  if (!events || events.length === 0) return "Academic Milestone";
 
-  if (
-    allText.includes("final exam") ||
-    allText.includes("overlapped exam") ||
-    allText.includes("marksheet") ||
-    allText.includes("semester break") ||
-    allText.includes("commencement") ||
-    (previousWeekNumber !== null && previousWeekNumber >= 12)
-  ) {
-    return "Final Examination & Closing Period";
+  // Single event in the phase: Use its exact title directly!
+  if (events.length === 1) {
+    return events[0].title;
   }
 
-  if (
-    allText.includes("mid-term") ||
-    allText.includes("midterm") ||
-    allText.includes("durga puja") ||
-    (previousWeekNumber !== null && previousWeekNumber >= 6 && previousWeekNumber <= 8)
-  ) {
-    return "Mid-Term Assessment & Break Period";
+  // Major examination anchor event
+  const examEvent = events.find((e) => e.category === "EXAM");
+  if (examEvent) {
+    const cleanTitle = examEvent.title.replace(/\s*-\s*[A-Za-z0-9\s]+$/, "").trim();
+    if (/exam|assessment|test/i.test(cleanTitle)) {
+      return cleanTitle.toLowerCase().includes("period") ? cleanTitle : `${cleanTitle} Period`;
+    }
+    return `${cleanTitle} Period`;
   }
 
-  if (previousWeekNumber === null || previousWeekNumber === 0) {
-    return "Pre-Semester & Orientation Period";
+  // Registration anchor event
+  const regEvent = events.find((e) => e.category === "REGISTRATION");
+  if (regEvent) {
+    return regEvent.title.toLowerCase().includes("period") ? regEvent.title : `${regEvent.title} Period`;
   }
 
-  return "Interim Assessment & Recess Period";
+  // Holiday or Break anchor event
+  const holidayEvent = events.find((e) => e.category === "HOLIDAY" || e.isHoliday);
+  if (holidayEvent) {
+    return holidayEvent.title;
+  }
+
+  // Deadline anchor event
+  const deadlineEvent = events.find((e) => e.category === "DEADLINE");
+  if (deadlineEvent) {
+    return deadlineEvent.title;
+  }
+
+  // Fallback: Event with the longest date span
+  let longestEvent = events[0];
+  let maxSpan = 0;
+  for (const e of events) {
+    const s = new Date(e.startDate).getTime();
+    const end = new Date(e.endDate || e.startDate).getTime();
+    const span = isNaN(s) || isNaN(end) ? 0 : end - s;
+    if (span >= maxSpan) {
+      maxSpan = span;
+      longestEvent = e;
+    }
+  }
+
+  return longestEvent.title;
 }
 
 /**
@@ -87,8 +190,48 @@ export function groupEventsChronologically(
 ): WeekGroup[] {
   if (!events || events.length === 0) return [];
 
-  // 1. Sort strictly chronologically by startDate ascending
-  const sorted = [...events].sort((a, b) => {
+  // 1. Build date ranges for explicit weeks
+  const weekRanges = new Map<number, { minStart: string; maxEnd: string }>();
+  for (const ev of events) {
+    if (ev.weekNumber !== null && ev.weekNumber !== undefined && ev.weekNumber > 0) {
+      const s = cleanDateYmd(ev.startDate);
+      const e = cleanDateYmd(ev.endDate || ev.startDate);
+      const existing = weekRanges.get(ev.weekNumber);
+      if (!existing) {
+        weekRanges.set(ev.weekNumber, { minStart: s, maxEnd: e });
+      } else {
+        if (s < existing.minStart) existing.minStart = s;
+        if (e > existing.maxEnd) existing.maxEnd = e;
+      }
+    }
+  }
+
+  // 2. Resolve implicit week numbers for single events whose dates fall within a week's span
+  const resolvedEvents = events.map((ev) => {
+    if (ev.weekNumber !== null && ev.weekNumber !== undefined && ev.weekNumber > 0) {
+      return ev;
+    }
+    const lowerTitle = (ev.title || "").toLowerCase();
+    const isMajorExam =
+      ev.category === "EXAM" ||
+      lowerTitle.includes("mid-term") ||
+      lowerTitle.includes("final exam") ||
+      lowerTitle.includes("semester break") ||
+      lowerTitle.includes("commencement");
+
+    if (!isMajorExam) {
+      const evStart = cleanDateYmd(ev.startDate);
+      for (const [wkNum, range] of weekRanges.entries()) {
+        if (evStart >= range.minStart && evStart <= range.maxEnd) {
+          return { ...ev, weekNumber: wkNum };
+        }
+      }
+    }
+    return ev;
+  });
+
+  // 3. Sort strictly chronologically by startDate ascending
+  const sorted = [...resolvedEvents].sort((a, b) => {
     const aDate = cleanDateYmd(a.startDate);
     const bDate = cleanDateYmd(b.startDate);
     if (aDate !== bDate) return aDate.localeCompare(bDate);
@@ -121,7 +264,7 @@ export function groupEventsChronologically(
     } else {
       const sameGroup =
         (!isCurrentGroupPhase && !isPhaseEvent && currentWeekNumber === evWk) ||
-        (isCurrentGroupPhase && isPhaseEvent);
+        (isCurrentGroupPhase && isPhaseEvent && isSamePhaseBlock(currentGroupEvents, ev));
 
       if (sameGroup) {
         currentGroupEvents.push(ev);
@@ -198,7 +341,7 @@ function buildWeekGroup(
       weekNumber: null,
       title,
       dateRangeLabel,
-      classDaysSummary,
+      classDaysSummary: null,
       startDate: minStart,
       endDate: maxEnd,
       events,

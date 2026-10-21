@@ -181,15 +181,15 @@ export function AdminCalendarScreen() {
       position: "absolute" as const,
       bottom: insets.bottom > 0 ? insets.bottom + 16 : 24,
       marginHorizontal: 20,
-      height: 72,
+      height: 68,
       backgroundColor: "#131b2e",
-      borderRadius: 20,
+      borderRadius: 24,
       borderTopWidth: 0,
-      elevation: 8,
+      elevation: 10,
       shadowColor: "#000000",
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.25,
-      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 24,
       paddingBottom: 0,
       paddingTop: 0,
     }),
@@ -490,21 +490,30 @@ export function AdminCalendarScreen() {
   ) => {
     if (!selectedCalendarId) return;
 
-    if (editingEvent) {
-      await updateEventMutation.mutateAsync({
-        calendarId: selectedCalendarId,
-        eventId: editingEvent.id,
-        data: payload,
+    try {
+      if (editingEvent) {
+        await updateEventMutation.mutateAsync({
+          calendarId: selectedCalendarId,
+          eventId: editingEvent.id,
+          data: payload,
+        });
+        Toast.show({ type: "success", text1: "Node Updated Successfully" });
+      } else {
+        await createEventMutation.mutateAsync({
+          calendarId: selectedCalendarId,
+          data: payload as CreateEventInput,
+        });
+        Toast.show({ type: "success", text1: "Node Added to Timeline" });
+      }
+      refetchCalendarDetail();
+      setIsNodeInspectorOpen(false);
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Save Failed",
+        text2: err?.message || "Failed to save event node.",
       });
-      Toast.show({ type: "success", text1: "Node Updated Successfully" });
-    } else {
-      await createEventMutation.mutateAsync({
-        calendarId: selectedCalendarId,
-        data: payload as CreateEventInput,
-      });
-      Toast.show({ type: "success", text1: "Node Added to Timeline" });
     }
-    refetchCalendarDetail();
   };
 
   // Delete Single Event
@@ -518,7 +527,11 @@ export function AdminCalendarScreen() {
       Toast.show({ type: "info", text1: `"${title}" removed` });
       refetchCalendarDetail();
     } catch (err: any) {
-      Toast.show({ type: "error", text1: "Delete Failed", text2: err.message });
+      Toast.show({
+        type: "error",
+        text1: "Delete Failed",
+        text2: err?.message || "Failed to delete event.",
+      });
     }
   };
 
@@ -564,13 +577,22 @@ export function AdminCalendarScreen() {
     targetBatch: string;
   }) => {
     if (!selectedCalendarId) return;
-    await updateCalendarMutation.mutateAsync({
-      id: selectedCalendarId,
-      data: payload,
-    });
-    Toast.show({ type: "success", text1: "Calendar Settings Updated" });
-    refetchCalendarDetail();
-    refetchCalendars();
+    try {
+      await updateCalendarMutation.mutateAsync({
+        id: selectedCalendarId,
+        data: payload,
+      });
+      Toast.show({ type: "success", text1: "Calendar Settings Updated" });
+      setIsEditAudienceOpen(false);
+      refetchCalendarDetail();
+      refetchCalendars();
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: err?.message || "Failed to update calendar audience.",
+      });
+    }
   };
 
   // Commit CSV Import
@@ -586,43 +608,51 @@ export function AdminCalendarScreen() {
       targetBatch?: string;
     },
   ) => {
-    if (selectedCalendarId) {
-      await importCsvMutation.mutateAsync({
-        calendarId: selectedCalendarId,
-        csvContent,
-      });
-      Toast.show({ type: "success", text1: "Schedule Imported Successfully" });
-      refetchCalendarDetail();
-      refetchCalendars();
-    } else {
-      const currentYear = new Date().getFullYear();
-      const sem = meta?.semester || "Summer";
-      const year = meta?.academicYear || currentYear;
-      const duration = meta?.semesterDuration || "6 Months";
-      const defaultTitle = `${sem} Semester ${year}${duration === "4 Months" ? " (4-Month)" : ""}`;
-      const title = meta?.title?.trim() || defaultTitle;
+    try {
+      if (selectedCalendarId) {
+        await importCsvMutation.mutateAsync({
+          calendarId: selectedCalendarId,
+          csvContent,
+        });
+        Toast.show({ type: "success", text1: "Schedule Imported Successfully" });
+        refetchCalendarDetail();
+        refetchCalendars();
+      } else {
+        const currentYear = new Date().getFullYear();
+        const sem = meta?.semester || "Summer";
+        const year = meta?.academicYear || currentYear;
+        const duration = meta?.semesterDuration || "6 Months";
+        const defaultTitle = `${sem} Semester ${year}${duration === "4 Months" ? " (4-Month)" : ""}`;
+        const title = meta?.title?.trim() || defaultTitle;
 
-      const newCal = await createCalendarMutation.mutateAsync({
-        title,
-        semester: sem,
-        academicYear: year,
-        semesterDuration: duration,
-        targetFaculties: meta?.targetFaculties || [],
-        targetPrograms: meta?.targetPrograms || [],
-        targetBatch: meta?.targetBatch || undefined,
-        status: "DRAFT",
-      });
-      await importCsvMutation.mutateAsync({
-        calendarId: newCal.id,
-        csvContent,
-      });
+        const newCal = await createCalendarMutation.mutateAsync({
+          title,
+          semester: sem,
+          academicYear: year,
+          semesterDuration: duration,
+          targetFaculties: meta?.targetFaculties || [],
+          targetPrograms: meta?.targetPrograms || [],
+          targetBatch: meta?.targetBatch || undefined,
+          status: "DRAFT",
+        });
+        await importCsvMutation.mutateAsync({
+          calendarId: newCal.id,
+          csvContent,
+        });
+        Toast.show({
+          type: "success",
+          text1: "Calendar Created",
+          text2: `"${title}" draft schedule populated from CSV.`,
+        });
+        refetchCalendars();
+        handleOpenDetail(newCal.id);
+      }
+    } catch (err: any) {
       Toast.show({
-        type: "success",
-        text1: "Calendar Created",
-        text2: `"${title}" draft schedule populated from CSV.`,
+        type: "error",
+        text1: "Import Failed",
+        text2: err?.message || "Failed to import schedule from CSV.",
       });
-      refetchCalendars();
-      handleOpenDetail(newCal.id);
     }
   };
 
