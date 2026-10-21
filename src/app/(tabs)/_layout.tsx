@@ -140,7 +140,11 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: "Manage users tab",
           href: userRole === "ADMIN" ? "/(tabs)/admin_users" : null,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={TAB_ICONS.userManagement} focused={focused} size={24} />
+            <TabIcon
+              source={TAB_ICONS.userManagement}
+              focused={focused}
+              size={24}
+            />
           ),
         }}
       />
@@ -194,7 +198,11 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: "Add faculty staff tab",
           href: userRole === "ADMIN" ? "/(tabs)/admin_add_teacher" : null,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={TAB_ICONS.addFaculty} focused={focused} size={23} />
+            <TabIcon
+              source={TAB_ICONS.addFaculty}
+              focused={focused}
+              size={23}
+            />
           ),
         }}
       />

@@ -21,6 +21,7 @@ interface FacultyProgramSelectorProps {
   onChangeSemesterDuration: (duration: string) => void;
   targetBatch: string;
   onChangeTargetBatch: (batch: string) => void;
+  hideDuration?: boolean;
 }
 
 export const FacultyProgramSelector: React.FC<FacultyProgramSelectorProps> = ({
@@ -34,6 +35,7 @@ export const FacultyProgramSelector: React.FC<FacultyProgramSelectorProps> = ({
   onChangeSemesterDuration,
   targetBatch,
   onChangeTargetBatch,
+  hideDuration = false,
 }) => {
   const toggleProgram = (prog: string, facultyName: string) => {
     let nextPrograms: string[];
@@ -92,39 +94,41 @@ export const FacultyProgramSelector: React.FC<FacultyProgramSelectorProps> = ({
   return (
     <View style={styles.container}>
       {/* Semester Duration Segment */}
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Semester Duration</Text>
-        <Text style={styles.sectionSubtitle}>
-          Select academic cycle term structure
-        </Text>
-        <View style={styles.segmentRow}>
-          {["6 Months", "4 Months"].map((dur) => {
-            const isSel = (semesterDuration || "6 Months") === dur;
-            return (
-              <TouchableOpacity
-                key={dur}
-                style={[styles.segmentBtn, isSel && styles.segmentBtnActive]}
-                onPress={() => onChangeSemesterDuration(dur)}
-                activeOpacity={0.8}
-              >
-                <Feather
-                  name="clock"
-                  size={14}
-                  color={isSel ? "#ffffff" : "#475569"}
-                />
-                <Text
-                  style={[
-                    styles.segmentBtnText,
-                    isSel && styles.segmentBtnTextActive,
-                  ]}
+      {!hideDuration && (
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Semester Duration</Text>
+          <Text style={styles.sectionSubtitle}>
+            Select academic cycle term structure
+          </Text>
+          <View style={styles.segmentRow}>
+            {["6 Months", "4 Months"].map((dur) => {
+              const isSel = (semesterDuration || "6 Months") === dur;
+              return (
+                <TouchableOpacity
+                  key={dur}
+                  style={[styles.segmentBtn, isSel && styles.segmentBtnActive]}
+                  onPress={() => onChangeSemesterDuration(dur)}
+                  activeOpacity={0.8}
                 >
-                  {dur} Semester
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Feather
+                    name="clock"
+                    size={14}
+                    color={isSel ? "#ffffff" : "#475569"}
+                  />
+                  <Text
+                    style={[
+                      styles.segmentBtnText,
+                      isSel && styles.segmentBtnTextActive,
+                    ]}
+                  >
+                    {dur} Semester
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Target Batch Note */}
       <View style={styles.sectionCard}>
@@ -166,7 +170,7 @@ export const FacultyProgramSelector: React.FC<FacultyProgramSelectorProps> = ({
       {!isGlobal && (
         <View style={styles.targetSection}>
           <View style={styles.targetHeaderRow}>
-            <Text style={styles.targetHeading}>Select Targeted Programs</Text>
+            <Text style={styles.targetHeading}>Targeted Programs</Text>
             <Text style={styles.targetCountBadge}>
               {selectedPrograms.length} Selected
             </Text>
@@ -200,7 +204,9 @@ export const FacultyProgramSelector: React.FC<FacultyProgramSelectorProps> = ({
                     activeOpacity={0.8}
                   >
                     <Feather
-                      name={allSelected ? "check" : someSelected ? "minus" : "plus"}
+                      name={
+                        allSelected ? "check" : someSelected ? "minus" : "plus"
+                      }
                       size={12}
                       color={allSelected ? "#047857" : "#0f172a"}
                     />

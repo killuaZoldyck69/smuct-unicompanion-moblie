@@ -303,7 +303,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/calendar.png"),
     fallbackIcon: "calendar",
     roles: ["ADMIN"],
-    route: "/admin/calendar" as Href,
+    route: "/(tabs)/admin_calendar" as Href,
   },
   {
     id: "upload_notice",

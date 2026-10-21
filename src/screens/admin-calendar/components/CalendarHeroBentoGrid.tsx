@@ -189,7 +189,7 @@ export const CalendarHeroBentoGrid: React.FC<CalendarHeroBentoGridProps> = ({
                 !isPub && !isDraft && { color: "#475569" },
               ]}
             >
-              {isPub ? "LIVE" : calendar.status || "DRAFT"}
+              {isPub ? "Active" : isDraft ? "Draft" : "Archived"}
             </Text>
           </View>
         </View>

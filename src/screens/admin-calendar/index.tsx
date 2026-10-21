@@ -10,9 +10,10 @@ import {
   Alert,
   Platform,
   TextInput,
+  BackHandler,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -53,21 +54,26 @@ import { NodeInspectorModal } from "./components/NodeInspectorModal";
 import { EditAudienceModal } from "./components/EditAudienceModal";
 import { CreateCalendarModal } from "./components/CreateCalendarModal";
 import { CsvImportModal } from "./components/CsvImportModal";
-import { AdminConfirmModal, ConfirmModalVariant } from "./components/AdminConfirmModal";
+import {
+  AdminConfirmModal,
+  ConfirmModalVariant,
+} from "./components/AdminConfirmModal";
 
 export function AdminCalendarScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { role, isPending } = useCurrentUser();
+  const { role, isPending, user } = useCurrentUser();
 
-  // Navigation State: 'LIST' or 'DETAIL'
-  const [currentView, setCurrentView] = useState<"LIST" | "DETAIL">("DETAIL");
+  // Navigation State: 'LIST' or 'DETAIL' (defaults to LIST overview)
+  const [currentView, setCurrentView] = useState<"LIST" | "DETAIL">("LIST");
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(
     null,
   );
   const [selectedStatusTab, setSelectedStatusTab] = useState<
     "ALL" | CalendarStatus
   >("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Stream Filters
   const [selectedCategoryFilter, setSelectedCategoryFilter] =
@@ -107,21 +113,122 @@ export function AdminCalendarScreen() {
     data: calendars = [],
     isLoading: isLoadingCalendars,
     refetch: refetchCalendars,
-  } = useAdminCalendars(
-    selectedStatusTab === "ALL"
-      ? undefined
-      : (selectedStatusTab as CalendarStatus),
+  } = useAdminCalendars();
+
+  // Dynamic status tab counts matching image
+  const allTermsCount = calendars.length;
+  const activeTermsCount = useMemo(
+    () => calendars.filter((c) => c.status === "PUBLISHED").length,
+    [calendars],
+  );
+  const draftTermsCount = useMemo(
+    () => calendars.filter((c) => c.status === "DRAFT").length,
+    [calendars],
+  );
+  const archivedTermsCount = useMemo(
+    () => calendars.filter((c) => c.status === "ARCHIVED").length,
+    [calendars],
   );
 
-  // Auto-select first calendar if none selected when entering
+  // Status Filter options: ALL, Active, Draft, Archived with numbers
+  const statusTabs: Array<{ key: "ALL" | CalendarStatus; label: string }> = [
+    { key: "ALL", label: `ALL (${allTermsCount})` },
+    { key: "PUBLISHED", label: `Active (${activeTermsCount})` },
+    { key: "DRAFT", label: `Draft (${draftTermsCount})` },
+    { key: "ARCHIVED", label: `Archived (${archivedTermsCount})` },
+  ];
+
+  // Filtered calendars by status and search query
+  const filteredCalendars = useMemo(() => {
+    let list = calendars;
+    if (selectedStatusTab !== "ALL") {
+      list = list.filter((c) => c.status === selectedStatusTab);
+    }
+    if (searchQuery.trim().length > 0) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.title?.toLowerCase().includes(q) ||
+          c.semester?.toLowerCase().includes(q) ||
+          c.academicYear?.toString().includes(q) ||
+          c.targetPrograms?.some((p) => p.toLowerCase().includes(q)) ||
+          c.targetFaculties?.some((f) => f.toLowerCase().includes(q)),
+      );
+    }
+    return list;
+  }, [calendars, selectedStatusTab, searchQuery]);
+
+  // Hardware Back Button Handler on Android: return to LIST from DETAIL
   React.useEffect(() => {
-    if (!selectedCalendarId && calendars.length > 0) {
-      // Find published or first
+    const onHardwareBackPress = () => {
+      if (currentView === "DETAIL") {
+        setCurrentView("LIST");
+        return true;
+      }
+      return false;
+    };
+
+    const backSub = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onHardwareBackPress,
+    );
+    return () => backSub.remove();
+  }, [currentView]);
+
+  // Default floating tab bar style to restore on LIST view
+  const defaultTabBarStyle = useMemo(
+    () => ({
+      position: "absolute" as const,
+      bottom: insets.bottom > 0 ? insets.bottom + 16 : 24,
+      marginHorizontal: 20,
+      height: 72,
+      backgroundColor: "#131b2e",
+      borderRadius: 20,
+      borderTopWidth: 0,
+      elevation: 8,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.25,
+      shadowRadius: 18,
+      paddingBottom: 0,
+      paddingTop: 0,
+    }),
+    [insets.bottom],
+  );
+
+  // Dynamically hide tab bar on DETAIL view and show on LIST view
+  React.useEffect(() => {
+    if (!navigation || typeof navigation.setOptions !== "function") return;
+
+    if (currentView === "DETAIL") {
+      navigation.setOptions({
+        tabBarStyle: { display: "none" },
+      });
+    } else {
+      navigation.setOptions({
+        tabBarStyle: defaultTabBarStyle,
+      });
+    }
+
+    return () => {
+      navigation.setOptions({
+        tabBarStyle: defaultTabBarStyle,
+      });
+    };
+  }, [currentView, navigation, defaultTabBarStyle]);
+
+  // Fallback to active calendar ONLY IF currently on DETAIL view and none is selected
+  React.useEffect(() => {
+    if (
+      currentView === "DETAIL" &&
+      !selectedCalendarId &&
+      calendars.length > 0
+    ) {
       const active =
         calendars.find((c) => c.status === "PUBLISHED") || calendars[0];
       setSelectedCalendarId(active.id);
     }
-  }, [calendars, selectedCalendarId]);
+  }, [currentView, calendars, selectedCalendarId]);
 
   const {
     data: selectedCalendar,
@@ -138,14 +245,6 @@ export function AdminCalendarScreen() {
   const updateEventMutation = useUpdateCalendarEvent();
   const deleteEventMutation = useDeleteCalendarEvent();
   const importCsvMutation = useImportCalendarCsv();
-
-  // Status Filter options
-  const statusTabs: Array<{ key: "ALL" | CalendarStatus; label: string }> = [
-    { key: "ALL", label: "All" },
-    { key: "PUBLISHED", label: "Published" },
-    { key: "DRAFT", label: "Draft" },
-    { key: "ARCHIVED", label: "Archived" },
-  ];
 
   // Category counts and filtered events
   const allEvents = selectedCalendar?.events || [];
@@ -475,7 +574,18 @@ export function AdminCalendarScreen() {
   };
 
   // Commit CSV Import
-  const handleCommitCsvImport = async (csvContent: string) => {
+  const handleCommitCsvImport = async (
+    csvContent: string,
+    meta?: {
+      title?: string;
+      semester?: string;
+      academicYear?: number;
+      semesterDuration?: string;
+      targetFaculties?: string[];
+      targetPrograms?: string[];
+      targetBatch?: string;
+    },
+  ) => {
     if (selectedCalendarId) {
       await importCsvMutation.mutateAsync({
         calendarId: selectedCalendarId,
@@ -486,10 +596,21 @@ export function AdminCalendarScreen() {
       refetchCalendars();
     } else {
       const currentYear = new Date().getFullYear();
+      const sem = meta?.semester || "Summer";
+      const year = meta?.academicYear || currentYear;
+      const duration = meta?.semesterDuration || "6 Months";
+      const defaultTitle = `${sem} Semester ${year}${duration === "4 Months" ? " (4-Month)" : ""}`;
+      const title = meta?.title?.trim() || defaultTitle;
+
       const newCal = await createCalendarMutation.mutateAsync({
-        title: `Academic Calendar - Summer ${currentYear}`,
-        semester: "Summer",
-        academicYear: currentYear,
+        title,
+        semester: sem,
+        academicYear: year,
+        semesterDuration: duration,
+        targetFaculties: meta?.targetFaculties || [],
+        targetPrograms: meta?.targetPrograms || [],
+        targetBatch: meta?.targetBatch || undefined,
+        status: "DRAFT",
       });
       await importCsvMutation.mutateAsync({
         calendarId: newCal.id,
@@ -498,7 +619,7 @@ export function AdminCalendarScreen() {
       Toast.show({
         type: "success",
         text1: "Calendar Created",
-        text2: "Draft schedule populated from CSV.",
+        text2: `"${title}" draft schedule populated from CSV.`,
       });
       refetchCalendars();
       handleOpenDetail(newCal.id);
@@ -520,109 +641,145 @@ export function AdminCalendarScreen() {
   if (currentView === "LIST") {
     return (
       <View style={styles.container}>
-        {/* Navigation Header */}
-        <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 48) }]}>
-          <TouchableOpacity
-            onPress={() => {
-              if (selectedCalendarId) {
-                setCurrentView("DETAIL");
-              } else {
-                router.back();
-              }
-            }}
-            style={styles.backBtn}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Feather name="arrow-left" size={20} color={BENTO_COLORS.deepNavy} />
-          </TouchableOpacity>
-
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>Academic Calendars</Text>
-            <Text style={styles.headerSubtitle}>
-              Manage semesters, timelines & imports
+        {/* FIXED TOP HEADER SECTION (Pinned at top) */}
+        <View
+          style={[
+            styles.fixedHeaderContainer,
+            { paddingTop: Math.max(insets.top + 8, 44) },
+          ]}
+        >
+          {/* 1. PAGE TITLE & SUBTITLE */}
+          <View style={styles.pageHeader}>
+            <Text style={styles.pageTitle}>Academic Calendars & Terms</Text>
+            <Text style={styles.pageSubtitle}>
+              Manage institutional timelines, exam periods, and semester
+              schedules.
             </Text>
           </View>
 
-          {/* + Create Action */}
-          <TouchableOpacity
-            style={styles.createMainPill}
-            onPress={() => setIsMethodChoiceOpen(true)}
-            activeOpacity={0.8}
-          >
-            <Feather name="plus" size={16} color="#ffffff" />
-            <Text style={styles.createMainPillText}>Create</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Filter Bar */}
-        <View style={styles.filterBar}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
-          >
-            {statusTabs.map((tab) => {
-              const isSelected = selectedStatusTab === tab.key;
-              return (
+          {/* 2. SEARCH & ACTION ROW (Search Box + Create Calendar Button beside it) */}
+          <View style={styles.actionSearchRow}>
+            {/* Search Box */}
+            <View style={styles.searchBox}>
+              <Feather name="search" size={15} color="#94a3b8" />
+              <TextInput
+                style={styles.searchBoxInput}
+                placeholder="Search calendars, terms..."
+                placeholderTextColor="#94a3b8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
                 <TouchableOpacity
-                  key={tab.key}
-                  style={[
-                    styles.filterPill,
-                    isSelected && styles.filterPillActive,
-                  ]}
-                  onPress={() => setSelectedStatusTab(tab.key)}
-                  activeOpacity={0.75}
+                  onPress={() => setSearchQuery("")}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text
-                    style={[
-                      styles.filterPillText,
-                      isSelected && styles.filterPillTextActive,
-                    ]}
-                  >
-                    {tab.label}
-                  </Text>
+                  <Feather name="x" size={14} color="#94a3b8" />
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+              )}
+            </View>
+
+            {/* Create Calendar Button */}
+            <TouchableOpacity
+              style={styles.createBtn}
+              onPress={() => setIsMethodChoiceOpen(true)}
+              activeOpacity={0.85}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Create Calendar"
+            >
+              <Feather name="plus" size={15} color="#ffffff" />
+              <Text style={styles.createBtnText}>Create</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 3. FILTER TABS STRIP (ALL, Active, Draft, Archived with numbers) */}
+          <View style={styles.filterTabsContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterTabsScroll}
+            >
+              {statusTabs.map((tab) => {
+                const isSelected = selectedStatusTab === tab.key;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[
+                      styles.filterTabPill,
+                      isSelected && styles.filterTabPillActive,
+                    ]}
+                    onPress={() => setSelectedStatusTab(tab.key)}
+                    activeOpacity={0.75}
+                  >
+                    <Text
+                      style={[
+                        styles.filterTabPillText,
+                        isSelected && styles.filterTabPillActiveText,
+                      ]}
+                    >
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
         </View>
 
-        {/* Calendar Cards List */}
+        {/* SCROLLABLE CALENDAR CARDS LIST */}
         <ScrollView
+          style={styles.cardsScrollView}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* 4. CALENDAR CARDS LIST */}
           {isLoadingCalendars ? (
             <View style={styles.centerBox}>
               <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
               <Text style={styles.loadingText}>Loading Calendars...</Text>
             </View>
-          ) : calendars.length === 0 ? (
+          ) : filteredCalendars.length === 0 ? (
             <View style={styles.emptyCard}>
               <Feather
                 name="calendar"
-                size={42}
+                size={40}
                 color="#94a3b8"
                 style={{ marginBottom: 12 }}
               />
-              <Text style={styles.emptyTitle}>No Calendars Found</Text>
+              <Text style={styles.emptyTitle}>
+                {searchQuery.trim()
+                  ? "No Matching Calendars"
+                  : "No Calendars Found"}
+              </Text>
               <Text style={styles.emptyDesc}>
-                {selectedStatusTab === "ALL"
-                  ? "Get started by creating your university academic calendar schedule."
+                {searchQuery.trim()
+                  ? `No academic calendars match "${searchQuery.trim()}".`
                   : `No ${selectedStatusTab.toLowerCase()} academic calendars found.`}
               </Text>
-              <TouchableOpacity
-                style={styles.emptyCreateBtn}
-                onPress={() => setIsMethodChoiceOpen(true)}
-              >
-                <Feather name="plus" size={15} color="#ffffff" />
-                <Text style={styles.emptyCreateBtnText}>Create Calendar</Text>
-              </TouchableOpacity>
+              {searchQuery.trim().length > 0 ? (
+                <TouchableOpacity
+                  style={styles.emptyCreateBtn}
+                  onPress={() => setSearchQuery("")}
+                >
+                  <Feather name="x" size={15} color="#ffffff" />
+                  <Text style={styles.emptyCreateBtnText}>Clear Search</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.emptyCreateBtn}
+                  onPress={() => setIsMethodChoiceOpen(true)}
+                >
+                  <Feather name="plus" size={15} color="#ffffff" />
+                  <Text style={styles.emptyCreateBtnText}>Create Calendar</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
-            calendars.map((cal) => (
+            filteredCalendars.map((cal) => (
               <CalendarListCard
                 key={cal.id}
                 calendar={cal}
@@ -664,7 +821,9 @@ export function AdminCalendarScreen() {
             >
               <View style={styles.sheetHeader}>
                 <View>
-                  <Text style={styles.sheetTitle}>Create Academic Calendar</Text>
+                  <Text style={styles.sheetTitle}>
+                    Create Academic Calendar
+                  </Text>
                   <Text style={styles.sheetSubtitle}>
                     Choose how you want to build this semester.
                   </Text>
@@ -685,7 +844,9 @@ export function AdminCalendarScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.methodIconBox, { backgroundColor: "#e0f2fe" }]}>
+                <View
+                  style={[styles.methodIconBox, { backgroundColor: "#e0f2fe" }]}
+                >
                   <Feather name="edit-3" size={20} color="#0284c7" />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -706,7 +867,9 @@ export function AdminCalendarScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.methodIconBox, { backgroundColor: "#d1fae5" }]}>
+                <View
+                  style={[styles.methodIconBox, { backgroundColor: "#d1fae5" }]}
+                >
                   <Feather name="upload-cloud" size={20} color="#047857" />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -726,7 +889,9 @@ export function AdminCalendarScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.methodIconBox, { backgroundColor: "#fef3c7" }]}>
+                <View
+                  style={[styles.methodIconBox, { backgroundColor: "#fef3c7" }]}
+                >
                   <Feather name="copy" size={20} color="#b45309" />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -794,7 +959,9 @@ export function AdminCalendarScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cloneTitle}>{cal.title}</Text>
                       <Text style={styles.cloneSub}>
-                        {cal.semester} {cal.academicYear ? `• AY ${cal.academicYear}` : ""} • {cal.events?.length || 0} events
+                        {cal.semester}{" "}
+                        {cal.academicYear ? `• AY ${cal.academicYear}` : ""} •{" "}
+                        {cal.events?.length || 0} events
                       </Text>
                     </View>
                     <View style={styles.clonePill}>
@@ -860,31 +1027,38 @@ export function AdminCalendarScreen() {
   return (
     <View style={styles.container}>
       {/* 1. TOP HEADER MATCHING SCREENSHOT */}
-      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top + 8, 48) }]}>
+      <View
+        style={[styles.topHeader, { paddingTop: Math.max(insets.top + 8, 48) }]}
+      >
         <TouchableOpacity
           onPress={() => setCurrentView("LIST")}
           style={styles.headerIconBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Back to list"
+          accessibilityLabel="Back to calendar list"
         >
           <Feather name="arrow-left" size={18} color="#0f172a" />
         </TouchableOpacity>
 
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerSemesterText} numberOfLines={1}>
-            {selectedCalendar ? `${selectedCalendar.semester} ${selectedCalendar.academicYear || ""}`.trim() : "Summer 2026"}
+            {selectedCalendar
+              ? `${selectedCalendar.semester} ${selectedCalendar.academicYear || ""}`.trim()
+              : "Summer 2026"}
           </Text>
           <Text style={styles.headerSubtitleText}>
             Academic Cohort Calendar
           </Text>
         </View>
-
       </View>
 
       {/* Main Content Scroll */}
       <ScrollView
-        contentContainerStyle={styles.detailsScrollContent}
+        contentContainerStyle={[
+          styles.detailsScrollContent,
+          { paddingBottom: Math.max(insets.bottom + 24, 36) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {isLoadingCalendarDetail ? (
@@ -936,7 +1110,8 @@ export function AdminCalendarScreen() {
               <TouchableOpacity
                 style={[
                   styles.catFilterPill,
-                  selectedCategoryFilter === "ALL" && styles.catFilterPillActive,
+                  selectedCategoryFilter === "ALL" &&
+                    styles.catFilterPillActive,
                 ]}
                 onPress={() => setSelectedCategoryFilter("ALL")}
               >
@@ -955,7 +1130,8 @@ export function AdminCalendarScreen() {
               <TouchableOpacity
                 style={[
                   styles.catFilterPill,
-                  selectedCategoryFilter === "CLASS" && styles.catFilterPillActive,
+                  selectedCategoryFilter === "CLASS" &&
+                    styles.catFilterPillActive,
                 ]}
                 onPress={() => setSelectedCategoryFilter("CLASS")}
               >
@@ -977,7 +1153,8 @@ export function AdminCalendarScreen() {
               <TouchableOpacity
                 style={[
                   styles.catFilterPill,
-                  selectedCategoryFilter === "EXAM" && styles.catFilterPillActive,
+                  selectedCategoryFilter === "EXAM" &&
+                    styles.catFilterPillActive,
                 ]}
                 onPress={() => setSelectedCategoryFilter("EXAM")}
               >
@@ -1103,9 +1280,7 @@ export function AdminCalendarScreen() {
                       setSelectedCategoryFilter("ALL");
                     }}
                   >
-                    <Text style={styles.emptyCreateBtnText}>
-                      Reset Filters
-                    </Text>
+                    <Text style={styles.emptyCreateBtnText}>Reset Filters</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -1173,17 +1348,17 @@ export function AdminCalendarScreen() {
               { paddingTop: Math.max(insets.top + 8, 44) },
             ]}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
               <Feather name="eye" size={15} color="#0369a1" />
-              <Text style={styles.previewBannerText}>
-                Student View Preview (Draft State)
-              </Text>
+              <Text style={styles.previewBannerText}>Student View Preview</Text>
             </View>
             <TouchableOpacity
               style={styles.closePreviewBtn}
               onPress={() => setIsPreviewOpen(false)}
             >
-              <Text style={styles.closePreviewBtnText}>Close Preview</Text>
+              <Text style={styles.closePreviewBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
           <AcademicCalendarScreen />
@@ -1338,6 +1513,105 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+  // Fixed Top Section
+  fixedHeaderContainer: {
+    backgroundColor: "#f8fafc",
+    zIndex: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  // Page Header
+  pageHeader: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  pageTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#0f172a",
+    letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  pageSubtitle: {
+    fontSize: 12.5,
+    fontWeight: "500",
+    color: "#64748b",
+    lineHeight: 18,
+  },
+
+  // Search & Action Row
+  actionSearchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    height: 38,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    gap: 8,
+  },
+  searchBoxInput: {
+    flex: 1,
+    fontSize: 12.5,
+    fontWeight: "500",
+    color: "#0f172a",
+    padding: 0,
+  },
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#047857",
+    paddingHorizontal: 11,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: "center",
+  },
+  createBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+
+  // Filter Tabs Strip
+  filterTabsContainer: {
+    paddingBottom: 14,
+  },
+  filterTabsScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterTabPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  filterTabPillActive: {
+    backgroundColor: "#0f172a",
+    borderColor: "#0f172a",
+  },
+  filterTabPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#334155",
+  },
+  filterTabPillActiveText: {
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+
   headerTitle: {
     fontSize: 19,
     fontWeight: "800",
@@ -1391,13 +1665,17 @@ const styles = StyleSheet.create({
   filterPillTextActive: {
     color: "#ffffff",
   },
+  cardsScrollView: {
+    flex: 1,
+  },
   listContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 130,
   },
   detailsScrollContent: {
     padding: 16,
-    paddingBottom: 60,
+    paddingBottom: 130,
   },
   streamHeaderRow: {
     flexDirection: "row",

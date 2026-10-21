@@ -6,6 +6,7 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
+  TextInput,
   ActivityIndicator,
   Platform,
   Alert,
@@ -20,15 +21,29 @@ import {
   getCalendarTemplateCsvAPI,
   validateCalendarCsvAPI,
 } from "@/services/calendar-service";
-import { BENTO_COLORS } from "../constants";
+import { FacultyProgramSelector } from "./FacultyProgramSelector";
+import { BENTO_COLORS, SMUCT_SEMESTERS, SmuctSemester } from "../constants";
 import { formatFormattedDateRange } from "../utils/date-helpers";
+
+export interface CalendarMetaInput {
+  title?: string;
+  semester?: SmuctSemester;
+  academicYear?: number;
+  semesterDuration?: string;
+  targetFaculties?: string[];
+  targetPrograms?: string[];
+  targetBatch?: string;
+}
 
 interface CsvImportModalProps {
   visible: boolean;
   calendarId?: string | null;
   calendarSemester?: string;
   onClose: () => void;
-  onImportSuccess: (csvContent: string) => Promise<void>;
+  onImportSuccess: (
+    csvContent: string,
+    meta?: CalendarMetaInput,
+  ) => Promise<void>;
 }
 
 export const CsvImportModal: React.FC<CsvImportModalProps> = ({
@@ -39,6 +54,44 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   onImportSuccess,
 }) => {
   const insets = useSafeAreaInsets();
+  const currentYear = new Date().getFullYear();
+
+  // Term & Metadata State (Used when creating a NEW calendar from CSV)
+  const [semester, setSemester] = useState<SmuctSemester>("Summer");
+  const [academicYear, setAcademicYear] = useState<string>(
+    currentYear.toString(),
+  );
+  const [semesterDuration, setSemesterDuration] = useState<string>("6 Months");
+  const [title, setTitle] = useState(`Summer Semester ${currentYear}`);
+  const [hasCustomTitle, setHasCustomTitle] = useState(false);
+  const [isGlobal, setIsGlobal] = useState(true);
+  const [selectedFaculties, setSelectedFaculties] = useState<string[]>([]);
+  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
+  const [targetBatch, setTargetBatch] = useState("");
+
+  const updateAutoTitle = (s: SmuctSemester, y: string, dur: string) => {
+    if (!hasCustomTitle) {
+      const suffix = dur === "4 Months" ? " (4-Month)" : "";
+      setTitle(`${s} Semester ${y || currentYear}${suffix}`);
+    }
+  };
+
+  const handleSelectSemester = (s: SmuctSemester) => {
+    setSemester(s);
+    updateAutoTitle(s, academicYear, semesterDuration);
+  };
+
+  const handleYearChange = (val: string) => {
+    const clean = val.replace(/[^0-9]/g, "");
+    setAcademicYear(clean);
+    updateAutoTitle(semester, clean, semesterDuration);
+  };
+
+  const handleDurationChange = (dur: string) => {
+    setSemesterDuration(dur);
+    updateAutoTitle(semester, academicYear, dur);
+  };
+
   const [pickedFile, setPickedFile] = useState<{
     name: string;
     content: string;
@@ -82,7 +135,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         }
       }
     } catch (err: any) {
-      Alert.alert("Download Failed", err.message || "Could not download template.");
+      Alert.alert(
+        "Download Failed",
+        err.message || "Could not download template.",
+      );
     }
   };
 
@@ -90,7 +146,13 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   const handlePickFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ["text/csv", "text/comma-separated-values", "application/csv"],
+        type: [
+          "text/csv",
+          "text/comma-separated-values",
+          "application/csv",
+          "text/plain",
+          "*/*",
+        ],
         copyToCacheDirectory: true,
       });
 
@@ -101,17 +163,29 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       const asset = result.assets[0];
       let content = "";
 
-      if (Platform.OS === "web") {
-        if (asset.file) {
-          content = await asset.file.text();
-        } else if (asset.uri) {
+      if (Platform.OS === "web" && asset.file) {
+        content = await asset.file.text();
+      } else {
+        // Universal robust file reader: avoids Android ExponentFileSystem unreadable cache path issues
+        try {
           const res = await fetch(asset.uri);
           content = await res.text();
+        } catch {
+          try {
+            content = await FileSystem.readAsStringAsync(asset.uri, {
+              encoding: FileSystem.EncodingType.UTF8,
+            });
+          } catch {
+            const res = await fetch(asset.uri);
+            const blob = await res.blob();
+            content = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve((reader.result as string) || "");
+              reader.onerror = reject;
+              reader.readAsText(blob);
+            });
+          }
         }
-      } else {
-        content = await FileSystem.readAsStringAsync(asset.uri, {
-          encoding: FileSystem.EncodingType.UTF8,
-        });
       }
 
       if (!content || !content.trim()) {
@@ -130,7 +204,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         );
         setValidationResult(validRes);
       } catch (err: any) {
-        Alert.alert("Validation Error", err.message || "Failed to validate CSV.");
+        Alert.alert(
+          "Validation Error",
+          err.message || "Failed to validate CSV.",
+        );
       } finally {
         setIsValidating(false);
       }
@@ -143,16 +220,62 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   const handleCommit = async () => {
     if (!pickedFile?.content || !validationResult?.isValid) return;
 
-    try {
-      setIsCommitting(true);
-      await onImportSuccess(pickedFile.content);
-      onClose();
-      setPickedFile(null);
-      setValidationResult(null);
-    } catch (err: any) {
-      Alert.alert("Import Failed", err.message || "Failed to import schedule.");
-    } finally {
-      setIsCommitting(false);
+    if (!calendarId) {
+      const finalYear = parseInt(academicYear, 10);
+      if (
+        !finalYear ||
+        isNaN(finalYear) ||
+        finalYear < 2000 ||
+        finalYear > 2100
+      ) {
+        Alert.alert(
+          "Invalid Academic Year",
+          "Please enter a valid 4-digit academic year (e.g. 2026).",
+        );
+        return;
+      }
+
+      const suffix = semesterDuration === "4 Months" ? " (4-Month)" : "";
+      const finalTitle =
+        title.trim() || `${semester} Semester ${finalYear}${suffix}`;
+
+      try {
+        setIsCommitting(true);
+        await onImportSuccess(pickedFile.content, {
+          title: finalTitle,
+          semester,
+          academicYear: finalYear,
+          semesterDuration,
+          targetFaculties: isGlobal ? [] : selectedFaculties,
+          targetPrograms: isGlobal ? [] : selectedPrograms,
+          targetBatch: targetBatch.trim() || undefined,
+        });
+        onClose();
+        setPickedFile(null);
+        setValidationResult(null);
+      } catch (err: any) {
+        Alert.alert(
+          "Creation Failed",
+          err.message || "Failed to create calendar from CSV.",
+        );
+      } finally {
+        setIsCommitting(false);
+      }
+    } else {
+      try {
+        setIsCommitting(true);
+        await onImportSuccess(pickedFile.content);
+        onClose();
+        setPickedFile(null);
+        setValidationResult(null);
+      } catch (err: any) {
+        Alert.alert(
+          "Import Failed",
+          err.message || "Failed to import schedule.",
+        );
+      } finally {
+        setIsCommitting(false);
+      }
     }
   };
 
@@ -165,10 +288,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       statusBarTranslucent={true}
     >
       <View
-        style={[
-          styles.modalOverlay,
-          { paddingTop: Math.max(insets.top, 24) },
-        ]}
+        style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 24) }]}
       >
         {/* Backdrop tap to dismiss */}
         <TouchableOpacity
@@ -180,9 +300,15 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         <View style={styles.sheetContainer}>
           <View style={styles.sheetHeader}>
             <View>
-              <Text style={styles.sheetTitle}>Import Academic Calendar</Text>
+              <Text style={styles.sheetTitle}>
+                {calendarId
+                  ? "Import Academic Calendar"
+                  : "Create Calendar from CSV"}
+              </Text>
               <Text style={styles.sheetSubtitle}>
-                Bulk upload schedule from RFC 4180 / Excel CSV
+                {calendarId
+                  ? `Bulk upload schedule for ${calendarSemester || "calendar"}`
+                  : "Configure term details and bulk populate schedule"}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -195,6 +321,160 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {/* SECTION 1: CALENDAR CONFIGURATION (Only shown when creating new calendar) */}
+            {!calendarId && (
+              <View style={styles.setupCard}>
+                <View style={styles.sectionHeadingRow}>
+                  <View style={styles.sectionStepBadge}>
+                    <Text style={styles.sectionStepNumber}>1</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.sectionHeadingTitle}>
+                      Calendar Term & Scope
+                    </Text>
+                    <Text style={styles.sectionHeadingSubtitle}>
+                      Configure semester details
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Semester Selector */}
+                <View style={styles.fieldBlock}>
+                  <Text style={styles.fieldLabel}>
+                    Semester Term <Text style={styles.requiredAsterisk}>*</Text>
+                  </Text>
+                  <View style={styles.semesterRow}>
+                    {SMUCT_SEMESTERS.map((s) => {
+                      const isSelected = semester === s;
+                      return (
+                        <TouchableOpacity
+                          key={s}
+                          style={[
+                            styles.semesterPill,
+                            isSelected && styles.semesterPillActive,
+                          ]}
+                          onPress={() => handleSelectSemester(s)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.semesterPillText,
+                              isSelected && styles.semesterPillTextActive,
+                            ]}
+                          >
+                            {s}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Academic Year & Semester Duration Row */}
+                <View style={styles.twoColRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>
+                      Academic Year <Text style={styles.requiredAsterisk}>*</Text>
+                    </Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="e.g. 2026"
+                      placeholderTextColor="#94a3b8"
+                      value={academicYear}
+                      onChangeText={handleYearChange}
+                      keyboardType="number-pad"
+                      maxLength={4}
+                    />
+                  </View>
+                  <View style={{ flex: 1.35 }}>
+                    <Text style={styles.fieldLabel}>
+                      Semester Duration <Text style={styles.requiredAsterisk}>*</Text>
+                    </Text>
+                    <View style={styles.durationRow}>
+                      {["6 Months", "4 Months"].map((dur) => {
+                        const isSelected = semesterDuration === dur;
+                        return (
+                          <TouchableOpacity
+                            key={dur}
+                            style={[
+                              styles.durationPill,
+                              isSelected && styles.durationPillActive,
+                            ]}
+                            onPress={() => handleDurationChange(dur)}
+                            activeOpacity={0.75}
+                          >
+                            <Text
+                              style={[
+                                styles.durationPillText,
+                                isSelected && styles.durationPillTextActive,
+                              ]}
+                            >
+                              {dur}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Calendar Title */}
+                <View style={styles.fieldBlock}>
+                  <Text style={styles.fieldLabel}>
+                    Calendar Title{" "}
+                    <Text style={styles.requiredAsterisk}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder={`e.g. ${semester} Semester ${academicYear}`}
+                    placeholderTextColor="#94a3b8"
+                    value={title}
+                    onChangeText={(val) => {
+                      setTitle(val);
+                      setHasCustomTitle(val.trim().length > 0);
+                    }}
+                  />
+                </View>
+
+                {/* Granular Scope Selector (Target Programs & Faculties) */}
+                <FacultyProgramSelector
+                  isGlobal={isGlobal}
+                  onChangeIsGlobal={setIsGlobal}
+                  selectedPrograms={selectedPrograms}
+                  onChangeSelectedPrograms={setSelectedPrograms}
+                  selectedFaculties={selectedFaculties}
+                  onChangeSelectedFaculties={setSelectedFaculties}
+                  semesterDuration={semesterDuration}
+                  onChangeSemesterDuration={handleDurationChange}
+                  targetBatch={targetBatch}
+                  onChangeTargetBatch={setTargetBatch}
+                  hideDuration={true}
+                />
+              </View>
+            )}
+
+            {/* SECTION 2: CSV UPLOAD SECTION */}
+            {!calendarId && (
+              <View
+                style={[
+                  styles.sectionHeadingRow,
+                  { marginTop: 18, marginBottom: 12 },
+                ]}
+              >
+                <View style={styles.sectionStepBadge}>
+                  <Text style={styles.sectionStepNumber}>2</Text>
+                </View>
+                <View>
+                  <Text style={styles.sectionHeadingTitle}>
+                    Upload Schedule CSV
+                  </Text>
+                  <Text style={styles.sectionHeadingSubtitle}>
+                    Import calendar dates, midterms, and finals
+                  </Text>
+                </View>
+              </View>
+            )}
+
             {/* Download Template Banner */}
             <TouchableOpacity
               style={styles.templateCard}
@@ -207,7 +487,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
               <View style={{ flex: 1 }}>
                 <Text style={styles.templateTitle}>Download Standard CSV</Text>
                 <Text style={styles.templateSubtitle}>
-                  Canonical headers: title, category, startDate, endDate, weekNumber...
+                  Canonical headers: title, category, startDate, endDate,
+                  weekNumber...
                 </Text>
               </View>
               <Feather name="chevron-right" size={16} color="#94a3b8" />
@@ -264,7 +545,9 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     <Text
                       style={[
                         styles.statNum,
-                        validationResult.errors.length > 0 && { color: "#dc2626" },
+                        validationResult.errors.length > 0 && {
+                          color: "#dc2626",
+                        },
                       ]}
                     >
                       {validationResult.errors.length}
@@ -288,7 +571,11 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     </Text>
                     {validationResult.errors.slice(0, 5).map((err, i) => (
                       <View key={i} style={styles.errorRow}>
-                        <Feather name="alert-circle" size={13} color="#dc2626" />
+                        <Feather
+                          name="alert-circle"
+                          size={13}
+                          color="#dc2626"
+                        />
                         <Text style={styles.errorText}>
                           Row {err.rowNumber}: {err.message}
                         </Text>
@@ -341,12 +628,14 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             <TouchableOpacity
               style={[
                 styles.importBtn,
-                (!validationResult?.isValid || isCommitting) && {
+                (!pickedFile || !validationResult?.isValid || isCommitting) && {
                   opacity: 0.5,
                 },
               ]}
               onPress={handleCommit}
-              disabled={!validationResult?.isValid || isCommitting}
+              disabled={
+                !pickedFile || !validationResult?.isValid || isCommitting
+              }
               activeOpacity={0.8}
             >
               {isCommitting ? (
@@ -412,6 +701,125 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingVertical: 16,
   },
+  setupCard: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 6,
+  },
+  sectionHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+  sectionStepBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: BENTO_COLORS.deepNavy,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sectionStepNumber: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  sectionHeadingTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  sectionHeadingSubtitle: {
+    fontSize: 11,
+    color: "#64748b",
+    marginTop: 1,
+  },
+  fieldBlock: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginBottom: 6,
+  },
+  requiredAsterisk: {
+    color: "#dc2626",
+    fontWeight: "800",
+  },
+  textInput: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 38,
+    fontSize: 13,
+    color: "#0f172a",
+  },
+  semesterRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  semesterPill: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  semesterPillActive: {
+    backgroundColor: BENTO_COLORS.deepNavy,
+    borderColor: BENTO_COLORS.deepNavy,
+  },
+  semesterPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  semesterPillTextActive: {
+    color: "#ffffff",
+  },
+  twoColRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+  },
+  durationRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  durationPill: {
+    flex: 1,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  durationPillActive: {
+    backgroundColor: BENTO_COLORS.deepNavy,
+    borderColor: BENTO_COLORS.deepNavy,
+  },
+  durationPillText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  durationPillTextActive: {
+    color: "#ffffff",
+  },
+
   templateCard: {
     flexDirection: "row",
     alignItems: "center",

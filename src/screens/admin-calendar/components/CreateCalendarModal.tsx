@@ -55,6 +55,14 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
     }
   };
 
+  const handleDurationChange = (dur: string) => {
+    setSemesterDuration(dur);
+    if (!hasCustomTitle) {
+      const suffix = dur === "4 Months" ? " (4-Month)" : "";
+      setTitle(`${semester} ${academicYear || currentYear}${suffix}`);
+    }
+  };
+
   const handleCreate = async () => {
     const finalYear = parseInt(academicYear, 10);
     if (!finalYear || isNaN(finalYear) || finalYear < 2000 || finalYear > 2100) {
@@ -170,20 +178,52 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
               </View>
             </View>
 
-            {/* Academic Year Input */}
-            <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>
-                Academic Year <Text style={styles.requiredAsterisk}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g. 2026"
-                placeholderTextColor="#94a3b8"
-                value={academicYear}
-                onChangeText={handleYearChange}
-                keyboardType="number-pad"
-                maxLength={4}
-              />
+            {/* Academic Year & Semester Duration Row */}
+            <View style={styles.twoColRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>
+                  Academic Year <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="e.g. 2026"
+                  placeholderTextColor="#94a3b8"
+                  value={academicYear}
+                  onChangeText={handleYearChange}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
+              <View style={{ flex: 1.35 }}>
+                <Text style={styles.fieldLabel}>
+                  Semester Duration <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
+                <View style={styles.durationRow}>
+                  {["6 Months", "4 Months"].map((dur) => {
+                    const isSelected = semesterDuration === dur;
+                    return (
+                      <TouchableOpacity
+                        key={dur}
+                        style={[
+                          styles.durationPill,
+                          isSelected && styles.durationPillActive,
+                        ]}
+                        onPress={() => handleDurationChange(dur)}
+                        activeOpacity={0.75}
+                      >
+                        <Text
+                          style={[
+                            styles.durationPillText,
+                            isSelected && styles.durationPillTextActive,
+                          ]}
+                        >
+                          {dur}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
             </View>
 
             {/* Calendar Title */}
@@ -212,9 +252,10 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
               selectedFaculties={selectedFaculties}
               onChangeSelectedFaculties={setSelectedFaculties}
               semesterDuration={semesterDuration}
-              onChangeSemesterDuration={setSemesterDuration}
+              onChangeSemesterDuration={handleDurationChange}
               targetBatch={targetBatch}
               onChangeTargetBatch={setTargetBatch}
+              hideDuration={true}
             />
           </ScrollView>
 
@@ -349,6 +390,33 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginBottom: 14,
+  },
+  durationRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  durationPill: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  durationPillActive: {
+    backgroundColor: BENTO_COLORS.deepNavy,
+    borderColor: BENTO_COLORS.deepNavy,
+  },
+  durationPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  durationPillTextActive: {
+    color: "#ffffff",
   },
   footer: {
     paddingHorizontal: 20,
