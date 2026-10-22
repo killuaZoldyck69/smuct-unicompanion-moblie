@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,153 +9,380 @@ import {
   TextInput,
   Modal,
   Platform,
-  Image,
+  RefreshControl,
+  ScrollView,
+  KeyboardAvoidingView,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-
-import api from "@/services/api";
-import { colors } from "@/theme/colors";
-import { typography } from "@/theme/typography";
-import { spacing, rounded, shadows } from "@/theme/layout";
 import * as FileSystem from "expo-file-system/legacy";
+
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+} from "@/screens/campus-hub/shared/design-tokens";
 import { formatDate } from "@/utils/date-formatter";
 import {
   useAllComplaintsAdmin,
+  useAdminComplaintStats,
   useUpdateComplaintStatus,
   useDeleteComplaint,
 } from "@/features/complaints/useComplaints";
+import {
+  ComplaintHeroStats,
+  ComplaintFilter,
+} from "@/screens/complaints/components/complaint-hero-stats";
+import { ComplaintCard } from "@/screens/complaints/components/complaint-card";
+import type { ComplaintItem } from "@/services/complaint-service";
 
-type FilterType = "ALL" | "PENDING" | "RESOLVED" | "REJECTED";
-type ActionType = "RESOLVE" | "REJECT" | "DELETE" | null;
+type ActionType = "ACCEPT" | "REJECT" | "RESOLVE" | "DELETE" | null;
+
+const CATEGORIES = [
+  "ALL",
+  "Facilities",
+  "Academic",
+  "Hostel",
+  "IT Support",
+  "Other",
+] as const;
 
 export default function AdminComplaintsScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
-  const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
+  const [activeFilter, setActiveFilter] = useState<ComplaintFilter>("ALL");
+  const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Modal State
+  // Modal State for Lifecycle & Destructive Operations
   const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
-  const [actionData, setActionData] = useState<{
-    id: string;
-    title: string;
-    type: ActionType;
-  } | null>(null);
+  const [actionItem, setActionItem] = useState<ComplaintItem | null>(null);
+  const [actionType, setActionType] = useState<ActionType>(null);
+  const [adminRemarksInput, setAdminRemarksInput] = useState("");
 
-  // --- Fetch Data using Feature Hooks ---
-  const { data: complaints, isLoading } = useAllComplaintsAdmin();
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "RESOLVED" | "REJECTED" }) =>
-      useUpdateComplaintStatus(id).mutateAsync({ status }),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["allComplaints"] });
-      Toast.show({
-        type: "success",
-        text1: `Complaint Marked as ${variables.status}`,
-      });
-      closeConfirmModal();
-    },
-    onError: (err: any) =>
-      Toast.show({
-        type: "error",
-        text1: "Failed to update",
-        text2: err.message,
-      }),
+  // --- Queries ---
+  const {
+    data: complaints = [],
+    isLoading,
+    isError,
+    error,
+    refetch: refetchComplaints,
+    isRefetching,
+  } = useAllComplaintsAdmin({
+    status: activeFilter !== "ALL" ? activeFilter : undefined,
+    category: activeCategory !== "ALL" ? activeCategory : undefined,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => useDeleteComplaint().mutateAsync(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["allComplaints"] });
-      Toast.show({ type: "info", text1: "Complaint Deleted" });
-      closeConfirmModal();
-    },
-    onError: (err: any) =>
-      Toast.show({
-        type: "error",
-        text1: "Failed to delete",
-        text2: err.message,
-      }),
-  });
+  const { data: statsData, refetch: refetchStats } = useAdminComplaintStats();
 
-  // --- Action Handlers ---
-  const openConfirmModal = (id: string, title: string, type: ActionType) => {
-    setActionData({ id, title, type });
+  const stats = useMemo(() => {
+    return (
+      statsData || {
+        all: complaints.length,
+        pending: complaints.filter((c) => c.status === "PENDING").length,
+        accepted: complaints.filter((c) => c.status === "ACCEPTED").length,
+        resolved: complaints.filter((c) => c.status === "RESOLVED").length,
+        rejected: complaints.filter((c) => c.status === "REJECTED").length,
+      }
+    );
+  }, [statsData, complaints]);
+
+  // --- Mutations ---
+  const updateStatusMutation = useUpdateComplaintStatus();
+  const deleteMutation = useDeleteComplaint();
+
+  const isActionLoading =
+    updateStatusMutation.isPending || deleteMutation.isPending;
+
+  const handleRefresh = useCallback(() => {
+    refetchComplaints();
+    refetchStats();
+  }, [refetchComplaints, refetchStats]);
+
+  // --- Action Modal Openers ---
+  const handleOpenAccept = useCallback((item: ComplaintItem) => {
+    setActionItem(item);
+    setActionType("ACCEPT");
+    setAdminRemarksInput("");
     setIsConfirmModalVisible(true);
-  };
+  }, []);
 
-  const closeConfirmModal = () => {
+  const handleOpenReject = useCallback((item: ComplaintItem) => {
+    setActionItem(item);
+    setActionType("REJECT");
+    setAdminRemarksInput(item.adminRemarks || "");
+    setIsConfirmModalVisible(true);
+  }, []);
+
+  const handleOpenResolve = useCallback((item: ComplaintItem) => {
+    setActionItem(item);
+    setActionType("RESOLVE");
+    setAdminRemarksInput(item.adminRemarks || "");
+    setIsConfirmModalVisible(true);
+  }, []);
+
+  const handleOpenDelete = useCallback((item: ComplaintItem) => {
+    setActionItem(item);
+    setActionType("DELETE");
+    setAdminRemarksInput("");
+    setIsConfirmModalVisible(true);
+  }, []);
+
+  const closeConfirmModal = useCallback(() => {
     setIsConfirmModalVisible(false);
-    setActionData(null);
-  };
+    setActionItem(null);
+    setActionType(null);
+    setAdminRemarksInput("");
+  }, []);
 
-  const executeAction = () => {
-    if (!actionData) return;
-    if (actionData.type === "RESOLVE")
-      updateStatusMutation.mutate({ id: actionData.id, status: "RESOLVED" });
-    if (actionData.type === "REJECT")
-      updateStatusMutation.mutate({ id: actionData.id, status: "REJECTED" });
-    if (actionData.type === "DELETE") deleteMutation.mutate(actionData.id);
-  };
+  // --- Execute Lifecycle Mutation ---
+  const executeAction = useCallback(async () => {
+    if (!actionItem || !actionType) return;
 
-  // --- PDF Export Logic ---
+    try {
+      if (actionType === "ACCEPT") {
+        await updateStatusMutation.mutateAsync({
+          id: actionItem.id,
+          data: {
+            status: "ACCEPTED",
+            adminRemarks: adminRemarksInput.trim() || undefined,
+          },
+        });
+        Toast.show({
+          type: "success",
+          text1: "Complaint Accepted",
+          text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} has been marked as Accepted.`,
+        });
+      } else if (actionType === "REJECT") {
+        await updateStatusMutation.mutateAsync({
+          id: actionItem.id,
+          data: {
+            status: "REJECTED",
+            adminRemarks: adminRemarksInput.trim() || undefined,
+          },
+        });
+        Toast.show({
+          type: "info",
+          text1: "Complaint Rejected",
+          text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} has been rejected.`,
+        });
+      } else if (actionType === "RESOLVE") {
+        await updateStatusMutation.mutateAsync({
+          id: actionItem.id,
+          data: {
+            status: "RESOLVED",
+            adminRemarks: adminRemarksInput.trim() || undefined,
+          },
+        });
+        Toast.show({
+          type: "success",
+          text1: "Complaint Resolved",
+          text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} marked as Resolved.`,
+        });
+      } else if (actionType === "DELETE") {
+        await deleteMutation.mutateAsync(actionItem.id);
+        Toast.show({
+          type: "info",
+          text1: "Complaint Deleted",
+          text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} has been removed.`,
+        });
+      }
+
+      closeConfirmModal();
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || "Operation failed.";
+      Toast.show({
+        type: "error",
+        text1: "Action Failed",
+        text2: errorMessage,
+      });
+    }
+  }, [
+    actionItem,
+    actionType,
+    adminRemarksInput,
+    updateStatusMutation,
+    deleteMutation,
+    closeConfirmModal,
+  ]);
+
+  // --- Client Filtering for Search & Category ---
+  const filteredComplaints = useMemo(() => {
+    if (!complaints) return [];
+    let list = [...complaints];
+
+    if (activeFilter !== "ALL") {
+      list = list.filter((c) => c.status === activeFilter);
+    }
+
+    if (activeCategory !== "ALL") {
+      list = list.filter(
+        (c) => c.category?.toLowerCase() === activeCategory.toLowerCase(),
+      );
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter((c) => {
+        const matchesTitle = c.title?.toLowerCase().includes(q);
+        const matchesDesc = c.description?.toLowerCase().includes(q);
+        const matchesId = c.id?.toLowerCase().includes(q);
+        const matchesCategory = c.category?.toLowerCase().includes(q);
+        // Only search user name if complaint is not anonymous
+        const matchesUser =
+          !c.isAnonymous && c.user?.name?.toLowerCase().includes(q);
+        return (
+          matchesTitle ||
+          matchesDesc ||
+          matchesId ||
+          matchesCategory ||
+          matchesUser
+        );
+      });
+    }
+
+    return list;
+  }, [complaints, activeFilter, activeCategory, searchQuery]);
+
+  // --- PDF Export with Anonymity Guarantees ---
   const exportToPDF = async () => {
-    if (!complaints || complaints.length === 0) {
-      Toast.show({ type: "error", text1: "No data to export" });
+    if (!filteredComplaints || filteredComplaints.length === 0) {
+      Toast.show({ type: "error", text1: "No records to export" });
       return;
     }
 
     try {
       const htmlContent = `
+        <!DOCTYPE html>
         <html>
           <head>
+            <meta charset="utf-8" />
+            <title>Campus Complaints Report</title>
             <style>
-              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
-              .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-              h1 { margin: 0; color: #111; font-size: 24px; }
-              .meta { font-size: 12px; color: #666; margin-top: 5px; }
-              table { width: 100%; border-collapse: collapse; font-size: 12px; }
-              th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-              th { background-color: #f4f4f4; font-weight: bold; }
-              .status-pending { color: #E65100; font-weight: bold; }
-              .status-resolved { color: #2E7D32; font-weight: bold; }
-              .status-rejected { color: #D32F2F; font-weight: bold; }
+              body {
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                padding: 36px;
+                color: #0f172a;
+                background-color: #ffffff;
+                margin: 0;
+              }
+              .header {
+                text-align: center;
+                margin-bottom: 24px;
+                border-bottom: 2px solid #0f172a;
+                padding-bottom: 14px;
+              }
+              h1 {
+                margin: 0 0 6px 0;
+                color: #0f172a;
+                font-size: 22px;
+                font-weight: 800;
+              }
+              .meta-line {
+                font-size: 11px;
+                color: #64748b;
+                margin-top: 4px;
+              }
+              .stats-summary {
+                display: flex;
+                justify-content: space-between;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 10px 16px;
+                margin-bottom: 20px;
+                font-size: 11px;
+                font-weight: 600;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10.5px;
+              }
+              th, td {
+                padding: 8px 10px;
+                border: 1px solid #e2e8f0;
+                text-align: left;
+                vertical-align: top;
+              }
+              th {
+                background-color: #f1f5f9;
+                font-weight: 700;
+                color: #334155;
+              }
+              .badge {
+                display: inline-block;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 9.5px;
+                font-weight: 800;
+                text-transform: uppercase;
+              }
+              .status-pending { background: #fef3c7; color: #b45309; }
+              .status-accepted { background: #e0f2fe; color: #0284c7; }
+              .status-resolved { background: #d1fae5; color: #047857; }
+              .status-rejected { background: #fee2e2; color: #b91c1c; }
+              .anon-label { color: #6366f1; font-weight: 700; }
             </style>
           </head>
           <body>
             <div class="header">
-              <h1>Campus Complaints Report</h1>
-              <div class="meta">Generated on: ${new Date().toLocaleString()}</div>
-              <div class="meta">Total Records: ${complaints.length}</div>
+              <h1>Campus Grievance Administration Report</h1>
+              <div class="meta-line">Generated on ${new Date().toLocaleString()}</div>
+              <div class="meta-line">Records Filtered: ${filteredComplaints.length} of ${complaints.length} Total</div>
             </div>
+
+            <div class="stats-summary">
+              <span>All: ${stats.all}</span>
+              <span>Pending: ${stats.pending}</span>
+              <span>Accepted: ${stats.accepted}</span>
+              <span>Resolved: ${stats.resolved}</span>
+              <span>Rejected: ${stats.rejected}</span>
+            </div>
+
             <table>
               <thead>
                 <tr>
-                  <th>Ticket ID</th>
-                  <th>Date</th>
-                  <th>User</th>
-                  <th>Category</th>
-                  <th>Title</th>
-                  <th>Status</th>
+                  <th style="width: 12%;">Ticket ID</th>
+                  <th style="width: 12%;">Date</th>
+                  <th style="width: 18%;">Complainant</th>
+                  <th style="width: 14%;">Category</th>
+                  <th style="width: 28%;">Title & Details</th>
+                  <th style="width: 16%;">Status</th>
                 </tr>
               </thead>
               <tbody>
-                ${complaints
+                ${filteredComplaints
                   .map(
                     (c: any) => `
                   <tr>
-                    <td>#${c.id.slice(-6).toUpperCase()}</td>
+                    <td><strong>#${c.id.slice(0, 8).toUpperCase()}</strong></td>
                     <td>${formatDate(c.createdAt)}</td>
-                    <td>${c.user?.name || "Unknown"}</td>
+                    <td>${
+                      c.isAnonymous
+                        ? '<span class="anon-label">🔒 Anonymous</span>'
+                        : `${c.user?.name || "Student"} ${
+                            c.user?.studentProfile?.studentId
+                              ? `<br/><small style="color: #64748b;">(${c.user.studentProfile.studentId})</small>`
+                              : ""
+                          }`
+                    }</td>
                     <td>${c.category}</td>
-                    <td>${c.title}</td>
-                    <td class="status-${c.status.toLowerCase()}">${c.status}</td>
+                    <td>
+                      <strong>${c.title}</strong>
+                      <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">${c.description}</div>
+                      ${
+                        c.adminRemarks
+                          ? `<div style="color: #0369a1; font-size: 9px; margin-top: 4px; background: #f0f9ff; padding: 3px 6px; border-radius: 4px;"><strong>Admin Response:</strong> ${c.adminRemarks}</div>`
+                          : ""
+                      }
+                    </td>
+                    <td><span class="badge status-${c.status.toLowerCase()}">${c.status}</span></td>
                   </tr>
                 `,
                   )
@@ -169,193 +396,69 @@ export default function AdminComplaintsScreen() {
       if (Platform.OS === "web") {
         await Print.printAsync({ html: htmlContent });
       } else {
-        // 1. Generate the file in the restricted Print folder
         const { uri } = await Print.printToFileAsync({ html: htmlContent });
-
         const baseDir =
           (FileSystem as any).documentDirectory ||
           (FileSystem as any).cacheDirectory ||
           "";
         const safeUri = `${baseDir}Campus_Complaints_Report.pdf`;
 
-        // 3. Move the file from the restricted folder to the safe folder
         await FileSystem.moveAsync({
           from: uri,
           to: safeUri,
         });
 
-        // 4. Share the safe file!
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
           await Sharing.shareAsync(safeUri, {
             UTI: ".pdf",
             mimeType: "application/pdf",
-            dialogTitle: "Save Complaints Report",
+            dialogTitle: "Save Campus Complaints Report",
           });
         } else {
           Toast.show({
             type: "info",
-            text1: "Sharing not available on this device",
+            text1: "Export created",
+            text2: "Report saved to temporary document directory.",
           });
         }
       }
-    } catch (error: any) {
-      console.error("PDF Generation Error:", error);
+    } catch (err: any) {
+      console.error("PDF Export Error:", err);
       Toast.show({
         type: "error",
-        text1: "Export failed",
-        text2: error.message || "Could not generate PDF",
+        text1: "Export Failed",
+        text2: err?.message || "Could not generate PDF report",
       });
     }
   };
 
-  // --- Filtering Logic ---
-  const filteredComplaints = useMemo(() => {
-    if (!complaints) return [];
-    let filtered = complaints;
-
-    if (activeFilter !== "ALL") {
-      filtered = filtered.filter((c: any) => c.status === activeFilter);
-    }
-
-    if (searchQuery) {
-      const lowerQ = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (c: any) =>
-          c.title.toLowerCase().includes(lowerQ) ||
-          c.user?.name?.toLowerCase().includes(lowerQ) ||
-          c.id.toLowerCase().includes(lowerQ),
-      );
-    }
-    return filtered;
-  }, [complaints, activeFilter, searchQuery]);
-
-  // --- Render Functions ---
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
-      case "RESOLVED":
-        return (
-          <View style={[styles.statusBadge, { backgroundColor: "#E8F5E9" }]}>
-            <Text style={[styles.statusText, { color: "#2E7D32" }]}>
-              Resolved
-            </Text>
-          </View>
-        );
-      case "REJECTED":
-        return (
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: colors.errorContainer },
-            ]}
-          >
-            <Text style={[styles.statusText, { color: colors.error }]}>
-              Rejected
-            </Text>
-          </View>
-        );
-      default:
-        return (
-          <View style={[styles.statusBadge, { backgroundColor: "#FFF3E0" }]}>
-            <Text style={[styles.statusText, { color: "#E65100" }]}>
-              Pending
-            </Text>
-          </View>
-        );
-    }
-  };
-
-  const renderComplaintCard = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      {/* Top Row: User Info & Status */}
-      <View style={styles.cardHeader}>
-        <View style={styles.userInfoRow}>
-          {item.user?.image ? (
-            <Image
-              source={{ uri: item.user.image }}
-              style={styles.avatarImage}
-            />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>
-                {item.user?.name?.charAt(0) || "?"}
-              </Text>
-            </View>
-          )}
-          <View>
-            <Text style={styles.userName}>{item.user?.name}</Text>
-            <Text style={styles.userRole}>{item.user?.role}</Text>
-          </View>
-        </View>
-        {renderStatusBadge(item.status)}
-      </View>
-
-      {/* Main Content */}
-      <View style={styles.cardBody}>
-        <View style={styles.titleRow}>
-          <Text style={styles.complaintTitle}>{item.title}</Text>
-          <Text style={styles.ticketId}>
-            #{item.id.slice(-6).toUpperCase()}
-          </Text>
-        </View>
-        <Text style={styles.categoryText}>
-          {item.category} • {formatDate(item.createdAt)}
-        </Text>
-        <Text style={styles.complaintDesc}>{item.description}</Text>
-      </View>
-
-      {/* Admin Actions */}
-      <View style={styles.actionRow}>
-        {item.status === "PENDING" && (
-          <View style={styles.actionGroup}>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.resolveBtn]}
-              onPress={() => openConfirmModal(item.id, item.title, "RESOLVE")}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={`Resolve complaint: ${item.title}`}
-            >
-              <Feather
-                name="check"
-                size={14}
-                color="#FFF"
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.actionTextWhite}>Resolve</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.rejectBtn]}
-              onPress={() => openConfirmModal(item.id, item.title, "REJECT")}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={`Reject complaint: ${item.title}`}
-            >
-              <Feather
-                name="x"
-                size={14}
-                color="#FFF"
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.actionTextWhite}>Reject</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.deleteBtn]}
-          onPress={() => openConfirmModal(item.id, item.title, "DELETE")}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={`Delete complaint: ${item.title}`}
-        >
-          <Feather name="trash-2" size={14} color={colors.error} />
-        </TouchableOpacity>
-      </View>
-    </View>
+  const renderItem = useCallback(
+    ({ item }: { item: ComplaintItem }) => (
+      <ComplaintCard
+        item={item}
+        isAdmin={true}
+        onAccept={handleOpenAccept}
+        onReject={handleOpenReject}
+        onResolve={handleOpenResolve}
+        onDelete={handleOpenDelete}
+        isActionLoading={isActionLoading}
+        activeActionId={actionItem?.id}
+      />
+    ),
+    [
+      handleOpenAccept,
+      handleOpenReject,
+      handleOpenResolve,
+      handleOpenDelete,
+      isActionLoading,
+      actionItem?.id,
+    ],
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Top Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity
@@ -364,159 +467,321 @@ export default function AdminComplaintsScreen() {
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Go back"
+            activeOpacity={0.7}
           >
-            <Feather name="arrow-left" size={24} color={colors.onSurface} />
+            <Feather
+              name="arrow-left"
+              size={22}
+              color={CAMPUS_HUB_COLORS.deepNavy}
+            />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Complaints Admin</Text>
-            <Text style={styles.headerSubtitle}>Manage user reports</Text>
+            <Text style={styles.headerTitle}>Manage Complaints</Text>
+            <Text style={styles.headerSubtitle}>
+              Grievance Resolution & Tracking
+            </Text>
           </View>
         </View>
+
         <TouchableOpacity
           style={styles.exportBtn}
           onPress={exportToPDF}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Export complaints to PDF"
+          accessibilityLabel="Export complaints report to PDF"
+          activeOpacity={0.8}
         >
           <Feather
             name="download"
-            size={16}
-            color={colors.primaryContainer}
+            size={14}
+            color={CAMPUS_HUB_COLORS.deepNavy}
             style={{ marginRight: 6 }}
           />
-          <Text style={styles.exportText}>PDF</Text>
+          <Text style={styles.exportText}>PDF Export</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainerWrapper}>
-        <View style={styles.searchContainer}>
+      {/* Hero Stats & Status Filter Tabs */}
+      <ComplaintHeroStats
+        stats={stats}
+        activeFilter={activeFilter}
+        onSelectFilter={setActiveFilter}
+      />
+
+      {/* Search & Category Filter Controls */}
+      <View style={styles.filterSection}>
+        {/* Search Bar */}
+        <View style={styles.searchBar}>
           <Feather
             name="search"
-            size={20}
-            color={colors.outline}
-            style={styles.searchIcon}
+            size={16}
+            color={CAMPUS_HUB_COLORS.subtleText}
+            style={{ marginRight: 8 }}
           />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by title, name, or ticket ID..."
-            placeholderTextColor={colors.outlineVariant}
+            placeholder="Search by title, ticket ID, complainant..."
+            placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
             value={searchQuery}
             onChangeText={setSearchQuery}
             accessible={true}
-            accessibilityLabel="Search complaints by title, name, or ticket ID"
+            accessibilityLabel="Search complaints"
           />
-        </View>
-      </View>
-
-      {/* Filters */}
-      <View style={styles.tabsContainer}>
-        {["ALL", "PENDING", "RESOLVED", "REJECTED"].map((filter) => (
-          <TouchableOpacity
-            key={filter}
-            style={[
-              styles.tabButton,
-              activeFilter === filter && styles.tabButtonActive,
-            ]}
-            onPress={() => setActiveFilter(filter as FilterType)}
-            accessible={true}
-            accessibilityRole="tab"
-            accessibilityLabel={`${filter} complaints filter`}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeFilter === filter && styles.tabTextActive,
-                filter === "REJECTED" && { fontSize: 13 },
-              ]}
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery("")}
+              style={styles.clearSearchBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              {filter}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Feather
+                name="x"
+                size={14}
+                color={CAMPUS_HUB_COLORS.subtleText}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Category Pills Scroll */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScroll}
+        >
+          {CATEGORIES.map((cat) => {
+            const isSelected = activeCategory === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.categoryFilterPill,
+                  isSelected && styles.categoryFilterPillActive,
+                ]}
+                onPress={() => setActiveCategory(cat)}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by category ${cat}`}
+              >
+                <Text
+                  style={[
+                    styles.categoryFilterText,
+                    isSelected && styles.categoryFilterTextActive,
+                  ]}
+                >
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      {/* List */}
+      {/* Main Complaints List */}
       {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primaryContainer} />
-        </View>
-      ) : filteredComplaints.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Feather
-            name="check-circle"
-            size={48}
-            color={colors.surfaceContainerHighest}
-            style={{ marginBottom: 16 }}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={CAMPUS_HUB_COLORS.complaintAccent}
           />
-          <Text style={styles.emptyTitle}>No Complaints Found</Text>
+          <Text style={styles.loadingText}>Loading complaints...</Text>
+        </View>
+      ) : isError ? (
+        <View style={styles.errorContainer}>
+          <View style={styles.errorIconCircle}>
+            <Feather name="alert-triangle" size={32} color="#dc2626" />
+          </View>
+          <Text style={styles.errorTitle}>Failed to Load Complaints</Text>
+          <Text style={styles.errorSubtitle}>
+            {(error as any)?.message ||
+              "Could not connect to the campus service. Please try again."}
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={handleRefresh}
+            activeOpacity={0.8}
+          >
+            <Feather
+              name="refresh-cw"
+              size={15}
+              color="#ffffff"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={filteredComplaints}
           keyExtractor={(item) => item.id}
-          renderItem={renderComplaintCard}
-          contentContainerStyle={styles.listContent}
+          renderItem={renderItem}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 28 },
+            filteredComplaints.length === 0 && styles.listEmpty,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefresh}
+              colors={[CAMPUS_HUB_COLORS.complaintAccent]}
+            />
+          }
           showsVerticalScrollIndicator={false}
           initialNumToRender={8}
           maxToRenderPerBatch={10}
           windowSize={5}
           removeClippedSubviews={Platform.OS === "android"}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Feather
+                  name={
+                    activeFilter === "ALL"
+                      ? "inbox"
+                      : activeFilter === "PENDING"
+                        ? "clock"
+                        : activeFilter === "ACCEPTED"
+                          ? "check"
+                          : activeFilter === "RESOLVED"
+                            ? "check-circle"
+                            : "filter"
+                  }
+                  size={36}
+                  color={CAMPUS_HUB_COLORS.subtleText}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {searchQuery || activeCategory !== "ALL"
+                  ? "No Matching Complaints"
+                  : activeFilter === "ALL"
+                    ? "No Complaints Submitted"
+                    : `No ${activeFilter.toLowerCase()} Complaints`}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {searchQuery || activeCategory !== "ALL"
+                  ? "Try adjusting your search terms or category filter to find reports."
+                  : activeFilter === "ALL"
+                    ? "There are currently no grievances filed by campus members."
+                    : `No tickets are currently in ${activeFilter.toLowerCase()} status.`}
+              </Text>
+            </View>
+          }
         />
       )}
 
-      {/* Confirmation Modal */}
-      <Modal visible={isConfirmModalVisible} transparent animationType="fade">
-        <View
+      {/* Administrative Action & Confirmation Modal */}
+      <Modal
+        visible={isConfirmModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeConfirmModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.modalOverlay}
-          accessibilityViewIsModal={true}
         >
           <View style={styles.modalCard}>
+            {/* Modal Header Icon */}
             <View
               style={[
                 styles.modalIconContainer,
-                actionData?.type === "DELETE" || actionData?.type === "REJECT"
-                  ? { backgroundColor: colors.errorContainer }
-                  : { backgroundColor: "#E8F5E9" },
+                actionType === "ACCEPT"
+                  ? { backgroundColor: "#e0f2fe" }
+                  : actionType === "RESOLVE"
+                    ? { backgroundColor: "#d1fae5" }
+                    : actionType === "REJECT" || actionType === "DELETE"
+                      ? { backgroundColor: "#fee2e2" }
+                      : { backgroundColor: "#f1f5f9" },
               ]}
             >
               <Feather
                 name={
-                  actionData?.type === "RESOLVE"
-                    ? "check-circle"
-                    : actionData?.type === "REJECT"
-                      ? "x-circle"
-                      : "alert-triangle"
+                  actionType === "ACCEPT"
+                    ? "check"
+                    : actionType === "RESOLVE"
+                      ? "check-circle"
+                      : actionType === "REJECT"
+                        ? "x-circle"
+                        : "trash-2"
                 }
                 size={28}
                 color={
-                  actionData?.type === "DELETE" || actionData?.type === "REJECT"
-                    ? colors.error
-                    : "#2E7D32"
+                  actionType === "ACCEPT"
+                    ? "#0284c7"
+                    : actionType === "RESOLVE"
+                      ? "#047857"
+                      : actionType === "REJECT" || actionType === "DELETE"
+                        ? "#dc2626"
+                        : CAMPUS_HUB_COLORS.deepNavy
                 }
               />
             </View>
 
+            {/* Modal Title */}
             <Text style={styles.modalTitle}>
-              {actionData?.type === "DELETE"
-                ? "Delete Ticket"
-                : actionData?.type === "REJECT"
-                  ? "Reject Complaint"
-                  : "Resolve Complaint"}
-            </Text>
-            <Text style={styles.modalSubtitle}>
-              Are you sure you want to {actionData?.type?.toLowerCase()} the
-              complaint "{actionData?.title}"?
+              {actionType === "ACCEPT"
+                ? "Accept Complaint Ticket"
+                : actionType === "RESOLVE"
+                  ? "Resolve Complaint"
+                  : actionType === "REJECT"
+                    ? "Reject Complaint"
+                    : "Delete Complaint Ticket"}
             </Text>
 
+            {/* Modal Subtitle / Context */}
+            <Text style={styles.modalSubtitle}>
+              {actionType === "ACCEPT"
+                ? `Advance ticket #${actionItem?.id.slice(0, 8).toUpperCase()} ("${actionItem?.title}") to Accepted status to begin formal resolution.`
+                : actionType === "RESOLVE"
+                  ? `Mark ticket #${actionItem?.id.slice(0, 8).toUpperCase()} as officially resolved.`
+                  : actionType === "REJECT"
+                    ? `Reject ticket #${actionItem?.id.slice(0, 8).toUpperCase()}. The status change will be visible to the student.`
+                    : `Are you sure you want to delete ticket #${actionItem?.id.slice(0, 8).toUpperCase()} ("${actionItem?.title}")?`}
+            </Text>
+
+            {/* Remarks Input for Accept, Resolve, and Reject actions */}
+            {(actionType === "RESOLVE" ||
+              actionType === "REJECT" ||
+              actionType === "ACCEPT") && (
+              <View style={styles.remarksInputContainer}>
+                <Text style={styles.remarksInputLabel}>
+                  {actionType === "RESOLVE"
+                    ? "Official Resolution Response:"
+                    : actionType === "REJECT"
+                      ? "Reason for Rejection:"
+                      : "Administrative Notes (Optional):"}
+                </Text>
+                <TextInput
+                  style={styles.remarksTextInput}
+                  placeholder={
+                    actionType === "RESOLVE"
+                      ? "Describe actions taken or completion details..."
+                      : actionType === "REJECT"
+                        ? "State reasons why this ticket cannot be addressed..."
+                        : "Optional internal note..."
+                  }
+                  placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+                  value={adminRemarksInput}
+                  onChangeText={setAdminRemarksInput}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  maxLength={1000}
+                />
+              </View>
+            )}
+
+            {/* Button Actions Row */}
             <View style={styles.modalButtonRow}>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
                 onPress={closeConfirmModal}
+                disabled={isActionLoading}
+                activeOpacity={0.7}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Cancel action"
+                accessibilityLabel="Cancel operation"
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -524,291 +789,361 @@ export default function AdminComplaintsScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalConfirmBtn,
-                  actionData?.type === "DELETE" || actionData?.type === "REJECT"
-                    ? { backgroundColor: colors.error }
-                    : { backgroundColor: "#2E7D32" },
+                  actionType === "ACCEPT"
+                    ? { backgroundColor: "#0284c7" }
+                    : actionType === "RESOLVE"
+                      ? { backgroundColor: "#059669" }
+                      : { backgroundColor: "#dc2626" },
+                  isActionLoading && styles.btnDisabled,
                 ]}
                 onPress={executeAction}
+                disabled={isActionLoading}
+                activeOpacity={0.8}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Confirm action"
+                accessibilityLabel="Confirm administrative action"
               >
-                {updateStatusMutation.isPending || deleteMutation.isPending ? (
-                  <ActivityIndicator color="#FFF" />
+                {isActionLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
                   <Text style={styles.modalConfirmText}>
-                    {actionData?.type === "DELETE" ? "Delete" : "Confirm"}
+                    {actionType === "ACCEPT"
+                      ? "Accept Ticket"
+                      : actionType === "RESOLVE"
+                        ? "Mark Resolved"
+                        : actionType === "REJECT"
+                          ? "Reject Ticket"
+                          : "Delete Ticket"}
                   </Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: CAMPUS_HUB_COLORS.background,
+  },
 
+  // Header
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 60,
-    paddingBottom: spacing.stackLg,
-    paddingHorizontal: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 14,
+    backgroundColor: CAMPUS_HUB_COLORS.background,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center" },
-  backButton: { marginRight: spacing.stackMd, padding: spacing.stackSm },
-  headerTitle: { ...typography.headlineMd, color: colors.onSurface },
-  headerSubtitle: { ...typography.bodyMd, color: colors.outline, marginTop: 2 },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    ...CAMPUS_HUB_COLORS.shadow,
+  },
+  headerTitle: {
+    fontFamily,
+    fontSize: 20,
+    fontWeight: "900",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontFamily,
+    fontSize: 12,
+    color: CAMPUS_HUB_COLORS.subtleText,
+    fontWeight: "500",
+    marginTop: 1,
+  },
 
   exportBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.primaryContainer + "15",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: rounded.full,
+    paddingVertical: 7,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: colors.primaryContainer + "30",
+    borderColor: "rgba(0, 0, 0, 0.08)",
+    ...CAMPUS_HUB_COLORS.shadow,
   },
   exportText: {
-    ...typography.labelMd,
-    color: colors.primaryContainer,
-    fontWeight: "700",
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.deepNavy,
   },
 
-  searchContainerWrapper: {
-    paddingHorizontal: spacing.marginMobile,
-    paddingBottom: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerLowest,
+  // Filter Section
+  filterSection: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    gap: 10,
   },
-  searchContainer: {
+  searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: rounded.lg,
-    paddingHorizontal: spacing.stackMd,
-    height: 48,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 44,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
+    ...CAMPUS_HUB_COLORS.shadow,
   },
-  searchIcon: { marginRight: spacing.stackSm },
   searchInput: {
     flex: 1,
-    ...typography.bodyMd,
-    color: colors.onSurface,
+    fontFamily,
+    fontSize: 13,
+    color: CAMPUS_HUB_COLORS.deepNavy,
     height: "100%",
   },
-
-  tabsContainer: {
+  clearSearchBtn: {
+    padding: 4,
+  },
+  categoryScroll: {
     flexDirection: "row",
-    paddingHorizontal: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainerHighest,
+    gap: 8,
+    paddingVertical: 2,
   },
-  tabButton: {
-    flex: 1,
-    paddingVertical: spacing.stackMd,
-    alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  tabButtonActive: { borderBottomColor: colors.primaryContainer },
-  tabText: { ...typography.labelMd, color: colors.outline },
-  tabTextActive: { color: colors.primaryContainer, fontWeight: "700" },
-
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing.marginMobile,
-  },
-  emptyTitle: {
-    ...typography.titleLg,
-    color: colors.onSurface,
-    marginBottom: spacing.stackSm,
-  },
-
-  listContent: { padding: spacing.marginMobile, paddingBottom: 100 },
-  card: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    padding: spacing.stackLg,
-    marginBottom: spacing.stackMd,
+  categoryFilterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     borderWidth: 1,
-    borderColor: colors.surfaceContainerHighest,
-    ...shadows.level1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
+    ...CAMPUS_HUB_COLORS.shadow,
+  },
+  categoryFilterPillActive: {
+    backgroundColor: CAMPUS_HUB_COLORS.deepNavy,
+    borderColor: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  categoryFilterText: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.subtleText,
+  },
+  categoryFilterTextActive: {
+    color: "#ffffff",
   },
 
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.stackMd,
+  // List States
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
-  userInfoRow: { flexDirection: "row", alignItems: "center" },
-  avatarFallback: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryContainer,
+  listEmpty: {
+    flexGrow: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
     justifyContent: "center",
+    gap: 12,
+  },
+  loadingText: {
+    fontFamily,
+    fontSize: 13,
+    color: CAMPUS_HUB_COLORS.subtleText,
+    fontWeight: "600",
+  },
+  errorContainer: {
+    flex: 1,
     alignItems: "center",
-    marginRight: spacing.stackSm,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 12,
   },
-  avatarImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: spacing.stackSm,
-    backgroundColor: colors.surfaceContainerHigh,
-  },
-  avatarText: {
-    ...typography.bodyLg,
-    color: colors.onPrimary,
-    fontWeight: "700",
-  },
-  userName: {
-    ...typography.bodyMd,
-    color: colors.onSurface,
-    fontWeight: "700",
-  },
-  userRole: {
-    ...typography.labelSm,
-    color: colors.outline,
-    fontSize: 10,
-    textTransform: "uppercase",
-  },
-
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: rounded.full,
-  },
-  statusText: {
-    ...typography.labelSm,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    fontSize: 10,
-  },
-
-  cardBody: { marginBottom: spacing.stackMd },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  errorIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#fee2e2",
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 4,
   },
-  complaintTitle: {
-    flex: 1,
-    ...typography.bodyLg,
-    fontSize: 16,
-    color: colors.onSurface,
+  errorTitle: {
+    fontFamily,
+    fontSize: 17,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  errorSubtitle: {
+    fontFamily,
+    fontSize: 13,
+    color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+    lineHeight: 18,
+    maxWidth: 280,
+  },
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: CAMPUS_HUB_COLORS.deepNavy,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    marginTop: 4,
+  },
+  retryBtnText: {
+    fontFamily,
+    fontSize: 13,
     fontWeight: "700",
-    marginRight: 8,
+    color: "#ffffff",
   },
-  ticketId: {
-    ...typography.labelSm,
-    color: colors.outline,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-  },
-  categoryText: {
-    ...typography.labelSm,
-    color: colors.primary,
-    fontWeight: "600",
-    marginBottom: spacing.stackSm,
-  },
-  complaintDesc: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
-    lineHeight: 22,
-  },
-
-  actionRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  emptyContainer: {
+    flex: 1,
     alignItems: "center",
-    paddingTop: spacing.stackSm,
-    borderTopWidth: 1,
-    borderTopColor: colors.surfaceContainerHighest,
-    gap: spacing.stackSm,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
-  actionGroup: { flexDirection: "row", flex: 1, gap: spacing.stackSm },
-  actionBtn: {
-    flexDirection: "row",
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: rounded.md,
+    justifyContent: "center",
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+    ...CAMPUS_HUB_COLORS.shadow,
   },
-  resolveBtn: { backgroundColor: "#2E7D32" },
-  rejectBtn: { backgroundColor: colors.errorContainer },
-  deleteBtn: {
-    paddingHorizontal: 12,
-    backgroundColor: colors.surfaceContainerHigh,
+  emptyTitle: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+    marginBottom: 6,
+    textAlign: "center",
   },
-  actionTextWhite: { ...typography.labelMd, color: "#FFF", fontWeight: "700" },
+  emptySubtitle: {
+    fontFamily,
+    fontSize: 12.5,
+    color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+    lineHeight: 18,
+    maxWidth: 280,
+  },
 
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(11, 21, 40, 0.6)",
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.marginMobile,
+    padding: 20,
   },
   modalCard: {
     width: "100%",
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: rounded.xl,
-    padding: spacing.stackLg,
+    maxWidth: 420,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: 22,
+    padding: 22,
     alignItems: "center",
-    ...shadows.level1,
+    ...CAMPUS_HUB_COLORS.heroShadow,
   },
   modalIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: spacing.stackLg,
+    marginBottom: 14,
   },
   modalTitle: {
-    ...typography.titleLg,
-    color: colors.onSurface,
-    fontWeight: "700",
-    marginBottom: spacing.stackSm,
+    fontFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+    marginBottom: 6,
+    textAlign: "center",
   },
   modalSubtitle: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
+    fontFamily,
+    fontSize: 13,
+    color: CAMPUS_HUB_COLORS.neutralText,
     textAlign: "center",
-    marginBottom: spacing.stackLg,
-    lineHeight: 22,
+    marginBottom: 16,
+    lineHeight: 19,
   },
-  modalButtonRow: { flexDirection: "row", gap: spacing.stackMd, width: "100%" },
+  remarksInputContainer: {
+    width: "100%",
+    marginBottom: 18,
+  },
+  remarksInputLabel: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+    marginBottom: 6,
+  },
+  remarksTextInput: {
+    width: "100%",
+    minHeight: 80,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily,
+    fontSize: 13,
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  modalButtonRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
   modalCancelBtn: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerHigh,
-    paddingVertical: 14,
-    borderRadius: rounded.md,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    ...typography.labelMd,
-    color: colors.onSurface,
-    fontWeight: "700",
-  },
-  modalConfirmBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: rounded.md,
+    backgroundColor: "#f1f5f9",
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  modalConfirmText: { ...typography.labelMd, color: "#FFF", fontWeight: "700" },
+  modalCancelText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  modalConfirmBtn: {
+    flex: 1.2,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalConfirmText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
 });

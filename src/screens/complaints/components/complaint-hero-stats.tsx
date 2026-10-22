@@ -1,15 +1,27 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
 import type { ComplaintStats } from "@/services/complaint-service";
 
-export type ComplaintFilter = "ALL" | "PENDING" | "RESOLVED" | "REJECTED";
+export type ComplaintFilter =
+  | "ALL"
+  | "PENDING"
+  | "ACCEPTED"
+  | "RESOLVED"
+  | "REJECTED";
 
 interface ComplaintHeroStatsProps {
   stats: ComplaintStats;
   activeFilter: ComplaintFilter;
   onSelectFilter: (filter: ComplaintFilter) => void;
+  horizontalScroll?: boolean;
 }
 
 interface StatTabConfig {
@@ -42,6 +54,15 @@ const STAT_TABS: StatTabConfig[] = [
     borderColor: "#fde68a",
   },
   {
+    key: "ACCEPTED",
+    label: "Accepted",
+    countKey: "accepted",
+    icon: "check",
+    color: "#0284c7",
+    bgColor: "#f0f9ff",
+    borderColor: "#bae6fd",
+  },
+  {
     key: "RESOLVED",
     label: "Resolved",
     countKey: "resolved",
@@ -65,83 +86,101 @@ export const ComplaintHeroStats = React.memo(function ComplaintHeroStats({
   stats,
   activeFilter,
   onSelectFilter,
+  horizontalScroll = true,
 }: ComplaintHeroStatsProps) {
-  return (
-    <View style={styles.container}>
-      <View style={styles.tabsRow}>
-        {STAT_TABS.map((tab) => {
-          const isActive = activeFilter === tab.key;
-          const count = stats[tab.countKey] || 0;
+  const content = (
+    <View style={styles.tabsRow}>
+      {STAT_TABS.map((tab) => {
+        const isActive = activeFilter === tab.key;
+        const count = stats[tab.countKey] || 0;
 
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[
-                styles.tabCard,
-                isActive && {
-                  backgroundColor: tab.bgColor,
-                  borderColor: tab.color,
-                  borderWidth: 1.5,
-                  ...CAMPUS_HUB_COLORS.shadow,
-                },
-              ]}
-              onPress={() => onSelectFilter(tab.key)}
-              activeOpacity={0.75}
-              accessible={true}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-              accessibilityLabel={`${tab.label} complaints: ${count}`}
-            >
-              <View style={styles.tabTopRow}>
-                <View
-                  style={[
-                    styles.iconBadge,
-                    { backgroundColor: isActive ? "#ffffff" : tab.bgColor },
-                  ]}
-                >
-                  <Feather name={tab.icon} size={14} color={tab.color} />
-                </View>
-                <Text
-                  style={[
-                    styles.countText,
-                    { color: isActive ? tab.color : CAMPUS_HUB_COLORS.deepNavy },
-                  ]}
-                >
-                  {count}
-                </Text>
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            style={[
+              styles.tabCard,
+              isActive && {
+                backgroundColor: tab.bgColor,
+                borderColor: tab.color,
+                borderWidth: 1.5,
+                ...CAMPUS_HUB_COLORS.shadow,
+              },
+            ]}
+            onPress={() => onSelectFilter(tab.key)}
+            activeOpacity={0.75}
+            accessible={true}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={`${tab.label} complaints: ${count}`}
+          >
+            <View style={styles.tabTopRow}>
+              <View
+                style={[
+                  styles.iconBadge,
+                  { backgroundColor: isActive ? "#ffffff" : tab.bgColor },
+                ]}
+              >
+                <Feather name={tab.icon} size={14} color={tab.color} />
               </View>
-
               <Text
                 style={[
-                  styles.labelText,
-                  isActive && { color: tab.color, fontWeight: "800" },
+                  styles.countText,
+                  { color: isActive ? tab.color : CAMPUS_HUB_COLORS.deepNavy },
                 ]}
-                numberOfLines={1}
               >
-                {tab.label}
+                {count}
               </Text>
+            </View>
 
-              {isActive && (
-                <View style={[styles.activeIndicator, { backgroundColor: tab.color }]} />
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+            <Text
+              style={[
+                styles.labelText,
+                isActive && { color: tab.color, fontWeight: "800" },
+              ]}
+              numberOfLines={1}
+            >
+              {tab.label}
+            </Text>
+
+            {isActive && (
+              <View style={[styles.activeIndicator, { backgroundColor: tab.color }]} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      {horizontalScroll ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {content}
+        </ScrollView>
+      ) : (
+        content
+      )}
     </View>
   );
 });
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
     marginBottom: 16,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
   },
   tabsRow: {
     flexDirection: "row",
     gap: 8,
   },
   tabCard: {
+    minWidth: 84,
     flex: 1,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 16,
@@ -157,6 +196,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 6,
+    gap: 6,
   },
   iconBadge: {
     width: 26,
@@ -180,8 +220,8 @@ const styles = StyleSheet.create({
   activeIndicator: {
     position: "absolute",
     bottom: 0,
-    left: 10,
-    right: 10,
+    left: 8,
+    right: 8,
     height: 3,
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,

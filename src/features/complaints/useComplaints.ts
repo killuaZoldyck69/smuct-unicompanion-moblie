@@ -3,12 +3,14 @@ import {
   getMyComplaintsAPI,
   getMyComplaintStatsAPI,
   getAllComplaintsAdminAPI,
+  getAdminComplaintStatsAPI,
   getComplaintByIdAPI,
   createComplaintAPI,
   updateComplaintAPI,
   updateComplaintStatusAPI,
   deleteComplaintAPI,
   GetMyComplaintsParams,
+  AdminGetComplaintsParams,
   CreateComplaintInput,
   UpdateComplaintInput,
   UpdateComplaintStatusInput,
@@ -30,10 +32,25 @@ export const useMyComplaintStats = () => {
   });
 };
 
-export const useAllComplaintsAdmin = () => {
+export const useAdminComplaintStats = () => {
   return useQuery({
-    queryKey: ["allComplaints"],
-    queryFn: getAllComplaintsAdminAPI,
+    queryKey: ["adminComplaintStats"],
+    queryFn: getAdminComplaintStatsAPI,
+    staleTime: 1000 * 60,
+  });
+};
+
+export const useAllComplaintsAdmin = (params?: AdminGetComplaintsParams) => {
+  return useQuery({
+    queryKey: [
+      "allComplaints",
+      params?.status,
+      params?.category,
+      params?.search,
+      params?.page,
+      params?.limit,
+    ],
+    queryFn: () => getAllComplaintsAdminAPI(params),
     staleTime: 1000 * 60,
   });
 };
@@ -54,6 +71,7 @@ export const useCreateComplaint = () => {
       queryClient.invalidateQueries({ queryKey: ["myComplaints"] });
       queryClient.invalidateQueries({ queryKey: ["myComplaintStats"] });
       queryClient.invalidateQueries({ queryKey: ["allComplaints"] });
+      queryClient.invalidateQueries({ queryKey: ["adminComplaintStats"] });
     },
   });
 };
@@ -68,32 +86,51 @@ export const useUpdateComplaint = () => {
       queryClient.invalidateQueries({ queryKey: ["myComplaintStats"] });
       queryClient.invalidateQueries({ queryKey: ["complaint", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["allComplaints"] });
+      queryClient.invalidateQueries({ queryKey: ["adminComplaintStats"] });
     },
   });
 };
 
-export const useUpdateComplaintStatus = (id: string) => {
+/**
+ * Hook to update complaint status. Supports passing { id, data } directly
+ * into mutate/mutateAsync, preventing React Hook rule violations.
+ */
+export function useUpdateComplaintStatus(fixedId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: UpdateComplaintStatusInput) =>
-      updateComplaintStatusAPI(id, data),
-    onSuccess: () => {
+    mutationFn: (payload: { id?: string; data: UpdateComplaintStatusInput } | UpdateComplaintStatusInput) => {
+      const targetId = (payload as any).id || fixedId;
+      const data = "data" in payload ? (payload as any).data : payload;
+      if (!targetId) {
+        throw new Error("Complaint ID is required to update status");
+      }
+      return updateComplaintStatusAPI(targetId, data);
+    },
+    onSuccess: (_, variables) => {
+      const targetId = (variables as any).id || fixedId;
       queryClient.invalidateQueries({ queryKey: ["allComplaints"] });
+      queryClient.invalidateQueries({ queryKey: ["adminComplaintStats"] });
       queryClient.invalidateQueries({ queryKey: ["myComplaints"] });
       queryClient.invalidateQueries({ queryKey: ["myComplaintStats"] });
-      queryClient.invalidateQueries({ queryKey: ["complaint", id] });
+      if (targetId) {
+        queryClient.invalidateQueries({ queryKey: ["complaint", targetId] });
+      }
     },
   });
-};
+}
 
 export const useDeleteComplaint = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteComplaintAPI(id),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["allComplaints"] });
+      queryClient.invalidateQueries({ queryKey: ["adminComplaintStats"] });
       queryClient.invalidateQueries({ queryKey: ["myComplaints"] });
       queryClient.invalidateQueries({ queryKey: ["myComplaintStats"] });
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: ["complaint", id] });
+      }
     },
   });
 };

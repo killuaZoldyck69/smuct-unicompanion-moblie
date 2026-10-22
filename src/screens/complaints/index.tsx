@@ -53,6 +53,7 @@ export function ComplaintsScreen() {
       statsData || {
         all: complaints.length,
         pending: complaints.filter((c) => c.status === "PENDING").length,
+        accepted: complaints.filter((c) => c.status === "ACCEPTED").length,
         resolved: complaints.filter((c) => c.status === "RESOLVED").length,
         rejected: complaints.filter((c) => c.status === "REJECTED").length,
       }
