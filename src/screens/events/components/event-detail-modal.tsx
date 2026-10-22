@@ -6,9 +6,7 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
-  Platform,
   Linking,
-  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -22,21 +20,24 @@ import {
 } from "@/features/events/useEvents";
 import { BENTO_COLORS, fontFamily } from "../constants";
 import { formatEventTime, safeShareEvent } from "../utils";
+import { DeleteEventModal } from "./delete-event-modal";
 
-interface EventDetailModalProps {
+export interface EventDetailModalProps {
   event: CampusEventItem | null;
   onClose: () => void;
   onEdit?: (event: CampusEventItem) => void;
+  isAdmin?: boolean;
 }
 
 export const EventDetailModal = React.memo(function EventDetailModal({
   event,
   onClose,
   onEdit,
+  isAdmin: isAdminProp,
 }: EventDetailModalProps) {
   const insets = useSafeAreaInsets();
   const { role, user } = useCurrentUser();
-  const isAdmin = role === "ADMIN" || user?.role === "ADMIN";
+  const isAdmin = isAdminProp ?? (role === "ADMIN" || user?.role === "ADMIN");
 
   const toggleInterestedMutation = useToggleEventInterested();
   const deleteEventMutation = useDeleteCampusEvent();
@@ -508,87 +509,13 @@ export const EventDetailModal = React.memo(function EventDetailModal({
         </View>
 
         {/* Custom Bento Delete Event Confirmation Modal */}
-        {showDeleteConfirm && (
-          <View style={styles.confirmOverlay}>
-            <TouchableOpacity
-              style={StyleSheet.absoluteFill}
-              activeOpacity={1}
-              onPress={() => !isDeleting && setShowDeleteConfirm(false)}
-              accessible={false}
-            />
-
-            <View style={styles.confirmCard}>
-              {/* Top Warning Icon Halo */}
-              <View style={styles.confirmIconHalo}>
-                <View style={styles.confirmIconCircle}>
-                  <Feather name="trash-2" size={24} color="#dc2626" />
-                </View>
-              </View>
-
-              {/* Title & Description */}
-              <Text style={styles.confirmTitle}>Delete Campus Event?</Text>
-              <Text style={styles.confirmMessage}>
-                Are you sure you want to permanently delete this event? This action will remove it for all students and cannot be undone.
-              </Text>
-
-              {/* Event Snapshot Card Preview */}
-              <View style={styles.confirmEventPreview}>
-                <View style={styles.confirmEventIconBox}>
-                  <Feather name="calendar" size={14} color="#2563eb" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.confirmEventTitle} numberOfLines={1}>
-                    {event.title}
-                  </Text>
-                  <Text style={styles.confirmEventSub} numberOfLines={1}>
-                    {dayMonthYear} • {formattedStartTime}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.confirmActionsRow}>
-                <TouchableOpacity
-                  style={styles.confirmCancelBtn}
-                  onPress={() => setShowDeleteConfirm(false)}
-                  disabled={isDeleting}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel delete event"
-                >
-                  <Text style={styles.confirmCancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.confirmDeleteBtn}
-                  onPress={handleConfirmDelete}
-                  disabled={isDeleting}
-                  activeOpacity={0.8}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Confirm delete event"
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <>
-                      <Feather
-                        name="trash-2"
-                        size={15}
-                        color="#ffffff"
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={styles.confirmDeleteBtnText}>
-                        Delete Event
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
+        <DeleteEventModal
+          visible={showDeleteConfirm}
+          event={event}
+          isDeleting={isDeleting}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={handleConfirmDelete}
+        />
       </View>
     </Modal>
   );

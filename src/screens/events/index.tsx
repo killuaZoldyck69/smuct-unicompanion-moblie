@@ -18,7 +18,13 @@ import {
 } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
-import { useInfiniteCampusEvents } from "@/features/events/useEvents";
+import { useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
+
+import {
+  useInfiniteCampusEvents,
+  useDeleteCampusEvent,
+} from "@/features/events/useEvents";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { CampusEventItem } from "@/services/event-service";
 import { BENTO_COLORS, EventTabType, fontFamily } from "./constants";
@@ -26,6 +32,7 @@ import { EventCard } from "./components/event-card";
 import { EventTabFilters } from "./components/event-tab-filters";
 import { EventDetailModal } from "./components/event-detail-modal";
 import { CreateEventModal } from "./components/create-event-modal";
+import { DeleteEventModal } from "./components/delete-event-modal";
 import {
   EventSkeleton,
   EventError,
@@ -41,10 +48,25 @@ export {
   safeCopyEvent,
 } from "./utils";
 
-export function EventsScreen() {
+export interface EventsScreenProps {
+  hasBackButton?: boolean;
+  isStackScreen?: boolean;
+  forceAdmin?: boolean;
+  headerTitle?: string;
+  headerSubtitle?: string;
+}
+
+export function EventsScreen({
+  hasBackButton = false,
+  isStackScreen = false,
+  forceAdmin = false,
+  headerTitle,
+  headerSubtitle,
+}: EventsScreenProps = {}) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { role, user } = useCurrentUser();
-  const isAdmin = role === "ADMIN" || user?.role === "ADMIN";
+  const isAdmin = forceAdmin || role === "ADMIN" || user?.role === "ADMIN";
 
   const [activeTab, setActiveTab] = useState<EventTabType>("upcoming");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -56,7 +78,13 @@ export function EventsScreen() {
   const [editingEvent, setEditingEvent] = useState<CampusEventItem | null>(
     null,
   );
+  const [eventToDelete, setEventToDelete] = useState<CampusEventItem | null>(
+    null,
+  );
+  const [isDeletingCard, setIsDeletingCard] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const deleteEventMutation = useDeleteCampusEvent();
 
   const onEndReachedCalledDuringMomentum = useRef(true);
 
@@ -143,10 +171,40 @@ export function EventsScreen() {
     setIsCreateOpen(true);
   }, []);
 
+  const handleDeleteCard = useCallback((item: CampusEventItem) => {
+    setEventToDelete(item);
+  }, []);
+
+  const handleConfirmCardDelete = useCallback(async () => {
+    if (!eventToDelete) return;
+    setIsDeletingCard(true);
+    try {
+      await deleteEventMutation.mutateAsync(eventToDelete.id);
+      Toast.show({
+        type: "success",
+        text1: "Event Deleted",
+        text2: `"${eventToDelete.title}" has been deleted.`,
+      });
+      setEventToDelete(null);
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Delete Failed",
+        text2: "Unable to delete event. Please try again.",
+      });
+    } finally {
+      setIsDeletingCard(false);
+    }
+  }, [eventToDelete, deleteEventMutation]);
+
   useEffect(() => {
     const onBackPress = () => {
       if (isCreateOpen) {
         handleCloseCreate();
+        return true;
+      }
+      if (eventToDelete) {
+        setEventToDelete(null);
         return true;
       }
       if (selectedEvent) {
@@ -163,13 +221,26 @@ export function EventsScreen() {
 
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [isCreateOpen, selectedEvent, searchQuery, handleCloseCreate]);
+  }, [
+    isCreateOpen,
+    eventToDelete,
+    selectedEvent,
+    searchQuery,
+    handleCloseCreate,
+  ]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: CampusEventItem; index: number }) => (
-      <EventCard item={item} index={index} onPress={setSelectedEvent} />
+      <EventCard
+        item={item}
+        index={index}
+        onPress={setSelectedEvent}
+        isAdmin={isAdmin}
+        onEdit={handleEditEvent}
+        onDelete={handleDeleteCard}
+      />
     ),
-    [],
+    [isAdmin, handleEditEvent, handleDeleteCard],
   );
 
   const keyExtractor = useCallback((item: CampusEventItem) => item.id, []);
@@ -300,11 +371,37 @@ export function EventsScreen() {
       {/* ── Header (ExploreHeader-style) ── */}
       <View style={styles.heroContainer}>
         <View style={styles.heroRow}>
+          {hasBackButton && (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              activeOpacity={0.7}
+            >
+              <Feather
+                name="arrow-left"
+                size={20}
+                color={BENTO_COLORS.deepNavy}
+              />
+            </TouchableOpacity>
+          )}
+
           {/* Left: Title + subtitle */}
           <View style={styles.heroTitleGroup}>
-            <Text style={styles.screenTitle}>Campus Events</Text>
+            <View style={styles.titleWithBadge}>
+              <Text style={styles.screenTitle}>
+                {headerTitle || "Campus Events"}
+              </Text>
+              {isAdmin && (
+                <View style={styles.adminBadge}>
+                  <Text style={styles.adminBadgeText}>ADMIN</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.screenSubtitle}>
-              Programs, Fests, Workshops & Activities
+              {headerSubtitle || "Programs, Fests, Workshops & Activities"}
             </Text>
           </View>
 
@@ -354,7 +451,15 @@ export function EventsScreen() {
         <TouchableOpacity
           style={[
             styles.fab,
-            { bottom: insets.bottom > 0 ? insets.bottom + 88 : 100 },
+            {
+              bottom: isStackScreen
+                ? insets.bottom > 0
+                  ? insets.bottom + 20
+                  : 28
+                : insets.bottom > 0
+                  ? insets.bottom + 88
+                  : 100,
+            },
           ]}
           onPress={() => {
             setEditingEvent(null);
@@ -365,7 +470,13 @@ export function EventsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Create new campus event"
         >
-          <Feather name="plus" size={24} color="#ffffff" />
+          <Feather
+            name="plus"
+            size={18}
+            color="#ffffff"
+            style={{ marginRight: 6 }}
+          />
+          <Text style={styles.fabText}>Create Event</Text>
         </TouchableOpacity>
       )}
 
@@ -375,6 +486,7 @@ export function EventsScreen() {
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onEdit={handleEditEvent}
+          isAdmin={isAdmin}
         />
       )}
 
@@ -386,6 +498,15 @@ export function EventsScreen() {
           eventToEdit={editingEvent}
         />
       )}
+
+      {/* Delete Confirmation Modal for Card Quick Delete */}
+      <DeleteEventModal
+        visible={!!eventToDelete}
+        event={eventToDelete}
+        isDeleting={isDeletingCard}
+        onClose={() => setEventToDelete(null)}
+        onConfirm={handleConfirmCardDelete}
+      />
     </SafeAreaView>
   );
 }
@@ -524,28 +645,78 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginLeft: 8,
   },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: BENTO_COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  titleWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  adminBadge: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.2)",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  adminBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#2563eb",
+    letterSpacing: 0.5,
+  },
   cardsListContainer: {
     marginBottom: 16,
   },
   fab: {
     position: "absolute",
     right: 20,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: BENTO_COLORS.deepNavy,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: BENTO_COLORS.deepNavy,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 30,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
       },
       android: {
         elevation: 6,
       },
     }),
+  },
+  fabText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: 0.2,
   },
 });

@@ -11,10 +11,13 @@ import { CampusEventItem } from "@/services/event-service";
 import { BENTO_COLORS, fontFamily } from "../constants";
 import { formatEventTime, getEventDateComponents } from "../utils";
 
-interface EventCardProps {
+export interface EventCardProps {
   item: CampusEventItem;
   index?: number;
   onPress: (item: CampusEventItem) => void;
+  isAdmin?: boolean;
+  onEdit?: (item: CampusEventItem) => void;
+  onDelete?: (item: CampusEventItem) => void;
 }
 
 const THEME_PALETTES = [
@@ -45,6 +48,9 @@ export const EventCard = React.memo(function EventCard({
   item,
   index = 0,
   onPress,
+  isAdmin = false,
+  onEdit,
+  onDelete,
 }: EventCardProps) {
   const eventDateStr = item.eventDate || item.date || item.createdAt;
   const eventDate = new Date(eventDateStr);
@@ -102,13 +108,42 @@ export const EventCard = React.memo(function EventCard({
 
       {/* Right Content Column */}
       <View style={styles.contentCol}>
-        {/* Title & Arrow Button */}
+        {/* Title & Actions Row */}
         <View style={styles.titleRow}>
           <Text style={styles.titleText} numberOfLines={2}>
             {item.title}
           </Text>
-          <View style={styles.arrowCircle}>
-            <Feather name="arrow-right" size={15} color="#64748b" />
+          <View style={styles.actionsRow}>
+            {isAdmin && (
+              <View style={styles.adminActionRow}>
+                <TouchableOpacity
+                  onPress={() => onEdit?.(item)}
+                  style={[styles.adminBtnCircle, styles.adminEditBtn]}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit event ${item.title}`}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                >
+                  <Feather name="edit-2" size={13} color="#2563eb" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => onDelete?.(item)}
+                  style={[styles.adminBtnCircle, styles.adminDeleteBtn]}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete event ${item.title}`}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
+                >
+                  <Feather name="trash-2" size={13} color="#dc2626" />
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={styles.arrowCircle}>
+              <Feather name="arrow-right" size={15} color="#64748b" />
+            </View>
           </View>
         </View>
 
@@ -228,6 +263,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  adminActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 6,
+    gap: 6,
+  },
+  adminBtnCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminEditBtn: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.15)",
+  },
+  adminDeleteBtn: {
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "rgba(220, 38, 38, 0.15)",
   },
   statusPill: {
     flexDirection: "row",
