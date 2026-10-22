@@ -28,18 +28,23 @@ export interface AlumniItem {
 export interface CreateAlumniInput {
   name: string;
   department: string;
-  batch?: string;
-  graduationBatch?: string;
-  passingYear?: number;
-  graduationYear?: number;
-  currentCompany?: string;
-  designation?: string;
-  currentRole?: string;
-  linkedinUrl?: string;
-  linkedInUrl?: string;
-  email?: string;
-  phone?: string;
-  imageUrl?: string;
+  batch?: string | null;
+  graduationBatch?: string | null;
+  passingYear?: number | null;
+  graduationYear?: number | null;
+  degree?: string | null;
+  currentCompany?: string | null;
+  designation?: string | null;
+  currentPosition?: string | null;
+  currentRole?: string | null;
+  skills?: string[];
+  linkedinUrl?: string | null;
+  linkedInUrl?: string | null;
+  personalWebsiteUrl?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  image?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface AlumniQueryParams {
@@ -140,3 +145,10 @@ export const deleteAlumni = async (id: string) => {
   return res.data?.data;
 };
 export const deleteAlumniAPI = deleteAlumni;
+
+export const bulkCreateAlumni = async (data: CreateAlumniInput[]) => {
+  const res = await api.post("/alumni/bulk", data);
+  return res.data;
+};
+export const bulkCreateAlumniAPI = bulkCreateAlumni;
+

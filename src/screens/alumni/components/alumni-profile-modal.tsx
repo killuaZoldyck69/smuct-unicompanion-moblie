@@ -26,10 +26,13 @@ import {
 interface AlumniProfileModalProps {
   alumni: AlumniItem | null;
   onClose: () => void;
+  isAdmin?: boolean;
+  onEdit?: (item: AlumniItem) => void;
+  onDelete?: (item: AlumniItem) => void;
 }
 
 export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
-  ({ alumni, onClose }) => {
+  ({ alumni, onClose, isAdmin = false, onEdit, onDelete }) => {
     const insets = useSafeAreaInsets();
     const [imageError, setImageError] = useState(false);
 
@@ -118,9 +121,44 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = React.memo(
               },
             ]}
           >
-            {/* Top Bar: Drag Handle & Close Button */}
+            {/* Top Bar: Drag Handle, Admin Actions & Close Button */}
             <View style={styles.topBar}>
               <View style={styles.dragHandle} />
+
+              {isAdmin && alumni && (
+                <View style={styles.adminTopActions}>
+                  {onEdit && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        onClose();
+                        onEdit(alumni);
+                      }}
+                      style={styles.adminActionIconBtn}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit alumni"
+                    >
+                      <Feather name="edit-2" size={14} color="#1e293b" />
+                    </TouchableOpacity>
+                  )}
+
+                  {onDelete && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        onClose();
+                        onDelete(alumni);
+                      }}
+                      style={[styles.adminActionIconBtn, styles.adminDeleteIconBtn]}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete alumni"
+                    >
+                      <Feather name="trash-2" size={14} color="#dc2626" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               <TouchableOpacity
                 onPress={onClose}
                 style={styles.closeBtn}
@@ -430,6 +468,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f4f6",
     alignItems: "center",
     justifyContent: "center",
+  },
+  adminTopActions: {
+    position: "absolute",
+    left: 18,
+    top: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  adminActionIconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminDeleteIconBtn: {
+    backgroundColor: "#fef2f2",
   },
   scroll: {
     flexGrow: 0,

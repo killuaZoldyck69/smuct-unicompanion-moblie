@@ -25,13 +25,23 @@ export interface AlumniItem {
 
 export interface CreateAlumniInput {
   name: string;
-  email: string;
-  phone?: string;
+  email?: string | null;
+  phone?: string | null;
   department: string;
-  graduationBatch: string;
-  graduationYear?: number;
-  currentCompany?: string;
-  currentRole?: string;
-  linkedInUrl?: string;
-  imageUrl?: string;
+  batch?: string | null;
+  graduationBatch?: string | null;
+  graduationYear?: number | null;
+  passingYear?: number | null;
+  degree?: string | null;
+  currentCompany?: string | null;
+  currentPosition?: string | null;
+  currentRole?: string | null;
+  designation?: string | null;
+  skills?: string[];
+  linkedInUrl?: string | null;
+  linkedinUrl?: string | null;
+  personalWebsiteUrl?: string | null;
+  image?: string | null;
+  imageUrl?: string | null;
 }
+

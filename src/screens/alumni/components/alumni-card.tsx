@@ -11,15 +11,18 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { BENTO, fontFamily } from "../constants";
 import { AlumniItem } from "../types";
-import { getDeptTheme, getAvatarTheme, getInitials } from "../utils";
+import { getDeptTheme, getInitials } from "../utils";
 
 interface AlumniCardProps {
   item: AlumniItem;
   onSelect: (item: AlumniItem) => void;
+  isAdmin?: boolean;
+  onEdit?: (item: AlumniItem) => void;
+  onDelete?: (item: AlumniItem) => void;
 }
 
 export const AlumniCard: React.FC<AlumniCardProps> = React.memo(
-  ({ item, onSelect }) => {
+  ({ item, onSelect, isAdmin = false, onEdit, onDelete }) => {
     const [imageError, setImageError] = useState(false);
 
     const role =
@@ -28,7 +31,6 @@ export const AlumniCard: React.FC<AlumniCardProps> = React.memo(
     const year = item.graduationYear || item.passingYear;
     const batch = item.batch || item.graduationBatch;
     const deptTheme = getDeptTheme(item.department);
-    const avatarTheme = getAvatarTheme(item.name, item.department);
     const imageUrl = item.image || item.imageUrl;
     const hasImage = Boolean(imageUrl) && !imageError;
 
@@ -113,10 +115,43 @@ export const AlumniCard: React.FC<AlumniCardProps> = React.memo(
           </Text>
         </View>
 
-        {/* Far Right: Chevron navigation indicator */}
-        <View style={styles.chevronWrap}>
-          <Feather name="chevron-right" size={16} color="#9ca3af" />
-        </View>
+        {/* Far Right: Admin actions or Chevron navigation indicator */}
+        {isAdmin ? (
+          <View style={styles.adminActionGroup}>
+            {onEdit && (
+              <TouchableOpacity
+                style={styles.adminEditBtn}
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  onEdit(item);
+                }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Edit ${item.name}`}
+              >
+                <Feather name="edit-2" size={13} color={BENTO.navy} />
+              </TouchableOpacity>
+            )}
+            {onDelete && (
+              <TouchableOpacity
+                style={styles.adminDeleteBtn}
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  onDelete(item);
+                }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${item.name}`}
+              >
+                <Feather name="trash-2" size={13} color={BENTO.rose} />
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <View style={styles.chevronWrap}>
+            <Feather name="chevron-right" size={16} color="#9ca3af" />
+          </View>
+        )}
       </TouchableOpacity>
     );
   },
@@ -218,6 +253,32 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     alignItems: "center",
     justifyContent: "center",
+  },
+  adminActionGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginLeft: 8,
+  },
+  adminEditBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: BENTO.slateSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: BENTO.border,
+  },
+  adminDeleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: BENTO.roseBg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: BENTO.roseBorder,
   },
 });
 

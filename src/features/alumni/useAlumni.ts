@@ -12,6 +12,7 @@ import {
   createAlumniAPI,
   updateAlumniAPI,
   deleteAlumniAPI,
+  bulkCreateAlumniAPI,
   AlumniQueryParams,
 } from "@/services/alumni-service";
 import { CreateAlumniInput } from "./types";
@@ -88,13 +89,28 @@ export const useCreateAlumni = () => {
   });
 };
 
-export const useUpdateAlumni = (id: string) => {
+export const useUpdateAlumni = (optionalId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<CreateAlumniInput>) => updateAlumniAPI(id, data),
-    onSuccess: () => {
+    mutationFn: (
+      args:
+        | { id: string; data: Partial<CreateAlumniInput> }
+        | Partial<CreateAlumniInput>,
+    ) => {
+      if ("id" in args && typeof (args as any).id === "string" && "data" in args) {
+        return updateAlumniAPI((args as any).id, (args as any).data);
+      }
+      if (optionalId) {
+        return updateAlumniAPI(optionalId, args as Partial<CreateAlumniInput>);
+      }
+      throw new Error("Alumni ID is required for update.");
+    },
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["alumniDirectory"] });
-      queryClient.invalidateQueries({ queryKey: ["alumni", id] });
+      const targetId = "id" in variables ? (variables as any).id : optionalId;
+      if (targetId) {
+        queryClient.invalidateQueries({ queryKey: ["alumni", targetId] });
+      }
     },
   });
 };
@@ -108,3 +124,14 @@ export const useDeleteAlumni = () => {
     },
   });
 };
+
+export const useBulkCreateAlumni = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateAlumniInput[]) => bulkCreateAlumniAPI(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alumniDirectory"] });
+    },
+  });
+};
+

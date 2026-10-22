@@ -1,4 +1,5 @@
 import { AlumniItem } from "@/services/alumni-service";
+import { CreateAlumniInput } from "@/features/alumni/types";
 
 export type AlumniSortOption = "recent" | "name";
 
@@ -21,4 +22,4 @@ export interface AvatarTheme {
   text: string;
 }
 
-export { AlumniItem };
+export { AlumniItem, CreateAlumniInput };
