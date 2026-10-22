@@ -7,7 +7,6 @@ import {
   TextInput,
   FlatList,
   RefreshControl,
-  Alert,
   BackHandler,
   ActivityIndicator,
   ScrollView,
@@ -22,6 +21,8 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   useInfiniteBloodFeed,
   useCreateBloodPost,
+  useResolveBloodPost,
+  useDeleteBloodPost,
 } from "@/features/blood/useBlood";
 import { GetBloodFeedParams } from "@/services/blood-service";
 import type { BloodPostItem } from "@/features/blood/types";
@@ -41,6 +42,8 @@ import {
   BloodFilterState,
 } from "./components/blood-filter-modal";
 import { ComposeBloodModal } from "./components/compose-blood-modal";
+import { BloodConfirmModal } from "./components/blood-confirm-modal";
+import { ProfileRequirementModal } from "./components/profile-requirement-modal";
 import {
   BloodSkeleton,
   BloodError,
@@ -50,6 +53,14 @@ import {
 export { BENTO_COLORS } from "./constants";
 export { formatBloodGroup, formatBloodGroupSymbol } from "./utils";
 
+export interface BloodScreenProps {
+  hasBackButton?: boolean;
+  isStackScreen?: boolean;
+  forceAdmin?: boolean;
+  headerTitle?: string;
+  headerSubtitle?: string;
+}
+
 const DEFAULT_FILTERS: BloodFilterState = {
   urgency: "ALL",
   status: "ACTIVE",
@@ -57,10 +68,18 @@ const DEFAULT_FILTERS: BloodFilterState = {
   myPostsOnly: false,
 };
 
-export function Blood() {
+export function Blood(props: BloodScreenProps = {}) {
+  const {
+    hasBackButton = false,
+    forceAdmin = false,
+    headerTitle = "Blood Bank Hub",
+    headerSubtitle,
+  } = props;
+
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user: currentUser } = useCurrentUser();
+  const isAdmin = forceAdmin || currentUser?.role === "ADMIN";
 
   // Search & Filters state
   const [searchInput, setSearchInput] = useState("");
@@ -117,6 +136,30 @@ export function Blood() {
   } = useInfiniteBloodFeed(queryParams);
 
   const createPostMutation = useCreateBloodPost();
+  const resolveMutation = useResolveBloodPost();
+  const deleteMutation = useDeleteBloodPost();
+
+  // Profile requirements state & Admin action confirmation state
+  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
+  const [profileMissing, setProfileMissing] = useState({
+    missingPhone: false,
+    missingBloodGroup: false,
+  });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    confirmColor?: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    onConfirm: () => {},
+  });
 
   const posts = useMemo(() => {
     return data?.pages.flatMap((page) => page.posts) ?? [];
@@ -149,16 +192,89 @@ export function Blood() {
   }, [refetch]);
 
   const verifyProfileAndCompose = useCallback(() => {
-    if (!currentUser?.bloodGroup || !currentUser?.phoneNumber) {
-      Alert.alert(
-        "Profile Incomplete",
-        "You must update your Profile to include your Blood Group and Phone Number before requesting or donating blood.",
-        [{ text: "OK", style: "default" }]
-      );
+    const hasPhone = !!(currentUser?.phoneNumber && currentUser.phoneNumber.trim());
+    const hasBlood = !!currentUser?.bloodGroup;
+    if (!hasPhone || !hasBlood) {
+      setProfileMissing({
+        missingPhone: !hasPhone,
+        missingBloodGroup: !hasBlood,
+      });
+      setIsProfileModalVisible(true);
       return;
     }
     setIsComposeVisible(true);
   }, [currentUser]);
+
+  const handleCompleteProfile = useCallback(() => {
+    setIsProfileModalVisible(false);
+    router.push("/(tabs)/profile" as any);
+  }, [router]);
+
+  const handleAdminResolve = useCallback(
+    (item: BloodPostItem) => {
+      const symbol = formatBloodGroupSymbol(item.bloodGroup);
+      setConfirmModal({
+        visible: true,
+        title: "Mark Request as Fulfilled",
+        message: `Are you sure you want to mark the blood request for patient "${item.patientName}" (${symbol}) as fulfilled? It will be updated as resolved for the entire campus community.`,
+        confirmText: "Mark Fulfilled",
+        confirmColor: "#059669",
+        onConfirm: () => {
+          setConfirmModal((prev) => ({ ...prev, visible: false }));
+          resolveMutation.mutate(item.id, {
+            onSuccess: () => {
+              Toast.show({
+                type: "success",
+                text1: "Request Fulfilled",
+                text2: `Blood request for ${item.patientName} marked as fulfilled.`,
+              });
+            },
+            onError: (err: any) => {
+              Toast.show({
+                type: "error",
+                text1: "Failed to update",
+                text2: err.message || "Could not mark request as fulfilled.",
+              });
+            },
+          });
+        },
+      });
+    },
+    [resolveMutation],
+  );
+
+  const handleAdminDelete = useCallback(
+    (item: BloodPostItem) => {
+      const symbol = formatBloodGroupSymbol(item.bloodGroup);
+      setConfirmModal({
+        visible: true,
+        title: "Delete Blood Request",
+        message: `Are you sure you want to permanently delete the emergency blood request for patient "${item.patientName}" (${symbol})? This action cannot be undone.`,
+        confirmText: "Delete Request",
+        confirmColor: BENTO_COLORS.crimson,
+        onConfirm: () => {
+          setConfirmModal((prev) => ({ ...prev, visible: false }));
+          deleteMutation.mutate(item.id, {
+            onSuccess: () => {
+              Toast.show({
+                type: "info",
+                text1: "Request Deleted",
+                text2: "The blood request was removed successfully.",
+              });
+            },
+            onError: (err: any) => {
+              Toast.show({
+                type: "error",
+                text1: "Failed to delete",
+                text2: err.message || "Could not delete blood request.",
+              });
+            },
+          });
+        },
+      });
+    },
+    [deleteMutation],
+  );
 
   const handlePost = useCallback(() => {
     const { isValid, error } = validateBloodPostInput(newPost);
@@ -186,10 +302,22 @@ export function Blood() {
         });
       },
       onError: (err: any) => {
+        const errMsg = err?.message || "";
+        if (
+          errMsg.toLowerCase().includes("profile incomplete") ||
+          errMsg.toLowerCase().includes("phone number and blood group")
+        ) {
+          setIsComposeVisible(false);
+          setProfileMissing({
+            missingPhone: !(currentUser?.phoneNumber && currentUser.phoneNumber.trim()),
+            missingBloodGroup: !currentUser?.bloodGroup,
+          });
+          setIsProfileModalVisible(true);
+        }
         Toast.show({
           type: "error",
           text1: "Failed to post",
-          text2: err.message || "Network error. Please try again.",
+          text2: errMsg || "Network error. Please try again.",
         });
       },
     });
@@ -228,16 +356,58 @@ export function Blood() {
   }, [isFetchingNextPage]);
 
   const renderItem = useCallback(
-    ({ item }: { item: BloodPostItem }) => <BloodPostCard item={item} />,
-    [],
+    ({ item }: { item: BloodPostItem }) => (
+      <BloodPostCard
+        item={item}
+        isAdmin={isAdmin}
+        onResolve={handleAdminResolve}
+        onDelete={handleAdminDelete}
+      />
+    ),
+    [isAdmin, handleAdminResolve, handleAdminDelete],
   );
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>
       {/* Top Header */}
       <View style={styles.header}>
-        <View style={styles.headerTitlesContainer}>
-          <Text style={styles.screenTitle}>Blood Bank Hub</Text>
+        <View style={styles.headerLeftGroup}>
+          {hasBackButton && (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              activeOpacity={0.7}
+            >
+              <Feather
+                name="arrow-left"
+                size={20}
+                color={BENTO_COLORS.deepNavy}
+              />
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.headerTitlesContainer}>
+            <View style={styles.titleRow}>
+              <Text style={styles.screenTitle}>{headerTitle}</Text>
+              {isAdmin && (
+                <View style={styles.adminBadge}>
+                  <Feather
+                    name="shield"
+                    size={11}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 3 }}
+                  />
+                  <Text style={styles.adminBadgeText}>ADMIN</Text>
+                </View>
+              )}
+            </View>
+            {headerSubtitle ? (
+              <Text style={styles.screenSubtitle}>{headerSubtitle}</Text>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.headerActions}>
@@ -533,6 +703,51 @@ export function Blood() {
           isSubmitting={createPostMutation.isPending}
         />
       )}
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={[
+          styles.floatingActionButton,
+          { bottom: insets.bottom > 0 ? insets.bottom + 20 : 28 },
+        ]}
+        onPress={verifyProfileAndCompose}
+        activeOpacity={0.88}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Request blood donation"
+      >
+        <Feather
+          name="plus"
+          size={18}
+          color="#ffffff"
+          style={{ marginRight: 6 }}
+        />
+        <Text style={styles.floatingActionButtonText}>
+          {isAdmin ? "Create Request" : "Request Blood"}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Profile Requirement Incomplete Modal */}
+      <ProfileRequirementModal
+        visible={isProfileModalVisible}
+        missingPhone={profileMissing.missingPhone}
+        missingBloodGroup={profileMissing.missingBloodGroup}
+        onCompleteProfile={handleCompleteProfile}
+        onClose={() => setIsProfileModalVisible(false)}
+      />
+
+      {/* Admin Action Confirmation Modal */}
+      <BloodConfirmModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        confirmColor={confirmModal.confirmColor}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() =>
+          setConfirmModal((prev) => ({ ...prev, visible: false }))
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -562,8 +777,54 @@ const styles = StyleSheet.create({
     borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
+  headerLeftGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: BENTO_COLORS.pillRadius,
+    backgroundColor: BENTO_COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    ...BENTO_COLORS.shadow,
+  },
   headerTitlesContainer: {
     alignItems: "flex-start",
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  screenSubtitle: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+    marginTop: 2,
+  },
+  adminBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO_COLORS.roseBg,
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(190, 18, 60, 0.15)",
+  },
+  adminBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: BENTO_COLORS.crimson,
+    letterSpacing: 0.5,
   },
   headerActions: {
     flexDirection: "row",
@@ -682,5 +943,28 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+  },
+  floatingActionButton: {
+    position: "absolute",
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO_COLORS.crimson,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    borderRadius: BENTO_COLORS.pillRadius,
+    shadowColor: BENTO_COLORS.crimson,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
+    zIndex: 99,
+  },
+  floatingActionButtonText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: -0.2,
   },
 });

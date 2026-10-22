@@ -8,10 +8,16 @@ import { formatBloodGroupSymbol, getUserAcademicSubtitle } from "../utils";
 
 interface BloodPostCardProps {
   item: any;
+  isAdmin?: boolean;
+  onResolve?: (item: any) => void;
+  onDelete?: (item: any) => void;
 }
 
 export const BloodPostCard = React.memo(function BloodPostCard({
   item,
+  isAdmin = false,
+  onResolve,
+  onDelete,
 }: BloodPostCardProps) {
   const router = useRouter();
   const bloodSymbol = formatBloodGroupSymbol(item.bloodGroup);
@@ -21,6 +27,13 @@ export const BloodPostCard = React.memo(function BloodPostCard({
   const volunteerCount = item._count?.responses ?? item.responses?.length ?? 0;
   const bagsNeeded = item.bagsNeeded || 1;
 
+  const handleCardPress = () => {
+    const targetUrl = isAdmin
+      ? `/blood/${item.id}?from=admin`
+      : `/blood/${item.id}`;
+    router.push(targetUrl as any);
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -28,7 +41,7 @@ export const BloodPostCard = React.memo(function BloodPostCard({
         isUrgent && styles.cardUrgent,
         isFulfilled && styles.cardFulfilled,
       ]}
-      onPress={() => router.push(`/blood/${item.id}`)}
+      onPress={handleCardPress}
       activeOpacity={0.88}
       accessible={true}
       accessibilityRole="button"
@@ -182,6 +195,56 @@ export const BloodPostCard = React.memo(function BloodPostCard({
           </Text>
         </View>
       </View>
+
+      {/* 6. ADMIN ACTIONS BAR */}
+      {isAdmin && (
+        <View style={styles.adminActionBar}>
+          <View style={styles.adminLabelGroup}>
+            <View style={styles.adminShieldDot} />
+            <Text style={styles.adminLabelText}>ADMIN CONTROLS</Text>
+          </View>
+
+          <View style={styles.adminButtonsRow}>
+            {!isFulfilled && onResolve && (
+              <TouchableOpacity
+                style={styles.adminResolveBtn}
+                onPress={() => onResolve(item)}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Mark blood request as fulfilled"
+              >
+                <Feather
+                  name="check-circle"
+                  size={13}
+                  color="#ffffff"
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.adminResolveBtnText}>Mark Fulfilled</Text>
+              </TouchableOpacity>
+            )}
+
+            {onDelete && (
+              <TouchableOpacity
+                style={styles.adminDeleteBtn}
+                onPress={() => onDelete(item)}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Delete blood request"
+              >
+                <Feather
+                  name="trash-2"
+                  size={13}
+                  color={BENTO_COLORS.crimson}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.adminDeleteBtnText}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
     </TouchableOpacity>
   );
 });
@@ -420,5 +483,68 @@ const styles = StyleSheet.create({
   },
   volunteerPillTextFulfilled: {
     color: "#059669",
+  },
+  adminActionBar: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.06)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  adminLabelGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  adminShieldDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: BENTO_COLORS.crimson,
+  },
+  adminLabelText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: BENTO_COLORS.crimson,
+    letterSpacing: 0.6,
+  },
+  adminButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  adminResolveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#059669",
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 10,
+    ...BENTO_COLORS.shadow,
+  },
+  adminResolveBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  adminDeleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO_COLORS.roseBg,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(190, 18, 60, 0.2)",
+  },
+  adminDeleteBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.crimson,
   },
 });
