@@ -17,3 +17,12 @@ export interface CreateNoticeInput {
   issuerDesignation: string;
   copyTo?: string[];
 }
+
+export interface UpdateNoticeInput {
+  referenceNo?: string | null;
+  title?: string;
+  body?: string;
+  issuerName?: string;
+  issuerDesignation?: string;
+  copyTo?: string[];
+}

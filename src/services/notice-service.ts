@@ -32,6 +32,18 @@ export interface CreateNoticeInput {
   category?: string;
 }
 
+export interface UpdateNoticeInput {
+  referenceNo?: string | null;
+  title?: string;
+  body?: string;
+  description?: string;
+  issuerName?: string;
+  issuerDesignation?: string;
+  copyTo?: string[];
+  fileUrl?: string;
+  category?: string;
+}
+
 export const getNotices = async (): Promise<NoticeItem[]> => {
   const res = await api.get("/notices");
   return res.data?.data || [];
@@ -49,6 +61,12 @@ export const createNotice = async (data: CreateNoticeInput) => {
   return res.data?.data;
 };
 export const createNoticeAPI = createNotice;
+
+export const updateNotice = async (id: string, data: UpdateNoticeInput) => {
+  const res = await api.patch(`/notices/${id}`, data);
+  return res.data?.data;
+};
+export const updateNoticeAPI = updateNotice;
 
 export const deleteNotice = async (id: string) => {
   const res = await api.delete(`/notices/${id}`);

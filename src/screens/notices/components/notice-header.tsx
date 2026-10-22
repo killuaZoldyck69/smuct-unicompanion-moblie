@@ -1,23 +1,56 @@
 // src/screens/notices/components/notice-header.tsx
 import React from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { NOTICE_COLORS, fontFamily } from "../constants";
 
 const NOTICE_HEADER_BG = require("@/assets/header-bg-images/notice-screen-bg.png");
 
-interface NoticeHeaderProps {
+export interface NoticeHeaderProps {
+  title?: string;
   badgeText?: string;
+  hasBackButton?: boolean;
+  onBack?: () => void;
+  isAdmin?: boolean;
 }
 
 export const NoticeHeader = React.memo(function NoticeHeader({
+  title = "Noticeboard",
   badgeText = "Official University Announcements",
+  hasBackButton = false,
+  onBack,
+  isAdmin = false,
 }: NoticeHeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
+        {hasBackButton && (
+          <TouchableOpacity
+            onPress={onBack}
+            style={styles.backButton}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            activeOpacity={0.7}
+          >
+            <Feather
+              name="arrow-left"
+              size={20}
+              color={NOTICE_COLORS.deepNavy}
+            />
+          </TouchableOpacity>
+        )}
+
         {/* Left: Title + badge row */}
         <View style={styles.titleGroup}>
-          <Text style={styles.title}>Noticeboard</Text>
+          <View style={styles.titleWithBadge}>
+            <Text style={styles.title}>{title}</Text>
+            {isAdmin && (
+              <View style={styles.adminBadge}>
+                <Text style={styles.adminBadgeText}>ADMIN</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.badgeRow}>
             <Text
               style={styles.badgeText}
@@ -91,5 +124,37 @@ const styles = StyleSheet.create({
     width: 135,
     height: 90,
     opacity: 0.9,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: NOTICE_COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
+    ...NOTICE_COLORS.shadow,
+  },
+  titleWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  adminBadge: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.2)",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  adminBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#2563eb",
+    letterSpacing: 0.5,
   },
 });

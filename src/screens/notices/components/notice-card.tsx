@@ -6,14 +6,20 @@ import { NOTICE_COLORS, fontFamily } from "../constants";
 import { NormalizedNotice } from "../types";
 import { resolveNoticeVisualTheme } from "../theme/notice-visual-theme-resolver";
 
-interface NoticeCardProps {
+export interface NoticeCardProps {
   item: NormalizedNotice;
   onPress: (item: NormalizedNotice) => void;
+  isAdmin?: boolean;
+  onEdit?: (item: NormalizedNotice) => void;
+  onDelete?: (item: NormalizedNotice) => void;
 }
 
 export const NoticeCard = React.memo(function NoticeCard({
   item,
   onPress,
+  isAdmin = false,
+  onEdit,
+  onDelete,
 }: NoticeCardProps) {
   const theme = resolveNoticeVisualTheme(item.category);
 
@@ -103,11 +109,40 @@ export const NoticeCard = React.memo(function NoticeCard({
             ) : null}
           </View>
 
-          <Feather
-            name="chevron-right"
-            size={16}
-            color="#94a3b8"
-          />
+          <View style={styles.rightActionCluster}>
+            {isAdmin && (
+              <View style={styles.adminActionRow}>
+                <TouchableOpacity
+                  onPress={() => onEdit?.(item)}
+                  style={[styles.adminBtnCircle, styles.adminEditBtn]}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit notice: ${item.title}`}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                >
+                  <Feather name="edit-2" size={13} color="#2563eb" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => onDelete?.(item)}
+                  style={[styles.adminBtnCircle, styles.adminDeleteBtn]}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete notice: ${item.title}`}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
+                >
+                  <Feather name="trash-2" size={13} color="#dc2626" />
+                </TouchableOpacity>
+              </View>
+            )}
+            <Feather
+              name="chevron-right"
+              size={16}
+              color="#94a3b8"
+            />
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -227,5 +262,32 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: "800",
     color: "#059669",
+  },
+  rightActionCluster: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  adminActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 6,
+    gap: 6,
+  },
+  adminBtnCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminEditBtn: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.15)",
+  },
+  adminDeleteBtn: {
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "rgba(220, 38, 38, 0.15)",
   },
 });

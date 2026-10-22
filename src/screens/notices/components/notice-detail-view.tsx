@@ -17,15 +17,21 @@ import { OfficialIdentityBlock } from "./official-identity-block";
 import { CampusWatermarkSvg } from "./illustrations/campus-watermark-svg";
 import { copyNoticeContent, shareNoticeContent } from "../utils";
 
-interface Props {
+export interface NoticeDetailViewProps {
   notice: NormalizedNotice | null;
   onClose: () => void;
+  isAdmin?: boolean;
+  onEdit?: (notice: NormalizedNotice) => void;
+  onDelete?: (notice: NormalizedNotice) => void;
 }
 
 export const NoticeDetailView = React.memo(function NoticeDetailView({
   notice,
   onClose,
-}: Props) {
+  isAdmin = false,
+  onEdit,
+  onDelete,
+}: NoticeDetailViewProps) {
   const insets = useSafeAreaInsets();
   if (!notice) return null;
 
@@ -55,16 +61,45 @@ export const NoticeDetailView = React.memo(function NoticeDetailView({
 
           <Text style={styles.headerTitle}>Official Notice</Text>
 
-          <TouchableOpacity
-            onPress={() => shareNoticeContent(notice)}
-            style={styles.circleBtn}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Share official notice"
-            activeOpacity={0.75}
-          >
-            <Feather name="share-2" size={18} color={NOTICE_COLORS.deepNavy} />
-          </TouchableOpacity>
+          <View style={styles.headerRightActions}>
+            {isAdmin && (
+              <>
+                <TouchableOpacity
+                  onPress={() => {
+                    onClose();
+                    onEdit?.(notice);
+                  }}
+                  style={[styles.circleBtn, { marginRight: 6 }]}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit notice"
+                  activeOpacity={0.75}
+                >
+                  <Feather name="edit-2" size={16} color="#2563eb" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onDelete?.(notice)}
+                  style={[styles.circleBtn, { marginRight: 6 }]}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete notice"
+                  activeOpacity={0.75}
+                >
+                  <Feather name="trash-2" size={16} color="#dc2626" />
+                </TouchableOpacity>
+              </>
+            )}
+            <TouchableOpacity
+              onPress={() => shareNoticeContent(notice)}
+              style={styles.circleBtn}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Share official notice"
+              activeOpacity={0.75}
+            >
+              <Feather name="share-2" size={18} color={NOTICE_COLORS.deepNavy} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
@@ -222,6 +257,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: NOTICE_COLORS.deepNavy,
     letterSpacing: -0.3,
+  },
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   scrollContent: {
     paddingHorizontal: 20,

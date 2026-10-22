@@ -8,12 +8,15 @@ import {
   RefreshControl,
   TouchableOpacity,
   BackHandler,
+  Platform,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
 
-import { useNotices } from "@/features/notices/useNotices";
+import { useNotices, useDeleteNotice } from "@/features/notices/useNotices";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { NOTICE_COLORS, fontFamily } from "./constants";
 import { NoticeCategoryKey, NormalizedNotice } from "./types";
 import { normalizeNotice } from "./utils";
@@ -22,6 +25,8 @@ import { NoticeSearchBar } from "./components/notice-search-bar";
 import { NoticeFilterModal } from "./components/notice-filter-modal";
 import { NoticeCard } from "./components/notice-card";
 import { NoticeDetailView } from "./components/notice-detail-view";
+import { CreateNoticeModal } from "./components/create-notice-modal";
+import { DeleteNoticeModal } from "./components/delete-notice-modal";
 import {
   NoticeSkeleton,
   NoticeErrorState,
@@ -38,17 +43,38 @@ export {
   shareNoticeContent,
 } from "./utils";
 
-export function NoticeboardScreen() {
+export interface NoticeboardScreenProps {
+  hasBackButton?: boolean;
+  isStackScreen?: boolean;
+  forceAdmin?: boolean;
+  headerTitle?: string;
+  headerSubtitle?: string;
+}
+
+export function NoticeboardScreen({
+  hasBackButton = false,
+  isStackScreen = false,
+  forceAdmin = false,
+  headerTitle,
+  headerSubtitle,
+}: NoticeboardScreenProps = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { role, user } = useCurrentUser();
+  const isAdmin = forceAdmin || role === "ADMIN" || user?.role === "ADMIN";
 
   const [selectedCategory, setSelectedCategory] = useState<NoticeCategoryKey>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState<NormalizedNotice | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<NormalizedNotice | null>(null);
+  const [noticeToDelete, setNoticeToDelete] = useState<NormalizedNotice | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: rawNotices, isLoading, isError, refetch } = useNotices();
+  const deleteNoticeMutation = useDeleteNotice();
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -59,7 +85,56 @@ export function NoticeboardScreen() {
     }
   }, [refetch]);
 
+  const handleOpenCreate = useCallback(() => {
+    setEditingNotice(null);
+    setIsCreateOpen(true);
+  }, []);
+
+  const handleEditNotice = useCallback((item: NormalizedNotice) => {
+    setSelectedNotice(null);
+    setEditingNotice(item);
+    setIsCreateOpen(true);
+  }, []);
+
+  const handleDeleteNotice = useCallback((item: NormalizedNotice) => {
+    setNoticeToDelete(item);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!noticeToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteNoticeMutation.mutateAsync(noticeToDelete.id);
+      Toast.show({
+        type: "success",
+        text1: "Notice Deleted",
+        text2: `"${noticeToDelete.title}" has been removed from noticeboard.`,
+      });
+      setNoticeToDelete(null);
+      if (selectedNotice?.id === noticeToDelete.id) {
+        setSelectedNotice(null);
+      }
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Delete Failed",
+        text2: "Unable to delete notice. Please try again.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [noticeToDelete, deleteNoticeMutation, selectedNotice?.id]);
+
   const handleBack = useCallback(() => {
+    if (isCreateOpen) {
+      setIsCreateOpen(false);
+      setEditingNotice(null);
+      return;
+    }
+    if (noticeToDelete) {
+      setNoticeToDelete(null);
+      return;
+    }
     if (selectedNotice) {
       setSelectedNotice(null);
       return;
@@ -81,11 +156,21 @@ export function NoticeboardScreen() {
     } else {
       router.replace("/(tabs)/menu");
     }
-  }, [selectedNotice, isFilterModalOpen, searchQuery, selectedCategory, router]);
+  }, [
+    isCreateOpen,
+    noticeToDelete,
+    selectedNotice,
+    isFilterModalOpen,
+    searchQuery,
+    selectedCategory,
+    router,
+  ]);
 
   useEffect(() => {
     const onHardwareBack = () => {
       if (
+        isCreateOpen ||
+        noticeToDelete ||
         selectedNotice ||
         isFilterModalOpen ||
         searchQuery.length > 0 ||
@@ -98,7 +183,15 @@ export function NoticeboardScreen() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", onHardwareBack);
     return () => sub.remove();
-  }, [selectedNotice, isFilterModalOpen, searchQuery, selectedCategory, handleBack]);
+  }, [
+    isCreateOpen,
+    noticeToDelete,
+    selectedNotice,
+    isFilterModalOpen,
+    searchQuery,
+    selectedCategory,
+    handleBack,
+  ]);
 
   // 1. Normalization layer: strictly transforms backend items to domain models
   const normalizedNotices = useMemo(() => {
@@ -171,7 +264,13 @@ export function NoticeboardScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* ── Editorial Header ── */}
-      <NoticeHeader />
+      <NoticeHeader
+        title={headerTitle || "Noticeboard"}
+        badgeText={headerSubtitle || "Official University Announcements"}
+        hasBackButton={hasBackButton}
+        onBack={handleBack}
+        isAdmin={isAdmin}
+      />
 
       <ScrollView
         contentContainerStyle={[
@@ -236,12 +335,46 @@ export function NoticeboardScreen() {
                 key={item.id}
                 item={item}
                 onPress={setSelectedNotice}
+                isAdmin={isAdmin}
+                onEdit={handleEditNotice}
+                onDelete={handleDeleteNotice}
               />
             ))}
           </View>
         )}
 
       </ScrollView>
+
+      {/* ── Floating Action Button (FAB) - Admin Only ── */}
+      {isAdmin && (
+        <TouchableOpacity
+          style={[
+            styles.fab,
+            {
+              bottom: isStackScreen
+                ? insets.bottom > 0
+                  ? insets.bottom + 20
+                  : 28
+                : insets.bottom > 0
+                  ? insets.bottom + 88
+                  : 100,
+            },
+          ]}
+          onPress={handleOpenCreate}
+          activeOpacity={0.85}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Create new campus notice"
+        >
+          <Feather
+            name="plus"
+            size={18}
+            color="#ffffff"
+            style={{ marginRight: 6 }}
+          />
+          <Text style={styles.fabText}>Create Notice</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Category Filter Modal (Bottom Sheet Dialog) ── */}
       <NoticeFilterModal
@@ -257,6 +390,30 @@ export function NoticeboardScreen() {
       <NoticeDetailView
         notice={selectedNotice}
         onClose={() => setSelectedNotice(null)}
+        isAdmin={isAdmin}
+        onEdit={handleEditNotice}
+        onDelete={handleDeleteNotice}
+      />
+
+      {/* ── Create / Edit Notice Modal - Admin Only ── */}
+      {isCreateOpen && (
+        <CreateNoticeModal
+          visible={isCreateOpen}
+          onClose={() => {
+            setIsCreateOpen(false);
+            setEditingNotice(null);
+          }}
+          noticeToEdit={editingNotice}
+        />
+      )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      <DeleteNoticeModal
+        visible={!!noticeToDelete}
+        notice={noticeToDelete}
+        isDeleting={isDeleting}
+        onClose={() => setNoticeToDelete(null)}
+        onConfirm={handleConfirmDelete}
       />
     </SafeAreaView>
   );
@@ -302,5 +459,34 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     width: "100%",
+  },
+  fab: {
+    position: "absolute",
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: NOTICE_COLORS.deepNavy,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 30,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  fabText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: 0.2,
   },
 });

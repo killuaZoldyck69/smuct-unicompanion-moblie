@@ -3,9 +3,10 @@ import {
   getNoticesAPI,
   getNoticeByIdAPI,
   createNoticeAPI,
+  updateNoticeAPI,
   deleteNoticeAPI,
 } from "@/services/notice-service";
-import { CreateNoticeInput } from "./types";
+import { CreateNoticeInput, UpdateNoticeInput } from "./types";
 
 export const useNotices = () => {
   return useQuery({
@@ -28,6 +29,18 @@ export const useCreateNotice = () => {
     mutationFn: (data: CreateNoticeInput) => createNoticeAPI(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notices"] });
+    },
+  });
+};
+
+export const useUpdateNotice = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateNoticeInput }) =>
+      updateNoticeAPI(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["notices"] });
+      queryClient.invalidateQueries({ queryKey: ["notice", id] });
     },
   });
 };
