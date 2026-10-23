@@ -16,6 +16,7 @@ import { resolveNoticeVisualTheme } from "../theme/notice-visual-theme-resolver"
 import { OfficialIdentityBlock } from "./official-identity-block";
 import { CampusWatermarkSvg } from "./illustrations/campus-watermark-svg";
 import { copyNoticeContent, shareNoticeContent } from "../utils";
+import { RichNoticeText } from "./rich-notice-text";
 
 export interface NoticeDetailViewProps {
   notice: NormalizedNotice | null;
@@ -164,11 +165,7 @@ export const NoticeDetailView = React.memo(function NoticeDetailView({
 
           {/* 5. Official Notice Body Paragraphs */}
           <View style={styles.bodyWrapper}>
-            {notice.bodyParagraphs.map((paragraph, idx) => (
-              <Text key={idx} style={styles.bodyParagraph}>
-                {paragraph}
-              </Text>
-            ))}
+            <RichNoticeText content={notice.body} />
           </View>
 
           {/* 6. Issuer Signatory Block */}

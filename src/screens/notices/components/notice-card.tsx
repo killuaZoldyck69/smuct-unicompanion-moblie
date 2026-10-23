@@ -41,10 +41,22 @@ export const NoticeCard = React.memo(function NoticeCard({
       />
 
       <View style={styles.cardContent}>
-        {/* Row 1: Notice Title (Bengali / English with proper metrics) */}
-        <Text style={styles.title} numberOfLines={3}>
-          {item.title}
-        </Text>
+        {/* Row 1: Notice Title with NEW / IMPORTANT badge beside it */}
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={3}>
+            {item.title}
+          </Text>
+          {item.isImportant ? (
+            <View style={styles.importantPill}>
+              <Text style={styles.importantPillText}>★ IMPORTANT</Text>
+            </View>
+          ) : item.isNew ? (
+            <View style={styles.newPill}>
+              <View style={styles.newDot} />
+              <Text style={styles.newPillText}>NEW</Text>
+            </View>
+          ) : null}
+        </View>
 
         {/* Row 2: Reference / Memo */}
         {item.referenceNo ? (
@@ -95,18 +107,6 @@ export const NoticeCard = React.memo(function NoticeCard({
               />
               <Text style={styles.dateText}>{item.formattedDate}</Text>
             </View>
-
-            {/* Optional Important / New Tag */}
-            {item.isImportant ? (
-              <View style={styles.importantPill}>
-                <Text style={styles.importantPillText}>★ IMPORTANT</Text>
-              </View>
-            ) : item.isNew ? (
-              <View style={styles.newPill}>
-                <View style={styles.newDot} />
-                <Text style={styles.newPillText}>NEW</Text>
-              </View>
-            ) : null}
           </View>
 
           <View style={styles.rightActionCluster}>
@@ -173,14 +173,21 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     paddingBottom: 14,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 6,
+  },
   title: {
+    flex: 1,
     fontFamily,
     fontSize: 17,
     fontWeight: "800",
     color: NOTICE_COLORS.deepNavy,
     lineHeight: 25,
     letterSpacing: -0.2,
-    marginBottom: 6,
   },
   referenceText: {
     fontFamily,
@@ -232,9 +239,12 @@ const styles = StyleSheet.create({
   },
   importantPill: {
     backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "rgba(220, 38, 38, 0.2)",
     paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: 5,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 2,
   },
   importantPillText: {
     fontFamily,
@@ -246,9 +256,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ecfdf5",
+    borderWidth: 1,
+    borderColor: "rgba(5, 150, 105, 0.2)",
     paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: 5,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 2,
   },
   newDot: {
     width: 5,
@@ -262,6 +275,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: "800",
     color: "#059669",
+    letterSpacing: 0.3,
   },
   rightActionCluster: {
     flexDirection: "row",

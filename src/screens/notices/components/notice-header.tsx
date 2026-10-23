@@ -41,24 +41,11 @@ export const NoticeHeader = React.memo(function NoticeHeader({
           </TouchableOpacity>
         )}
 
-        {/* Left: Title + badge row */}
+        {/* Left: Title + Subtitle */}
         <View style={styles.titleGroup}>
-          <View style={styles.titleWithBadge}>
-            <Text style={styles.title}>{title}</Text>
-            {isAdmin && (
-              <View style={styles.adminBadge}>
-                <Text style={styles.adminBadgeText}>ADMIN</Text>
-              </View>
-            )}
-          </View>
+          <Text style={styles.title}>{title}</Text>
           <View style={styles.badgeRow}>
-            <Text
-              style={styles.badgeText}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {badgeText}
-            </Text>
+            <Text style={styles.badgeText}>{badgeText}</Text>
           </View>
         </View>
 
@@ -102,9 +89,7 @@ const styles = StyleSheet.create({
     lineHeight: 34,
   },
   badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 7,
+    marginTop: 4,
   },
   badgeText: {
     fontFamily,
@@ -112,6 +97,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: NOTICE_COLORS.subtleText,
     letterSpacing: -0.2,
+    lineHeight: 17,
+    flexShrink: 1,
   },
   illustrationWrap: {
     width: 104,
@@ -137,24 +124,5 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0, 0, 0, 0.06)",
     ...NOTICE_COLORS.shadow,
   },
-  titleWithBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  adminBadge: {
-    backgroundColor: "#eff6ff",
-    borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.2)",
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  adminBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#2563eb",
-    letterSpacing: 0.5,
-  },
+
 });

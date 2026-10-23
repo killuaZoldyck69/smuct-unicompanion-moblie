@@ -1,24 +1,12 @@
 import React from "react";
-import { NoticeboardScreen } from "@/screens/notices";
+import { Redirect } from "expo-router";
 
 /**
- * Admin Campus Notice Management Screen
+ * Admin Campus Notice Management Screen Redirect
  *
- * Renders the noticeboard interface matching student and faculty views,
- * enriched with administrative capabilities:
- * - Floating "+ Create Notice" pill button that opens the notice creation form
- * - In-card & in-modal notice editing with pre-filled notice data
- * - Deletion with custom confirmation dialogs & database persistence
- * - Back button integration for nested stack navigation
+ * Redirects to the unified noticeboard tab screen (/(tabs)/notices)
+ * which renders within the app's main tab layout with bottom navigation bar.
  */
 export default function AdminNoticesManageScreen() {
-  return (
-    <NoticeboardScreen
-      hasBackButton={true}
-      isStackScreen={true}
-      forceAdmin={true}
-      headerTitle="Noticeboard"
-      headerSubtitle="Admin Management & Official Notices"
-    />
-  );
+  return <Redirect href="/(tabs)/notices" />;
 }

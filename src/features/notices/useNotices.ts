@@ -1,17 +1,46 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   getNoticesAPI,
+  getNoticesPaginatedAPI,
   getNoticeByIdAPI,
   createNoticeAPI,
   updateNoticeAPI,
   deleteNoticeAPI,
+  GetNoticesQueryParams,
+  PaginatedNoticesResponse,
 } from "@/services/notice-service";
 import { CreateNoticeInput, UpdateNoticeInput } from "./types";
 
-export const useNotices = () => {
+/**
+ * Standard query for campus notices (used across home widgets and noticeboard list)
+ */
+export const useNotices = (params?: GetNoticesQueryParams) => {
   return useQuery({
-    queryKey: ["notices"],
-    queryFn: getNoticesAPI,
+    queryKey: ["notices", params],
+    queryFn: () => getNoticesAPI(params),
+    staleTime: 1000 * 60, // 60s fresh
+  });
+};
+
+/**
+ * Infinite query for smooth pagination, infinite scrolling, and lazy loading
+ */
+export const useInfiniteNotices = (
+  params?: Omit<GetNoticesQueryParams, "page">,
+) => {
+  return useInfiniteQuery<PaginatedNoticesResponse>({
+    queryKey: ["notices", "infinite", params],
+    queryFn: ({ pageParam = 1 }) =>
+      getNoticesPaginatedAPI({ ...params, page: pageParam as number }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasNextPage ? lastPage.pagination.page + 1 : undefined,
+    initialPageParam: 1,
+    staleTime: 1000 * 60,
   });
 };
 
@@ -20,6 +49,7 @@ export const useNoticeById = (id: string) => {
     queryKey: ["notice", id],
     queryFn: () => getNoticeByIdAPI(id),
     enabled: !!id,
+    staleTime: 1000 * 60,
   });
 };
 
@@ -49,8 +79,9 @@ export const useDeleteNotice = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteNoticeAPI(id),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["notices"] });
+      queryClient.invalidateQueries({ queryKey: ["notice", id] });
     },
   });
 };

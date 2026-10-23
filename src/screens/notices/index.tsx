@@ -1,18 +1,19 @@
 // src/screens/notices/index.tsx
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   RefreshControl,
   TouchableOpacity,
   BackHandler,
   Platform,
+  ListRenderItem,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useNotices, useDeleteNotice } from "@/features/notices/useNotices";
@@ -59,20 +60,88 @@ export function NoticeboardScreen({
   headerSubtitle,
 }: NoticeboardScreenProps = {}) {
   const router = useRouter();
+  const searchParams = useLocalSearchParams<{
+    category?: string;
+    search?: string;
+    noticeId?: string;
+  }>();
   const insets = useSafeAreaInsets();
   const { role, user } = useCurrentUser();
   const isAdmin = forceAdmin || role === "ADMIN" || user?.role === "ADMIN";
 
-  const [selectedCategory, setSelectedCategory] = useState<NoticeCategoryKey>("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+  // State initialization with URL search params support
+  const initialCategory: NoticeCategoryKey = useMemo(() => {
+    if (searchParams.category) {
+      const upper = searchParams.category.toUpperCase() as NoticeCategoryKey;
+      if (
+        [
+          "ALL",
+          "ACADEMIC",
+          "ADMIN",
+          "TRANSPORT",
+          "HOLIDAY",
+          "EXAM",
+          "EMERGENCY",
+        ].includes(upper)
+      ) {
+        return upper;
+      }
+    }
+    return "ALL";
+  }, [searchParams.category]);
+
+  const [selectedCategory, setSelectedCategory] =
+    useState<NoticeCategoryKey>(initialCategory);
+  const [searchQuery, setSearchQuery] = useState(searchParams.search || "");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(
+    searchParams.search || "",
+  );
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [selectedNotice, setSelectedNotice] = useState<NormalizedNotice | null>(null);
+  const [selectedNotice, setSelectedNotice] = useState<NormalizedNotice | null>(
+    null,
+  );
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingNotice, setEditingNotice] = useState<NormalizedNotice | null>(null);
-  const [noticeToDelete, setNoticeToDelete] = useState<NormalizedNotice | null>(null);
+  const [editingNotice, setEditingNotice] = useState<NormalizedNotice | null>(
+    null,
+  );
+  const [noticeToDelete, setNoticeToDelete] = useState<NormalizedNotice | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Debounce search query to prevent high-frequency recalculations during typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Sync state if URL params change externally
+  useEffect(() => {
+    if (searchParams.category && searchParams.category.toUpperCase() !== selectedCategory) {
+      const upper = searchParams.category.toUpperCase() as NoticeCategoryKey;
+      if (
+        [
+          "ALL",
+          "ACADEMIC",
+          "ADMIN",
+          "TRANSPORT",
+          "HOLIDAY",
+          "EXAM",
+          "EMERGENCY",
+        ].includes(upper)
+      ) {
+        setSelectedCategory(upper);
+      }
+    }
+    if (searchParams.search !== undefined && searchParams.search !== searchQuery) {
+      setSearchQuery(searchParams.search);
+    }
+  }, [searchParams.category, searchParams.search]);
+
+  // Data fetching via TanStack Query with caching
   const { data: rawNotices, isLoading, isError, refetch } = useNotices();
   const deleteNoticeMutation = useDeleteNotice();
 
@@ -199,6 +268,22 @@ export function NoticeboardScreen({
     return list.map(normalizeNotice);
   }, [rawNotices]);
 
+  // Deep-link direct notice selection
+  const hasAutoSelectedRef = useRef(false);
+  useEffect(() => {
+    if (
+      searchParams.noticeId &&
+      !hasAutoSelectedRef.current &&
+      normalizedNotices.length > 0
+    ) {
+      const match = normalizedNotices.find((n) => n.id === searchParams.noticeId);
+      if (match) {
+        setSelectedNotice(match);
+        hasAutoSelectedRef.current = true;
+      }
+    }
+  }, [searchParams.noticeId, normalizedNotices]);
+
   // 2. Compute dynamic category counts and filter options
   const { categoryCounts, availableCategories } = useMemo(() => {
     const counts: Record<string, number> = {
@@ -232,9 +317,9 @@ export function NoticeboardScreen({
     };
   }, [normalizedNotices]);
 
-  // 3. Filtered notices based on selected category and search query
+  // 3. Filtered notices based on selected category and debounced search query
   const filteredNotices = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
+    const query = debouncedSearchQuery.toLowerCase().trim();
 
     return normalizedNotices.filter((item) => {
       const matchesCategory =
@@ -249,7 +334,7 @@ export function NoticeboardScreen({
 
       return titleMatch || bodyMatch || refMatch || issuerMatch;
     });
-  }, [normalizedNotices, selectedCategory, searchQuery]);
+  }, [normalizedNotices, selectedCategory, debouncedSearchQuery]);
 
   const activeCategoryLabel = useMemo(() => {
     const found = availableCategories.find((c) => c.key === selectedCategory);
@@ -259,35 +344,26 @@ export function NoticeboardScreen({
   const handleResetFilters = useCallback(() => {
     setSelectedCategory("ALL");
     setSearchQuery("");
+    setDebouncedSearchQuery("");
   }, []);
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* ── Editorial Header ── */}
-      <NoticeHeader
-        title={headerTitle || "Noticeboard"}
-        badgeText={headerSubtitle || "Official University Announcements"}
-        hasBackButton={hasBackButton}
-        onBack={handleBack}
+  const renderNoticeItem: ListRenderItem<NormalizedNotice> = useCallback(
+    ({ item }) => (
+      <NoticeCard
+        item={item}
+        onPress={setSelectedNotice}
         isAdmin={isAdmin}
+        onEdit={handleEditNotice}
+        onDelete={handleDeleteNotice}
       />
+    ),
+    [isAdmin, handleEditNotice, handleDeleteNotice],
+  );
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom > 0 ? insets.bottom + 120 : 132 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={[NOTICE_COLORS.deepNavy]}
-            tintColor={NOTICE_COLORS.deepNavy}
-          />
-        }
-      >
-        {/* ── Search Box & Filter Icon Row ── */}
+  const listHeaderComponent = useMemo(
+    () => (
+      <View style={styles.headerContainer}>
+        {/* Search Box & Filter Icon Row */}
         <NoticeSearchBar
           searchQuery={searchQuery}
           onChangeSearchQuery={setSearchQuery}
@@ -296,7 +372,7 @@ export function NoticeboardScreen({
           hasActiveFilter={selectedCategory !== "ALL"}
         />
 
-        {/* ── Active Filter Badge (shows when filtered from modal) ── */}
+        {/* Active Filter Badge */}
         {selectedCategory !== "ALL" && (
           <View style={styles.activeFilterRow}>
             <View style={styles.activeFilterPill}>
@@ -316,34 +392,74 @@ export function NoticeboardScreen({
             </View>
           </View>
         )}
+      </View>
+    ),
+    [
+      searchQuery,
+      isFilterModalOpen,
+      selectedCategory,
+      activeCategoryLabel,
+      filteredNotices.length,
+    ],
+  );
 
-        {/* ── Main List Content ── */}
-        {isLoading ? (
-          <NoticeSkeleton />
-        ) : isError ? (
-          <NoticeErrorState onRetry={refetch} />
-        ) : filteredNotices.length === 0 ? (
-          <NoticeEmptyState
-            searchQuery={searchQuery}
-            selectedCategory={selectedCategory}
-            onReset={handleResetFilters}
+  const listEmptyComponent = useMemo(() => {
+    if (isLoading) {
+      return <NoticeSkeleton />;
+    }
+    if (isError) {
+      return <NoticeErrorState onRetry={refetch} />;
+    }
+    return (
+      <NoticeEmptyState
+        searchQuery={debouncedSearchQuery}
+        selectedCategory={selectedCategory}
+        onReset={handleResetFilters}
+      />
+    );
+  }, [isLoading, isError, debouncedSearchQuery, selectedCategory, refetch, handleResetFilters]);
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* ── Editorial Header ── */}
+      <NoticeHeader
+        title={headerTitle || "Noticeboard"}
+        badgeText={
+          headerSubtitle ||
+          (isAdmin
+            ? "Admin Management & Official Notices"
+            : "Official University Announcements")
+        }
+        hasBackButton={hasBackButton}
+        onBack={handleBack}
+        isAdmin={isAdmin}
+      />
+
+      {/* ── Virtualized High-Performance List ── */}
+      <FlatList
+        data={isLoading || isError ? [] : filteredNotices}
+        keyExtractor={(item) => item.id}
+        renderItem={renderNoticeItem}
+        ListHeaderComponent={listHeaderComponent}
+        ListEmptyComponent={listEmptyComponent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom + 120 : 132 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === "android"}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[NOTICE_COLORS.deepNavy]}
+            tintColor={NOTICE_COLORS.deepNavy}
           />
-        ) : (
-          <View style={styles.cardsContainer}>
-            {filteredNotices.map((item) => (
-              <NoticeCard
-                key={item.id}
-                item={item}
-                onPress={setSelectedNotice}
-                isAdmin={isAdmin}
-                onEdit={handleEditNotice}
-                onDelete={handleDeleteNotice}
-              />
-            ))}
-          </View>
-        )}
-
-      </ScrollView>
+        }
+      />
 
       {/* ── Floating Action Button (FAB) - Admin Only ── */}
       {isAdmin && (
@@ -428,6 +544,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 4,
   },
+  headerContainer: {
+    width: "100%",
+  },
   activeFilterRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -456,9 +575,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.25)",
     alignItems: "center",
     justifyContent: "center",
-  },
-  cardsContainer: {
-    width: "100%",
   },
   fab: {
     position: "absolute",
