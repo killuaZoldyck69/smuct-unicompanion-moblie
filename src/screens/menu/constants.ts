@@ -333,7 +333,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/event-list.png"),
     fallbackIcon: "calendar",
     roles: ["ADMIN"],
-    route: "/admin/events" as Href,
+    route: "/(tabs)/events" as Href,
   },
   {
     id: "admin_field_booking",

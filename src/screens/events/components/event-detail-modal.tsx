@@ -18,9 +18,10 @@ import {
   useToggleEventInterested,
   useDeleteCampusEvent,
 } from "@/features/events/useEvents";
-import { BENTO_COLORS, fontFamily } from "../constants";
-import { formatEventTime, safeShareEvent } from "../utils";
+import { BENTO_COLORS, fontFamily, getCategoryConfig } from "../constants";
+import { formatEventTime, safeShareEvent, stripHtmlToPlainText } from "../utils";
 import { DeleteEventModal } from "./delete-event-modal";
+import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
 
 export interface EventDetailModalProps {
   event: CampusEventItem | null;
@@ -82,6 +83,7 @@ export const EventDetailModal = React.memo(function EventDetailModal({
 
   // Toggle Interested with backend integration & optimistic update
   const handleToggleInterested = async () => {
+    if (isPast) return;
     const nextState = !isInterested;
     const nextCount = Math.max(0, interestedCount + (nextState ? 1 : -1));
     setIsInterested(nextState);
@@ -112,10 +114,11 @@ export const EventDetailModal = React.memo(function EventDetailModal({
 
   // Get Reminder handler
   const handleGetReminder = async () => {
+    if (isPast) return;
     try {
       const title = encodeURIComponent(`Reminder: ${event.title || "Campus Event"}`);
       const details = encodeURIComponent(
-        `Don't miss ${event.title} at ${event.location || "Designated Campus Venue"}.\n\n${event.description || ""}`
+        `Don't miss ${event.title} at ${event.location || "Designated Campus Venue"}.\n\n${stripHtmlToPlainText(event.description)}`
       );
       const location = encodeURIComponent(event.location || "");
       const startIso = eventDate.toISOString().replace(/-|:|\.\d\d\d/g, "");
@@ -171,6 +174,8 @@ export const EventDetailModal = React.memo(function EventDetailModal({
       setIsDeleting(false);
     }
   };
+
+  const categoryConfig = getCategoryConfig(event.category);
 
   return (
     <Modal
@@ -256,36 +261,68 @@ export const EventDetailModal = React.memo(function EventDetailModal({
 
           {/* Scrollable Content */}
           <ScrollView
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              isPast && { paddingBottom: Math.max(insets.bottom + 20, 32) },
+            ]}
             showsVerticalScrollIndicator={false}
           >
-            {/* Status Badge */}
-            <View
-              style={[
-                styles.statusPill,
-                isToday && styles.statusPillToday,
-                isPast && styles.statusPillPast,
-              ]}
-            >
-              <Feather
-                name="calendar"
-                size={12}
-                color={isToday ? "#059669" : isPast ? "#64748b" : "#2563eb"}
-                style={{ marginRight: 6 }}
-              />
-              <Text
+            {/* Badges Row: Category + Status */}
+            <View style={styles.badgesRow}>
+              {/* Category Badge */}
+              <View
                 style={[
-                  styles.statusText,
-                  isToday && styles.statusTextToday,
-                  isPast && styles.statusTextPast,
+                  styles.categoryPill,
+                  {
+                    backgroundColor: categoryConfig.badgeBg,
+                    borderColor: categoryConfig.badgeBorder,
+                  },
                 ]}
               >
-                {isToday
-                  ? "HAPPENING TODAY"
-                  : isPast
-                    ? "COMPLETED EVENT"
-                    : "UPCOMING EVENT"}
-              </Text>
+                <Feather
+                  name={categoryConfig.icon as any}
+                  size={12}
+                  color={categoryConfig.badgeText}
+                  style={{ marginRight: 5 }}
+                />
+                <Text
+                  style={[
+                    styles.categoryPillText,
+                    { color: categoryConfig.badgeText },
+                  ]}
+                >
+                  {categoryConfig.label.toUpperCase()}
+                </Text>
+              </View>
+
+              {/* Status Badge */}
+              <View
+                style={[
+                  styles.statusPill,
+                  isToday && styles.statusPillToday,
+                  isPast && styles.statusPillPast,
+                ]}
+              >
+                <Feather
+                  name="calendar"
+                  size={12}
+                  color={isToday ? "#059669" : isPast ? "#64748b" : "#2563eb"}
+                  style={{ marginRight: 5 }}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    isToday && styles.statusTextToday,
+                    isPast && styles.statusTextPast,
+                  ]}
+                >
+                  {isToday
+                    ? "HAPPENING TODAY"
+                    : isPast
+                      ? "COMPLETED EVENT"
+                      : "UPCOMING EVENT"}
+                </Text>
+              </View>
             </View>
 
             {/* Event Title */}
@@ -343,71 +380,73 @@ export const EventDetailModal = React.memo(function EventDetailModal({
               </View>
             </View>
 
-            {/* Total Interested People Card */}
-            <View style={styles.interestedCard}>
-              <View style={styles.interestedLeft}>
-                <View
-                  style={[
-                    styles.interestedIconBox,
-                    isInterested && styles.interestedIconBoxActive,
-                  ]}
-                >
-                  <Feather
-                    name="heart"
-                    size={18}
-                    color={isInterested ? "#e11d48" : "#f43f5e"}
-                  />
+            {/* Total Interested People Card (Upcoming / Active Events Only) */}
+            {!isPast && (
+              <View style={styles.interestedCard}>
+                <View style={styles.interestedLeft}>
+                  <View
+                    style={[
+                      styles.interestedIconBox,
+                      isInterested && styles.interestedIconBoxActive,
+                    ]}
+                  >
+                    <Feather
+                      name="heart"
+                      size={18}
+                      color={isInterested ? "#e11d48" : "#f43f5e"}
+                    />
+                  </View>
+                  <View style={styles.interestedInfo}>
+                    <Text style={styles.interestedCountText}>
+                      {interestedCount} {interestedCount === 1 ? "Person" : "People"} Interested
+                    </Text>
+                    <Text style={styles.interestedSubtext}>
+                      {isInterested
+                        ? "You and others marked interest"
+                        : "Students & faculty marked interest"}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.interestedInfo}>
-                  <Text style={styles.interestedCountText}>
-                    {interestedCount} {interestedCount === 1 ? "Person" : "People"} Interested
-                  </Text>
-                  <Text style={styles.interestedSubtext}>
-                    {isInterested
-                      ? "You and others marked interest"
-                      : "Students & faculty marked interest"}
-                  </Text>
-                </View>
-              </View>
 
-              {/* Avatar Stack Preview */}
-              <View style={styles.avatarStack}>
-                <View
-                  style={[styles.avatarBubble, { backgroundColor: "#3b82f6" }]}
-                >
-                  <Text style={styles.avatarInitial}>S</Text>
-                </View>
-                <View
-                  style={[
-                    styles.avatarBubble,
-                    styles.avatarOverlap,
-                    { backgroundColor: "#8b5cf6" },
-                  ]}
-                >
-                  <Text style={styles.avatarInitial}>M</Text>
-                </View>
-                <View
-                  style={[
-                    styles.avatarBubble,
-                    styles.avatarOverlap,
-                    { backgroundColor: "#10b981" },
-                  ]}
-                >
-                  <Text style={styles.avatarInitial}>U</Text>
-                </View>
-                <View
-                  style={[
-                    styles.avatarBubble,
-                    styles.avatarOverlap,
-                    { backgroundColor: "#e2e8f0" },
-                  ]}
-                >
-                  <Text style={[styles.avatarInitial, { color: "#475569" }]}>
-                    +{Math.max(1, interestedCount > 3 ? interestedCount - 3 : 1)}
-                  </Text>
+                {/* Avatar Stack Preview */}
+                <View style={styles.avatarStack}>
+                  <View
+                    style={[styles.avatarBubble, { backgroundColor: "#3b82f6" }]}
+                  >
+                    <Text style={styles.avatarInitial}>S</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.avatarBubble,
+                      styles.avatarOverlap,
+                      { backgroundColor: "#8b5cf6" },
+                    ]}
+                  >
+                    <Text style={styles.avatarInitial}>M</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.avatarBubble,
+                      styles.avatarOverlap,
+                      { backgroundColor: "#10b981" },
+                    ]}
+                  >
+                    <Text style={styles.avatarInitial}>U</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.avatarBubble,
+                      styles.avatarOverlap,
+                      { backgroundColor: "#e2e8f0" },
+                    ]}
+                  >
+                    <Text style={[styles.avatarInitial, { color: "#475569" }]}>
+                      +{Math.max(1, interestedCount > 3 ? interestedCount - 3 : 1)}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
 
             {/* About This Event Card */}
             <View style={styles.aboutCard}>
@@ -417,10 +456,16 @@ export const EventDetailModal = React.memo(function EventDetailModal({
                 </View>
                 <Text style={styles.aboutLabel}>ABOUT THIS EVENT</Text>
               </View>
-              <Text style={styles.aboutText}>
-                {event.description ||
-                  "An interactive event and showcase. Join faculty and peers to participate, gain industry insights, and explore campus opportunities."}
-              </Text>
+              {event.description ? (
+                <RichNoticeText
+                  content={event.description}
+                  style={styles.aboutText}
+                />
+              ) : (
+                <Text style={styles.aboutText}>
+                  An interactive event and showcase. Join faculty and peers to participate, gain industry insights, and explore campus opportunities.
+                </Text>
+              )}
             </View>
 
             {/* Online Registration Link (If Available) */}
@@ -444,68 +489,70 @@ export const EventDetailModal = React.memo(function EventDetailModal({
             ) : null}
           </ScrollView>
 
-          {/* Bottom Fixed Action Buttons: Interested & Get Reminder */}
-          <View
-            style={[
-              styles.bottomBar,
-              { paddingBottom: Math.max(insets.bottom, 16) },
-            ]}
-          >
-            {/* Button 1: Interested */}
-            <TouchableOpacity
+          {/* Bottom Fixed Action Buttons: Interested & Get Reminder (Upcoming / Today Events Only) */}
+          {!isPast && (
+            <View
               style={[
-                styles.interestedBtn,
-                isInterested && styles.interestedBtnActive,
+                styles.bottomBar,
+                { paddingBottom: Math.max(insets.bottom, 16) },
               ]}
-              onPress={handleToggleInterested}
-              activeOpacity={0.85}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isInterested
-                  ? "Marked as interested"
-                  : "Mark yourself as interested"
-              }
             >
-              <Feather
-                name={isInterested ? "check" : "star"}
-                size={16}
-                color={isInterested ? "#2563eb" : "#1e293b"}
-                style={{ marginRight: 6 }}
-              />
-              <Text
+              {/* Button 1: Interested */}
+              <TouchableOpacity
                 style={[
-                  styles.interestedBtnText,
-                  isInterested && styles.interestedBtnTextActive,
+                  styles.interestedBtn,
+                  isInterested && styles.interestedBtnActive,
                 ]}
+                onPress={handleToggleInterested}
+                activeOpacity={0.85}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isInterested
+                    ? "Marked as interested"
+                    : "Mark yourself as interested"
+                }
               >
-                {isInterested ? "Interested" : "Interested"}
-              </Text>
-            </TouchableOpacity>
+                <Feather
+                  name={isInterested ? "check" : "star"}
+                  size={16}
+                  color={isInterested ? "#2563eb" : "#1e293b"}
+                  style={{ marginRight: 6 }}
+                />
+                <Text
+                  style={[
+                    styles.interestedBtnText,
+                    isInterested && styles.interestedBtnTextActive,
+                  ]}
+                >
+                  {isInterested ? "Interested" : "Interested"}
+                </Text>
+              </TouchableOpacity>
 
-            {/* Button 2: Get Reminder */}
-            <TouchableOpacity
-              style={[
-                styles.reminderBtn,
-                hasReminder && styles.reminderBtnActive,
-              ]}
-              onPress={handleGetReminder}
-              activeOpacity={0.85}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Add reminder for this event"
-            >
-              <Feather
-                name={hasReminder ? "check-circle" : "bell"}
-                size={16}
-                color="#ffffff"
-                style={{ marginRight: 6 }}
-              />
-              <Text style={styles.reminderBtnText}>
-                {hasReminder ? "Reminder Set" : "Get Reminder"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              {/* Button 2: Get Reminder */}
+              <TouchableOpacity
+                style={[
+                  styles.reminderBtn,
+                  hasReminder && styles.reminderBtnActive,
+                ]}
+                onPress={handleGetReminder}
+                activeOpacity={0.85}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Add reminder for this event"
+              >
+                <Feather
+                  name={hasReminder ? "check-circle" : "bell"}
+                  size={16}
+                  color="#ffffff"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.reminderBtnText}>
+                  {hasReminder ? "Reminder Set" : "Get Reminder"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Custom Bento Delete Event Confirmation Modal */}
@@ -585,6 +632,27 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 24,
   },
+  badgesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  categoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: BENTO_COLORS.pillRadius,
+    borderWidth: 1,
+  },
+  categoryPillText: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -595,7 +663,6 @@ const styles = StyleSheet.create({
     borderRadius: BENTO_COLORS.pillRadius,
     borderWidth: 1,
     borderColor: "#dbeafe",
-    marginBottom: 12,
   },
   statusPillToday: {
     backgroundColor: "#ecfdf5",

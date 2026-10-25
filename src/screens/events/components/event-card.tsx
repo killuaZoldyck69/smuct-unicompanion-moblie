@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { CampusEventItem } from "@/services/event-service";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO_COLORS, fontFamily, getCategoryConfig } from "../constants";
 import { formatEventTime, getEventDateComponents } from "../utils";
 
 export interface EventCardProps {
@@ -24,23 +24,14 @@ const THEME_PALETTES = [
   {
     bg: "#e6f9f0", // mint/teal
     monthColor: "#0d9488",
-    badgeBg: "#e6f9f0",
-    badgeText: "#059669",
-    badgeDot: "#059669",
   },
   {
     bg: "#eff6ff", // soft blue
     monthColor: "#2563eb",
-    badgeBg: "#eff6ff",
-    badgeText: "#2563eb",
-    badgeDot: "#2563eb",
   },
   {
     bg: "#f5f3ff", // soft lavender
     monthColor: "#7c3aed",
-    badgeBg: "#f5f3ff",
-    badgeText: "#7c3aed",
-    badgeDot: "#7c3aed",
   },
 ];
 
@@ -60,31 +51,20 @@ export const EventCard = React.memo(function EventCard({
 
   const { month, dayNumber, weekday } = getEventDateComponents(eventDateStr);
   const formattedTime = formatEventTime(eventDateStr);
+  const categoryConfig = getCategoryConfig(item.category);
 
-  // Palette assignment
+  // Palette assignment for left date block
   const palette = isPast
     ? {
         bg: "#f1f5f9",
         monthColor: "#64748b",
-        badgeBg: "#f1f5f9",
-        badgeText: "#64748b",
-        badgeDot: "#94a3b8",
       }
     : isToday
       ? {
           bg: "#ecfdf5",
           monthColor: "#059669",
-          badgeBg: "#ecfdf5",
-          badgeText: "#047857",
-          badgeDot: "#059669",
         }
       : THEME_PALETTES[index % THEME_PALETTES.length];
-
-  const statusLabel = isToday
-    ? "Happening Today"
-    : isPast
-      ? "Completed"
-      : "Upcoming";
 
   return (
     <TouchableOpacity
@@ -97,88 +77,92 @@ export const EventCard = React.memo(function EventCard({
         item.location || "Campus"
       }. Tap to view details.`}
     >
-      {/* Left Date Block */}
-      <View style={[styles.dateBlock, { backgroundColor: palette.bg }]}>
-        <Text style={[styles.dateMonth, { color: palette.monthColor }]}>
-          {month}
-        </Text>
-        <Text style={styles.dateNumber}>{dayNumber}</Text>
-        <Text style={styles.dateWeekday}>{weekday}</Text>
+      {/* Left Column: Date Block + Admin Edit/Delete Options Underneath */}
+      <View style={styles.leftCol}>
+        <View style={[styles.dateBlock, { backgroundColor: palette.bg }]}>
+          <Text style={[styles.dateMonth, { color: palette.monthColor }]}>
+            {month}
+          </Text>
+          <Text style={styles.dateNumber}>{dayNumber}</Text>
+          <Text style={styles.dateWeekday}>{weekday}</Text>
+        </View>
+
+        {isAdmin && (
+          <View style={styles.leftAdminRow}>
+            <TouchableOpacity
+              onPress={() => onEdit?.(item)}
+              style={[styles.adminBtnCircle, styles.adminEditBtn]}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit event ${item.title}`}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            >
+              <Feather name="edit-2" size={13} color="#2563eb" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => onDelete?.(item)}
+              style={[styles.adminBtnCircle, styles.adminDeleteBtn]}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete event ${item.title}`}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
+            >
+              <Feather name="trash-2" size={13} color="#dc2626" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Right Content Column */}
       <View style={styles.contentCol}>
-        {/* Title & Actions Row */}
-        <View style={styles.titleRow}>
-          <Text style={styles.titleText} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <View style={styles.actionsRow}>
-            {isAdmin && (
-              <View style={styles.adminActionRow}>
-                <TouchableOpacity
-                  onPress={() => onEdit?.(item)}
-                  style={[styles.adminBtnCircle, styles.adminEditBtn]}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Edit event ${item.title}`}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                >
-                  <Feather name="edit-2" size={13} color="#2563eb" />
-                </TouchableOpacity>
+        {/* Full-width Title */}
+        <Text style={styles.titleText}>
+          {item.title}
+        </Text>
 
-                <TouchableOpacity
-                  onPress={() => onDelete?.(item)}
-                  style={[styles.adminBtnCircle, styles.adminDeleteBtn]}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete event ${item.title}`}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
-                >
-                  <Feather name="trash-2" size={13} color="#dc2626" />
-                </TouchableOpacity>
-              </View>
-            )}
-            <View style={styles.arrowCircle}>
-              <Feather name="arrow-right" size={15} color="#64748b" />
-            </View>
-          </View>
-        </View>
-
-        {/* Status Pill */}
-        <View style={[styles.statusPill, { backgroundColor: palette.badgeBg }]}>
-          <View
-            style={[styles.statusDot, { backgroundColor: palette.badgeDot }]}
-          />
-          <Text style={[styles.statusText, { color: palette.badgeText }]}>
-            {statusLabel}
-          </Text>
-        </View>
-
-        {/* Description */}
-        {item.description ? (
-          <Text style={styles.descText} numberOfLines={2}>
-            {item.description}
-          </Text>
-        ) : null}
-
-        {/* Meta Info Row: Time & Location */}
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Feather name="clock" size={13} color="#64748b" />
-            <Text style={styles.metaText}>{formattedTime}</Text>
-          </View>
-
-          {item.location ? (
+        {/* Bottom Row: Time & Venue on Left, Chevron Arrow on Right */}
+        <View style={styles.bottomRow}>
+          <View style={styles.metaGroup}>
             <View style={styles.metaItem}>
-              <Feather name="map-pin" size={13} color="#64748b" />
-              <Text style={styles.metaText} numberOfLines={1}>
-                {item.location}
-              </Text>
+              <Feather name="clock" size={13} color="#64748b" />
+              <Text style={styles.metaText}>{formattedTime}</Text>
             </View>
-          ) : null}
+
+            {item.location ? (
+              <View style={styles.metaItem}>
+                <Feather name="map-pin" size={13} color="#64748b" />
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {item.location}
+                </Text>
+              </View>
+            ) : null}
+
+            {item.category && item.category !== "GENERAL" ? (
+              <View style={styles.metaItem}>
+                <Feather
+                  name={categoryConfig.icon as any}
+                  size={12}
+                  color={categoryConfig.badgeText}
+                />
+                <Text
+                  style={[
+                    styles.metaText,
+                    { color: categoryConfig.badgeText, fontWeight: "600" },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {categoryConfig.label}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.arrowCircle}>
+            <Feather name="chevron-right" size={17} color="#64748b" />
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -210,9 +194,12 @@ const styles = StyleSheet.create({
   cardPast: {
     opacity: 0.72,
   },
+  leftCol: {
+    alignItems: "center",
+  },
   dateBlock: {
-    width: 58,
-    height: 74,
+    width: 60,
+    minHeight: 68,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
@@ -238,46 +225,18 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginTop: 1,
   },
-  contentCol: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  titleRow: {
+  leftAdminRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-  },
-  titleText: {
-    flex: 1,
-    fontFamily,
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#0f172a",
-    lineHeight: 21,
-    marginRight: 8,
-  },
-  arrowCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
-  },
-  actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  adminActionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 6,
+    marginTop: 8,
     gap: 6,
+    width: 60,
   },
   adminBtnCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 27,
+    height: 27,
+    borderRadius: 13.5,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -291,45 +250,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(220, 38, 38, 0.15)",
   },
-  statusPill: {
+  contentCol: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  titleText: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0f172a",
+    lineHeight: 22,
+    width: "100%",
+  },
+  bottomRow: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: BENTO_COLORS.pillRadius,
-    marginTop: 6,
-    marginBottom: 6,
+    justifyContent: "space-between",
+    marginTop: 10,
+    gap: 8,
   },
-  statusDot: {
-    width: 5.5,
-    height: 5.5,
-    borderRadius: 2.75,
-    marginRight: 5,
-  },
-  statusText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  descText: {
-    fontFamily,
-    fontSize: 12,
-    color: "#64748b",
-    lineHeight: 17,
-    marginBottom: 8,
-  },
-  metaRow: {
+  metaGroup: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
     flexWrap: "wrap",
-    columnGap: 14,
+    columnGap: 12,
     rowGap: 4,
   },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    maxWidth: "65%",
+    flexShrink: 1,
   },
   metaText: {
     fontFamily,
@@ -337,5 +288,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#64748b",
     marginLeft: 4,
+  },
+  arrowCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

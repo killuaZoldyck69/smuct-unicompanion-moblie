@@ -3,13 +3,13 @@ import api from "./api";
 export interface CampusEventItem {
   id: string;
   title: string;
+  category: string;
   description: string;
   date?: string;
   eventDate?: string;
   location: string;
   imageUrl?: string | null;
   organizer?: string;
-  category?: string | null;
   registrationLink?: string | null;
   interestedCount?: number;
   isInterested?: boolean;
@@ -32,13 +32,13 @@ export const getEventInterestedAPI = async (
 
 export interface CreateCampusEventInput {
   title: string;
+  category: string;
   description: string;
   date?: string;
   eventDate?: string | Date;
   location: string;
   imageUrl?: string;
   organizer?: string;
-  category?: string;
   registrationLink?: string;
 }
 
@@ -70,6 +70,7 @@ export interface GetEventsQueryParams {
   page?: number;
   limit?: number;
   tab?: "all" | "upcoming" | "today" | "past";
+  category?: string;
   search?: string;
   sortBy?: "eventDate" | "createdAt" | "title";
   sortOrder?: "asc" | "desc";

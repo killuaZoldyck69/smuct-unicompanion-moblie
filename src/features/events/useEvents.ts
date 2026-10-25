@@ -29,22 +29,25 @@ export const useCampusEvents = (params?: GetEventsQueryParams) => {
 
 export interface UseInfiniteCampusEventsOptions {
   tab?: "all" | "upcoming" | "today" | "past";
+  category?: string;
   search?: string;
   limit?: number;
 }
 
 export const useInfiniteCampusEvents = (options?: UseInfiniteCampusEventsOptions) => {
   const tab = options?.tab || "upcoming";
+  const category = options?.category?.trim() || "";
   const search = options?.search?.trim() || "";
   const limit = options?.limit || 10;
 
   return useInfiniteQuery<PaginatedEventsResponse>({
-    queryKey: ["campusEvents", "infinite", { tab, search }],
+    queryKey: ["campusEvents", "infinite", { tab, category, search }],
     queryFn: ({ pageParam = 1 }) =>
       getCampusEventsPaginatedAPI({
         page: pageParam as number,
         limit,
         tab,
+        category: category || undefined,
         search: search || undefined,
       }),
     initialPageParam: 1,
@@ -56,7 +59,6 @@ export const useInfiniteCampusEvents = (options?: UseInfiniteCampusEventsOptions
     },
     staleTime: 60 * 1000, // 1 minute
     gcTime: 10 * 60 * 1000, // 10 minutes cache
-    placeholderData: (previousData) => previousData,
     refetchOnWindowFocus: false,
   });
 };

@@ -1,6 +1,6 @@
 import React from "react";
-import { EventsScreen } from "@/screens/events";
+import { Redirect } from "expo-router";
 
-export default function CampusEventsRoute() {
-  return <EventsScreen />;
+export default function CampusEventsLegacyRedirectScreen() {
+  return <Redirect href="/(tabs)/events" />;
 }

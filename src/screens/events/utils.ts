@@ -3,6 +3,7 @@ import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-toast-message";
 import { CampusEventItem } from "@/services/event-service";
 import { EventTabCounts, EventTabType } from "./constants";
+import { decodeHtmlEntities } from "@/screens/notices/components/rich-notice-text";
 
 export const getEventTimestamp = (item: CampusEventItem): number => {
   const dateStr = item.eventDate || item.date || item.createdAt;
@@ -51,6 +52,19 @@ export const formatEventTime = (dateStr: string | undefined): string => {
   });
 };
 
+export const stripHtmlToPlainText = (raw?: string | null): string => {
+  if (!raw) return "";
+  const cleaned = raw
+    .replace(/\\r\\n|\\n|\\r/g, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\n{3,}/g, "\n\n");
+  return decodeHtmlEntities(cleaned).trim();
+};
+
 export const safeShareEvent = async (event: CampusEventItem): Promise<void> => {
   try {
     const formattedDate = formatEventDate(
@@ -65,10 +79,11 @@ export const safeShareEvent = async (event: CampusEventItem): Promise<void> => {
     const formattedTime = formatEventTime(
       event.eventDate || event.date || event.createdAt
     );
+    const cleanDesc = stripHtmlToPlainText(event.description);
 
     const message = `🎉 ${event.title}\n\n📅 Date: ${formattedDate}\n🕒 Time: ${formattedTime}\n📍 Venue: ${
       event.location || "Permanent Campus"
-    }\n\n${event.description || ""}\n\nShared via SMUCT UniCompanion`;
+    }\n\n${cleanDesc}\n\nShared via SMUCT UniCompanion`;
 
     await Share.share({ message });
   } catch {
@@ -88,11 +103,12 @@ export const safeCopyEvent = async (event: CampusEventItem): Promise<void> => {
     const formattedTime = formatEventTime(
       event.eventDate || event.date || event.createdAt
     );
+    const cleanDesc = stripHtmlToPlainText(event.description);
 
     await Clipboard.setStringAsync(
       `${event.title} - ${formattedDate} at ${formattedTime}, ${
         event.location || "Campus"
-      }\n\n${event.description || ""}`
+      }\n\n${cleanDesc}`
     );
     Toast.show({
       type: "success",

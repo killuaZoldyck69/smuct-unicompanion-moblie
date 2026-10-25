@@ -1,7 +1,22 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
+
+export const EventLoading = React.memo(function EventLoading() {
+  return (
+    <View style={styles.loadingBox}>
+      <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
+      <Text style={styles.loadingText}>Loading campus events...</Text>
+    </View>
+  );
+});
 
 export const EventSkeleton = React.memo(function EventSkeleton() {
   return (
@@ -73,15 +88,22 @@ export const EventError = React.memo(function EventError({
 
 interface EventEmptyProps {
   searchQuery: string;
+  category?: string;
   activeTab: string;
   onReset: () => void;
 }
 
 export const EventEmpty = React.memo(function EventEmpty({
   searchQuery,
+  category,
   activeTab,
   onReset,
 }: EventEmptyProps) {
+  const hasFilter =
+    activeTab !== "all" ||
+    searchQuery.trim().length > 0 ||
+    (category && category.toUpperCase() !== "ALL");
+
   return (
     <View style={styles.card}>
       <View style={styles.emptyIconCircle}>
@@ -90,27 +112,31 @@ export const EventEmpty = React.memo(function EventEmpty({
       <Text style={styles.title}>
         {searchQuery.trim()
           ? "No matching events"
-          : activeTab === "today"
-            ? "No Events Today"
-            : activeTab === "upcoming"
-              ? "No Upcoming Events"
-              : "No Events Found"}
+          : category && category.toUpperCase() !== "ALL"
+            ? `No ${category} Events`
+            : activeTab === "today"
+              ? "No Events Today"
+              : activeTab === "upcoming"
+                ? "No Upcoming Events"
+                : "No Events Found"}
       </Text>
       <Text style={styles.desc}>
         {searchQuery.trim()
           ? `No events matched "${searchQuery}". Try a different keyword.`
-          : "Check back later for new programs, seminars, and campus activities."}
+          : category && category.toUpperCase() !== "ALL"
+            ? `There are currently no events under the ${category} category.`
+            : "Check back later for new programs, seminars, and campus activities."}
       </Text>
-      {(activeTab !== "all" || searchQuery.trim().length > 0) && (
+      {hasFilter && (
         <TouchableOpacity
           style={styles.resetBtn}
           onPress={onReset}
           activeOpacity={0.8}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="View all events"
+          accessibilityLabel="Reset all filters and view all events"
         >
-          <Text style={styles.resetBtnText}>View All Events</Text>
+          <Text style={styles.resetBtnText}>Reset Filters & View All</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -225,5 +251,27 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: "#f1f5f9",
     borderRadius: 10,
+  },
+  loadingBox: {
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: BENTO_COLORS.cardRadius,
+    paddingVertical: 52,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    ...BENTO_COLORS.shadow,
+  },
+  loadingText: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: BENTO_COLORS.subtleText,
+    marginTop: 14,
+    letterSpacing: -0.2,
+    textAlign: "center",
   },
 });

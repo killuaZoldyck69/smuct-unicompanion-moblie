@@ -24,6 +24,104 @@ interface TagPattern {
   bothFlags?: ("bold" | "italic" | "underline")[];
 }
 
+const HTML_ENTITIES_MAP: Record<string, string> = {
+  amp: "&",
+  nbsp: " ",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  rsquo: "'",
+  lsquo: "'",
+  rdquo: '"',
+  ldquo: '"',
+  ndash: "–",
+  mdash: "—",
+  bull: "•",
+  hellip: "…",
+  copy: "©",
+  reg: "®",
+  trade: "™",
+  deg: "°",
+  plusmn: "±",
+  times: "×",
+  divide: "÷",
+  euro: "€",
+  pound: "£",
+  yen: "¥",
+  cent: "¢",
+  eacute: "é",
+  Eacute: "É",
+  egrave: "è",
+  Egrave: "È",
+  ecirc: "ê",
+  Ecirc: "Ê",
+  euml: "ë",
+  Euml: "Ë",
+  aacute: "á",
+  Aacute: "Á",
+  agrave: "à",
+  Agrave: "À",
+  acirc: "â",
+  Acirc: "Â",
+  auml: "ä",
+  Auml: "Ä",
+  iacute: "í",
+  Iacute: "Í",
+  igrave: "ì",
+  Igrave: "Ì",
+  icirc: "î",
+  Icirc: "Î",
+  iuml: "ï",
+  Iuml: "Ï",
+  oacute: "ó",
+  Oacute: "Ó",
+  ograve: "ò",
+  Ograve: "Ò",
+  ocirc: "ô",
+  Ocirc: "Ô",
+  ouml: "ö",
+  Ouml: "Ö",
+  uacute: "ú",
+  Uacute: "Ú",
+  ugrave: "ù",
+  Ugrave: "Ù",
+  ucirc: "û",
+  Ucirc: "Û",
+  uuml: "ü",
+  Uuml: "Ü",
+  ntilde: "ñ",
+  Ntilde: "Ñ",
+  ccedil: "ç",
+  Ccedil: "Ç",
+};
+
+/**
+ * Fully decodes all common HTML and XML numeric / named entities.
+ */
+export const decodeHtmlEntities = (raw?: string | null): string => {
+  if (!raw) return "";
+  return raw
+    .replace(/&#(\d+);/g, (_, dec) => {
+      const code = parseInt(dec, 10);
+      return !isNaN(code) ? String.fromCharCode(code) : _;
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      const code = parseInt(hex, 16);
+      return !isNaN(code) ? String.fromCharCode(code) : _;
+    })
+    .replace(/&([a-zA-Z0-9]+);/g, (match, entity) => {
+      return HTML_ENTITIES_MAP[entity] ?? match;
+    });
+};
+
+/**
+ * Strips any remaining unhandled or stray HTML tags so they never leak as raw markup in React Native Text.
+ */
+function stripStrayTags(text: string): string {
+  return text.replace(/<[^>]+>/g, "");
+}
+
 const TAG_PATTERNS: TagPattern[] = [
   // Combined Bold + Italic
   {
@@ -32,7 +130,7 @@ const TAG_PATTERNS: TagPattern[] = [
     flag: "bold",
     bothFlags: ["bold", "italic"],
   },
-  // Bold
+  // Bold (Markdown asterisks, HTML <b> or <strong> with arbitrary attributes like font size/style, or styled spans)
   {
     name: "bold_asterisks",
     regex: /\*\*([\s\S]+?)\*\*/,
@@ -40,18 +138,28 @@ const TAG_PATTERNS: TagPattern[] = [
   },
   {
     name: "bold_html",
-    regex: /<b>([\s\S]+?)<\/b>/i,
+    regex: /<b(?:\s+[^>]*)?>([\s\S]+?)<\/b>/i,
     flag: "bold",
   },
   {
     name: "bold_strong",
-    regex: /<strong>([\s\S]+?)<\/strong>/i,
+    regex: /<strong(?:\s+[^>]*)?>([\s\S]+?)<\/strong>/i,
     flag: "bold",
   },
-  // Underline
+  {
+    name: "bold_span",
+    regex: /<span[^>]*style="[^"]*font-weight:\s*(?:bold|[789]00)[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
+    flag: "bold",
+  },
+  // Underline (HTML <u>, <ins>, Markdown __, or styled spans)
   {
     name: "underline_html",
-    regex: /<u>([\s\S]+?)<\/u>/i,
+    regex: /<u(?:\s+[^>]*)?>([\s\S]+?)<\/u>/i,
+    flag: "underline",
+  },
+  {
+    name: "underline_ins",
+    regex: /<ins(?:\s+[^>]*)?>([\s\S]+?)<\/ins>/i,
     flag: "underline",
   },
   {
@@ -59,7 +167,12 @@ const TAG_PATTERNS: TagPattern[] = [
     regex: /__([\s\S]+?)__/,
     flag: "underline",
   },
-  // Italic
+  {
+    name: "underline_span",
+    regex: /<span[^>]*style="[^"]*text-decoration:\s*underline[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
+    flag: "underline",
+  },
+  // Italic (Markdown *, HTML <i>, <em>, Markdown _, or styled spans)
   {
     name: "italic_asterisk",
     regex: /\*([\s\S]+?)\*/,
@@ -67,17 +180,22 @@ const TAG_PATTERNS: TagPattern[] = [
   },
   {
     name: "italic_html",
-    regex: /<i>([\s\S]+?)<\/i>/i,
+    regex: /<i(?:\s+[^>]*)?>([\s\S]+?)<\/i>/i,
     flag: "italic",
   },
   {
     name: "italic_em",
-    regex: /<em>([\s\S]+?)<\/em>/i,
+    regex: /<em(?:\s+[^>]*)?>([\s\S]+?)<\/em>/i,
     flag: "italic",
   },
   {
     name: "italic_underscore",
     regex: /_([\s\S]+?)_/,
+    flag: "italic",
+  },
+  {
+    name: "italic_span",
+    regex: /<span[^>]*style="[^"]*font-style:\s*italic[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
     flag: "italic",
   },
 ];
@@ -107,9 +225,10 @@ function parseInlineFormatting(
     }
   }
 
-  // If no tags matched, return the whole raw text with current flags
+  // If no tags matched, return the text with any stray unclosed tags stripped and all HTML entities decoded
   if (!earliestMatch) {
-    return [{ text: raw, ...flags }];
+    const cleanedText = decodeHtmlEntities(stripStrayTags(raw));
+    return [{ text: cleanedText, ...flags }];
   }
 
   const { pattern, match, index } = earliestMatch;
@@ -170,6 +289,7 @@ export const RichNoticeText = React.memo(function RichNoticeText({
     // Normalize escaped line breaks and HTML block tags
     const normalized = content
       .replace(/\\r\\n|\\n|\\r/g, "\n")
+      .replace(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi, "\n\n<b>$1</b>\n\n")
       .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n• $1\n")
       .replace(/<\/?ul[^>]*>/gi, "\n")
       .replace(/<\/?ol[^>]*>/gi, "\n")
@@ -194,13 +314,15 @@ export const RichNoticeText = React.memo(function RichNoticeText({
       const isJustified =
         defaultJustified || hasJustifyTag || trimmedPara.startsWith("[justify]");
 
-      // Clean justify tags, stray html wrappers, and stray formatting artifacts
+      // Clean justify tags, unstyled wrappers, and stray formatting artifacts
       const cleanPara = trimmedPara
         .replace(/\[\/?justify\]/gi, "")
         .replace(/\[•\s*\/justify\]/gi, "• ")
         .replace(/\*{4,}/g, "**")
         .replace(/_{4,}/g, "__")
-        .replace(/<\/?(?:span|font)[^>]*>/gi, "")
+        .replace(/<\/?font[^>]*>/gi, "")
+        .replace(/<span(?![^>]*style="[^"]*(?:font-weight|font-style|text-decoration))[^>]*>/gi, "")
+        .replace(/<\/span>/gi, "")
         .trim();
 
       // Check if this paragraph contains bullet or numbered list lines
