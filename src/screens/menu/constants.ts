@@ -383,6 +383,6 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/complain.png"),
     fallbackIcon: "inbox",
     roles: ["ADMIN"],
-    route: "/admin/complaints" as Href,
+    route: "/(tabs)/admin_complaints" as Href,
   },
 ];

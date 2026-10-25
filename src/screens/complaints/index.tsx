@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
 import {
   useMyComplaints,
   useMyComplaintStats,
@@ -28,6 +28,7 @@ import { ComplaintDeleteModal } from "./components/complaint-delete-modal";
 
 export function ComplaintsScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const listBottomPadding = 72 + (insets.bottom > 0 ? insets.bottom + 16 : 24) + 16;
 
@@ -35,6 +36,48 @@ export function ComplaintsScreen() {
   const [isComposeVisible, setIsComposeVisible] = useState(false);
   const [complaintToEdit, setComplaintToEdit] = useState<ComplaintItem | null>(null);
   const [complaintToDelete, setComplaintToDelete] = useState<ComplaintItem | null>(null);
+
+  const defaultTabBarStyle = useMemo(
+    () => ({
+      position: "absolute" as const,
+      bottom: insets.bottom > 0 ? insets.bottom + 16 : 24,
+      marginHorizontal: 20,
+      height: 68,
+      backgroundColor: "#131b2e",
+      borderRadius: 24,
+      borderTopWidth: 0,
+      elevation: 10,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 24,
+      paddingBottom: 0,
+      paddingTop: 0,
+    }),
+    [insets.bottom],
+  );
+
+  const isModalOpen = isComposeVisible || Boolean(complaintToDelete);
+
+  React.useEffect(() => {
+    if (!navigation || typeof navigation.setOptions !== "function") return;
+
+    if (isModalOpen) {
+      navigation.setOptions({
+        tabBarStyle: { display: "none" },
+      });
+    } else {
+      navigation.setOptions({
+        tabBarStyle: defaultTabBarStyle,
+      });
+    }
+
+    return () => {
+      navigation.setOptions({
+        tabBarStyle: defaultTabBarStyle,
+      });
+    };
+  }, [isModalOpen, navigation, defaultTabBarStyle]);
 
   // Queries
   const {
@@ -332,3 +375,5 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
 });
+
+export { AdminComplaintsScreen } from "./admin-complaints";

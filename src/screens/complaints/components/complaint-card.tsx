@@ -14,6 +14,7 @@ import {
   timeAgo,
 } from "@/screens/campus-hub/shared/design-tokens";
 import { formatCardDateTime } from "@/utils/date-formatter";
+import { getDepartmentShortName } from "@/data/programs";
 import type { ComplaintItem } from "@/services/complaint-service";
 
 export interface ComplaintCardProps {
@@ -63,19 +64,10 @@ export const ComplaintCard = React.memo(function ComplaintCard({
             <Text style={styles.categoryText}>{item.category}</Text>
           </View>
 
-          {item.isAnonymous ? (
+          {item.isAnonymous && (
             <View style={styles.anonymousBadge}>
               <Feather name="eye-off" size={11} color="#6366f1" />
               <Text style={styles.anonymousText}>Anonymous</Text>
-            </View>
-          ) : (
-            <View style={styles.publicBadge}>
-              <Feather
-                name="user-check"
-                size={11}
-                color={CAMPUS_HUB_COLORS.subtleText}
-              />
-              <Text style={styles.publicText}>Standard</Text>
             </View>
           )}
         </View>
@@ -165,7 +157,7 @@ export const ComplaintCard = React.memo(function ComplaintCard({
                     : ""}
                   {item.user?.studentProfile?.department ||
                   item.user?.teacherProfile?.department
-                    ? `${item.user?.studentProfile?.department || item.user?.teacherProfile?.department} • `
+                    ? `${getDepartmentShortName(item.user?.studentProfile?.department || item.user?.teacherProfile?.department)} • `
                     : ""}
                   {formatCardDateTime(item.createdAt)}
                 </Text>
@@ -265,10 +257,12 @@ export const ComplaintCard = React.memo(function ComplaintCard({
           <View style={styles.timeRow}>
             <Feather
               name="calendar"
-              size={12}
+              size={11}
               color={CAMPUS_HUB_COLORS.subtleText}
             />
-            <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
+            <Text style={styles.timeText} numberOfLines={1}>
+              {timeAgo(item.createdAt)}
+            </Text>
           </View>
         </View>
 
@@ -298,7 +292,7 @@ export const ComplaintCard = React.memo(function ComplaintCard({
                         accessibilityRole="button"
                         accessibilityLabel={`Accept complaint: ${item.title}`}
                       >
-                        <Feather name="check" size={12} color="#ffffff" />
+                        <Feather name="check" size={11} color="#ffffff" />
                         <Text style={styles.adminBtnText}>Accept</Text>
                       </TouchableOpacity>
 
@@ -311,7 +305,7 @@ export const ComplaintCard = React.memo(function ComplaintCard({
                         accessibilityRole="button"
                         accessibilityLabel={`Reject complaint: ${item.title}`}
                       >
-                        <Feather name="x" size={12} color="#ffffff" />
+                        <Feather name="x" size={11} color="#ffffff" />
                         <Text style={styles.adminBtnText}>Reject</Text>
                       </TouchableOpacity>
                     </>
@@ -329,7 +323,7 @@ export const ComplaintCard = React.memo(function ComplaintCard({
                         accessibilityRole="button"
                         accessibilityLabel={`Resolve complaint: ${item.title}`}
                       >
-                        <Feather name="check-circle" size={12} color="#ffffff" />
+                        <Feather name="check-circle" size={11} color="#ffffff" />
                         <Text style={styles.adminBtnText}>Resolve</Text>
                       </TouchableOpacity>
 
@@ -342,7 +336,7 @@ export const ComplaintCard = React.memo(function ComplaintCard({
                         accessibilityRole="button"
                         accessibilityLabel={`Reject complaint: ${item.title}`}
                       >
-                        <Feather name="x" size={12} color="#ffffff" />
+                        <Feather name="x" size={11} color="#ffffff" />
                         <Text style={styles.adminBtnText}>Reject</Text>
                       </TouchableOpacity>
                     </>
@@ -360,7 +354,7 @@ export const ComplaintCard = React.memo(function ComplaintCard({
                       accessibilityLabel={`Delete complaint: ${item.title}`}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Feather name="trash-2" size={13} color="#e11d48" />
+                      <Feather name="trash-2" size={12} color="#e11d48" />
                     </TouchableOpacity>
                   )}
                 </>
@@ -412,7 +406,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 20,
-    padding: 16,
+    paddingHorizontal: 13,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.05)",
     ...CAMPUS_HUB_COLORS.shadow,
@@ -461,23 +456,6 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "700",
     color: "#6366f1",
-  },
-  publicBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
-  },
-  publicText: {
-    fontFamily,
-    fontSize: 10.5,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
   },
   statusBadge: {
     flexDirection: "row",
@@ -737,47 +715,50 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
-    flexWrap: "wrap",
-    gap: 8,
+    flexWrap: "nowrap",
+    gap: 4,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
+    flexShrink: 1,
   },
   idPill: {
     backgroundColor: "#f1f5f9",
-    paddingHorizontal: 7,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   idText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.subtleText,
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
   },
   timeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 3,
+    flexShrink: 1,
   },
   timeText: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 10,
     color: CAMPUS_HUB_COLORS.subtleText,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   actionButtonsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
+    flexShrink: 0,
   },
   actionIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: "#f8fafc",
     alignItems: "center",
     justifyContent: "center",
@@ -793,19 +774,20 @@ const styles = StyleSheet.create({
   adminActionsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
+    flexShrink: 0,
   },
   inlineLoading: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 4,
   },
   adminBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    gap: 3,
+    paddingHorizontal: 7.5,
+    paddingVertical: 4.5,
+    borderRadius: 7,
   },
   acceptBtn: {
     backgroundColor: "#0284c7",
@@ -818,9 +800,9 @@ const styles = StyleSheet.create({
   },
   adminBtnText: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "800",
     color: "#ffffff",
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
 });

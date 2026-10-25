@@ -64,7 +64,15 @@ export const ComplaintDeleteModal = React.memo(function ComplaintDeleteModal({
       onRequestClose={onClose}
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
-      <View style={styles.overlay}>
+      <View
+        style={[
+          styles.overlay,
+          {
+            paddingTop: Math.max(insets.top, 20) + 12,
+            paddingBottom: Math.max(insets.bottom, 20) + 12,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -72,7 +80,7 @@ export const ComplaintDeleteModal = React.memo(function ComplaintDeleteModal({
           accessible={false}
         />
 
-        <View style={[styles.dialogCard, { marginBottom: Math.max(insets.bottom, 24) }]}>
+        <View style={styles.dialogCard}>
           {/* Warning Icon Badge */}
           <View style={styles.iconCircle}>
             <Feather name="trash-2" size={24} color="#e11d48" />

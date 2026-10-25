@@ -232,6 +232,7 @@ export default function TabsLayout() {
       {/* 6. HIDDEN SCREENS (Accessible only via router.push) */}
       {/* ========================================== */}
       <Tabs.Screen name="admin_calendar" options={{ href: null }} />
+      <Tabs.Screen name="admin_complaints" options={{ href: null }} />
       <Tabs.Screen name="blood" options={{ href: null }} />
       <Tabs.Screen name="cgpa-calculator" options={{ href: null }} />
       <Tabs.Screen name="community" options={{ href: null }} />
