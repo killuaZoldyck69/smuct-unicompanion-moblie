@@ -46,7 +46,7 @@ export default function AdminAidScreen() {
         {/* Blood Aid Card */}
         <TouchableOpacity
           style={styles.featureCard}
-          onPress={() => router.push("/admin/blood")}
+          onPress={() => router.push("/(tabs)/admin_blood")}
           activeOpacity={0.7}
         >
           <View style={[styles.iconWrap, { backgroundColor: "#fee2e2" }]}>

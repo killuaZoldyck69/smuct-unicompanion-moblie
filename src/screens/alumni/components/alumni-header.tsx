@@ -112,8 +112,7 @@ const styles = StyleSheet.create({
   },
   headerIllustration: {
     width: 160,
-    height: 80,
+    height: 90,
     opacity: 0.85,
   },
 });
-

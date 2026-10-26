@@ -64,6 +64,9 @@ export interface BloodPostItem {
   bloodGroup: string;
   bagsNeeded?: number;
   location: string;
+  hospitalName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   urgency: string;
   contactPhone: string;
   isFulfilled: boolean;
@@ -82,6 +85,9 @@ export interface CreateBloodPostInput {
   bloodGroup: string;
   bagsNeeded?: number;
   location: string;
+  hospitalName?: string;
+  latitude?: number;
+  longitude?: number;
   urgency: string;
   contactPhone: string;
 }

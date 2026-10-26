@@ -363,7 +363,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/blood-bag.png"),
     fallbackIcon: "droplet",
     roles: ["ADMIN"],
-    route: "/admin/blood" as Href,
+    route: "/(tabs)/admin_blood" as Href,
   },
   {
     id: "admin_alumni",

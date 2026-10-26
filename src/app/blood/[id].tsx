@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -28,7 +28,12 @@ import {
 } from "@/features/blood/useBlood";
 import { BloodProfileModal } from "@/screens/blood/components/blood-profile-modal";
 import { BloodConfirmModal } from "@/screens/blood/components/blood-confirm-modal";
-import { formatBloodGroupSymbol } from "@/screens/blood/utils";
+import { BloodAdmissionCard } from "@/screens/blood/components/blood-admission-card";
+import { HospitalDestinationCard } from "@/screens/blood/components/hospital-destination-card";
+import {
+  formatBloodGroupSymbol,
+  parseHospitalLocation,
+} from "@/screens/blood/utils";
 import { BENTO_COLORS, fontFamily } from "@/screens/blood/constants";
 import type { BloodAuthor, BloodResponseItem } from "@/features/blood/types";
 
@@ -68,7 +73,7 @@ export default function BloodThreadScreen() {
 
   const handleGoBack = useCallback(() => {
     if (from === "admin") {
-      router.replace("/admin/blood" as any);
+      router.replace("/(tabs)/admin_blood" as any);
     } else {
       router.replace("/(tabs)/blood" as any);
     }
@@ -230,100 +235,65 @@ export default function BloodThreadScreen() {
   const bagsNeeded = post.bagsNeeded || 1;
   const isUrgent = post.urgency === "High" && !post.isFulfilled;
   const isFulfilled = !!post.isFulfilled;
+  const parsedHospital = parseHospitalLocation(
+    post.location,
+    post.latitude,
+    post.longitude,
+    post.hospitalName,
+  );
 
   const renderOriginalPost = () => (
     <View style={styles.postHeaderContainer}>
-      <View
-        style={[
-          styles.mainBentoCard,
-          isUrgent && styles.cardUrgent,
-          isFulfilled && styles.cardFulfilled,
-        ]}
-      >
-        <View style={styles.cardTopRow}>
-          <View style={styles.badgeGroup}>
-            <View
-              style={[
-                styles.bloodBadge,
-                isFulfilled
-                  ? styles.bloodBadgeFulfilled
-                  : isUrgent
-                  ? styles.bloodBadgeUrgent
-                  : styles.bloodBadgeNormal,
-              ]}
-            >
-              <Feather
-                name="droplet"
-                size={12}
-                color="#ffffff"
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.bloodBadgeText}>{bloodSymbol}</Text>
-            </View>
+      {/* 1. CARD 1: PATIENT ADMISSION & MEDICAL DETAILS (Screenshot 1) */}
+      <BloodAdmissionCard post={post} parsedHospital={parsedHospital} />
 
-            <View
-              style={[
-                styles.bagsBadge,
-                isFulfilled && styles.bagsBadgeFulfilled,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.bagsBadgeText,
-                  isFulfilled && styles.bagsBadgeTextFulfilled,
-                ]}
-              >
-                {bagsNeeded} {bagsNeeded === 1 ? "Bag" : "Bags"}
+      {/* 2. CARD 2: DESTINATION & HOSPITAL ROUTE MAP (Screenshot 2) */}
+      <HospitalDestinationCard parsedHospital={parsedHospital} />
+
+      {/* 3. CARD 3: REQUESTER & EMERGENCY CONTACT */}
+      <View style={styles.requesterCard}>
+        <Text style={styles.sectionSmallLabel}>REQUESTED BY</Text>
+        <TouchableOpacity
+          style={styles.requesterRow}
+          onPress={() => setSelectedProfile(post.author || null)}
+          activeOpacity={0.8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Requester: ${post.author?.name || "Campus Member"}. Tap to view profile.`}
+        >
+          {post.author?.image ? (
+            <Image
+              source={{ uri: post.author.image }}
+              style={styles.requesterAvatar}
+            />
+          ) : (
+            <View style={styles.requesterAvatarFallback}>
+              <Text style={styles.requesterAvatarText}>
+                {post.author?.name?.charAt(0) || "U"}
               </Text>
             </View>
-          </View>
+          )}
 
-          <View style={styles.statusGroup}>
-            {isUrgent ? (
-              <View style={styles.urgentPill}>
-                <View style={styles.urgentDot} />
-                <Text style={styles.urgentPillText}>URGENT</Text>
-              </View>
-            ) : isFulfilled ? (
-              <View style={styles.fulfilledPill}>
-                <Feather
-                  name="check"
-                  size={11}
-                  color="#059669"
-                  style={{ marginRight: 3 }}
-                />
-                <Text style={styles.fulfilledPillText}>FULFILLED</Text>
-              </View>
-            ) : null}
-
-            <Text style={styles.timestampText}>
-              {formatCardDateTime(post.createdAt)}
+          <View style={styles.requesterMeta}>
+            <Text style={styles.requesterName} numberOfLines={1}>
+              {post.author?.name || "Campus Member"}
+            </Text>
+            <Text style={styles.requesterSubtitle} numberOfLines={1}>
+              {getUserSubtitle(post.author)}
             </Text>
           </View>
-        </View>
 
-        <View style={styles.patientBlock}>
-          <Text style={styles.patientName} numberOfLines={2}>
-            {post.patientName}
-          </Text>
-          {post.patientCondition ? (
-            <Text style={styles.patientCondition} numberOfLines={2}>
-              {post.patientCondition}
-            </Text>
-          ) : null}
-        </View>
+          <View style={styles.viewProfilePill}>
+            <Text style={styles.viewProfileText}>View</Text>
+            <Feather
+              name="chevron-right"
+              size={13}
+              color={BENTO_COLORS.subtleText}
+            />
+          </View>
+        </TouchableOpacity>
 
-        <View style={styles.locationBlock}>
-          <Feather
-            name="map-pin"
-            size={14}
-            color={BENTO_COLORS.subtleText}
-            style={styles.locationIcon}
-          />
-          <Text style={styles.locationText} numberOfLines={2}>
-            {post.location}
-          </Text>
-        </View>
+        <View style={styles.cardDivider} />
 
         <View style={styles.contactBlock}>
           <View style={styles.contactInfo}>
@@ -366,45 +336,6 @@ export default function BloodThreadScreen() {
             </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.cardDivider} />
-
-        <TouchableOpacity
-          style={styles.requesterRow}
-          onPress={() => setSelectedProfile(post.author || null)}
-          activeOpacity={0.8}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={`Requester: ${post.author?.name || "Campus Member"}. Tap to view profile.`}
-        >
-          {post.author?.image ? (
-            <Image
-              source={{ uri: post.author.image }}
-              style={styles.requesterAvatar}
-            />
-          ) : (
-            <View style={styles.requesterAvatarFallback}>
-              <Text style={styles.requesterAvatarText}>
-                {post.author?.name?.charAt(0) || "U"}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.requesterMeta}>
-            <Text style={styles.requesterName} numberOfLines={1}>
-              {post.author?.name || "Campus Member"}
-            </Text>
-            <Text style={styles.requesterSubtitle} numberOfLines={1}>
-              {getUserSubtitle(post.author)}
-            </Text>
-          </View>
-
-          <Feather
-            name="chevron-right"
-            size={16}
-            color={BENTO_COLORS.subtleText}
-          />
-        </TouchableOpacity>
 
         {isAuthor && (
           <View style={styles.authorActionsRow}>
@@ -701,6 +632,44 @@ const styles = StyleSheet.create({
   },
   postHeaderContainer: {
     marginBottom: 8,
+  },
+  requesterCard: {
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.07)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 18,
+    elevation: 2,
+  },
+  sectionSmallLabel: {
+    fontFamily,
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: "#94a3b8",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginBottom: 10,
+  },
+  viewProfilePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 2,
+  },
+  viewProfileText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748b",
   },
   mainBentoCard: {
     backgroundColor: BENTO_COLORS.white,

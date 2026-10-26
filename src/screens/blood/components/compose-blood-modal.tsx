@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,19 +10,64 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  useWindowDimensions,
   Keyboard,
   StatusBar,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import {
   BENTO_COLORS,
   BLOOD_GROUPS,
   fontFamily,
   NewBloodPostForm,
+  POPULAR_HOSPITALS,
   URGENCY_LEVELS,
 } from "../constants";
+import {
+  HospitalMapPickerModal,
+  SelectedHospitalLocation,
+} from "./hospital-map-picker-modal";
+
+export const buildCompiledLocation = (
+  hospitalName?: string,
+  floor?: string,
+  ward?: string,
+  bed?: string,
+  notes?: string,
+): string => {
+  const parts: string[] = [];
+  if (hospitalName?.trim()) {
+    parts.push(hospitalName.trim());
+  }
+  if (floor?.trim()) {
+    const f = floor.trim();
+    parts.push(
+      f.toLowerCase().includes("floor") || f.toLowerCase().includes("level")
+        ? f
+        : `${f} Floor`,
+    );
+  }
+  if (ward?.trim()) {
+    const w = ward.trim();
+    parts.push(
+      w.toLowerCase().includes("ward") ||
+        w.toLowerCase().includes("icu") ||
+        w.toLowerCase().includes("ccu") ||
+        w.toLowerCase().includes("cabin") ||
+        w.toLowerCase().includes("unit")
+        ? w
+        : `Ward ${w}`,
+    );
+  }
+  if (bed?.trim()) {
+    const b = bed.trim();
+    parts.push(b.toLowerCase().includes("bed") ? b : `Bed ${b}`);
+  }
+  if (notes?.trim()) {
+    parts.push(`(${notes.trim()})`);
+  }
+  return parts.join(", ");
+};
 
 interface ComposeBloodModalProps {
   visible: boolean;
@@ -42,10 +87,9 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
   isSubmitting,
 }: ComposeBloodModalProps) {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isMapPickerVisible, setIsMapPickerVisible] = useState(false);
 
-  // Listen to keyboard show/hide events to dynamically adapt modal height
   useEffect(() => {
     const showEvent =
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -65,14 +109,27 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
     };
   }, []);
 
-  // Compute responsive sheet height that NEVER exceeds the safe area below the status bar
-  const defaultHeight = Math.round(windowHeight * 0.88);
-  const maxAllowedWithKeyboard =
-    windowHeight - keyboardHeight - Math.max(insets.top, 24) - 12;
-  const sheetHeight =
-    keyboardHeight > 0
-      ? Math.max(280, Math.min(defaultHeight, maxAllowedWithKeyboard))
-      : Math.min(defaultHeight, windowHeight - Math.max(insets.top, 24) - 16);
+  const handleSelectHospitalFromMap = useCallback(
+    (hospital: SelectedHospitalLocation) => {
+      onChangeForm((prev) => {
+        const compiled = buildCompiledLocation(
+          hospital.name,
+          prev.floor,
+          prev.ward,
+          prev.bed,
+          prev.additionalLocationNotes,
+        );
+        return {
+          ...prev,
+          hospitalName: hospital.name,
+          latitude: hospital.latitude,
+          longitude: hospital.longitude,
+          location: compiled,
+        };
+      });
+    },
+    [onChangeForm],
+  );
 
   const canSubmit =
     form.patientName.trim().length > 0 &&
@@ -90,58 +147,72 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      presentationStyle="fullScreen"
       statusBarTranslucent={true}
       onRequestClose={handleClose}
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="transparent"
+        backgroundColor={BENTO_COLORS.background}
         translucent={true}
       />
-      <View style={styles.overlay}>
-        {/* Tap outside backdrop to dismiss */}
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={handleClose}
-          accessible={false}
-        />
+      <SafeAreaView style={styles.fullScreenContainer} edges={["top", "bottom"]}>
+        {/* Full Screen Top Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTitleRow}>
+            <View style={styles.headerIconCircle}>
+              <Feather name="droplet" size={20} color={BENTO_COLORS.crimson} />
+            </View>
+            <View style={styles.headerTextCol}>
+              <Text style={styles.headerTitle}>New Blood Request</Text>
+              <Text style={styles.headerSubtitle}>
+                Emergency donor coordination for campus
+              </Text>
+            </View>
+          </View>
 
+          <TouchableOpacity
+            onPress={handleClose}
+            style={styles.closeBtn}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Close request form"
+          >
+            <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Form Body with Keyboard Avoiding */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardAvoid}
         >
-          <View style={[styles.sheet, { height: sheetHeight }]}>
-            {/* Drag Handle */}
-            <View style={styles.dragHandle} />
-
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity
-                onPress={handleClose}
-                style={styles.closeBtn}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel blood request"
-              >
-                <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>New Blood Request</Text>
-              <View style={{ width: 36 }} />
-            </View>
-
-            {/* Scrollable Form Content */}
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Patient Name */}
-              <View style={styles.formGroup}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* 1. Patient Name */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Feather
+                  name="user"
+                  size={13}
+                  color={BENTO_COLORS.crimson}
+                  style={styles.labelIcon}
+                />
                 <Text style={styles.formLabel}>PATIENT FULL NAME</Text>
+              </View>
+              <View style={styles.inputWrapper}>
+                <Feather
+                  name="user"
+                  size={16}
+                  color={BENTO_COLORS.subtleText}
+                  style={styles.fieldLeadingIcon}
+                />
                 <TextInput
                   style={styles.formInput}
                   value={form.patientName}
@@ -151,13 +222,43 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   placeholder="e.g. Md. Shafiqul Islam"
                   placeholderTextColor={BENTO_COLORS.subtleText}
                   accessible={true}
-                  accessibilityLabel="Patient Name"
+                  accessibilityLabel="Patient full name"
                 />
+                {form.patientName.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      onChangeForm((prev) => ({ ...prev, patientName: "" }))
+                    }
+                    style={styles.clearBtn}
+                  >
+                    <Feather
+                      name="x-circle"
+                      size={15}
+                      color={BENTO_COLORS.subtleText}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
+            </View>
 
-              {/* Patient Condition */}
-              <View style={styles.formGroup}>
+            {/* 2. Patient Condition */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Feather
+                  name="activity"
+                  size={13}
+                  color={BENTO_COLORS.crimson}
+                  style={styles.labelIcon}
+                />
                 <Text style={styles.formLabel}>MEDICAL CONDITION / REASON</Text>
+              </View>
+              <View style={styles.inputWrapper}>
+                <Feather
+                  name="activity"
+                  size={16}
+                  color={BENTO_COLORS.subtleText}
+                  style={styles.fieldLeadingIcon}
+                />
                 <TextInput
                   style={styles.formInput}
                   value={form.patientCondition}
@@ -170,207 +271,523 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   placeholder="e.g. Emergency Surgery, Dengue, Accident"
                   placeholderTextColor={BENTO_COLORS.subtleText}
                   accessible={true}
-                  accessibilityLabel="Patient Condition or Reason"
+                  accessibilityLabel="Patient medical condition or reason"
                 />
+                {form.patientCondition.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      onChangeForm((prev) => ({ ...prev, patientCondition: "" }))
+                    }
+                    style={styles.clearBtn}
+                  >
+                    <Feather
+                      name="x-circle"
+                      size={15}
+                      color={BENTO_COLORS.subtleText}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
+            </View>
 
-              {/* Blood Group Selector */}
-              <View style={styles.formGroup}>
+            {/* 3. Blood Group Selector */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Feather
+                  name="droplet"
+                  size={13}
+                  color={BENTO_COLORS.crimson}
+                  style={styles.labelIcon}
+                />
                 <Text style={styles.formLabel}>BLOOD GROUP NEEDED</Text>
-                <View style={styles.bloodGroupsGrid}>
-                  {BLOOD_GROUPS.map((bg) => {
-                    const isSelected = form.bloodGroup === bg.value;
+              </View>
+              <View style={styles.bloodGroupsGrid}>
+                {BLOOD_GROUPS.map((bg) => {
+                  const isSelected = form.bloodGroup === bg.value;
+                  return (
+                    <TouchableOpacity
+                      key={bg.value}
+                      style={[
+                        styles.bloodGroupChip,
+                        isSelected && styles.bloodGroupChipActive,
+                      ]}
+                      onPress={() =>
+                        onChangeForm((prev) => ({
+                          ...prev,
+                          bloodGroup: bg.value,
+                        }))
+                      }
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select blood group ${bg.label}`}
+                      activeOpacity={0.7}
+                    >
+                      {isSelected && (
+                        <Feather
+                          name="droplet"
+                          size={11}
+                          color="#ffffff"
+                          style={{ marginRight: 4 }}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.bloodGroupChipText,
+                          isSelected && styles.bloodGroupChipTextActive,
+                        ]}
+                      >
+                        {bg.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 4. Blood Bags Needed Selector */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Feather
+                  name="package"
+                  size={13}
+                  color={BENTO_COLORS.crimson}
+                  style={styles.labelIcon}
+                />
+                <Text style={styles.formLabel}>BLOOD BAGS NEEDED</Text>
+              </View>
+              <View style={styles.bagsSelectorRow}>
+                <View style={styles.bagsStepperBox}>
+                  <TouchableOpacity
+                    style={[
+                      styles.stepperActionBtn,
+                      (form.bagsNeeded || 1) <= 1 &&
+                        styles.stepperActionBtnDisabled,
+                    ]}
+                    onPress={() =>
+                      onChangeForm((prev) => ({
+                        ...prev,
+                        bagsNeeded: Math.max(1, (prev.bagsNeeded || 1) - 1),
+                      }))
+                    }
+                    disabled={(form.bagsNeeded || 1) <= 1}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease bag count"
+                    activeOpacity={0.7}
+                  >
+                    <Feather
+                      name="minus"
+                      size={15}
+                      color={
+                        (form.bagsNeeded || 1) <= 1
+                          ? "#cbd5e1"
+                          : BENTO_COLORS.deepNavy
+                      }
+                    />
+                  </TouchableOpacity>
+
+                  <View style={styles.stepperValueContainer}>
+                    <Text style={styles.stepperValueNumber}>
+                      {form.bagsNeeded || 1}
+                    </Text>
+                    <Text style={styles.stepperValueUnit}>
+                      {(form.bagsNeeded || 1) === 1 ? "Bag" : "Bags"}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.stepperActionBtn,
+                      (form.bagsNeeded || 1) >= 10 &&
+                        styles.stepperActionBtnDisabled,
+                    ]}
+                    onPress={() =>
+                      onChangeForm((prev) => ({
+                        ...prev,
+                        bagsNeeded: Math.min(10, (prev.bagsNeeded || 1) + 1),
+                      }))
+                    }
+                    disabled={(form.bagsNeeded || 1) >= 10}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase bag count"
+                    activeOpacity={0.7}
+                  >
+                    <Feather
+                      name="plus"
+                      size={15}
+                      color={
+                        (form.bagsNeeded || 1) >= 10
+                          ? "#cbd5e1"
+                          : BENTO_COLORS.deepNavy
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Quick count presets */}
+                <View style={styles.bagsPresetsRow}>
+                  {[1, 2, 3, 4].map((count) => {
+                    const isSelected = (form.bagsNeeded || 1) === count;
                     return (
                       <TouchableOpacity
-                        key={bg.value}
+                        key={count}
                         style={[
-                          styles.bloodGroupChip,
-                          isSelected && styles.bloodGroupChipActive,
+                          styles.bagPresetChip,
+                          isSelected && styles.bagPresetChipActive,
                         ]}
                         onPress={() =>
                           onChangeForm((prev) => ({
                             ...prev,
-                            bloodGroup: bg.value,
+                            bagsNeeded: count,
                           }))
                         }
                         accessible={true}
                         accessibilityRole="button"
-                        accessibilityLabel={`Select blood group ${bg.label}`}
+                        accessibilityLabel={`${count} bags`}
+                        activeOpacity={0.7}
                       >
                         <Text
                           style={[
-                            styles.bloodGroupChipText,
-                            isSelected && styles.bloodGroupChipTextActive,
+                            styles.bagPresetChipText,
+                            isSelected && styles.bagPresetChipTextActive,
                           ]}
                         >
-                          {bg.label}
+                          {count}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
               </View>
+            </View>
 
-              {/* Blood Bags Needed Selector */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>BLOOD BAGS NEEDED</Text>
-                <View style={styles.bagsSelectorRow}>
-                  <View style={styles.bagsStepperBox}>
-                    <TouchableOpacity
-                      style={[
-                        styles.stepperActionBtn,
-                        (form.bagsNeeded || 1) <= 1 &&
-                          styles.stepperActionBtnDisabled,
-                      ]}
-                      onPress={() =>
-                        onChangeForm((prev) => ({
-                          ...prev,
-                          bagsNeeded: Math.max(1, (prev.bagsNeeded || 1) - 1),
-                        }))
-                      }
-                      disabled={(form.bagsNeeded || 1) <= 1}
-                      accessible={true}
-                      accessibilityRole="button"
-                      accessibilityLabel="Decrease bag count"
-                    >
-                      <Feather
-                        name="minus"
-                        size={15}
-                        color={
-                          (form.bagsNeeded || 1) <= 1
-                            ? "#94a3b8"
-                            : BENTO_COLORS.deepNavy
-                        }
-                      />
-                    </TouchableOpacity>
-
-                    <View style={styles.stepperValueContainer}>
-                      <Text style={styles.stepperValueNumber}>
-                        {form.bagsNeeded || 1}
-                      </Text>
-                      <Text style={styles.stepperValueUnit}>
-                        {(form.bagsNeeded || 1) === 1 ? "Bag" : "Bags"}
-                      </Text>
-                    </View>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.stepperActionBtn,
-                        (form.bagsNeeded || 1) >= 10 &&
-                          styles.stepperActionBtnDisabled,
-                      ]}
-                      onPress={() =>
-                        onChangeForm((prev) => ({
-                          ...prev,
-                          bagsNeeded: Math.min(10, (prev.bagsNeeded || 1) + 1),
-                        }))
-                      }
-                      disabled={(form.bagsNeeded || 1) >= 10}
-                      accessible={true}
-                      accessibilityRole="button"
-                      accessibilityLabel="Increase bag count"
-                    >
-                      <Feather
-                        name="plus"
-                        size={15}
-                        color={
-                          (form.bagsNeeded || 1) >= 10
-                            ? "#94a3b8"
-                            : BENTO_COLORS.deepNavy
-                        }
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Quick count presets */}
-                  <View style={styles.bagsPresetsRow}>
-                    {[1, 2, 3, 4].map((count) => {
-                      const isSelected = (form.bagsNeeded || 1) === count;
-                      return (
-                        <TouchableOpacity
-                          key={count}
-                          style={[
-                            styles.bagPresetChip,
-                            isSelected && styles.bagPresetChipActive,
-                          ]}
-                          onPress={() =>
-                            onChangeForm((prev) => ({
-                              ...prev,
-                              bagsNeeded: count,
-                            }))
-                          }
-                          accessible={true}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${count} bags`}
-                        >
-                          <Text
-                            style={[
-                              styles.bagPresetChipText,
-                              isSelected && styles.bagPresetChipTextActive,
-                            ]}
-                          >
-                            {count}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+            {/* 5. Hospital Location & Patient Room Bento Box */}
+            <View style={styles.formGroup}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.labelRowNoMargin}>
+                  <Feather
+                    name="map-pin"
+                    size={13}
+                    color={BENTO_COLORS.crimson}
+                    style={styles.labelIcon}
+                  />
+                  <Text style={styles.formLabel} numberOfLines={1}>
+                    HOSPITAL LOCATION
+                  </Text>
                 </View>
+
+                <TouchableOpacity
+                  style={styles.mapPickerTriggerBtn}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setIsMapPickerVisible(true);
+                  }}
+                  activeOpacity={0.75}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose hospital location on map"
+                >
+                  <Feather
+                    name="map"
+                    size={12}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.mapPickerTriggerText}>Select on Map</Text>
+                </TouchableOpacity>
               </View>
 
-              {/* Location / Hospital */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>HOSPITAL / LOCATION</Text>
+              {/* Hospital Name Input with Quick Map Button */}
+              <View style={styles.inputWrapper}>
+                <Feather
+                  name="plus-circle"
+                  size={16}
+                  color={BENTO_COLORS.crimson}
+                  style={styles.fieldLeadingIcon}
+                />
                 <TextInput
                   style={styles.formInput}
-                  value={form.location}
-                  onChangeText={(text) =>
-                    onChangeForm((prev) => ({ ...prev, location: text }))
-                  }
-                  placeholder="e.g. Uttara Adhunik Hospital, Ward 4"
+                  value={form.hospitalName ?? (form.location ? form.location.split(",")[0] : "")}
+                  onChangeText={(text) => {
+                    const matchedPop = POPULAR_HOSPITALS.find(
+                      (h) => h.name.toLowerCase() === text.trim().toLowerCase(),
+                    );
+                    onChangeForm((prev) => {
+                      const compiled = buildCompiledLocation(
+                        text,
+                        prev.floor,
+                        prev.ward,
+                        prev.bed,
+                        prev.additionalLocationNotes,
+                      );
+                      return {
+                        ...prev,
+                        hospitalName: text,
+                        location: compiled,
+                        latitude: matchedPop ? matchedPop.latitude : prev.latitude,
+                        longitude: matchedPop ? matchedPop.longitude : prev.longitude,
+                      };
+                    });
+                  }}
+                  placeholder="Hospital name (or tap Select on Map)"
                   placeholderTextColor={BENTO_COLORS.subtleText}
                   accessible={true}
-                  accessibilityLabel="Hospital or Location"
+                  accessibilityLabel="Hospital name"
                 />
+                <TouchableOpacity
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setIsMapPickerVisible(true);
+                  }}
+                  style={styles.inlineMapBtn}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open map picker"
+                >
+                  <Feather name="navigation" size={14} color={BENTO_COLORS.crimson} />
+                </TouchableOpacity>
               </View>
 
-              {/* Urgency Selector */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>URGENCY PRIORITY</Text>
-                <View style={styles.urgencyRow}>
-                  {URGENCY_LEVELS.map((level) => {
-                    const isSelected = form.urgency === level;
-                    return (
-                      <TouchableOpacity
-                        key={level}
-                        style={[
-                          styles.urgencyChip,
-                          isSelected && styles.urgencyChipActive,
-                        ]}
-                        onPress={() =>
-                          onChangeForm((prev) => ({ ...prev, urgency: level }))
-                        }
+              {/* Structured Patient Room Details: Floor, Ward, Bed in a 3-column Bento grid */}
+              <View style={styles.roomDetailsCard}>
+                <View style={styles.roomCardHeader}>
+                  <Feather
+                    name="layers"
+                    size={12}
+                    color={BENTO_COLORS.subtleText}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.roomCardTitle}>
+                    PATIENT ROOM, BED & WARD DETAILS
+                  </Text>
+                </View>
+
+                <View style={styles.roomGridRow}>
+                  {/* Floor */}
+                  <View style={styles.roomCol}>
+                    <Text style={styles.roomInputLabel}>FLOOR</Text>
+                    <View style={styles.roomInputWrapper}>
+                      <TextInput
+                        style={styles.roomInput}
+                        value={form.floor || ""}
+                        onChangeText={(text) => {
+                          onChangeForm((prev) => {
+                            const currentHosp =
+                              prev.hospitalName ||
+                              (prev.location ? prev.location.split(",")[0] : "");
+                            const compiled = buildCompiledLocation(
+                              currentHosp,
+                              text,
+                              prev.ward,
+                              prev.bed,
+                              prev.additionalLocationNotes,
+                            );
+                            return { ...prev, floor: text, location: compiled };
+                          });
+                        }}
+                        placeholder="e.g. 3rd"
+                        placeholderTextColor={BENTO_COLORS.subtleText}
                         accessible={true}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Priority ${level}`}
-                      >
-                        <Text
-                          style={[
-                            styles.urgencyChipText,
-                            isSelected && styles.urgencyChipTextActive,
-                          ]}
-                        >
-                          {level}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                        accessibilityLabel="Hospital floor number"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Ward */}
+                  <View style={styles.roomCol}>
+                    <Text style={styles.roomInputLabel}>WARD / UNIT</Text>
+                    <View style={styles.roomInputWrapper}>
+                      <TextInput
+                        style={styles.roomInput}
+                        value={form.ward || ""}
+                        onChangeText={(text) => {
+                          onChangeForm((prev) => {
+                            const currentHosp =
+                              prev.hospitalName ||
+                              (prev.location ? prev.location.split(",")[0] : "");
+                            const compiled = buildCompiledLocation(
+                              currentHosp,
+                              prev.floor,
+                              text,
+                              prev.bed,
+                              prev.additionalLocationNotes,
+                            );
+                            return { ...prev, ward: text, location: compiled };
+                          });
+                        }}
+                        placeholder="Ward 4 / ICU"
+                        placeholderTextColor={BENTO_COLORS.subtleText}
+                        accessible={true}
+                        accessibilityLabel="Hospital ward or unit"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Bed */}
+                  <View style={styles.roomCol}>
+                    <Text style={styles.roomInputLabel}>BED NO.</Text>
+                    <View style={styles.roomInputWrapper}>
+                      <TextInput
+                        style={styles.roomInput}
+                        value={form.bed || ""}
+                        onChangeText={(text) => {
+                          onChangeForm((prev) => {
+                            const currentHosp =
+                              prev.hospitalName ||
+                              (prev.location ? prev.location.split(",")[0] : "");
+                            const compiled = buildCompiledLocation(
+                              currentHosp,
+                              prev.floor,
+                              prev.ward,
+                              text,
+                              prev.additionalLocationNotes,
+                            );
+                            return { ...prev, bed: text, location: compiled };
+                          });
+                        }}
+                        placeholder="Bed 12"
+                        placeholderTextColor={BENTO_COLORS.subtleText}
+                        accessible={true}
+                        accessibilityLabel="Patient bed number"
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Additional Room Notes */}
+                <View style={styles.roomNotesWrapper}>
+                  <Feather
+                    name="info"
+                    size={12}
+                    color={BENTO_COLORS.subtleText}
+                    style={{ marginRight: 6 }}
+                  />
+                  <TextInput
+                    style={styles.roomNotesInput}
+                    value={form.additionalLocationNotes || ""}
+                    onChangeText={(text) => {
+                      onChangeForm((prev) => {
+                        const currentHosp =
+                          prev.hospitalName ||
+                          (prev.location ? prev.location.split(",")[0] : "");
+                        const compiled = buildCompiledLocation(
+                          currentHosp,
+                          prev.floor,
+                          prev.ward,
+                          prev.bed,
+                          text,
+                        );
+                        return {
+                          ...prev,
+                          additionalLocationNotes: text,
+                          location: compiled,
+                        };
+                      });
+                    }}
+                    placeholder="Directions (e.g. Cabin 201, Near Nurse Station)"
+                    placeholderTextColor={BENTO_COLORS.subtleText}
+                    accessible={true}
+                    accessibilityLabel="Additional room directions"
+                  />
                 </View>
               </View>
 
-              {/* Contact Phone */}
-              <View style={styles.formGroup}>
+              {/* Live Donor Location Preview Banner */}
+              {form.location.trim().length > 0 && (
+                <View style={styles.locationPreviewBanner}>
+                  <Feather
+                    name="navigation"
+                    size={13}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 8, marginTop: 2 }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.locationPreviewLabel}>
+                      DONOR LOCATION PREVIEW
+                    </Text>
+                    <Text style={styles.locationPreviewText} numberOfLines={2}>
+                      {form.location}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* 6. Urgency Selector */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Feather
+                  name="alert-triangle"
+                  size={13}
+                  color={BENTO_COLORS.crimson}
+                  style={styles.labelIcon}
+                />
+                <Text style={styles.formLabel}>URGENCY PRIORITY</Text>
+              </View>
+              <View style={styles.urgencyRow}>
+                {URGENCY_LEVELS.map((level) => {
+                  const isSelected = form.urgency === level;
+                  const isHigh = level === "High";
+                  return (
+                    <TouchableOpacity
+                      key={level}
+                      style={[
+                        styles.urgencyChip,
+                        isSelected &&
+                          (isHigh
+                            ? styles.urgencyChipHighActive
+                            : styles.urgencyChipActive),
+                      ]}
+                      onPress={() =>
+                        onChangeForm((prev) => ({ ...prev, urgency: level }))
+                      }
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Priority ${level}`}
+                      activeOpacity={0.7}
+                    >
+                      {isSelected && (
+                        <View
+                          style={[
+                            styles.urgencyDot,
+                            isHigh && styles.urgencyDotHigh,
+                          ]}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.urgencyChipText,
+                          isSelected && styles.urgencyChipTextActive,
+                        ]}
+                      >
+                        {level}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 7. Emergency Contact Phone */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Feather
+                  name="phone"
+                  size={13}
+                  color={BENTO_COLORS.crimson}
+                  style={styles.labelIcon}
+                />
                 <Text style={styles.formLabel}>EMERGENCY CONTACT PHONE</Text>
+              </View>
+              <View style={styles.inputWrapper}>
+                <Feather
+                  name="phone"
+                  size={16}
+                  color={BENTO_COLORS.subtleText}
+                  style={styles.fieldLeadingIcon}
+                />
                 <TextInput
                   style={styles.formInput}
                   value={form.contactPhone}
@@ -383,136 +800,193 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   accessible={true}
                   accessibilityLabel="Emergency contact phone number"
                 />
-              </View>
-            </ScrollView>
-
-            {/* Bottom Docked Action Footer with Safe Area */}
-            <View
-              style={[
-                styles.modalFooter,
-                {
-                  paddingBottom:
-                    keyboardHeight > 0
-                      ? 14
-                      : Math.max(insets.bottom, 16),
-                },
-              ]}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.submitBtn,
-                  (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
-                ]}
-                onPress={onSubmit}
-                disabled={!canSubmit || isSubmitting}
-                activeOpacity={0.85}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Publish blood request"
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
+                {form.contactPhone.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      onChangeForm((prev) => ({ ...prev, contactPhone: "" }))
+                    }
+                    style={styles.clearBtn}
+                  >
                     <Feather
-                      name="droplet"
-                      size={16}
-                      color="#ffffff"
-                      style={{ marginRight: 8 }}
+                      name="x-circle"
+                      size={15}
+                      color={BENTO_COLORS.subtleText}
                     />
-                    <Text style={styles.submitBtnText}>
-                      Publish Blood Request
-                    </Text>
-                  </>
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
+              </View>
             </View>
+          </ScrollView>
+
+          {/* Bottom Docked Action Footer */}
+          <View
+            style={[
+              styles.modalFooter,
+              {
+                paddingBottom:
+                  keyboardHeight > 0 ? 12 : Math.max(insets.bottom, 16),
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                isSubmitting && styles.submitBtnDisabled,
+              ]}
+              onPress={onSubmit}
+              disabled={isSubmitting}
+              activeOpacity={0.88}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Publish blood request"
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Feather
+                    name="send"
+                    size={16}
+                    color="#ffffff"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={styles.submitBtnText}>
+                    Publish Blood Request
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </View>
+
+        {/* Hospital Map Location Picker Modal */}
+        <HospitalMapPickerModal
+          visible={isMapPickerVisible}
+          initialHospitalName={
+            form.hospitalName ||
+            (form.location ? form.location.split(",")[0] : undefined)
+          }
+          initialLatitude={form.latitude}
+          initialLongitude={form.longitude}
+          onSelectHospital={handleSelectHospitalFromMap}
+          onClose={() => setIsMapPickerVisible(false)}
+        />
+      </SafeAreaView>
     </Modal>
   );
 });
 
 const styles = StyleSheet.create({
-  overlay: {
+  fullScreenContainer: {
     flex: 1,
-    backgroundColor: "rgba(10, 15, 29, 0.65)",
-    justifyContent: "flex-end",
+    backgroundColor: BENTO_COLORS.background,
   },
   keyboardAvoid: {
-    width: "100%",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: BENTO_COLORS.background,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    overflow: "hidden",
-    maxHeight: "100%",
-  },
-  scrollView: {
     flex: 1,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(0, 0, 0, 0.15)",
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 6,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: BENTO_COLORS.subtleBorder,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: BENTO_COLORS.background,
   },
-  headerTitle: {
-    fontFamily,
-    fontSize: 17,
-    fontWeight: "800",
-    color: BENTO_COLORS.deepNavy,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: BENTO_COLORS.white,
+  headerTitleRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    ...BENTO_COLORS.shadow,
+    gap: 12,
+    flex: 1,
   },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 24,
-  },
-  formGroup: {
-    marginBottom: 18,
-  },
-  formLabel: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    color: BENTO_COLORS.subtleText,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  formInput: {
-    fontFamily,
-    fontSize: 14,
-    color: BENTO_COLORS.neutralText,
+  headerIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: BENTO_COLORS.white,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
+  },
+  headerTextCol: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+    letterSpacing: -0.4,
+  },
+  headerSubtitle: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: BENTO_COLORS.white,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    ...BENTO_COLORS.shadow,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 32,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  labelIcon: {
+    marginRight: 6,
+  },
+  formLabel: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: BENTO_COLORS.subtleText,
+    letterSpacing: 0.6,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    paddingHorizontal: 14,
+    height: 52,
+    ...BENTO_COLORS.shadow,
+  },
+  fieldLeadingIcon: {
+    marginRight: 10,
+  },
+  formInput: {
+    flex: 1,
+    fontFamily,
+    fontSize: 14,
+    color: BENTO_COLORS.neutralText,
+    paddingVertical: 0,
+    height: "100%",
+  },
+  clearBtn: {
+    padding: 4,
   },
   bloodGroupsGrid: {
     flexDirection: "row",
@@ -521,18 +995,25 @@ const styles = StyleSheet.create({
   },
   bloodGroupChip: {
     backgroundColor: BENTO_COLORS.white,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
-    minWidth: 64,
+    minWidth: 72,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     ...BENTO_COLORS.shadow,
   },
   bloodGroupChipActive: {
     backgroundColor: BENTO_COLORS.crimson,
     borderColor: BENTO_COLORS.crimson,
+    shadowColor: BENTO_COLORS.crimson,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   bloodGroupChipText: {
     fontFamily,
@@ -552,17 +1033,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: BENTO_COLORS.white,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
     paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingVertical: 5,
     ...BENTO_COLORS.shadow,
   },
   stepperActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
@@ -573,11 +1054,11 @@ const styles = StyleSheet.create({
   stepperValueContainer: {
     paddingHorizontal: 12,
     alignItems: "center",
-    minWidth: 58,
+    minWidth: 54,
   },
   stepperValueNumber: {
     fontFamily,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
   },
@@ -591,12 +1072,12 @@ const styles = StyleSheet.create({
   bagsPresetsRow: {
     flex: 1,
     flexDirection: "row",
-    gap: 6,
+    gap: 8,
   },
   bagPresetChip: {
     flex: 1,
-    height: 44,
-    borderRadius: 12,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: BENTO_COLORS.white,
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
@@ -607,10 +1088,15 @@ const styles = StyleSheet.create({
   bagPresetChipActive: {
     backgroundColor: BENTO_COLORS.crimson,
     borderColor: BENTO_COLORS.crimson,
+    shadowColor: BENTO_COLORS.crimson,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   bagPresetChipText: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "800",
     color: BENTO_COLORS.neutralText,
   },
@@ -624,9 +1110,11 @@ const styles = StyleSheet.create({
   urgencyChip: {
     flex: 1,
     backgroundColor: BENTO_COLORS.white,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 13,
+    borderRadius: 14,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
@@ -634,6 +1122,25 @@ const styles = StyleSheet.create({
   urgencyChipActive: {
     backgroundColor: BENTO_COLORS.deepNavy,
     borderColor: BENTO_COLORS.deepNavy,
+  },
+  urgencyChipHighActive: {
+    backgroundColor: "#dc2626",
+    borderColor: "#dc2626",
+    shadowColor: "#dc2626",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  urgencyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    marginRight: 6,
+  },
+  urgencyDotHigh: {
+    backgroundColor: "#ffffff",
   },
   urgencyChipText: {
     fontFamily,
@@ -646,8 +1153,8 @@ const styles = StyleSheet.create({
   },
   modalFooter: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    backgroundColor: BENTO_COLORS.white,
+    paddingTop: 12,
+    backgroundColor: BENTO_COLORS.background,
     borderTopWidth: 1,
     borderTopColor: BENTO_COLORS.subtleBorder,
   },
@@ -656,17 +1163,155 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: BENTO_COLORS.crimson,
-    height: 48,
-    borderRadius: BENTO_COLORS.pillRadius,
-    ...BENTO_COLORS.shadow,
+    height: 52,
+    borderRadius: 26,
+    shadowColor: BENTO_COLORS.crimson,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
   },
   submitBtnDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitBtnText: {
     fontFamily,
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
     color: "#ffffff",
+    letterSpacing: -0.2,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  labelRowNoMargin: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 8,
+  },
+  mapPickerTriggerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(225, 29, 72, 0.08)",
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(225, 29, 72, 0.2)",
+    flexShrink: 0,
+  },
+  mapPickerTriggerText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: BENTO_COLORS.crimson,
+  },
+  inlineMapBtn: {
+    padding: 6,
+    backgroundColor: "rgba(225, 29, 72, 0.08)",
+    borderRadius: 10,
+  },
+  roomDetailsCard: {
+    backgroundColor: BENTO_COLORS.white,
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    marginTop: 10,
+    ...BENTO_COLORS.shadow,
+  },
+  roomCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  roomCardTitle: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "800",
+    color: BENTO_COLORS.subtleText,
+    letterSpacing: 0.5,
+  },
+  roomGridRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  roomCol: {
+    flex: 1,
+  },
+  roomInputLabel: {
+    fontFamily,
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: BENTO_COLORS.subtleText,
+    marginBottom: 4,
+  },
+  roomInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    paddingHorizontal: 8,
+    height: 42,
+  },
+  roomInput: {
+    flex: 1,
+    fontFamily,
+    fontSize: 12.5,
+    color: BENTO_COLORS.neutralText,
+    paddingVertical: 0,
+    height: "100%",
+  },
+  roomNotesWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.subtleBorder,
+    paddingHorizontal: 10,
+    height: 42,
+  },
+  roomNotesInput: {
+    flex: 1,
+    fontFamily,
+    fontSize: 12,
+    color: BENTO_COLORS.neutralText,
+    paddingVertical: 0,
+    height: "100%",
+  },
+  locationPreviewBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "rgba(225, 29, 72, 0.05)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(225, 29, 72, 0.15)",
+    padding: 10,
+    marginTop: 10,
+  },
+  locationPreviewLabel: {
+    fontFamily,
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: BENTO_COLORS.crimson,
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  locationPreviewText: {
+    fontFamily,
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
+    lineHeight: 16,
   },
 });

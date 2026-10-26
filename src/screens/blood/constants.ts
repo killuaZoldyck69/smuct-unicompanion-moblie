@@ -55,6 +55,101 @@ export interface BloodFeedCounts {
   total: number;
 }
 
+export interface HospitalLocationItem {
+  name: string;
+  area: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+}
+
+export const POPULAR_HOSPITALS: HospitalLocationItem[] = [
+  {
+    name: "Uttara Adhunik Medical College Hospital",
+    area: "Uttara Sector 9",
+    latitude: 23.8748,
+    longitude: 90.3967,
+    address: "House 34, Road 4, Sector 9, Uttara, Dhaka",
+  },
+  {
+    name: "Kuwait Bangladesh Friendship Hospital",
+    area: "Uttara Sector 6",
+    latitude: 23.8647,
+    longitude: 90.4042,
+    address: "Issha Kha Avenue, Sector 6, Uttara, Dhaka",
+  },
+  {
+    name: "Kurmitola General Hospital",
+    area: "Dhaka Cantonment",
+    latitude: 23.8193,
+    longitude: 90.4103,
+    address: "Airport Road, Dhaka Cantonment, Dhaka",
+  },
+  {
+    name: "Dhaka Medical College Hospital (DMCH)",
+    area: "Bakshibazar",
+    latitude: 23.7258,
+    longitude: 90.3976,
+    address: "Secretariat Road, Bakshibazar, Dhaka",
+  },
+  {
+    name: "Evercare Hospital Dhaka",
+    area: "Bashundhara R/A",
+    latitude: 23.8103,
+    longitude: 90.4312,
+    address: "Plot 81, Block E, Bashundhara R/A, Dhaka",
+  },
+  {
+    name: "Square Hospital",
+    area: "Panthapath",
+    latitude: 23.7533,
+    longitude: 90.3816,
+    address: "18/F Bir Uttam Qazi Nuruzzaman Sarak, Panthapath, Dhaka",
+  },
+  {
+    name: "United Hospital",
+    area: "Gulshan-2",
+    latitude: 23.8051,
+    longitude: 90.4158,
+    address: "Plot 15, Road 71, Gulshan-2, Dhaka",
+  },
+  {
+    name: "Shaheed Suhrawardy Medical College Hospital",
+    area: "Sher-e-Bangla Nagar",
+    latitude: 23.7699,
+    longitude: 90.3712,
+    address: "Mirpur Road, Sher-e-Bangla Nagar, Dhaka",
+  },
+  {
+    name: "BSMMU (PG Hospital)",
+    area: "Shahbagh",
+    latitude: 23.7389,
+    longitude: 90.3948,
+    address: "Shahbagh, Dhaka",
+  },
+  {
+    name: "LabAid Specialized Hospital",
+    area: "Dhanmondi",
+    latitude: 23.7423,
+    longitude: 90.3826,
+    address: "House 06, Road 04, Dhanmondi, Dhaka",
+  },
+  {
+    name: "Ibn Sina Medical College Hospital",
+    area: "Kallyanpur",
+    latitude: 23.7806,
+    longitude: 90.3582,
+    address: "1/1 B, Kallyanpur, Mirpur Road, Dhaka",
+  },
+  {
+    name: "National Institute of Cardiovascular Diseases (NICVD)",
+    area: "Sher-e-Bangla Nagar",
+    latitude: 23.7712,
+    longitude: 90.3701,
+    address: "Sher-e-Bangla Nagar, Dhaka",
+  },
+];
+
 export interface NewBloodPostForm {
   patientName: string;
   patientCondition: string;
@@ -63,4 +158,12 @@ export interface NewBloodPostForm {
   location: string;
   urgency: string;
   contactPhone: string;
+  hospitalName?: string;
+  floor?: string;
+  ward?: string;
+  bed?: string;
+  additionalLocationNotes?: string;
+  latitude?: number;
+  longitude?: number;
 }
+
