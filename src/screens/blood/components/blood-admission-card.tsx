@@ -92,7 +92,7 @@ export const BloodAdmissionCard: React.FC<BloodAdmissionCardProps> = ({
       {/* 3. PATIENT ADMISSION SECTION */}
       <View style={styles.admissionSection}>
         <View style={styles.admissionLabelRow}>
-          <Text style={styles.admissionLabel}>PATIENT ADMISSION</Text>
+          <Text style={styles.admissionLabel}>PATIENT NAME</Text>
           <View
             style={[
               styles.urgencyPill,
@@ -130,6 +130,24 @@ export const BloodAdmissionCard: React.FC<BloodAdmissionCardProps> = ({
           </Text>
         </Text>
       </View>
+
+      {/* 4b. MEDICAL & PATIENT DETAILS NOTE */}
+      {!!post.details?.trim() && (
+        <View style={styles.detailsCard}>
+          <View style={styles.detailsHeaderRow}>
+            <Feather
+              name="file-text"
+              size={13}
+              color="#be123c"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.detailsHeaderTitle}>
+              PATIENT & MEDICAL DETAILS
+            </Text>
+          </View>
+          <Text style={styles.detailsBodyText}>{post.details.trim()}</Text>
+        </View>
+      )}
 
       {/* 5. TWO BENTO CARDS: URGENCY LEVEL & TARGET HOSPITAL */}
       <View style={styles.bentoRow}>
@@ -333,6 +351,34 @@ const styles = StyleSheet.create({
   diagnosisValue: {
     fontWeight: "600",
     color: "#881337",
+  },
+  detailsCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(225, 29, 72, 0.1)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 10,
+  },
+  detailsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  detailsHeaderTitle: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "800",
+    color: "#be123c",
+    letterSpacing: 0.5,
+  },
+  detailsBodyText: {
+    fontFamily,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: "#334155",
+    fontWeight: "500",
   },
   bentoRow: {
     flexDirection: "row",

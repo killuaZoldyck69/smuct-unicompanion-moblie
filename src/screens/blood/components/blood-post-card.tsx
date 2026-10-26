@@ -3,9 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { formatCardDateTime } from "@/utils/date-formatter";
-import { getDepartmentShortName } from "@/data/programs";
 import { BENTO_COLORS, fontFamily } from "../constants";
-import { formatBloodGroupSymbol } from "../utils";
+import { formatBloodGroupSymbol, getAuthorRoleAndDept } from "../utils";
 
 interface BloodPostCardProps {
   item: any;
@@ -19,28 +18,6 @@ const getAuthorInitials = (name?: string): string => {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
-
-const formatRole = (role?: string | null): string => {
-  if (!role) return "";
-  const upper = role.toUpperCase();
-  if (upper === "STUDENT") return "Student";
-  if (upper === "TEACHER" || upper === "FACULTY") return "Faculty";
-  if (upper === "ADMIN") return "Admin";
-  if (upper === "ALUMNI") return "Alumni";
-  return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-};
-
-const getAuthorRoleAndDept = (author: any): string => {
-  const roleName = formatRole(author?.role);
-  const rawDept =
-    author?.studentProfile?.department ||
-    author?.teacherProfile?.department ||
-    author?.department ||
-    author?.major;
-  const deptShort =
-    rawDept && rawDept.trim() ? getDepartmentShortName(rawDept) : "";
-  return [roleName, deptShort].filter(Boolean).join(" • ");
 };
 
 export const BloodPostCard = React.memo(function BloodPostCard({

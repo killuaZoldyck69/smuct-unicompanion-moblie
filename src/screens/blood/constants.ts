@@ -65,6 +65,13 @@ export interface HospitalLocationItem {
 
 export const POPULAR_HOSPITALS: HospitalLocationItem[] = [
   {
+    name: "Marine Health Care",
+    area: "Khilkhet, Dhaka",
+    latitude: 23.8298,
+    longitude: 90.4215,
+    address: "House 12, Road 4, Nikunja-2, Khilkhet, Dhaka",
+  },
+  {
     name: "Uttara Adhunik Medical College Hospital",
     area: "Uttara Sector 9",
     latitude: 23.8748,
@@ -153,12 +160,14 @@ export const POPULAR_HOSPITALS: HospitalLocationItem[] = [
 export interface NewBloodPostForm {
   patientName: string;
   patientCondition: string;
+  details?: string;
   bloodGroup: string;
   bagsNeeded: number;
   location: string;
   urgency: string;
   contactPhone: string;
   hospitalName?: string;
+  hospitalAddress?: string;
   floor?: string;
   ward?: string;
   bed?: string;

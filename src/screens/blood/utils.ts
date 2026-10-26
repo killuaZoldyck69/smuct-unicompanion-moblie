@@ -1,3 +1,4 @@
+import { getDepartmentShortName } from "@/data/programs";
 import {
   BloodFeedCounts,
   BloodFilterType,
@@ -26,40 +27,155 @@ export const formatBloodGroupSymbol = (group: string | undefined): string => {
   return map[group] || group.replace(/_/g, " ");
 };
 
+export const formatRole = (
+  role?: string | null,
+  hasStudentProfile?: boolean,
+  hasTeacherProfile?: boolean,
+): string => {
+  if (role && role.trim()) {
+    const upper = role.toUpperCase();
+    if (upper === "STUDENT") return "Student";
+    if (upper === "TEACHER" || upper === "FACULTY") return "Faculty";
+    if (upper === "ADMIN") return "Admin";
+    if (upper === "ALUMNI") return "Alumni";
+    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+  }
+  if (hasStudentProfile) return "Student";
+  if (hasTeacherProfile) return "Faculty";
+  return "";
+};
+
+export const getAuthorRoleAndDept = (author?: {
+  role?: string | null;
+  studentProfile?: { department?: string | null; program?: string | null } | null;
+  teacherProfile?: { department?: string | null; designation?: string | null } | null;
+  department?: string | null;
+  major?: string | null;
+} | null): string => {
+  if (!author) return "Campus Member";
+  const roleName = formatRole(
+    author.role,
+    !!author.studentProfile,
+    !!author.teacherProfile,
+  );
+  const rawDept =
+    author.studentProfile?.department ||
+    author.teacherProfile?.department ||
+    author.department ||
+    author.major;
+  const deptShort =
+    rawDept && rawDept.trim() ? getDepartmentShortName(rawDept) : "";
+  return [roleName, deptShort].filter(Boolean).join(" • ") || "University Member";
+};
+
 export const getUserAcademicSubtitle = (author?: {
   role?: string;
   studentProfile?: { department?: string; program?: string } | null;
   teacherProfile?: { department?: string; designation?: string } | null;
 }): string => {
-  if (!author) return "";
-  if (author.studentProfile?.department) {
-    return author.studentProfile.department;
-  }
-  if (author.teacherProfile?.department) {
-    return author.teacherProfile.department;
-  }
-  return author.role || "";
+  return getAuthorRoleAndDept(author);
 };
+
+export interface BloodFormValidationResult {
+  isValid: boolean;
+  error?: string;
+  fieldErrors: Record<string, string>;
+}
 
 export const validateBloodPostInput = (
   form: NewBloodPostForm
-): { isValid: boolean; error?: string } => {
-  if (!form.patientName.trim()) {
-    return { isValid: false, error: "Patient name is required." };
+): BloodFormValidationResult => {
+  const fieldErrors: Record<string, string> = {};
+
+  const name = (form.patientName || "").trim();
+  if (!name) {
+    fieldErrors.patientName = "Patient full name is required.";
+  } else if (name.length < 2) {
+    fieldErrors.patientName = "Patient name must be at least 2 characters.";
   }
-  if (!form.patientCondition.trim()) {
-    return { isValid: false, error: "Medical condition/reason is required." };
+
+  const condition = (form.patientCondition || "").trim();
+  if (!condition) {
+    fieldErrors.patientCondition = "Medical condition or reason is required.";
+  } else if (condition.length < 3) {
+    fieldErrors.patientCondition =
+      "Condition must be at least 3 characters (e.g. Surgery, Dengue).";
   }
-  if (!form.bagsNeeded || form.bagsNeeded < 1) {
-    return { isValid: false, error: "At least 1 bag of blood is required." };
+
+  const bg = (form.bloodGroup || "").trim();
+  if (!bg) {
+    fieldErrors.bloodGroup = "Please select the required blood group.";
   }
-  if (!form.location.trim()) {
-    return { isValid: false, error: "Hospital / Location is required." };
+
+  const bags = form.bagsNeeded || 1;
+  if (bags < 1) {
+    fieldErrors.bagsNeeded = "At least 1 bag of blood is required.";
+  } else if (bags > 20) {
+    fieldErrors.bagsNeeded = "Maximum 20 bags can be requested at a time.";
   }
-  if (!form.contactPhone.trim()) {
-    return { isValid: false, error: "Contact phone number is required." };
+
+  const loc = (form.location || "").trim();
+  if (!loc) {
+    fieldErrors.location =
+      "Hospital location is required. Please type name or select on map.";
   }
-  return { isValid: true };
+
+  const phone = (form.contactPhone || "").trim();
+  if (!phone) {
+    fieldErrors.contactPhone = "Emergency contact phone number is required.";
+  } else {
+    const digitsOnly = phone.replace(/[^0-9+]/g, "");
+    if (digitsOnly.length < 7) {
+      fieldErrors.contactPhone =
+        "Please enter a valid phone number (e.g. 01700-000000).";
+    }
+  }
+
+  const errors = Object.values(fieldErrors);
+  return {
+    isValid: errors.length === 0,
+    error: errors[0],
+    fieldErrors,
+  };
+};
+
+export const extractErrorMessage = (
+  err: any,
+  fallback = "Network error. Please check your connection and try again."
+): string => {
+  if (!err) return fallback;
+
+  if (err.response?.data) {
+    const data = err.response.data;
+    if (Array.isArray(data.errorSources) && data.errorSources.length > 0) {
+      const messages = data.errorSources
+        .map((s: any) => s.message)
+        .filter(Boolean);
+      if (messages.length > 0) {
+        return messages.join(". ");
+      }
+    }
+    if (typeof data.message === "string" && data.message.trim()) {
+      return data.message.trim();
+    }
+    if (typeof data.error === "string" && data.error.trim()) {
+      return data.error.trim();
+    }
+  }
+
+  if (typeof err.message === "string" && err.message.trim()) {
+    if (
+      err.message.includes("Network Error") ||
+      err.message.includes("Network error")
+    ) {
+      return "Cannot connect to server. Please check your network connection.";
+    }
+    if (!err.message.includes("status code")) {
+      return err.message.trim();
+    }
+  }
+
+  return fallback;
 };
 
 export const filterAndCountBloodPosts = (
@@ -105,7 +221,9 @@ export const filterAndCountBloodPosts = (
         .includes(query);
       const locMatch = (p.location || "").toLowerCase().includes(query);
       const patientMatch = (p.patientName || "").toLowerCase().includes(query);
-      return bgMatch || locMatch || patientMatch;
+      const conditionMatch = (p.patientCondition || "").toLowerCase().includes(query);
+      const detailsMatch = (p.details || "").toLowerCase().includes(query);
+      return bgMatch || locMatch || patientMatch || conditionMatch || detailsMatch;
     });
   }
 
@@ -124,6 +242,7 @@ export interface ParsedHospitalLocation {
   name: string;
   shortName: string;
   area: string;
+  address?: string;
   roomInfo: string;
   latitude: number;
   longitude: number;
@@ -142,7 +261,8 @@ export const parseHospitalLocation = (
   rawLocation?: string,
   postLat?: number | null,
   postLng?: number | null,
-  postHospName?: string | null
+  postHospName?: string | null,
+  postHospAddress?: string | null
 ): ParsedHospitalLocation => {
   const loc = (rawLocation || "").trim();
 
@@ -159,6 +279,7 @@ export const parseHospitalLocation = (
       name: "Dhaka Medical College Hospital (DMCH)",
       shortName: "DMCH Emergency",
       area: "Bakshibazar, Dhaka",
+      address: postHospAddress?.trim() || "Secretariat Road, Bakshibazar, Dhaka",
       roomInfo: "Emergency Ward",
       latitude: 23.7258,
       longitude: 90.3976,
@@ -173,36 +294,15 @@ export const parseHospitalLocation = (
     .filter(Boolean);
 
   let matchedHospital: HospitalLocationItem | undefined;
-  for (const h of POPULAR_HOSPITALS) {
-    const hLower = h.name.toLowerCase();
-    if (
-      loc.toLowerCase().includes(hLower) ||
-      (postHospName && postHospName.toLowerCase().includes(hLower)) ||
-      (h.area && loc.toLowerCase().includes(h.area.toLowerCase()))
-    ) {
-      matchedHospital = h;
-      break;
-    }
-  }
-
-  if (!matchedHospital) {
-    const keywords: [RegExp, string][] = [
-      [/dmch|dhaka med/i, "Dhaka Medical College Hospital (DMCH)"],
-      [/uttara adhunik/i, "Uttara Adhunik Medical College Hospital"],
-      [/kuwait/i, "Kuwait Bangladesh Friendship Hospital"],
-      [/kurmitola/i, "Kurmitola General Hospital"],
-      [/evercare/i, "Evercare Hospital Dhaka"],
-      [/square/i, "Square Hospital"],
-      [/united/i, "United Hospital"],
-      [/suhrawardy/i, "Shaheed Suhrawardy Medical College Hospital"],
-      [/bsmmu|pg hosp/i, "BSMMU (PG Hospital)"],
-      [/labaid/i, "LabAid Specialized Hospital"],
-      [/ibn sina/i, "Ibn Sina Medical College Hospital"],
-      [/nicvd/i, "National Institute of Cardiovascular Diseases (NICVD)"],
-    ];
-    for (const [pattern, hospName] of keywords) {
-      if (pattern.test(loc) || (postHospName && pattern.test(postHospName))) {
-        matchedHospital = POPULAR_HOSPITALS.find((h) => h.name === hospName);
+  if (!postHospName || !hasValidCoords) {
+    for (const h of POPULAR_HOSPITALS) {
+      const hLower = h.name.toLowerCase();
+      if (
+        loc.toLowerCase().includes(hLower) ||
+        (postHospName && postHospName.toLowerCase().includes(hLower)) ||
+        (h.area && loc.toLowerCase().includes(h.area.toLowerCase()))
+      ) {
+        matchedHospital = h;
         break;
       }
     }
@@ -223,7 +323,7 @@ export const parseHospitalLocation = (
       lower.includes("unit")
     ) {
       roomSegments.push(seg);
-    } else if (index > 0 && !matchedHospital) {
+    } else if (index > 0 && !matchedHospital && !postHospAddress) {
       otherSegments.push(seg);
     }
   });
@@ -237,23 +337,10 @@ export const parseHospitalLocation = (
   let shortName = "";
   if (primaryName.includes("(DMCH)") || /dmch/i.test(primaryName)) {
     shortName = "DMCH Emergency";
+  } else if (primaryName.includes(",")) {
+    shortName = primaryName.split(",")[0].trim();
   } else if (matchedHospital) {
-    if (matchedHospital.name.includes("Uttara Adhunik")) {
-      shortName = "Uttara Adhunik";
-    } else if (matchedHospital.name.includes("Kurmitola")) {
-      shortName = "Kurmitola General";
-    } else if (matchedHospital.name.includes("Square")) {
-      shortName = "Square Emergency";
-    } else if (matchedHospital.name.includes("Evercare")) {
-      shortName = "Evercare Emergency";
-    } else {
-      const matchParen = matchedHospital.name.match(/\((.*?)\)/);
-      if (matchParen) {
-        shortName = `${matchParen[1]} Emergency`;
-      } else {
-        shortName = matchedHospital.name.split(" ").slice(0, 2).join(" ");
-      }
-    }
+    shortName = matchedHospital.name.split(" ").slice(0, 2).join(" ");
   } else {
     const words = primaryName.split(" ").filter(Boolean);
     shortName =
@@ -267,9 +354,43 @@ export const parseHospitalLocation = (
       ? roomSegments.join(", ")
       : "Emergency Ward";
 
-  const area = matchedHospital
-    ? `${matchedHospital.area}, Dhaka`
-    : otherSegments[0] || "Dhaka, Bangladesh";
+  let area = matchedHospital?.area;
+  if (!area) {
+    if (postHospAddress?.trim()) {
+      const parts = postHospAddress
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      if (parts.length >= 3) {
+        area = `${parts[1]}, ${parts[2]}`;
+      } else if (parts.length >= 2) {
+        area = parts[1];
+      } else {
+        area = parts[0];
+      }
+    } else if (otherSegments.length >= 3) {
+      area = `${otherSegments[1]}, ${otherSegments[2]}`;
+    } else if (otherSegments.length >= 2) {
+      area = otherSegments[1];
+    } else {
+      area = otherSegments[0] || "Dhaka, Bangladesh";
+    }
+  }
+
+  let address = postHospAddress?.trim();
+  if (!address) {
+    if (otherSegments.length > 0) {
+      address = otherSegments.join(", ");
+    } else if (matchedHospital?.address) {
+      address = matchedHospital.address;
+    } else if (matchedHospital?.area) {
+      address = `${matchedHospital.area}, Dhaka`;
+    } else {
+      address = area.toLowerCase().includes("dhaka")
+        ? `${area}, Bangladesh`
+        : `${area}, Dhaka, Bangladesh`;
+    }
+  }
 
   const latitude = hasValidCoords
     ? (postLat as number)
@@ -319,6 +440,7 @@ export const parseHospitalLocation = (
     name: primaryName,
     shortName,
     area,
+    address,
     roomInfo,
     latitude,
     longitude,

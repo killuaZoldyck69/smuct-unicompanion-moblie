@@ -33,19 +33,14 @@ import { HospitalDestinationCard } from "@/screens/blood/components/hospital-des
 import {
   formatBloodGroupSymbol,
   parseHospitalLocation,
+  extractErrorMessage,
+  getAuthorRoleAndDept,
 } from "@/screens/blood/utils";
 import { BENTO_COLORS, fontFamily } from "@/screens/blood/constants";
 import type { BloodAuthor, BloodResponseItem } from "@/features/blood/types";
 
 const getUserSubtitle = (user?: BloodAuthor | null) => {
-  if (!user) return "";
-  if (user.studentProfile?.department) {
-    return user.studentProfile.department;
-  }
-  if (user.teacherProfile?.department) {
-    return user.teacherProfile.department;
-  }
-  return user.role || "University Member";
+  return getAuthorRoleAndDept(user);
 };
 
 export default function BloodThreadScreen() {
@@ -130,10 +125,14 @@ export default function BloodThreadScreen() {
               });
             },
             onError: (err: any) => {
+              const msg = extractErrorMessage(
+                err,
+                "Could not record volunteer response."
+              );
               Toast.show({
                 type: "error",
-                text1: "Failed to respond",
-                text2: err.message || "Could not record volunteer response.",
+                text1: "Failed to Volunteer",
+                text2: msg,
               });
             },
           },
@@ -153,7 +152,22 @@ export default function BloodThreadScreen() {
         setConfirmModal((prev) => ({ ...prev, visible: false }));
         resolveMutation.mutate(id as string, {
           onSuccess: () => {
-            Toast.show({ type: "success", text1: "Marked as Fulfilled" });
+            Toast.show({
+              type: "success",
+              text1: "Marked as Fulfilled",
+              text2: "The request has been updated as resolved.",
+            });
+          },
+          onError: (err: any) => {
+            const msg = extractErrorMessage(
+              err,
+              "Could not mark request as fulfilled."
+            );
+            Toast.show({
+              type: "error",
+              text1: "Failed to Update",
+              text2: msg,
+            });
           },
         });
       },
@@ -171,8 +185,23 @@ export default function BloodThreadScreen() {
         setConfirmModal((prev) => ({ ...prev, visible: false }));
         deleteMutation.mutate(id as string, {
           onSuccess: () => {
-            Toast.show({ type: "info", text1: "Request Deleted" });
+            Toast.show({
+              type: "info",
+              text1: "Request Deleted",
+              text2: "Blood request has been permanently deleted.",
+            });
             handleGoBack();
+          },
+          onError: (err: any) => {
+            const msg = extractErrorMessage(
+              err,
+              "Could not delete request."
+            );
+            Toast.show({
+              type: "error",
+              text1: "Failed to Delete",
+              text2: msg,
+            });
           },
         });
       },
@@ -240,6 +269,7 @@ export default function BloodThreadScreen() {
     post.latitude,
     post.longitude,
     post.hospitalName,
+    post.hospitalAddress,
   );
 
   const renderOriginalPost = () => (
@@ -294,6 +324,8 @@ export default function BloodThreadScreen() {
         </TouchableOpacity>
 
         <View style={styles.cardDivider} />
+
+        <Text style={styles.sectionSmallLabel}>EMERGENCY CONTACT</Text>
 
         <View style={styles.contactBlock}>
           <View style={styles.contactInfo}>

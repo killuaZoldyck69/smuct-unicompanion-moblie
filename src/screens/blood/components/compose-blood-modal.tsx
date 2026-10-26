@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
 import {
   BENTO_COLORS,
   BLOOD_GROUPS,
@@ -23,6 +25,7 @@ import {
   POPULAR_HOSPITALS,
   URGENCY_LEVELS,
 } from "../constants";
+import { validateBloodPostInput } from "../utils";
 import {
   HospitalMapPickerModal,
   SelectedHospitalLocation,
@@ -34,10 +37,17 @@ export const buildCompiledLocation = (
   ward?: string,
   bed?: string,
   notes?: string,
+  address?: string,
 ): string => {
   const parts: string[] = [];
   if (hospitalName?.trim()) {
     parts.push(hospitalName.trim());
+  }
+  if (
+    address?.trim() &&
+    !hospitalName?.trim().toLowerCase().includes(address.trim().toLowerCase())
+  ) {
+    parts.push(address.trim());
   }
   if (floor?.trim()) {
     const f = floor.trim();
@@ -89,6 +99,16 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
   const insets = useSafeAreaInsets();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isMapPickerVisible, setIsMapPickerVisible] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [submitErrorBanner, setSubmitErrorBanner] = useState<string | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setFieldErrors({});
+      setSubmitErrorBanner(null);
+    }
+  }, [visible]);
 
   useEffect(() => {
     const showEvent =
@@ -109,8 +129,20 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
     };
   }, []);
 
+  const clearFieldError = useCallback((field: keyof NewBloodPostForm) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+    setSubmitErrorBanner(null);
+  }, []);
+
   const handleSelectHospitalFromMap = useCallback(
     (hospital: SelectedHospitalLocation) => {
+      clearFieldError("location");
+      const fullAddress = hospital.address || hospital.area || "";
       onChangeForm((prev) => {
         const compiled = buildCompiledLocation(
           hospital.name,
@@ -118,28 +150,48 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
           prev.ward,
           prev.bed,
           prev.additionalLocationNotes,
+          fullAddress,
         );
         return {
           ...prev,
           hospitalName: hospital.name,
+          hospitalAddress: fullAddress,
           latitude: hospital.latitude,
           longitude: hospital.longitude,
           location: compiled,
         };
       });
     },
-    [onChangeForm],
+    [clearFieldError, onChangeForm],
   );
 
-  const canSubmit =
-    form.patientName.trim().length > 0 &&
-    form.patientCondition.trim().length > 0 &&
-    (form.bagsNeeded || 1) >= 1 &&
-    form.location.trim().length > 0 &&
-    form.contactPhone.trim().length > 0;
+  const handlePublishPress = useCallback(() => {
+    Keyboard.dismiss();
+    const validation = validateBloodPostInput(form);
+    if (!validation.isValid) {
+      setFieldErrors(validation.fieldErrors);
+      setSubmitErrorBanner(
+        validation.error || "Please complete all required fields."
+      );
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      Toast.show({
+        type: "error",
+        text1: "Missing Information",
+        text2: validation.error || "Please correct the highlighted fields.",
+        visibilityTime: 4000,
+      });
+      return;
+    }
+
+    setFieldErrors({});
+    setSubmitErrorBanner(null);
+    onSubmit();
+  }, [form, onSubmit]);
 
   const handleClose = () => {
     Keyboard.dismiss();
+    setFieldErrors({});
+    setSubmitErrorBanner(null);
     onClose();
   };
 
@@ -189,12 +241,40 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
           style={styles.keyboardAvoid}
         >
           <ScrollView
+            ref={scrollViewRef}
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
           >
+            {/* Top Error Alert Banner if validation failed */}
+            {submitErrorBanner ? (
+              <View style={styles.errorBannerContainer}>
+                <Feather
+                  name="alert-triangle"
+                  size={18}
+                  color={BENTO_COLORS.crimson}
+                  style={{ marginRight: 10, marginTop: 1 }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.errorBannerTitle}>
+                    Please check the form
+                  </Text>
+                  <Text style={styles.errorBannerText}>
+                    {submitErrorBanner}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setSubmitErrorBanner(null)}
+                  style={styles.errorBannerCloseBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name="x" size={14} color={BENTO_COLORS.crimson} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
             {/* 1. Patient Name */}
             <View style={styles.formGroup}>
               <View style={styles.labelRow}>
@@ -204,21 +284,31 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   color={BENTO_COLORS.crimson}
                   style={styles.labelIcon}
                 />
-                <Text style={styles.formLabel}>PATIENT FULL NAME</Text>
+                <Text style={styles.formLabel}>PATIENT FULL NAME *</Text>
               </View>
-              <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  !!fieldErrors.patientName && styles.inputWrapperError,
+                ]}
+              >
                 <Feather
                   name="user"
                   size={16}
-                  color={BENTO_COLORS.subtleText}
+                  color={
+                    fieldErrors.patientName
+                      ? BENTO_COLORS.crimson
+                      : BENTO_COLORS.subtleText
+                  }
                   style={styles.fieldLeadingIcon}
                 />
                 <TextInput
                   style={styles.formInput}
                   value={form.patientName}
-                  onChangeText={(text) =>
-                    onChangeForm((prev) => ({ ...prev, patientName: text }))
-                  }
+                  onChangeText={(text) => {
+                    clearFieldError("patientName");
+                    onChangeForm((prev) => ({ ...prev, patientName: text }));
+                  }}
                   placeholder="e.g. Md. Shafiqul Islam"
                   placeholderTextColor={BENTO_COLORS.subtleText}
                   accessible={true}
@@ -226,9 +316,10 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                 />
                 {form.patientName.length > 0 && (
                   <TouchableOpacity
-                    onPress={() =>
-                      onChangeForm((prev) => ({ ...prev, patientName: "" }))
-                    }
+                    onPress={() => {
+                      clearFieldError("patientName");
+                      onChangeForm((prev) => ({ ...prev, patientName: "" }));
+                    }}
                     style={styles.clearBtn}
                   >
                     <Feather
@@ -239,6 +330,19 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   </TouchableOpacity>
                 )}
               </View>
+              {fieldErrors.patientName ? (
+                <View style={styles.fieldErrorRow}>
+                  <Feather
+                    name="alert-circle"
+                    size={12}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.fieldErrorText}>
+                    {fieldErrors.patientName}
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
             {/* 2. Patient Condition */}
@@ -250,24 +354,34 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   color={BENTO_COLORS.crimson}
                   style={styles.labelIcon}
                 />
-                <Text style={styles.formLabel}>MEDICAL CONDITION / REASON</Text>
+                <Text style={styles.formLabel}>MEDICAL CONDITION / REASON *</Text>
               </View>
-              <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  !!fieldErrors.patientCondition && styles.inputWrapperError,
+                ]}
+              >
                 <Feather
                   name="activity"
                   size={16}
-                  color={BENTO_COLORS.subtleText}
+                  color={
+                    fieldErrors.patientCondition
+                      ? BENTO_COLORS.crimson
+                      : BENTO_COLORS.subtleText
+                  }
                   style={styles.fieldLeadingIcon}
                 />
                 <TextInput
                   style={styles.formInput}
                   value={form.patientCondition}
-                  onChangeText={(text) =>
+                  onChangeText={(text) => {
+                    clearFieldError("patientCondition");
                     onChangeForm((prev) => ({
                       ...prev,
                       patientCondition: text,
-                    }))
-                  }
+                    }));
+                  }}
                   placeholder="e.g. Emergency Surgery, Dengue, Accident"
                   placeholderTextColor={BENTO_COLORS.subtleText}
                   accessible={true}
@@ -275,10 +389,81 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                 />
                 {form.patientCondition.length > 0 && (
                   <TouchableOpacity
-                    onPress={() =>
-                      onChangeForm((prev) => ({ ...prev, patientCondition: "" }))
-                    }
+                    onPress={() => {
+                      clearFieldError("patientCondition");
+                      onChangeForm((prev) => ({
+                        ...prev,
+                        patientCondition: "",
+                      }));
+                    }}
                     style={styles.clearBtn}
+                  >
+                    <Feather
+                      name="x-circle"
+                      size={15}
+                      color={BENTO_COLORS.subtleText}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {fieldErrors.patientCondition ? (
+                <View style={styles.fieldErrorRow}>
+                  <Feather
+                    name="alert-circle"
+                    size={12}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.fieldErrorText}>
+                    {fieldErrors.patientCondition}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* 3. Details About Patient / Medical Condition / Notes */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Feather
+                  name="file-text"
+                  size={13}
+                  color={BENTO_COLORS.crimson}
+                  style={styles.labelIcon}
+                />
+                <Text style={styles.formLabel}>
+                  DETAILS & MEDICAL NOTES (OPTIONAL)
+                </Text>
+              </View>
+              <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+                <Feather
+                  name="file-text"
+                  size={16}
+                  color={BENTO_COLORS.subtleText}
+                  style={[styles.fieldLeadingIcon, { marginTop: 2 }]}
+                />
+                <TextInput
+                  style={[styles.formInput, styles.textAreaInput]}
+                  value={form.details || ""}
+                  onChangeText={(text) =>
+                    onChangeForm((prev) => ({
+                      ...prev,
+                      details: text,
+                    }))
+                  }
+                  placeholder="Details about the patient, medical condition, donor requirements or special instructions..."
+                  placeholderTextColor={BENTO_COLORS.subtleText}
+                  multiline={true}
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  accessible={true}
+                  accessibilityLabel="Details about the patient and medical condition"
+                />
+                {(form.details || "").length > 0 && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      onChangeForm((prev) => ({ ...prev, details: "" }))
+                    }
+                    style={styles.textAreaClearBtn}
                   >
                     <Feather
                       name="x-circle"
@@ -290,7 +475,7 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
               </View>
             </View>
 
-            {/* 3. Blood Group Selector */}
+            {/* 4. Blood Group Selector */}
             <View style={styles.formGroup}>
               <View style={styles.labelRow}>
                 <Feather
@@ -299,7 +484,7 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   color={BENTO_COLORS.crimson}
                   style={styles.labelIcon}
                 />
-                <Text style={styles.formLabel}>BLOOD GROUP NEEDED</Text>
+                <Text style={styles.formLabel}>BLOOD GROUP NEEDED *</Text>
               </View>
               <View style={styles.bloodGroupsGrid}>
                 {BLOOD_GROUPS.map((bg) => {
@@ -311,12 +496,13 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                         styles.bloodGroupChip,
                         isSelected && styles.bloodGroupChipActive,
                       ]}
-                      onPress={() =>
+                      onPress={() => {
+                        clearFieldError("bloodGroup");
                         onChangeForm((prev) => ({
                           ...prev,
                           bloodGroup: bg.value,
-                        }))
-                      }
+                        }));
+                      }}
                       accessible={true}
                       accessibilityRole="button"
                       accessibilityLabel={`Select blood group ${bg.label}`}
@@ -342,6 +528,19 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   );
                 })}
               </View>
+              {fieldErrors.bloodGroup ? (
+                <View style={styles.fieldErrorRow}>
+                  <Feather
+                    name="alert-circle"
+                    size={12}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.fieldErrorText}>
+                    {fieldErrors.bloodGroup}
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
             {/* 4. Blood Bags Needed Selector */}
@@ -473,7 +672,7 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                     style={styles.labelIcon}
                   />
                   <Text style={styles.formLabel} numberOfLines={1}>
-                    HOSPITAL LOCATION
+                    HOSPITAL LOCATION *
                   </Text>
                 </View>
 
@@ -499,31 +698,44 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
               </View>
 
               {/* Hospital Name Input with Quick Map Button */}
-              <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  !!fieldErrors.location && styles.inputWrapperError,
+                ]}
+              >
                 <Feather
                   name="plus-circle"
                   size={16}
-                  color={BENTO_COLORS.crimson}
+                  color={
+                    fieldErrors.location
+                      ? BENTO_COLORS.crimson
+                      : BENTO_COLORS.crimson
+                  }
                   style={styles.fieldLeadingIcon}
                 />
                 <TextInput
                   style={styles.formInput}
                   value={form.hospitalName ?? (form.location ? form.location.split(",")[0] : "")}
                   onChangeText={(text) => {
+                    clearFieldError("location");
                     const matchedPop = POPULAR_HOSPITALS.find(
                       (h) => h.name.toLowerCase() === text.trim().toLowerCase(),
                     );
                     onChangeForm((prev) => {
+                      const newAddress = matchedPop?.address || prev.hospitalAddress || "";
                       const compiled = buildCompiledLocation(
                         text,
                         prev.floor,
                         prev.ward,
                         prev.bed,
                         prev.additionalLocationNotes,
+                        newAddress,
                       );
                       return {
                         ...prev,
                         hospitalName: text,
+                        hospitalAddress: newAddress,
                         location: compiled,
                         latitude: matchedPop ? matchedPop.latitude : prev.latitude,
                         longitude: matchedPop ? matchedPop.longitude : prev.longitude,
@@ -549,6 +761,32 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   <Feather name="navigation" size={14} color={BENTO_COLORS.crimson} />
                 </TouchableOpacity>
               </View>
+              {!!form.hospitalAddress && (
+                <View style={styles.confirmedAddressBanner}>
+                  <Feather
+                    name="map-pin"
+                    size={12}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 6, marginTop: 1 }}
+                  />
+                  <Text style={styles.confirmedAddressBannerText} numberOfLines={2}>
+                    {form.hospitalAddress}
+                  </Text>
+                </View>
+              )}
+              {fieldErrors.location ? (
+                <View style={styles.fieldErrorRow}>
+                  <Feather
+                    name="alert-circle"
+                    size={12}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.fieldErrorText}>
+                    {fieldErrors.location}
+                  </Text>
+                </View>
+              ) : null}
 
               {/* Structured Patient Room Details: Floor, Ward, Bed in a 3-column Bento grid */}
               <View style={styles.roomDetailsCard}>
@@ -583,6 +821,7 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                               prev.ward,
                               prev.bed,
                               prev.additionalLocationNotes,
+                              prev.hospitalAddress,
                             );
                             return { ...prev, floor: text, location: compiled };
                           });
@@ -613,6 +852,7 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                               text,
                               prev.bed,
                               prev.additionalLocationNotes,
+                              prev.hospitalAddress,
                             );
                             return { ...prev, ward: text, location: compiled };
                           });
@@ -643,6 +883,7 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                               prev.ward,
                               text,
                               prev.additionalLocationNotes,
+                              prev.hospitalAddress,
                             );
                             return { ...prev, bed: text, location: compiled };
                           });
@@ -678,6 +919,7 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                           prev.ward,
                           prev.bed,
                           text,
+                          prev.hospitalAddress,
                         );
                         return {
                           ...prev,
@@ -779,21 +1021,31 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   color={BENTO_COLORS.crimson}
                   style={styles.labelIcon}
                 />
-                <Text style={styles.formLabel}>EMERGENCY CONTACT PHONE</Text>
+                <Text style={styles.formLabel}>EMERGENCY CONTACT PHONE *</Text>
               </View>
-              <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  !!fieldErrors.contactPhone && styles.inputWrapperError,
+                ]}
+              >
                 <Feather
                   name="phone"
                   size={16}
-                  color={BENTO_COLORS.subtleText}
+                  color={
+                    fieldErrors.contactPhone
+                      ? BENTO_COLORS.crimson
+                      : BENTO_COLORS.subtleText
+                  }
                   style={styles.fieldLeadingIcon}
                 />
                 <TextInput
                   style={styles.formInput}
                   value={form.contactPhone}
-                  onChangeText={(text) =>
-                    onChangeForm((prev) => ({ ...prev, contactPhone: text }))
-                  }
+                  onChangeText={(text) => {
+                    clearFieldError("contactPhone");
+                    onChangeForm((prev) => ({ ...prev, contactPhone: text }));
+                  }}
                   placeholder="e.g. +880 1700-000000"
                   placeholderTextColor={BENTO_COLORS.subtleText}
                   keyboardType="phone-pad"
@@ -802,9 +1054,10 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                 />
                 {form.contactPhone.length > 0 && (
                   <TouchableOpacity
-                    onPress={() =>
-                      onChangeForm((prev) => ({ ...prev, contactPhone: "" }))
-                    }
+                    onPress={() => {
+                      clearFieldError("contactPhone");
+                      onChangeForm((prev) => ({ ...prev, contactPhone: "" }));
+                    }}
                     style={styles.clearBtn}
                   >
                     <Feather
@@ -815,6 +1068,19 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                   </TouchableOpacity>
                 )}
               </View>
+              {fieldErrors.contactPhone ? (
+                <View style={styles.fieldErrorRow}>
+                  <Feather
+                    name="alert-circle"
+                    size={12}
+                    color={BENTO_COLORS.crimson}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.fieldErrorText}>
+                    {fieldErrors.contactPhone}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </ScrollView>
 
@@ -833,7 +1099,7 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
                 styles.submitBtn,
                 isSubmitting && styles.submitBtnDisabled,
               ]}
-              onPress={onSubmit}
+              onPress={handlePublishPress}
               disabled={isSubmitting}
               activeOpacity={0.88}
               accessible={true}
@@ -871,6 +1137,9 @@ export const ComposeBloodModal = React.memo(function ComposeBloodModal({
           onSelectHospital={handleSelectHospitalFromMap}
           onClose={() => setIsMapPickerVisible(false)}
         />
+
+        {/* Toast Notification Container mounted inside Modal Window */}
+        <Toast config={toastConfig} />
       </SafeAreaView>
     </Modal>
   );
@@ -974,6 +1243,51 @@ const styles = StyleSheet.create({
     height: 52,
     ...BENTO_COLORS.shadow,
   },
+  inputWrapperError: {
+    borderColor: "#e11d48",
+    backgroundColor: "#fff1f2",
+  },
+  fieldErrorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  fieldErrorText: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#be123c",
+    flex: 1,
+  },
+  errorBannerContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#fff1f2",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(225, 29, 72, 0.25)",
+    padding: 12,
+    marginBottom: 20,
+  },
+  errorBannerTitle: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#9f1239",
+    marginBottom: 2,
+  },
+  errorBannerText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#be123c",
+    lineHeight: 16,
+  },
+  errorBannerCloseBtn: {
+    padding: 4,
+    marginLeft: 6,
+  },
   fieldLeadingIcon: {
     marginRight: 10,
   },
@@ -987,6 +1301,22 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     padding: 4,
+  },
+  textAreaWrapper: {
+    height: 104,
+    paddingVertical: 12,
+    alignItems: "flex-start",
+  },
+  textAreaInput: {
+    height: "100%",
+    paddingTop: 0,
+    paddingBottom: 0,
+    textAlignVertical: "top",
+    lineHeight: 20,
+  },
+  textAreaClearBtn: {
+    padding: 4,
+    alignSelf: "flex-start",
   },
   bloodGroupsGrid: {
     flexDirection: "row",
@@ -1312,6 +1642,25 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
+    lineHeight: 16,
+  },
+  confirmedAddressBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#fff1f2",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: "#fecdd3",
+  },
+  confirmedAddressBannerText: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#be123c",
+    flex: 1,
     lineHeight: 16,
   },
 });

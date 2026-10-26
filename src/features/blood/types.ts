@@ -61,10 +61,12 @@ export interface BloodPostItem {
   id: string;
   patientName: string;
   patientCondition: string;
+  details?: string | null;
   bloodGroup: string;
   bagsNeeded?: number;
   location: string;
   hospitalName?: string | null;
+  hospitalAddress?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   urgency: string;
@@ -82,10 +84,12 @@ export interface BloodPostItem {
 export interface CreateBloodPostInput {
   patientName: string;
   patientCondition: string;
+  details?: string;
   bloodGroup: string;
   bagsNeeded?: number;
   location: string;
   hospitalName?: string;
+  hospitalAddress?: string;
   latitude?: number;
   longitude?: number;
   urgency: string;

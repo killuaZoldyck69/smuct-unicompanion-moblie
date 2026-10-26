@@ -35,6 +35,7 @@ import {
 import {
   formatBloodGroupSymbol,
   validateBloodPostInput,
+  extractErrorMessage,
 } from "./utils";
 import { BloodPostCard } from "./components/blood-post-card";
 import { BloodHeroCard } from "./components/blood-hero-card";
@@ -103,9 +104,12 @@ export function Blood(props: BloodScreenProps = {}) {
   const [newPost, setNewPost] = useState<NewBloodPostForm>({
     patientName: "",
     patientCondition: "",
+    details: "",
     bloodGroup: "A_POSITIVE",
     bagsNeeded: 1,
     location: "",
+    hospitalName: "",
+    hospitalAddress: "",
     urgency: "High",
     contactPhone: currentUser?.phoneNumber || "",
   });
@@ -232,10 +236,14 @@ export function Blood(props: BloodScreenProps = {}) {
               });
             },
             onError: (err: any) => {
+              const msg = extractErrorMessage(
+                err,
+                "Could not mark request as fulfilled."
+              );
               Toast.show({
                 type: "error",
-                text1: "Failed to update",
-                text2: err.message || "Could not mark request as fulfilled.",
+                text1: "Failed to Update",
+                text2: msg,
               });
             },
           });
@@ -265,10 +273,14 @@ export function Blood(props: BloodScreenProps = {}) {
               });
             },
             onError: (err: any) => {
+              const msg = extractErrorMessage(
+                err,
+                "Could not delete blood request."
+              );
               Toast.show({
                 type: "error",
-                text1: "Failed to delete",
-                text2: err.message || "Could not delete blood request.",
+                text1: "Failed to Delete",
+                text2: msg,
               });
             },
           });
@@ -283,25 +295,27 @@ export function Blood(props: BloodScreenProps = {}) {
     if (!isValid) {
       Toast.show({
         type: "error",
-        text1: "Missing Information",
-        text2: error || "All fields are required.",
+        text1: "Missing Required Information",
+        text2: error || "Please complete all required fields.",
+        visibilityTime: 4000,
       });
       return;
     }
 
     createPostMutation.mutate(newPost, {
       onSuccess: () => {
-        Toast.show({ type: "success", text1: "Blood Request Published!" });
         setIsComposeVisible(false);
         setNewPost({
           patientName: "",
           patientCondition: "",
+          details: "",
           bloodGroup: "A_POSITIVE",
           bagsNeeded: 1,
           location: "",
           urgency: "High",
           contactPhone: currentUser?.phoneNumber || "",
           hospitalName: "",
+          hospitalAddress: "",
           floor: "",
           ward: "",
           bed: "",
@@ -309,9 +323,22 @@ export function Blood(props: BloodScreenProps = {}) {
           latitude: undefined,
           longitude: undefined,
         });
+
+        // Delay toast slightly so the full screen modal animation completes
+        setTimeout(() => {
+          Toast.show({
+            type: "success",
+            text1: "Blood Request Published!",
+            text2: "Your request is now live for all donors across campus.",
+            visibilityTime: 4500,
+          });
+        }, 300);
       },
       onError: (err: any) => {
-        const errMsg = err?.message || "";
+        const errMsg = extractErrorMessage(
+          err,
+          "Failed to publish blood request. Please check your connection and try again."
+        );
         if (
           errMsg.toLowerCase().includes("profile incomplete") ||
           errMsg.toLowerCase().includes("phone number and blood group")
@@ -325,8 +352,9 @@ export function Blood(props: BloodScreenProps = {}) {
         }
         Toast.show({
           type: "error",
-          text1: "Failed to post",
-          text2: errMsg || "Network error. Please try again.",
+          text1: "Could Not Publish Request",
+          text2: errMsg,
+          visibilityTime: 5000,
         });
       },
     });
