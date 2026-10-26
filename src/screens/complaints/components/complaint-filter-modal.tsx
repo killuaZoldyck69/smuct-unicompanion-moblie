@@ -50,6 +50,12 @@ export const COMPLAINT_CATEGORY_OPTIONS = [
     icon: "monitor" as const,
   },
   {
+    key: "Administrative",
+    label: "Administrative",
+    description: "Accounts, admissions, registrar & official campus offices",
+    icon: "briefcase" as const,
+  },
+  {
     key: "Other",
     label: "Other",
     description: "General campus concerns & inquiries",

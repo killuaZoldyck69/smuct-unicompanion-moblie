@@ -11,6 +11,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
 import { useDeleteComplaint } from "@/features/complaints/useComplaints";
 import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
 import type { ComplaintItem } from "@/services/complaint-service";
@@ -36,18 +37,28 @@ export const ComplaintDeleteModal = React.memo(function ComplaintDeleteModal({
 
     deleteMutation.mutate(complaint.id, {
       onSuccess: () => {
-        Toast.show({
-          type: "success",
-          text1: "Complaint Deleted",
-          text2: "The complaint record has been removed.",
-        });
+        // 1. Close modal
         onClose();
+        // 2. Trigger parent toast after modal dismiss
+        setTimeout(() => {
+          Toast.hide();
+          Toast.show({
+            type: "success",
+            text1: "Complaint Deleted",
+            text2: `Ticket #${complaint.id.slice(0, 8).toUpperCase()} has been removed.`,
+            visibilityTime: 4000,
+          });
+        }, 200);
       },
       onError: (err: any) => {
+        const errorMsg =
+          err?.response?.data?.message || err?.message || "Could not delete complaint.";
+        Toast.hide();
         Toast.show({
           type: "error",
           text1: "Deletion Failed",
-          text2: err?.message || "Could not delete complaint.",
+          text2: Array.isArray(errorMsg) ? errorMsg.join(", ") : String(errorMsg),
+          visibilityTime: 4500,
         });
       },
     });
@@ -127,6 +138,7 @@ export const ComplaintDeleteModal = React.memo(function ComplaintDeleteModal({
           </View>
         </View>
       </View>
+      <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
     </Modal>
   );
 });

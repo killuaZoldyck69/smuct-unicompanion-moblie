@@ -19,6 +19,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
 
 import {
   CAMPUS_HUB_COLORS,
@@ -191,6 +192,16 @@ export function AdminComplaintsScreen() {
     if (!actionItem || !actionType) return;
 
     try {
+      let successConfig: {
+        type: "success" | "info" | "error";
+        text1: string;
+        text2: string;
+      } = {
+        type: "success",
+        text1: "Operation Succeeded",
+        text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} updated.`,
+      };
+
       if (actionType === "ACCEPT") {
         await updateStatusMutation.mutateAsync({
           id: actionItem.id,
@@ -199,11 +210,11 @@ export function AdminComplaintsScreen() {
             adminRemarks: adminRemarksInput.trim() || undefined,
           },
         });
-        Toast.show({
+        successConfig = {
           type: "success",
           text1: "Complaint Accepted",
           text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} has been marked as Accepted.`,
-        });
+        };
       } else if (actionType === "REJECT") {
         await updateStatusMutation.mutateAsync({
           id: actionItem.id,
@@ -212,11 +223,11 @@ export function AdminComplaintsScreen() {
             adminRemarks: adminRemarksInput.trim() || undefined,
           },
         });
-        Toast.show({
+        successConfig = {
           type: "info",
           text1: "Complaint Rejected",
           text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} has been rejected.`,
-        });
+        };
       } else if (actionType === "RESOLVE") {
         await updateStatusMutation.mutateAsync({
           id: actionItem.id,
@@ -225,28 +236,44 @@ export function AdminComplaintsScreen() {
             adminRemarks: adminRemarksInput.trim() || undefined,
           },
         });
-        Toast.show({
+        successConfig = {
           type: "success",
           text1: "Complaint Resolved",
           text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} marked as Resolved.`,
-        });
+        };
       } else if (actionType === "DELETE") {
         await deleteMutation.mutateAsync(actionItem.id);
-        Toast.show({
+        successConfig = {
           type: "info",
           text1: "Complaint Deleted",
           text2: `Ticket #${actionItem.id.slice(0, 8).toUpperCase()} has been removed.`,
-        });
+        };
       }
 
+      // 1. Close modal
       closeConfirmModal();
+
+      // 2. Safely display success toast on parent screen
+      setTimeout(() => {
+        Toast.hide();
+        Toast.show({
+          ...successConfig,
+          visibilityTime: 4000,
+        });
+      }, 200);
     } catch (err: any) {
-      const errorMessage =
+      const errorRaw =
         err?.response?.data?.message || err?.message || "Operation failed.";
+      const errorMessage = Array.isArray(errorRaw)
+        ? errorRaw.join(", ")
+        : String(errorRaw);
+
+      Toast.hide();
       Toast.show({
         type: "error",
         text1: "Action Failed",
         text2: errorMessage,
+        visibilityTime: 4500,
       });
     }
   }, [
@@ -712,6 +739,7 @@ export function AdminComplaintsScreen() {
             </View>
           </KeyboardAvoidingView>
         </View>
+        <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
       </Modal>
     </SafeAreaView>
   );

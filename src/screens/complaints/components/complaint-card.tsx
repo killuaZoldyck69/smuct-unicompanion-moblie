@@ -154,6 +154,11 @@ export const ComplaintCard = React.memo(function ComplaintCard({
                 <Text style={styles.userMeta} numberOfLines={1}>
                   {item.user?.studentProfile?.studentId
                     ? `ID: ${item.user.studentProfile.studentId} • `
+                    : item.user?.teacherProfile?.teacherId
+                      ? `Faculty ID: ${item.user.teacherProfile.teacherId} • `
+                      : ""}
+                  {item.user?.teacherProfile?.designation
+                    ? `${item.user.teacherProfile.designation} • `
                     : ""}
                   {item.user?.studentProfile?.department ||
                   item.user?.teacherProfile?.department
@@ -381,7 +386,7 @@ export const ComplaintCard = React.memo(function ComplaintCard({
                 </TouchableOpacity>
               )}
 
-              {onDelete && (
+              {isPending && onDelete && (
                 <TouchableOpacity
                   style={[styles.actionIconBtn, styles.deleteBtn]}
                   onPress={() => onDelete(item)}
