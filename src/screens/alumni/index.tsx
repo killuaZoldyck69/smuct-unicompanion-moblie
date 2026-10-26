@@ -12,22 +12,23 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   useAlumniInfinite,
-  useAlumniDepartments,
   useCreateAlumni,
   useUpdateAlumni,
   useDeleteAlumni,
   useBulkCreateAlumni,
 } from "@/features/alumni/useAlumni";
 import { BENTO, fontFamily } from "./constants";
-import { AlumniItem, DepartmentOption, CreateAlumniInput } from "./types";
+import { AlumniItem, CreateAlumniInput } from "./types";
 import { AlumniHeader } from "./components/alumni-header";
 import { AlumniFilters } from "./components/alumni-filters";
+import { AlumniFilterModal } from "./components/alumni-filter-modal";
+import { AlumniAddChoiceModal } from "./components/alumni-add-choice-modal";
 import { AlumniCard } from "./components/alumni-card";
 import { AlumniSkeletons } from "./components/alumni-skeletons";
 import { AlumniProfileModal } from "./components/alumni-profile-modal";
@@ -50,6 +51,7 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
   headerSubtitle,
 }) => {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user: currentUser } = useCurrentUser();
   const isAdmin = forceAdmin || currentUser?.role === "ADMIN";
@@ -60,6 +62,8 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedAlumni, setSelectedAlumni] = useState<AlumniItem | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isAddChoiceModalOpen, setIsAddChoiceModalOpen] = useState(false);
 
   // Administrative Modals State
   const [formModalState, setFormModalState] = useState<{
@@ -80,6 +84,56 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
 
   const [isCsvModalVisible, setIsCsvModalVisible] = useState(false);
 
+  // Floating tab bar style definition to restore when modal closes
+  const defaultTabBarStyle = useMemo(
+    () => ({
+      position: "absolute" as const,
+      bottom: insets.bottom > 0 ? insets.bottom + 16 : 24,
+      marginHorizontal: 20,
+      height: 68,
+      backgroundColor: "#131b2e",
+      borderRadius: 24,
+      borderTopWidth: 0,
+      elevation: 10,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 24,
+      paddingBottom: 0,
+      paddingTop: 0,
+    }),
+    [insets.bottom],
+  );
+
+  const isAnyModalOpen =
+    isFilterModalOpen ||
+    isAddChoiceModalOpen ||
+    formModalState.visible ||
+    deleteModalState.visible ||
+    isCsvModalVisible ||
+    Boolean(selectedAlumni);
+
+  // Dynamically hide tab bar when ANY modal is open to fix bottom safe area overlap
+  useEffect(() => {
+    if (!navigation || typeof navigation.setOptions !== "function") return;
+
+    if (isAnyModalOpen) {
+      navigation.setOptions({
+        tabBarStyle: { display: "none" },
+      });
+    } else {
+      navigation.setOptions({
+        tabBarStyle: defaultTabBarStyle,
+      });
+    }
+
+    return () => {
+      navigation.setOptions({
+        tabBarStyle: defaultTabBarStyle,
+      });
+    };
+  }, [isAnyModalOpen, navigation, defaultTabBarStyle]);
+
   // Debounced search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -89,9 +143,6 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
   }, [searchQuery]);
 
   // Queries
-  const { data: departmentsData, refetch: refetchDepartments } =
-    useAlumniDepartments();
-
   const {
     data,
     isLoading,
@@ -119,25 +170,9 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([refetchAlumni(), refetchDepartments()]);
+    await refetchAlumni();
     setIsRefreshing(false);
-  }, [refetchAlumni, refetchDepartments]);
-
-  const departmentOptions: DepartmentOption[] = useMemo(() => {
-    const list: DepartmentOption[] = [{ label: "All", value: null, count: 0 }];
-    if (departmentsData && Array.isArray(departmentsData)) {
-      departmentsData.forEach((d) => {
-        if (d.department) {
-          list.push({
-            label: d.department,
-            value: d.department,
-            count: d.count,
-          });
-        }
-      });
-    }
-    return list;
-  }, [departmentsData]);
+  }, [refetchAlumni]);
 
   // Modal Triggers
   const handleSelectAlumni = useCallback((item: AlumniItem) => {
@@ -195,13 +230,13 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
               });
               setFormModalState({ visible: false, alumni: null });
               refetchAlumni();
-              refetchDepartments();
             },
             onError: (err: any) => {
+              const serverMsg = err?.response?.data?.message || err?.message;
               Toast.show({
                 type: "error",
                 text1: "Update Failed",
-                text2: err?.message || "Could not update alumni profile.",
+                text2: serverMsg || "Could not update alumni profile.",
               });
             },
           },
@@ -217,13 +252,13 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
             });
             setFormModalState({ visible: false, alumni: null });
             refetchAlumni();
-            refetchDepartments();
           },
           onError: (err: any) => {
+            const serverMsg = err?.response?.data?.message || err?.message;
             Toast.show({
               type: "error",
               text1: "Failed to Add",
-              text2: err?.message || "Could not create alumni profile.",
+              text2: serverMsg || "Could not create alumni profile.",
             });
           },
         });
@@ -234,7 +269,6 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
       updateAlumniMutation,
       createAlumniMutation,
       refetchAlumni,
-      refetchDepartments,
     ],
   );
 
@@ -251,42 +285,57 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
         });
         setDeleteModalState({ visible: false, alumni: null });
         refetchAlumni();
-        refetchDepartments();
       },
       onError: (err: any) => {
+        const serverMsg = err?.response?.data?.message || err?.message;
         Toast.show({
           type: "error",
           text1: "Delete Failed",
-          text2: err?.message || "Could not delete alumni profile.",
+          text2: serverMsg || "Could not delete alumni profile.",
         });
       },
     });
-  }, [deleteModalState.alumni, deleteAlumniMutation, refetchAlumni, refetchDepartments]);
+  }, [deleteModalState.alumni, deleteAlumniMutation, refetchAlumni]);
 
   // Bulk CSV Import Confirmation
   const handleImportCsv = useCallback(
     (records: CreateAlumniInput[]) => {
       bulkCreateAlumniMutation.mutate(records, {
-        onSuccess: () => {
-          Toast.show({
-            type: "success",
-            text1: "Bulk Import Completed",
-            text2: `Successfully imported ${records.length} alumni profiles.`,
-          });
+        onSuccess: (res: any) => {
+          const importData = res?.data || res;
+          const inserted = typeof importData?.insertedCount === "number" ? importData.insertedCount : records.length;
+          const skipped = typeof importData?.skippedCount === "number" ? importData.skippedCount : 0;
+
+          if (inserted === 0 && skipped > 0) {
+            Toast.show({
+              type: "info",
+              text1: "Import Completed",
+              text2: `All ${skipped} profile(s) were duplicates and were skipped.`,
+            });
+          } else {
+            Toast.show({
+              type: "success",
+              text1: "Bulk Import Completed",
+              text2:
+                skipped > 0
+                  ? `Successfully imported ${inserted} alumni profiles (${skipped} duplicate(s) skipped).`
+                  : `Successfully imported ${inserted} alumni profiles.`,
+            });
+          }
           setIsCsvModalVisible(false);
           refetchAlumni();
-          refetchDepartments();
         },
         onError: (err: any) => {
+          const serverMsg = err?.response?.data?.message || err?.message;
           Toast.show({
             type: "error",
             text1: "Import Failed",
-            text2: err?.message || "Failed to bulk import alumni profiles.",
+            text2: serverMsg || "Failed to bulk import alumni profiles.",
           });
         },
       });
     },
-    [bulkCreateAlumniMutation, refetchAlumni, refetchDepartments],
+    [bulkCreateAlumniMutation, refetchAlumni],
   );
 
   const renderItem = useCallback(
@@ -313,27 +362,26 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
 
   const keyExtractor = useCallback((item: AlumniItem) => item.id, []);
 
+  // Bottom padding factoring in floating tab bar height
+  const listBottomPadding =
+    72 + (insets.bottom > 0 ? insets.bottom + 16 : 24) + (isAdmin ? 48 : 20);
+
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.container}>
         <AlumniHeader
           totalCount={totalCount}
           filteredCount={totalCount}
-          hasBackButton={hasBackButton}
-          onBackPress={() => router.back()}
-          isAdmin={isAdmin}
           title={headerTitle}
           subtitle={headerSubtitle}
-          onAddPress={handleOpenCreate}
-          onCsvPress={handleOpenCsv}
         />
 
         <AlumniFilters
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           selectedDepartment={selectedDepartment}
-          onSelectDepartment={setSelectedDepartment}
-          departments={departmentOptions}
+          onClearDepartment={() => setSelectedDepartment(null)}
+          onOpenFilterModal={() => setIsFilterModalOpen(true)}
         />
 
         {isLoading ? (
@@ -414,14 +462,7 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
             onEndReachedThreshold={0.4}
             contentContainerStyle={[
               styles.listContent,
-              {
-                paddingBottom:
-                  insets.bottom > 0
-                    ? insets.bottom + (isAdmin ? 95 : 50)
-                    : isAdmin
-                    ? 100
-                    : 60,
-              },
+              { paddingBottom: listBottomPadding },
             ]}
             showsVerticalScrollIndicator={false}
             initialNumToRender={10}
@@ -437,39 +478,41 @@ export const AlumniScreen: React.FC<AlumniScreenProps> = ({
           />
         )}
 
-        {/* Floating Administrative Action Pill */}
-        {isAdmin && (
-          <View
+        {/* Floating Add Alumnus FAB Button */}
+        {isAdmin && !isAnyModalOpen && (
+          <TouchableOpacity
             style={[
-              styles.floatingActionContainer,
-              { bottom: (insets.bottom > 0 ? insets.bottom : 12) + 12 },
+              styles.fabAddBtn,
+              {
+                bottom: insets.bottom > 0 ? insets.bottom + 88 : 100,
+              },
             ]}
+            onPress={() => setIsAddChoiceModalOpen(true)}
+            activeOpacity={0.85}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Add new alumnus"
           >
-            <TouchableOpacity
-              style={styles.floatingCsvBtn}
-              onPress={handleOpenCsv}
-              activeOpacity={0.85}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Import alumni via CSV"
-            >
-              <Feather name="file-text" size={16} color={BENTO.navy} />
-              <Text style={styles.floatingCsvText}>Import CSV</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.floatingAddBtn}
-              onPress={handleOpenCreate}
-              activeOpacity={0.85}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Add new alumnus"
-            >
-              <Feather name="plus" size={17} color="#ffffff" />
-              <Text style={styles.floatingAddText}>Add Alumnus</Text>
-            </TouchableOpacity>
-          </View>
+            <Feather name="plus" size={18} color="#ffffff" />
+            <Text style={styles.fabAddText}>Add Alumnus</Text>
+          </TouchableOpacity>
         )}
+
+        {/* Add Alumnus Method Choice Modal (CSV Upload vs Manual Form) */}
+        <AlumniAddChoiceModal
+          visible={isAddChoiceModalOpen}
+          onClose={() => setIsAddChoiceModalOpen(false)}
+          onSelectCsv={() => setIsCsvModalVisible(true)}
+          onSelectManualForm={handleOpenCreate}
+        />
+
+        {/* Department Filter Modal */}
+        <AlumniFilterModal
+          visible={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          selectedDepartment={selectedDepartment}
+          onApplyDepartment={(dept) => setSelectedDepartment(dept)}
+        />
 
         {/* Detail Modal */}
         <AlumniProfileModal
@@ -632,60 +675,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  floatingActionContainer: {
+  fabAddBtn: {
     position: "absolute",
-    left: 16,
-    right: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  floatingCsvBtn: {
-    flex: 1,
+    right: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
-    backgroundColor: BENTO.card,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: BENTO.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  floatingCsvText: {
-    fontSize: 13.5,
-    fontFamily,
-    fontWeight: "600",
-    color: BENTO.navy,
-  },
-  floatingAddBtn: {
-    flex: 1.25,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
+    gap: 8,
     backgroundColor: BENTO.navy,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 30,
     ...Platform.select({
       ios: {
         shadowColor: BENTO.navy,
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.3,
         shadowRadius: 10,
       },
       android: {
@@ -693,10 +698,10 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  floatingAddText: {
-    fontSize: 13.5,
+  fabAddText: {
+    fontSize: 14,
     fontFamily,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#ffffff",
   },
 });

@@ -41,7 +41,7 @@ export const AlumniCard: React.FC<AlumniCardProps> = React.memo(
     // Secondary line: "Role · Company" matching Screenshot 1
     const roleCompany = [role, company].filter(Boolean).join(" · ");
 
-    // Tertiary line: Batch instead of Class of 2024
+    // Tertiary line: Batch + optional Student ID
     const rawBatch = batch ? String(batch).trim() : null;
     const batchDisplay = rawBatch
       ? rawBatch.toLowerCase().includes("batch")
@@ -50,6 +50,9 @@ export const AlumniCard: React.FC<AlumniCardProps> = React.memo(
       : year
       ? `Class of ${year}`
       : "SMUCT Graduate";
+    const tertiaryDisplay = item.studentId
+      ? `${batchDisplay} · ID: ${item.studentId}`
+      : batchDisplay;
 
     return (
       <TouchableOpacity
@@ -109,49 +112,52 @@ export const AlumniCard: React.FC<AlumniCardProps> = React.memo(
             {roleCompany}
           </Text>
 
-          {/* Line 3: Batch */}
-          <Text style={styles.batchText} numberOfLines={1}>
-            {batchDisplay}
-          </Text>
-        </View>
+          {/* Line 3: Bottom Row with Batch on Left & Admin Actions on Bottom Right */}
+          <View style={styles.bottomRow}>
+            <Text style={styles.batchText} numberOfLines={1}>
+              {tertiaryDisplay}
+            </Text>
 
-        {/* Far Right: Admin actions or Chevron navigation indicator */}
-        {isAdmin ? (
-          <View style={styles.adminActionGroup}>
-            {onEdit && (
-              <TouchableOpacity
-                style={styles.adminEditBtn}
-                onPress={(e) => {
-                  e.stopPropagation?.();
-                  onEdit(item);
-                }}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={`Edit ${item.name}`}
-              >
-                <Feather name="edit-2" size={13} color={BENTO.navy} />
-              </TouchableOpacity>
-            )}
-            {onDelete && (
-              <TouchableOpacity
-                style={styles.adminDeleteBtn}
-                onPress={(e) => {
-                  e.stopPropagation?.();
-                  onDelete(item);
-                }}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={`Delete ${item.name}`}
-              >
-                <Feather name="trash-2" size={13} color={BENTO.rose} />
-              </TouchableOpacity>
+            {isAdmin ? (
+              <View style={styles.adminActionGroup}>
+                {onEdit && (
+                  <TouchableOpacity
+                    style={styles.adminEditBtn}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      onEdit(item);
+                    }}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${item.name}`}
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="edit-2" size={12} color={BENTO.navy} />
+                  </TouchableOpacity>
+                )}
+                {onDelete && (
+                  <TouchableOpacity
+                    style={styles.adminDeleteBtn}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      onDelete(item);
+                    }}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${item.name}`}
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="trash-2" size={12} color={BENTO.rose} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={styles.chevronWrap}>
+                <Feather name="chevron-right" size={15} color="#9ca3af" />
+              </View>
             )}
           </View>
-        ) : (
-          <View style={styles.chevronWrap}>
-            <Feather name="chevron-right" size={16} color="#9ca3af" />
-          </View>
-        )}
+        </View>
       </TouchableOpacity>
     );
   },
@@ -243,14 +249,21 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 2,
   },
+  bottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 3,
+  },
   batchText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "400",
     color: "#9ca3af",
+    flex: 1,
+    marginRight: 8,
   },
   chevronWrap: {
-    marginLeft: 8,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -258,11 +271,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginLeft: 8,
   },
   adminEditBtn: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     backgroundColor: BENTO.slateSubtle,
     alignItems: "center",
@@ -271,8 +283,8 @@ const styles = StyleSheet.create({
     borderColor: BENTO.border,
   },
   adminDeleteBtn: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     backgroundColor: BENTO.roseBg,
     alignItems: "center",

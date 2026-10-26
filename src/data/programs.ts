@@ -535,3 +535,24 @@ export const getCleanFacultyName = (
 
   return "Design & Technology";
 };
+
+export interface ProgramDepartmentOption {
+  code: string;
+  name: string;
+  faculty: string;
+}
+
+export const SMUCT_PROGRAM_DEPARTMENTS: ProgramDepartmentOption[] = Object.entries(
+  DEPARTMENT_SHORT_NAMES,
+).map(([name, code]) => {
+  const prog = universityPrograms.find(
+    (p) =>
+      p.departmentShortName?.toUpperCase() === code.toUpperCase() ||
+      p.department.toLowerCase() === name.toLowerCase(),
+  );
+  return {
+    code,
+    name,
+    faculty: getCleanFacultyName(prog?.faculty, name),
+  };
+});

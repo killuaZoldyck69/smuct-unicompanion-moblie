@@ -32,12 +32,12 @@ interface ParsedRow {
   errors: string[];
 }
 
-const SAMPLE_CSV = `name,department,batch,graduationYear,currentCompany,currentPosition,skills,email,linkedInUrl
-Tanvir Hasan,Computer Science & Engineering,16th Batch,2021,Brain Station 23,Senior Software Engineer,"TypeScript; React Native; Node.js",tanvir@example.com,https://linkedin.com/in/tanvirhasan
-Farhana Akter,Fashion Design & Technology,18th Batch,2023,Yellow,Lead Apparel Designer,"Fabric Sourcing; Styling",farhana@example.com,https://linkedin.com/in/farhana
-Mahmudul Islam,Business Administration,17th Batch,2022,Grameenphone,Brand Strategist,"Marketing; Analytics",mahmud@example.com,`;
+const SAMPLE_CSV = `studentId,name,department,degree,batch,graduationYear,currentCompany,currentPosition,skills,email,phone,linkedInUrl
+210101050,Tanvir Hasan,Computer Science & Engineering,B.Sc. in Computer Science & Engineering,16,2021,Brain Station 23,Senior Software Engineer,"TypeScript; React Native; Node.js",tanvir@example.com,+880 1712-345678,https://linkedin.com/in/tanvirhasan
+210202061,Farhana Akter,Fashion Design & Technology,B.Sc. in Fashion Design & Technology,18,2023,Yellow,Lead Apparel Designer,"Fabric Sourcing; Styling",farhana@example.com,+880 1812-345679,https://linkedin.com/in/farhana
+210303072,Mahmudul Islam,Business Administration,Bachelor of Business Administration,17,2022,Grameenphone,Brand Strategist,"Marketing; Analytics",mahmud@example.com,+880 1912-345670,https://linkedin.com/in/mahmud`;
 
-// Simple robust CSV line splitter taking quotes into account
+// Robust CSV line splitter taking quotes into account (RFC 4180 standard)
 function parseCsvLine(text: string): string[] {
   const result: string[] = [];
   let cur = "";
@@ -46,15 +46,20 @@ function parseCsvLine(text: string): string[] {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (char === '"') {
-      inQuotes = !inQuotes;
+      if (inQuotes && text[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
     } else if (char === "," && !inQuotes) {
-      result.push(cur.trim().replace(/^"|"$/g, ""));
+      result.push(cur.trim());
       cur = "";
     } else {
       cur += char;
     }
   }
-  result.push(cur.trim().replace(/^"|"$/g, ""));
+  result.push(cur.trim());
   return result;
 }
 
@@ -86,6 +91,16 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
       }
 
       const file = res.assets[0];
+      const lowerName = (file.name || "").toLowerCase();
+      if (!lowerName.endsWith(".csv") && file.mimeType && !file.mimeType.includes("csv") && !file.mimeType.includes("text")) {
+        Toast.show({
+          type: "error",
+          text1: "Invalid File Format",
+          text2: "Please select a valid .csv file.",
+        });
+        return;
+      }
+
       setFileName(file.name);
 
       let textContent = "";
@@ -151,6 +166,9 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
       h.toLowerCase().replace(/[^a-z0-9]/g, ""),
     );
 
+    const studentIdIdx = headers.findIndex(
+      (h) => h === "studentid" || h === "student_id" || h === "id",
+    );
     const nameIdx = headers.findIndex((h) => h === "name" || h === "fullname");
     const deptIdx = headers.findIndex((h) => h === "department" || h === "dept");
     const batchIdx = headers.findIndex((h) => h === "batch" || h === "graduationbatch");
@@ -164,11 +182,15 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
     const degreeIdx = headers.findIndex((h) => h === "degree");
     const skillsIdx = headers.findIndex((h) => h === "skills");
     const emailIdx = headers.findIndex((h) => h === "email");
+    const phoneIdx = headers.findIndex(
+      (h) => h === "phone" || h === "phonenumber" || h === "mobile" || h === "contact",
+    );
     const linkedinIdx = headers.findIndex((h) => h === "linkedinurl" || h === "linkedin");
     const websiteIdx = headers.findIndex((h) => h === "personalwebsiteurl" || h === "website");
     const imageIdx = headers.findIndex((h) => h === "image" || h === "imageurl");
 
     const rows: ParsedRow[] = [];
+    const seenStudentIds = new Set<string>();
     const seenEmails = new Set<string>();
     const seenCombos = new Set<string>();
 
@@ -179,6 +201,7 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
       const cells = parseCsvLine(line);
       const rowErrors: string[] = [];
 
+      const rawStudentId = studentIdIdx >= 0 ? cells[studentIdIdx] || "" : "";
       const rawName = nameIdx >= 0 ? cells[nameIdx] || "" : cells[0] || "";
       const rawDept = deptIdx >= 0 ? cells[deptIdx] || "" : cells[1] || "";
       const rawBatch = batchIdx >= 0 ? cells[batchIdx] || "" : cells[2] || "";
@@ -188,6 +211,7 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
       const rawDegree = degreeIdx >= 0 ? cells[degreeIdx] || "" : "";
       const rawSkills = skillsIdx >= 0 ? cells[skillsIdx] || "" : "";
       const rawEmail = emailIdx >= 0 ? cells[emailIdx] || "" : "";
+      const rawPhone = phoneIdx >= 0 ? cells[phoneIdx] || "" : "";
       const rawLinkedIn = linkedinIdx >= 0 ? cells[linkedinIdx] || "" : "";
       const rawWebsite = websiteIdx >= 0 ? cells[websiteIdx] || "" : "";
       const rawImage = imageIdx >= 0 ? cells[imageIdx] || "" : "";
@@ -203,27 +227,44 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
         rowErrors.push("Missing batch");
       }
 
-      const gradYearNum = Number(rawYear.trim());
+      const gradYearNum = Number(rawYear.trim().replace(/[^0-9]/g, ""));
       if (!rawYear.trim() || isNaN(gradYearNum)) {
         rowErrors.push("Invalid graduation year");
       } else if (gradYearNum < 1990 || gradYearNum > 2035) {
         rowErrors.push(`Year out of range (${gradYearNum})`);
       }
 
-      // Optional format validation
-      if (rawEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail.trim())) {
-        rowErrors.push("Invalid email format");
+      // Student ID check & duplicate tracking
+      let isDuplicate = false;
+      let cleanStudentId = rawStudentId.trim();
+      if (cleanStudentId) {
+        const digitsOnly = cleanStudentId.replace(/[^0-9]/g, "");
+        if (digitsOnly !== cleanStudentId) {
+          rowErrors.push(`Student ID must be numeric: ${cleanStudentId}`);
+        }
+        cleanStudentId = digitsOnly;
+        if (cleanStudentId) {
+          if (seenStudentIds.has(cleanStudentId)) {
+            isDuplicate = true;
+            rowErrors.push(`Duplicate Student ID in CSV: ${cleanStudentId}`);
+          } else {
+            seenStudentIds.add(cleanStudentId);
+          }
+        }
       }
 
-      // Duplicate check
-      let isDuplicate = false;
+      // Email validation & duplicate tracking
       if (rawEmail.trim()) {
-        const normEmail = rawEmail.trim().toLowerCase();
-        if (seenEmails.has(normEmail)) {
-          isDuplicate = true;
-          rowErrors.push(`Duplicate email in CSV: ${rawEmail}`);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail.trim())) {
+          rowErrors.push("Invalid email format");
         } else {
-          seenEmails.add(normEmail);
+          const normEmail = rawEmail.trim().toLowerCase();
+          if (seenEmails.has(normEmail)) {
+            isDuplicate = true;
+            rowErrors.push(`Duplicate email in CSV: ${rawEmail}`);
+          } else {
+            seenEmails.add(normEmail);
+          }
         }
       }
 
@@ -238,24 +279,28 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
       const parsedSkills = rawSkills
         ? rawSkills
             .split(/[,;]/)
-            .map((s) => s.trim())
+            .map((s) => s.trim().replace(/\s+/g, " "))
             .filter(Boolean)
         : [];
 
+      const cleanBatch = rawBatch.trim().replace(/[^0-9]/g, "") || rawBatch.trim();
+
       const record: CreateAlumniInput = {
-        name: rawName.trim(),
+        studentId: cleanStudentId || undefined,
+        name: rawName.trim().replace(/\s+/g, " "),
         department: rawDept.trim(),
-        batch: rawBatch.trim(),
-        graduationBatch: rawBatch.trim(),
+        batch: cleanBatch,
+        graduationBatch: cleanBatch,
         graduationYear: isNaN(gradYearNum) ? undefined : gradYearNum,
         passingYear: isNaN(gradYearNum) ? undefined : gradYearNum,
-        currentCompany: rawCompany.trim() || undefined,
-        currentPosition: rawPos.trim() || undefined,
-        currentRole: rawPos.trim() || undefined,
-        designation: rawPos.trim() || undefined,
+        currentCompany: rawCompany.trim().replace(/\s+/g, " ") || undefined,
+        currentPosition: rawPos.trim().replace(/\s+/g, " ") || undefined,
+        currentRole: rawPos.trim().replace(/\s+/g, " ") || undefined,
+        designation: rawPos.trim().replace(/\s+/g, " ") || undefined,
         degree: rawDegree.trim() || undefined,
         skills: parsedSkills,
-        email: rawEmail.trim() || undefined,
+        email: rawEmail.trim().toLowerCase() || undefined,
+        phone: rawPhone.trim() || undefined,
         linkedInUrl: rawLinkedIn.trim() || undefined,
         linkedinUrl: rawLinkedIn.trim() || undefined,
         personalWebsiteUrl: rawWebsite.trim() || undefined,
@@ -270,7 +315,7 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
         : "VALID";
 
       rows.push({
-        rowNumber: i + 1, // Row number in original spreadsheet
+        rowNumber: i + 1,
         data: record,
         status,
         errors: rowErrors,
@@ -636,6 +681,7 @@ export const AlumniCsvModal: React.FC<AlumniCsvModalProps> = ({
                         {/* Metadata snippet */}
                         <Text style={styles.rowMetaSnippet} numberOfLines={1}>
                           {[
+                            row.data.studentId ? `ID: ${row.data.studentId}` : null,
                             row.data.department,
                             row.data.batch,
                             row.data.graduationYear ? `Class of ${row.data.graduationYear}` : null,

@@ -1,6 +1,12 @@
 import React from "react";
-import { AlumniScreen } from "@/screens/alumni";
+import { Redirect } from "expo-router";
 
-export default function AlumniRoute() {
-  return <AlumniScreen />;
+/**
+ * General Alumni Redirect
+ *
+ * Redirects to the unified alumni directory tab screen (/(tabs)/alumni)
+ * so the bottom main tab bar is always shown.
+ */
+export default function AlumniRedirect() {
+  return <Redirect href="/(tabs)/alumni" />;
 }

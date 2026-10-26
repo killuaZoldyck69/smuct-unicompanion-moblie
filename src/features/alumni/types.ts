@@ -1,5 +1,6 @@
 export interface AlumniItem {
   id: string;
+  studentId?: string | null;
   name: string;
   email?: string | null;
   phone?: string | null;
@@ -24,6 +25,7 @@ export interface AlumniItem {
 }
 
 export interface CreateAlumniInput {
+  studentId?: string | null;
   name: string;
   email?: string | null;
   phone?: string | null;
