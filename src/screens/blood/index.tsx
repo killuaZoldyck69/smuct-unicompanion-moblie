@@ -171,6 +171,10 @@ export function Blood(props: BloodScreenProps = {}) {
     return data?.pages.flatMap((page) => page.posts) ?? [];
   }, [data]);
 
+  const firstUrgentPost = useMemo(() => {
+    return posts.find((p) => p.urgency === "High" && !p.isFulfilled);
+  }, [posts]);
+
   const counts = data?.pages[0]?.meta?.counts ?? {
     total: 0,
     active: 0,
@@ -291,6 +295,18 @@ export function Blood(props: BloodScreenProps = {}) {
   );
 
   const handlePost = useCallback(() => {
+    const hasPhone = !!(currentUser?.phoneNumber && currentUser.phoneNumber.trim());
+    const hasBlood = !!currentUser?.bloodGroup;
+    if (!hasPhone || !hasBlood) {
+      setIsComposeVisible(false);
+      setProfileMissing({
+        missingPhone: !hasPhone,
+        missingBloodGroup: !hasBlood,
+      });
+      setIsProfileModalVisible(true);
+      return;
+    }
+
     const { isValid, error } = validateBloodPostInput(newPost);
     if (!isValid) {
       Toast.show({
@@ -397,11 +413,12 @@ export function Blood(props: BloodScreenProps = {}) {
       <BloodPostCard
         item={item}
         isAdmin={isAdmin}
+        isAuthor={item.authorId === currentUser?.id}
         onResolve={handleAdminResolve}
         onDelete={handleAdminDelete}
       />
     ),
-    [isAdmin, handleAdminResolve, handleAdminDelete],
+    [isAdmin, currentUser?.id, handleAdminResolve, handleAdminDelete],
   );
 
   return (
@@ -619,7 +636,31 @@ export function Blood(props: BloodScreenProps = {}) {
         ListHeaderComponent={
           <BloodHeroCard
             counts={counts}
-            selectedFilter={filters.status}
+            selectedFilter={
+              filters.urgency === "High" && filters.status === "ACTIVE"
+                ? "URGENT"
+                : filters.status
+            }
+            urgentHospital={
+              firstUrgentPost?.hospitalName ||
+              firstUrgentPost?.location?.split(",")[0]
+            }
+            urgentBloodGroup={
+              firstUrgentPost?.bloodGroup
+                ? formatBloodGroupSymbol(firstUrgentPost.bloodGroup)
+                : undefined
+            }
+            onPressPledge={() => {
+              if (counts.urgent > 0) {
+                setFilters((prev) => ({
+                  ...prev,
+                  urgency: "High",
+                  status: "ACTIVE",
+                }));
+              } else {
+                verifyProfileAndCompose();
+              }
+            }}
             onPressStat={(type) => {
               if (type === "ALL") {
                 setFilters((prev) => ({
@@ -631,17 +672,21 @@ export function Blood(props: BloodScreenProps = {}) {
                 setFilters((prev) => ({
                   ...prev,
                   urgency: "ALL",
-                  status: "ACTIVE",
+                  status:
+                    prev.status === "ACTIVE" && prev.urgency === "ALL"
+                      ? "ALL"
+                      : "ACTIVE",
                 }));
               } else if (type === "FULFILLED") {
                 setFilters((prev) => ({
                   ...prev,
-                  status: "FULFILLED",
+                  urgency: "ALL",
+                  status: prev.status === "FULFILLED" ? "ALL" : "FULFILLED",
                 }));
               } else if (type === "URGENT") {
                 setFilters((prev) => ({
                   ...prev,
-                  urgency: "High",
+                  urgency: prev.urgency === "High" ? "ALL" : "High",
                   status: "ACTIVE",
                 }));
               }
@@ -880,26 +925,27 @@ const styles = StyleSheet.create({
   },
   activeFiltersScroll: {
     paddingHorizontal: 20,
+    paddingVertical: 3,
     gap: 8,
     alignItems: "center",
   },
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: BENTO_COLORS.white,
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: "#e2e8f0",
     borderRadius: 20,
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 5,
     gap: 6,
-    ...BENTO_COLORS.shadow,
+    elevation: 0,
   },
   filterChipText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
-    color: BENTO_COLORS.neutralText,
+    color: "#334155",
   },
   clearAllChip: {
     paddingHorizontal: 10,

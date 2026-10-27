@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import Svg, { Defs, LinearGradient, Stop, Rect } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { formatCardDateTime } from "@/utils/date-formatter";
 import { BENTO_COLORS, fontFamily } from "../constants";
@@ -9,6 +10,7 @@ import { formatBloodGroupSymbol, getAuthorRoleAndDept } from "../utils";
 interface BloodPostCardProps {
   item: any;
   isAdmin?: boolean;
+  isAuthor?: boolean;
   onResolve?: (item: any) => void;
   onDelete?: (item: any) => void;
 }
@@ -23,10 +25,12 @@ const getAuthorInitials = (name?: string): string => {
 export const BloodPostCard = React.memo(function BloodPostCard({
   item,
   isAdmin = false,
+  isAuthor = false,
   onResolve,
   onDelete,
 }: BloodPostCardProps) {
   const router = useRouter();
+  const canManage = isAdmin || isAuthor;
   const bloodSymbol = formatBloodGroupSymbol(item.bloodGroup);
   const isUrgent = item.urgency === "High" && !item.isFulfilled;
   const isFulfilled = !!item.isFulfilled;
@@ -66,6 +70,23 @@ export const BloodPostCard = React.memo(function BloodPostCard({
         style={styles.watermarkHeart}
         pointerEvents="none"
       />
+
+      {/* Top Accent Gradient Bar for Urgent Requests */}
+      {isUrgent && (
+        <View style={styles.urgentTopBar} pointerEvents="none">
+          <Svg height="4" width="100%">
+            <Defs>
+              <LinearGradient id={`urgentTopGrad_${item.id}`} x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0%" stopColor="#e11d48" />
+                <Stop offset="40%" stopColor="#f43f5e" />
+                <Stop offset="75%" stopColor="#f97316" />
+                <Stop offset="100%" stopColor="#f59e0b" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="4" fill={`url(#urgentTopGrad_${item.id})`} />
+          </Svg>
+        </View>
+      )}
 
       {/* 1. TOP METADATA ROW */}
       <View style={styles.topRow}>
@@ -227,28 +248,10 @@ export const BloodPostCard = React.memo(function BloodPostCard({
         </View>
       </View>
 
-      {/* 5. PRIMARY FULL-WIDTH ACTION: VOLUNTEER NOW */}
-      <TouchableOpacity
-        style={[
-          styles.actionButton,
-          isFulfilled && styles.actionButtonFulfilled,
-        ]}
-        onPress={handleCardPress}
-        activeOpacity={0.88}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={
-          isFulfilled ? "View blood request details" : "Volunteer now to donate blood"
-        }
-      >
-        <Text style={styles.actionButtonText}>
-          {isFulfilled ? "View Details" : "Volunteer Now"}
-        </Text>
-        <Feather name="arrow-right" size={16} color="#ffffff" />
-      </TouchableOpacity>
 
-      {/* 6. ADMIN ACTIONS BAR (If user is Admin) */}
-      {isAdmin && (
+
+      {/* 6. ADMIN / AUTHOR ACTIONS BAR */}
+      {canManage && (
         <View style={styles.adminActionBar}>
           {!isFulfilled && onResolve && (
             <TouchableOpacity
@@ -310,7 +313,21 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardUrgent: {
-    borderColor: "#fda4af",
+    borderWidth: 2,
+    borderColor: "#fb7185",
+    shadowColor: "#e11d48",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  urgentTopBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    zIndex: 10,
   },
   cardFulfilled: {
     backgroundColor: "#f7fdf9",
@@ -491,7 +508,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 2,
   },
   authorSection: {
     flexDirection: "row",

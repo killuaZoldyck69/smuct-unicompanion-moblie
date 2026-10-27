@@ -28,6 +28,7 @@ import {
 } from "@/features/blood/useBlood";
 import { BloodProfileModal } from "@/screens/blood/components/blood-profile-modal";
 import { BloodConfirmModal } from "@/screens/blood/components/blood-confirm-modal";
+import { ProfileRequirementModal } from "@/screens/blood/components/profile-requirement-modal";
 import { BloodAdmissionCard } from "@/screens/blood/components/blood-admission-card";
 import { HospitalDestinationCard } from "@/screens/blood/components/hospital-destination-card";
 import {
@@ -66,6 +67,12 @@ export default function BloodThreadScreen() {
     onConfirm: () => {},
   });
 
+  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
+  const [profileMissing, setProfileMissing] = useState({
+    missingPhone: false,
+    missingBloodGroup: false,
+  });
+
   const handleGoBack = useCallback(() => {
     if (from === "admin") {
       router.replace("/(tabs)/admin_blood" as any);
@@ -74,8 +81,17 @@ export default function BloodThreadScreen() {
     }
   }, [router, from]);
 
+  const handleCompleteProfile = useCallback(() => {
+    setIsProfileModalVisible(false);
+    router.push("/(tabs)/profile" as any);
+  }, [router]);
+
   useEffect(() => {
     const onBackPress = () => {
+      if (isProfileModalVisible) {
+        setIsProfileModalVisible(false);
+        return true;
+      }
       if (selectedProfile) {
         setSelectedProfile(null);
         return true;
@@ -89,7 +105,7 @@ export default function BloodThreadScreen() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [handleGoBack, selectedProfile, confirmModal.visible]);
+  }, [handleGoBack, selectedProfile, confirmModal.visible, isProfileModalVisible]);
 
   const { data: post, isLoading } = useBloodPostById(id as string);
 
@@ -98,12 +114,14 @@ export default function BloodThreadScreen() {
   const deleteMutation = useDeleteBloodPost();
 
   const handleVolunteer = () => {
-    if (!currentUser?.bloodGroup || !currentUser?.phoneNumber) {
-      Toast.show({
-        type: "error",
-        text1: "Profile Incomplete",
-        text2: "Add your Blood Group and Phone Number to your profile before volunteering.",
+    const hasPhone = !!(currentUser?.phoneNumber && currentUser.phoneNumber.trim());
+    const hasBlood = !!currentUser?.bloodGroup;
+    if (!hasPhone || !hasBlood) {
+      setProfileMissing({
+        missingPhone: !hasPhone,
+        missingBloodGroup: !hasBlood,
       });
+      setIsProfileModalVisible(true);
       return;
     }
     setConfirmModal({
@@ -313,13 +331,16 @@ export default function BloodThreadScreen() {
             </Text>
           </View>
 
-          <View style={styles.viewProfilePill}>
-            <Text style={styles.viewProfileText}>View</Text>
+          <View style={styles.requesterTimeBadge}>
             <Feather
-              name="chevron-right"
-              size={13}
-              color={BENTO_COLORS.subtleText}
+              name="clock"
+              size={10.5}
+              color="#94a3b8"
+              style={{ marginRight: 3.5 }}
             />
+            <Text style={styles.requesterTimeText}>
+              {formatCardDateTime(post.createdAt)}
+            </Text>
           </View>
         </TouchableOpacity>
 
@@ -417,67 +438,72 @@ export default function BloodThreadScreen() {
     </View>
   );
 
-  const renderReply = ({ item }: { item: BloodResponseItem }) => (
-    <TouchableOpacity
-      style={styles.volunteerCard}
-      onPress={() => setSelectedProfile(item.responder || null)}
-      activeOpacity={0.8}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={`Volunteer ${item.responder?.name || "Member"}. Tap to view profile.`}
-    >
-      {item.responder?.image ? (
-        <Image
-          source={{ uri: item.responder.image }}
-          style={styles.volunteerAvatar}
-        />
-      ) : (
-        <View style={styles.volunteerAvatarFallback}>
-          <Text style={styles.volunteerAvatarText}>
-            {item.responder?.name?.charAt(0) || "U"}
-          </Text>
-        </View>
-      )}
+  const renderReply = ({ item }: { item: BloodResponseItem }) => {
+    const isVolunteerSelf = item.responder?.id === currentUser?.id;
+    const canContact = isAuthor || isVolunteerSelf || (item.responder as any)?.canContact;
+    const isMasked = !!item.responder?.phoneNumber?.includes("*");
 
-      <View style={styles.volunteerInfoBlock}>
-        <Text style={styles.volunteerName} numberOfLines={1}>
-          {item.responder?.name || "Campus Volunteer"}
-        </Text>
-        <View style={styles.volunteerSubRow}>
-          {item.responder?.phoneNumber ? (
-            <Text style={styles.volunteerPhone} numberOfLines={1}>
-              {item.responder.phoneNumber}
+    return (
+      <TouchableOpacity
+        style={styles.volunteerCard}
+        onPress={() => setSelectedProfile(item.responder || null)}
+        activeOpacity={0.8}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Volunteer ${item.responder?.name || "Member"}. Tap to view profile.`}
+      >
+        {item.responder?.image ? (
+          <Image
+            source={{ uri: item.responder.image }}
+            style={styles.volunteerAvatar}
+          />
+        ) : (
+          <View style={styles.volunteerAvatarFallback}>
+            <Text style={styles.volunteerAvatarText}>
+              {item.responder?.name?.charAt(0) || "U"}
             </Text>
-          ) : null}
-          {item.responder?.phoneNumber ? (
-            <Text style={styles.volunteerDotSeparator}>•</Text>
-          ) : null}
-          <Text style={styles.volunteerTime} numberOfLines={1}>
-            {formatCardDateTime(item.createdAt)}
+          </View>
+        )}
+
+        <View style={styles.volunteerInfoBlock}>
+          <Text style={styles.volunteerName} numberOfLines={1}>
+            {item.responder?.name || "Campus Volunteer"}
           </Text>
+          <View style={styles.volunteerSubRow}>
+            {item.responder?.phoneNumber ? (
+              <Text
+                style={[
+                  styles.volunteerPhone,
+                  isMasked && { color: BENTO_COLORS.subtleText },
+                ]}
+                numberOfLines={1}
+              >
+                {item.responder.phoneNumber}
+              </Text>
+            ) : null}
+            {item.responder?.phoneNumber ? (
+              <Text style={styles.volunteerDotSeparator}>•</Text>
+            ) : null}
+            <Text style={styles.volunteerTime} numberOfLines={1}>
+              {formatCardDateTime(item.createdAt)}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      {item.responder?.phoneNumber && (
-        <TouchableOpacity
-          style={styles.volunteerCallBtn}
-          onPress={() => handleCall(item.responder?.phoneNumber || undefined)}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={`Call ${item.responder?.name}`}
-        >
-          <Feather name="phone-call" size={13} color="#059669" />
-        </TouchableOpacity>
-      )}
-
-      <Feather
-        name="chevron-right"
-        size={16}
-        color={BENTO_COLORS.subtleText}
-        style={{ marginLeft: 6 }}
-      />
-    </TouchableOpacity>
-  );
+        {canContact && item.responder?.phoneNumber && !isMasked && (
+          <TouchableOpacity
+            style={styles.volunteerCallBtn}
+            onPress={() => handleCall(item.responder?.phoneNumber || undefined)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Call ${item.responder?.name}`}
+          >
+            <Feather name="phone-call" size={13} color="#059669" />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -619,6 +645,14 @@ export default function BloodThreadScreen() {
           onCancel={() => setConfirmModal((prev) => ({ ...prev, visible: false }))}
         />
       )}
+
+      <ProfileRequirementModal
+        visible={isProfileModalVisible}
+        missingPhone={profileMissing.missingPhone}
+        missingBloodGroup={profileMissing.missingBloodGroup}
+        onCompleteProfile={handleCompleteProfile}
+        onClose={() => setIsProfileModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -688,18 +722,21 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 10,
   },
-  viewProfilePill: {
+  requesterTimeBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    gap: 2,
+    alignSelf: "flex-end",
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 7.5,
+    paddingVertical: 3.5,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 2,
   },
-  viewProfileText: {
+  requesterTimeText: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
     color: "#64748b",
   },

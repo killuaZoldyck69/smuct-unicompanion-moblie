@@ -64,6 +64,9 @@ export const BloodProfileModal = memo(function BloodProfileModal({
       ? "Student"
       : profile.role || null;
 
+  const isPhoneMasked = !!(profile.phoneNumber && profile.phoneNumber.includes("*"));
+  const canContact = !!(profile.phoneNumber && !isPhoneMasked);
+
   return (
     <Modal
       visible={!!profile}
@@ -210,14 +213,20 @@ export const BloodProfileModal = memo(function BloodProfileModal({
             {profile.phoneNumber ? (
               <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
                 <View style={styles.iconBox}>
-                  <Feather name="phone" size={13} color="#059669" />
+                  <Feather
+                    name={isPhoneMasked ? "shield" : "phone"}
+                    size={13}
+                    color={isPhoneMasked ? BENTO_COLORS.subtleText : "#059669"}
+                  />
                 </View>
                 <View style={styles.detailTextWrapper}>
-                  <Text style={styles.detailLabel}>Phone Number</Text>
+                  <Text style={styles.detailLabel}>
+                    {isPhoneMasked ? "Phone (Protected)" : "Phone Number"}
+                  </Text>
                   <Text
                     style={[
                       styles.detailValue,
-                      { color: BENTO_COLORS.deepNavy },
+                      { color: isPhoneMasked ? BENTO_COLORS.subtleText : BENTO_COLORS.deepNavy },
                     ]}
                   >
                     {profile.phoneNumber}
@@ -227,7 +236,7 @@ export const BloodProfileModal = memo(function BloodProfileModal({
             ) : null}
           </View>
 
-          {profile.phoneNumber && (
+          {canContact && (
             <View style={styles.actionsRow}>
               <TouchableOpacity
                 style={styles.callBtn}

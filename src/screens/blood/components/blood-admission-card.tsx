@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { formatCardDateTime } from "@/utils/date-formatter";
+import Svg, { Defs, LinearGradient, Stop, Rect } from "react-native-svg";
 import { formatBloodGroupSymbol } from "../utils";
 import { fontFamily } from "../constants";
 import type { BloodPostItem } from "@/features/blood/types";
@@ -49,7 +49,29 @@ export const BloodAdmissionCard: React.FC<BloodAdmissionCardProps> = ({
         : "Flexible timing";
 
   return (
-    <View style={styles.cardContainer}>
+    <View
+      style={[
+        styles.cardContainer,
+        isUrgent && !post.isFulfilled && styles.cardUrgent,
+      ]}
+    >
+      {/* Top Accent Gradient Bar for Urgent Requests */}
+      {isUrgent && !post.isFulfilled && (
+        <View style={styles.urgentTopBar} pointerEvents="none">
+          <Svg height="4" width="100%">
+            <Defs>
+              <LinearGradient id={`admissionTopGrad_${post.id}`} x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0%" stopColor="#e11d48" />
+                <Stop offset="40%" stopColor="#f43f5e" />
+                <Stop offset="75%" stopColor="#f97316" />
+                <Stop offset="100%" stopColor="#f59e0b" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="4" fill={`url(#admissionTopGrad_${post.id})`} />
+          </Svg>
+        </View>
+      )}
+
       {/* Decorative Soft Watermark Heart */}
       <View style={styles.watermarkContainer} pointerEvents="none">
         <Feather name="heart" size={130} color="#be123c" />
@@ -80,34 +102,10 @@ export const BloodAdmissionCard: React.FC<BloodAdmissionCardProps> = ({
         </View>
       </View>
 
-      {/* 2. POSTED TIMESTAMP BADGE */}
-      <View style={styles.timestampRow}>
-        <View style={styles.timestampBadge}>
-          <Text style={styles.timestampText}>
-            {formatCardDateTime(post.createdAt)}
-          </Text>
-        </View>
-      </View>
-
-      {/* 3. PATIENT ADMISSION SECTION */}
+      {/* 2. PATIENT ADMISSION SECTION */}
       <View style={styles.admissionSection}>
         <View style={styles.admissionLabelRow}>
           <Text style={styles.admissionLabel}>PATIENT NAME</Text>
-          <View
-            style={[
-              styles.urgencyPill,
-              post.isFulfilled && styles.urgencyPillFulfilled,
-            ]}
-          >
-            <Text
-              style={[
-                styles.urgencyPillText,
-                post.isFulfilled && styles.urgencyPillTextFulfilled,
-              ]}
-            >
-              {urgencyPillLabel}
-            </Text>
-          </View>
         </View>
 
         <Text style={styles.patientName} numberOfLines={2}>
@@ -208,6 +206,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 18,
     elevation: 2,
+  },
+  cardUrgent: {
+    borderWidth: 2,
+    borderColor: "#fb7185",
+    shadowColor: "#e11d48",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  urgentTopBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    zIndex: 10,
   },
   watermarkContainer: {
     position: "absolute",
