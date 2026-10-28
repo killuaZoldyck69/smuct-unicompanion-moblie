@@ -61,6 +61,9 @@ export const SectionTabBar = React.memo(function SectionTabBar({
                 styles.tabText,
                 isActive && styles.tabTextActive,
               ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
             >
               {tab.label}
             </Text>
@@ -75,16 +78,20 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    marginHorizontal: 20,
+    marginHorizontal: 16,
     marginBottom: 14,
     borderRadius: 14,
     padding: 4,
     gap: 4,
+    alignItems: "center",
+    justifyContent: "center",
     ...CAMPUS_HUB_COLORS.shadow,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    minHeight: 40,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -94,8 +101,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
   tabTextActive: {
     color: CAMPUS_HUB_COLORS.white,
+    fontWeight: "800",
   },
 });

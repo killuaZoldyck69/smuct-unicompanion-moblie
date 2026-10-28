@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  useWindowDimensions,
   Keyboard,
   StatusBar,
+  Alert,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
 
 import { useUpdateLostFoundPost } from "@/features/campus-hub/useLostFound";
 import {
@@ -39,11 +44,18 @@ interface EditLostFoundModalProps {
 }
 
 const CATEGORIES: { key: LostFoundCategory; label: string }[] = [
-  { key: "BOOKS", label: "Books" },
-  { key: "ELECTRONICS", label: "Electronics" },
   { key: "ID_CARD", label: "ID Card" },
+  { key: "ELECTRONICS", label: "Electronics" },
   { key: "KEYS", label: "Keys" },
+  { key: "WALLET", label: "Wallet" },
+  { key: "BAGS", label: "Bags" },
+  { key: "BOOKS", label: "Books" },
+  { key: "DOCUMENTS", label: "Documents" },
+  { key: "ACCESSORIES", label: "Accessories" },
   { key: "CLOTHING", label: "Clothing" },
+  { key: "STATIONERY", label: "Stationery" },
+  { key: "UMBRELLA", label: "Umbrella" },
+  { key: "BOTTLE", label: "Bottle" },
   { key: "OTHER", label: "Other" },
 ];
 
@@ -66,35 +78,6 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
   post,
 }: EditLostFoundModalProps) {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  const defaultHeight = Math.round(windowHeight * 0.88);
-  const maxAllowedWithKeyboard =
-    windowHeight - keyboardHeight - Math.max(insets.top, 24) - 12;
-  const sheetHeight =
-    keyboardHeight > 0
-      ? Math.max(280, Math.min(defaultHeight, maxAllowedWithKeyboard))
-      : Math.min(defaultHeight, windowHeight - Math.max(insets.top, 24) - 16);
 
   const [form, setForm] = useState<FormState>({
     type: post.type,
@@ -102,23 +85,27 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
     description: post.description,
     category: post.category,
     location: post.location,
-    images: post.images || [],
-    verificationQuestion: post.verificationQuestion || "",
-    verificationAnswer: post.verificationAnswer || "",
+    images: post.images ?? [],
+    verificationQuestion: post.verificationQuestion ?? "",
+    verificationAnswer: post.verificationAnswer ?? "",
   });
 
+  const initialFormRef = useRef(form);
+
   useEffect(() => {
-    if (visible && post) {
-      setForm({
+    if (visible) {
+      const initial: FormState = {
         type: post.type,
         title: post.title,
         description: post.description,
         category: post.category,
         location: post.location,
-        images: post.images || [],
-        verificationQuestion: post.verificationQuestion || "",
-        verificationAnswer: post.verificationAnswer || "",
-      });
+        images: post.images ?? [],
+        verificationQuestion: post.verificationQuestion ?? "",
+        verificationAnswer: post.verificationAnswer ?? "",
+      };
+      setForm(initial);
+      initialFormRef.current = initial;
     }
   }, [visible, post]);
 
@@ -132,52 +119,126 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
     [],
   );
 
+  const isDirty =
+    form.type !== initialFormRef.current.type ||
+    form.title !== initialFormRef.current.title ||
+    form.description !== initialFormRef.current.description ||
+    form.category !== initialFormRef.current.category ||
+    form.location !== initialFormRef.current.location ||
+    form.images !== initialFormRef.current.images ||
+    form.verificationQuestion !== initialFormRef.current.verificationQuestion ||
+    form.verificationAnswer !== initialFormRef.current.verificationAnswer;
+
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
-    onClose();
-  }, [onClose]);
+    if (isDirty) {
+      Alert.alert(
+        "Discard Changes?",
+        "You have unsaved changes to this post. Are you sure you want to discard them?",
+        [
+          { text: "Keep Editing", style: "cancel" },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: onClose,
+          },
+        ],
+      );
+    } else {
+      onClose();
+    }
+  }, [isDirty, onClose]);
 
   const canSubmit =
     form.title.trim().length > 0 &&
     form.description.trim().length > 0 &&
-    form.location.trim().length > 0 &&
-    !isSubmitting;
+    form.location.trim().length > 0;
 
   const handleSubmit = useCallback(async () => {
     if (!form.title.trim()) {
-      return Toast.show({ type: "error", text1: "Title is required." });
+      return Toast.show({
+        type: "error",
+        text1: "Title Required",
+        text2: "Please enter an item title.",
+      });
     }
     if (!form.description.trim()) {
-      return Toast.show({ type: "error", text1: "Description is required." });
+      return Toast.show({
+        type: "error",
+        text1: "Description Required",
+        text2: "Please describe the item in detail.",
+      });
     }
     if (!form.location.trim()) {
-      return Toast.show({ type: "error", text1: "Location is required." });
+      return Toast.show({
+        type: "error",
+        text1: "Location Required",
+        text2: "Please specify where the item was lost or found.",
+      });
     }
 
-    let finalImages: string[] = [];
-    const existingRemote = form.images.filter((img) => img.startsWith("http"));
-    const newlyAdded = form.images.filter((img) => !img.startsWith("http"));
+    if (form.images.length > 2) {
+      return Toast.show({
+        type: "error",
+        text1: "Photo Limit Exceeded",
+        text2: "Maximum 2 photos can be attached to a Lost & Found post.",
+      });
+    }
 
-    finalImages = [...existingRemote];
+    const localUris = form.images.filter(
+      (uri) => !uri.startsWith("http://") && !uri.startsWith("https://"),
+    );
+    const existingUrls = form.images.filter(
+      (uri) => uri.startsWith("http://") || uri.startsWith("https://"),
+    );
 
-    if (newlyAdded.length > 0) {
+    let newlyUploadedUrls: string[] = [];
+
+    if (localUris.length > 0) {
+      // Validate local photo file sizes before upload
+      for (let i = 0; i < localUris.length; i++) {
+        const uri = localUris[i];
+        try {
+          const info = await FileSystem.getInfoAsync(uri);
+          if (
+            info.exists &&
+            typeof (info as any).size === "number" &&
+            (info as any).size > 5 * 1024 * 1024
+          ) {
+            return Toast.show({
+              type: "error",
+              text1: "Photo Exceeds 5MB",
+              text2: `Photo ${i + 1} exceeds the 5MB size limit. Please choose a smaller photo.`,
+            });
+          }
+        } catch {
+          // File check fallback
+        }
+      }
+
       setIsUploading(true);
       try {
         const results = await uploadMultipleImages(
-          newlyAdded,
+          localUris,
           CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
         );
-        finalImages = [...finalImages, ...results.map((r) => r.secureUrl)];
-      } catch {
+        newlyUploadedUrls = results.map((r) => r.secureUrl);
+      } catch (err: any) {
         setIsUploading(false);
+        const errMsg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Check your connection or try again.";
         return Toast.show({
           type: "error",
-          text1: "Image upload failed",
-          text2: "Check your connection or Cloudinary configuration.",
+          text1: "Image Upload Failed",
+          text2: errMsg,
         });
       }
       setIsUploading(false);
     }
+
+    const finalImages = [...existingUrls, ...newlyUploadedUrls].slice(0, 2);
 
     const payload: Partial<CreateLostFoundInput> = {
       type: form.type,
@@ -200,381 +261,374 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
       { id: post.id, data: payload },
       {
         onSuccess: () => {
-          Toast.show({ type: "success", text1: "Post updated successfully!" });
-          handleClose();
+          Keyboard.dismiss();
+          onClose();
+          setTimeout(() => {
+            Toast.show({
+              type: "success",
+              text1: "Post Updated",
+              text2: "Your changes have been saved successfully.",
+            });
+          }, 350);
         },
-        onError: (err: any) =>
+        onError: (err: any) => {
+          const message =
+            err?.response?.data?.message ||
+            err?.message ||
+            "Please check your input and try again.";
           Toast.show({
             type: "error",
             text1: "Failed to update",
-            text2: err.message ?? "Please try again.",
-          }),
+            text2: message,
+          });
+        },
       },
     );
-  }, [form, post.id, updateMutation, handleClose]);
+  }, [form, post.id, updateMutation, onClose]);
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      presentationStyle="fullScreen"
       statusBarTranslucent={true}
       onRequestClose={handleClose}
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="transparent"
+        backgroundColor="#ffffff"
         translucent={true}
       />
-      <View style={styles.overlay}>
-        {/* Tap outside backdrop to dismiss */}
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={handleClose}
-          accessible={false}
-        />
+      <SafeAreaView
+        style={styles.fullScreenContainer}
+        edges={["top", "bottom"]}
+      >
+        {/* ── Top Header Navigation Bar ── */}
+        <View style={styles.topHeader}>
+          {/* Title & Hub Badge - Left Aligned */}
+          <View style={styles.headerTitleGroup}>
+            <Text style={styles.headerTitle}>Edit Lost & Found</Text>
+            <View style={styles.hubBadge}>
+              <Text style={styles.hubBadgeText}>CAMPUS HUB</Text>
+            </View>
+          </View>
+
+          {/* Close Button on Right */}
+          <TouchableOpacity
+            onPress={handleClose}
+            style={styles.circleBtn}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Close edit modal"
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
+          </TouchableOpacity>
+        </View>
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardAvoid}
         >
-          <View style={[styles.sheet, { height: sheetHeight }]}>
-            {/* Drag Handle */}
-            <View style={styles.dragHandle} />
-
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity
-                onPress={handleClose}
-                style={styles.closeBtn}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Close edit modal"
-                activeOpacity={0.7}
-              >
-                <Feather
-                  name="x"
-                  size={20}
-                  color={CAMPUS_HUB_COLORS.deepNavy}
-                />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Edit Lost & Found Post</Text>
-              <View style={styles.headerPlaceholder} />
-            </View>
-
-            {/* Scrollable Form Content */}
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scroll}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Type Toggle: I Lost Something vs I Found Something */}
-              <View style={styles.typeSegment}>
-                <TouchableOpacity
-                  style={[
-                    styles.typeSegmentBtn,
-                    form.type === "LOST" && styles.typeSegmentBtnLostActive,
-                  ]}
-                  onPress={() => update("type", "LOST")}
-                  activeOpacity={0.8}
-                  accessible
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: form.type === "LOST" }}
-                  accessibilityLabel="I Lost Something"
-                >
-                  <Feather
-                    name="search"
-                    size={14}
-                    color={
-                      form.type === "LOST"
-                        ? CAMPUS_HUB_COLORS.dangerText
-                        : CAMPUS_HUB_COLORS.subtleText
-                    }
-                    style={styles.btnIconSpacing}
-                  />
-                  <Text
-                    style={[
-                      styles.typeSegmentText,
-                      form.type === "LOST" && styles.typeSegmentTextLostActive,
-                    ]}
-                  >
-                    I Lost Something
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.typeSegmentBtn,
-                    form.type === "FOUND" && styles.typeSegmentBtnFoundActive,
-                  ]}
-                  onPress={() => update("type", "FOUND")}
-                  activeOpacity={0.8}
-                  accessible
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: form.type === "FOUND" }}
-                  accessibilityLabel="I Found Something"
-                >
-                  <Feather
-                    name="gift"
-                    size={14}
-                    color={
-                      form.type === "FOUND"
-                        ? CAMPUS_HUB_COLORS.marketplaceAccentText
-                        : CAMPUS_HUB_COLORS.subtleText
-                    }
-                    style={styles.btnIconSpacing}
-                  />
-                  <Text
-                    style={[
-                      styles.typeSegmentText,
-                      form.type === "FOUND" &&
-                        styles.typeSegmentTextFoundActive,
-                    ]}
-                  >
-                    I Found Something
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Title Input */}
-              <View style={styles.formGroup}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>TITLE</Text>
-                  <Text style={styles.counterText}>
-                    {form.title.length}/100
-                  </Text>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="What did you lose or find?"
-                  placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
-                  value={form.title}
-                  onChangeText={(v) => update("title", v)}
-                  maxLength={100}
-                  accessible
-                  accessibilityLabel="Post title"
-                  returnKeyType="next"
-                />
-              </View>
-
-              {/* Description Input */}
-              <View style={styles.formGroup}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>DESCRIPTION</Text>
-                  <Text style={styles.counterText}>
-                    {form.description.length}/1000
-                  </Text>
-                </View>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Describe the item in detail (color, brand, distinguishing marks)..."
-                  placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
-                  value={form.description}
-                  onChangeText={(v) => update("description", v)}
-                  maxLength={1000}
-                  multiline
-                  textAlignVertical="top"
-                  accessible
-                  accessibilityLabel="Post description"
-                />
-              </View>
-
-              {/* Category Pills */}
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>CATEGORY</Text>
-                <View style={styles.chipRow}>
-                  {CATEGORIES.map((cat) => {
-                    const isSelected = form.category === cat.key;
-                    return (
-                      <TouchableOpacity
-                        key={cat.key}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() => update("category", cat.key)}
-                        activeOpacity={0.8}
-                        accessible
-                        accessibilityRole="radio"
-                        accessibilityState={{ checked: isSelected }}
-                        accessibilityLabel={cat.label}
-                      >
-                        {isSelected && (
-                          <Feather
-                            name="check"
-                            size={12}
-                            color="#ffffff"
-                            style={styles.chipCheckIcon}
-                          />
-                        )}
-                        <Text
-                          style={[
-                            styles.chipText,
-                            isSelected && styles.chipTextSelected,
-                          ]}
-                        >
-                          {cat.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Location Input */}
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>LOCATION</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Where was it lost or found? (e.g. Library 2nd Floor, Room 302)"
-                  placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
-                  value={form.location}
-                  onChangeText={(v) => update("location", v)}
-                  maxLength={100}
-                  accessible
-                  accessibilityLabel="Location"
-                />
-              </View>
-
-              {/* Ownership Verification (Only when Found) */}
-              {form.type === "FOUND" && (
-                <View style={styles.verificationCard}>
-                  <View style={styles.verificationTitleRow}>
-                    <Feather name="shield" size={15} color="#0284c7" />
-                    <Text style={styles.verificationTitle}>
-                      OWNERSHIP VERIFICATION (RECOMMENDED)
-                    </Text>
-                  </View>
-                  <Text style={styles.verificationHint}>
-                    Ask a secret question only the genuine owner can answer
-                    (e.g. "What sticker is on the back?" or "What is in the
-                    pocket?").
-                  </Text>
-
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Verification question for claimant..."
-                    placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
-                    value={form.verificationQuestion}
-                    onChangeText={(v) => update("verificationQuestion", v)}
-                    maxLength={200}
-                    accessible
-                    accessibilityLabel="Verification question"
-                  />
-
-                  <TextInput
-                    style={[styles.input, styles.secretInputMargin]}
-                    placeholder="Expected answer (private, only visible to you)..."
-                    placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
-                    value={form.verificationAnswer}
-                    onChangeText={(v) => update("verificationAnswer", v)}
-                    maxLength={200}
-                    accessible
-                    accessibilityLabel="Secret expected answer"
-                  />
-                </View>
-              )}
-
-              {/* Photo Upload Section */}
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>PHOTOS (MAX 4)</Text>
-                <ImagePickerRow
-                  images={form.images}
-                  onImagesChange={(imgs) => update("images", imgs)}
-                  maxImages={4}
-                  accent={ACCENT}
-                />
-              </View>
-            </ScrollView>
-
-            {/* Bottom Docked Action Footer with Safe Area */}
-            <View
-              style={[
-                styles.modalFooter,
-                {
-                  paddingBottom:
-                    keyboardHeight > 0 ? 14 : Math.max(insets.bottom, 16),
-                },
-              ]}
-            >
+          {/* Scrollable Form Content */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Type Toggle: I Lost Something vs I Found Something */}
+            <View style={styles.typeSegment}>
               <TouchableOpacity
                 style={[
-                  styles.submitBtn,
-                  (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
+                  styles.typeSegmentBtn,
+                  form.type === "LOST" && styles.typeSegmentBtnLostActive,
                 ]}
-                onPress={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
+                onPress={() => update("type", "LOST")}
                 activeOpacity={0.8}
                 accessible
-                accessibilityRole="button"
-                accessibilityLabel="Save post changes"
+                accessibilityRole="radio"
+                accessibilityState={{ checked: form.type === "LOST" }}
+                accessibilityLabel="I Lost Something"
               >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
-                    <Feather
-                      name="check"
-                      size={16}
-                      color="#ffffff"
-                      style={styles.submitIconSpacing}
-                    />
-                    <Text style={styles.submitBtnText}>Save Changes</Text>
-                  </>
-                )}
+                <Feather
+                  name="search"
+                  size={15}
+                  color={
+                    form.type === "LOST"
+                      ? CAMPUS_HUB_COLORS.dangerText
+                      : CAMPUS_HUB_COLORS.subtleText
+                  }
+                  style={{ marginRight: 6 }}
+                />
+                <Text
+                  style={[
+                    styles.typeSegmentText,
+                    form.type === "LOST" && styles.typeSegmentTextLostActive,
+                  ]}
+                >
+                  I Lost Something
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.typeSegmentBtn,
+                  form.type === "FOUND" && styles.typeSegmentBtnFoundActive,
+                ]}
+                onPress={() => update("type", "FOUND")}
+                activeOpacity={0.8}
+                accessible
+                accessibilityRole="radio"
+                accessibilityState={{ checked: form.type === "FOUND" }}
+                accessibilityLabel="I Found Something"
+              >
+                <Feather
+                  name="gift"
+                  size={15}
+                  color={
+                    form.type === "FOUND"
+                      ? CAMPUS_HUB_COLORS.marketplaceAccentText
+                      : CAMPUS_HUB_COLORS.subtleText
+                  }
+                  style={{ marginRight: 6 }}
+                />
+                <Text
+                  style={[
+                    styles.typeSegmentText,
+                    form.type === "FOUND" && styles.typeSegmentTextFoundActive,
+                  ]}
+                >
+                  I Found Something
+                </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Title Input */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>TITLE</Text>
+                <Text style={styles.counterText}>{form.title.length}/100</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="What did you lose or find?"
+                placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+                value={form.title}
+                onChangeText={(v) => update("title", v)}
+                maxLength={100}
+                accessible
+                accessibilityLabel="Post title"
+                returnKeyType="next"
+              />
+            </View>
+
+            {/* Description Input */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>DESCRIPTION</Text>
+                <Text style={styles.counterText}>
+                  {form.description.length}/1000
+                </Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Describe the item in detail (color, brand, distinguishing marks)..."
+                placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+                value={form.description}
+                onChangeText={(v) => update("description", v)}
+                maxLength={1000}
+                multiline
+                textAlignVertical="top"
+                accessible
+                accessibilityLabel="Post description"
+              />
+            </View>
+
+            {/* Category Pills */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>CATEGORY</Text>
+              <View style={styles.chipRow}>
+                {CATEGORIES.map((cat) => {
+                  const isSelected = form.category === cat.key;
+                  return (
+                    <TouchableOpacity
+                      key={cat.key}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => update("category", cat.key)}
+                      activeOpacity={0.8}
+                      accessible
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: isSelected }}
+                      accessibilityLabel={cat.label}
+                    >
+                      {isSelected && (
+                        <Feather
+                          name="check"
+                          size={12}
+                          color="#ffffff"
+                          style={{ marginRight: 4 }}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.chipText,
+                          isSelected && styles.chipTextSelected,
+                        ]}
+                      >
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Location Input */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>LOCATION</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Where was it lost or found?"
+                placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+                value={form.location}
+                onChangeText={(v) => update("location", v)}
+                maxLength={100}
+                accessible
+                accessibilityLabel="Location"
+              />
+            </View>
+
+            {/* Ownership Verification (Only when Found) */}
+            {form.type === "FOUND" && (
+              <View style={styles.verificationCard}>
+                <View style={styles.verificationTitleRow}>
+                  <Feather name="shield" size={15} color="#0284c7" />
+                  <Text style={styles.verificationTitle}>
+                    OWNERSHIP VERIFICATION (RECOMMENDED)
+                  </Text>
+                </View>
+                <Text style={styles.verificationHint}>
+                  Ask a secret question only the genuine owner can answer (e.g.
+                  "What sticker is on the back?" or "What is in the pocket?").
+                </Text>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Verification question for claimant..."
+                  placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+                  value={form.verificationQuestion}
+                  onChangeText={(v) => update("verificationQuestion", v)}
+                  maxLength={200}
+                  accessible
+                  accessibilityLabel="Verification question"
+                />
+
+                <TextInput
+                  style={[styles.input, { marginTop: 8 }]}
+                  placeholder="Expected answer (private, only visible to you)..."
+                  placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+                  value={form.verificationAnswer}
+                  onChangeText={(v) => update("verificationAnswer", v)}
+                  maxLength={200}
+                  accessible
+                  accessibilityLabel="Secret expected answer"
+                />
+              </View>
+            )}
+
+            {/* Photo Upload Section */}
+            <View style={styles.formGroup}>
+              <ImagePickerRow
+                images={form.images}
+                onImagesChange={(imgs) => update("images", imgs)}
+                maxImages={2}
+                maxSizeBytes={5 * 1024 * 1024}
+                accent={ACCENT}
+              />
+            </View>
+          </ScrollView>
+
+          {/* Bottom Docked Action Footer with Safe Area */}
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={!canSubmit || isSubmitting}
+              activeOpacity={0.8}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Save post changes"
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Feather
+                    name="check"
+                    size={16}
+                    color="#ffffff"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={styles.submitBtnText}>Save Changes</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </View>
+
+        {/* Embedded Toast Overlay for Modal Viewport */}
+        <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
+      </SafeAreaView>
     </Modal>
   );
 });
 
 const styles = StyleSheet.create({
-  overlay: {
+  fullScreenContainer: {
     flex: 1,
-    backgroundColor: "rgba(10, 15, 29, 0.65)",
-    justifyContent: "flex-end",
+    backgroundColor: "#ffffff",
   },
-  keyboardAvoid: {
-    width: "100%",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    overflow: "hidden",
-    ...CAMPUS_HUB_COLORS.heroShadow,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(0, 0, 0, 0.15)",
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  header: {
+  topHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderBottomColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
+  },
+  headerTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   headerTitle: {
     fontFamily,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    letterSpacing: -0.3,
   },
-  closeBtn: {
+  hubBadge: {
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  hubBadgeText: {
+    fontFamily,
+    fontSize: 9,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
+    letterSpacing: 0.5,
+  },
+  circleBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -582,46 +636,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerPlaceholder: {
-    width: 36,
+  keyboardAvoid: {
+    flex: 1,
   },
-  btnIconSpacing: {
-    marginRight: 6,
-  },
-  chipCheckIcon: {
-    marginRight: 4,
-  },
-  secretInputMargin: {
-    marginTop: 8,
-  },
-  submitIconSpacing: {
-    marginRight: 8,
+  scrollView: {
+    flex: 1,
   },
   scroll: {
     padding: 20,
-    gap: 18,
-    paddingBottom: 24,
+    paddingBottom: 28,
   },
   typeSegment: {
     flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 14,
-    padding: 4,
-    gap: 4,
+    gap: 10,
+    marginBottom: 20,
   },
   typeSegmentBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 11,
+    paddingVertical: 13,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   typeSegmentBtnLostActive: {
     backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
+    borderColor: CAMPUS_HUB_COLORS.dangerText,
   },
   typeSegmentBtnFoundActive: {
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
+    borderColor: CAMPUS_HUB_COLORS.marketplaceAccent,
   },
   typeSegmentText: {
     fontFamily,
@@ -631,46 +678,47 @@ const styles = StyleSheet.create({
   },
   typeSegmentTextLostActive: {
     color: CAMPUS_HUB_COLORS.dangerText,
-    fontWeight: "800",
   },
   typeSegmentTextFoundActive: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
-    fontWeight: "800",
   },
   formGroup: {
-    gap: 8,
+    marginBottom: 18,
   },
   labelRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
   label: {
     fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.subtleText,
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   counterText: {
     fontFamily,
     fontSize: 11,
+    fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
   },
   input: {
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     fontFamily,
     fontSize: 14,
-    color: CAMPUS_HUB_COLORS.deepNavy,
-    backgroundColor: "#f8fafc",
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.neutralText,
     borderWidth: 1.5,
     borderColor: "#e2e8f0",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
   },
   textArea: {
-    minHeight: 90,
-    paddingTop: 11,
+    minHeight: 100,
+    paddingTop: 12,
   },
   chipRow: {
     flexDirection: "row",
@@ -680,12 +728,12 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#e2e8f0",
   },
   chipSelected: {
     backgroundColor: ACCENT,
@@ -695,18 +743,18 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.neutralText,
   },
   chipTextSelected: {
     color: "#ffffff",
-    fontWeight: "800",
   },
   verificationCard: {
     backgroundColor: "#f0f9ff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: "#bae6fd",
-    borderRadius: 16,
-    padding: 14,
     gap: 8,
   },
   verificationTitleRow: {
@@ -719,36 +767,43 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     color: "#0284c7",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   verificationHint: {
     fontFamily,
     fontSize: 12,
-    color: "#0369a1",
-    lineHeight: 17,
+    fontWeight: "500",
+    color: "#0284c7",
+    lineHeight: 16,
+    marginBottom: 4,
   },
   modalFooter: {
     paddingHorizontal: 20,
     paddingTop: 12,
+    paddingBottom: Platform.OS === "ios" ? 14 : 16,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderTopColor: "#f1f5f9",
+    ...CAMPUS_HUB_COLORS.shadow,
   },
   submitBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ACCENT,
-    borderRadius: 14,
-    paddingVertical: 14,
-    ...CAMPUS_HUB_COLORS.shadow,
+    height: 50,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    ...CAMPUS_HUB_COLORS.heroShadow,
   },
   submitBtnDisabled: {
-    opacity: 0.5,
+    backgroundColor: "#cbd5e1",
+    opacity: 0.65,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   submitBtnText: {
     fontFamily,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
     color: "#ffffff",
   },

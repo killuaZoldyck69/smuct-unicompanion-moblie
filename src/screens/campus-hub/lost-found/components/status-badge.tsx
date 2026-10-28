@@ -9,20 +9,34 @@ import type {
 } from "@/services/lost-found-service";
 
 export const CATEGORY_LABELS: Record<LostFoundCategory, string> = {
-  BOOKS: "Books & Notes",
-  ELECTRONICS: "Electronics",
   ID_CARD: "ID Card",
+  ELECTRONICS: "Electronics",
   KEYS: "Keys",
+  WALLET: "Wallet & Purse",
+  BAGS: "Bags & Backpacks",
+  BOOKS: "Books & Notes",
+  DOCUMENTS: "Documents",
+  ACCESSORIES: "Accessories",
   CLOTHING: "Clothing",
+  STATIONERY: "Stationery",
+  UMBRELLA: "Umbrella",
+  BOTTLE: "Water Bottle",
   OTHER: "Other Item",
 };
 
 export const CATEGORY_ICONS: Record<LostFoundCategory, keyof typeof Feather.glyphMap> = {
-  BOOKS: "book",
-  ELECTRONICS: "smartphone",
   ID_CARD: "credit-card",
+  ELECTRONICS: "smartphone",
   KEYS: "key",
+  WALLET: "pocket",
+  BAGS: "briefcase",
+  BOOKS: "book-open",
+  DOCUMENTS: "file-text",
+  ACCESSORIES: "watch",
   CLOTHING: "tag",
+  STATIONERY: "edit-3",
+  UMBRELLA: "umbrella",
+  BOTTLE: "coffee",
   OTHER: "box",
 };
 

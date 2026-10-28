@@ -57,8 +57,15 @@ const CATEGORY_OPTIONS: { key: "ALL" | LostFoundCategory; label: string }[] = [
   { key: "ID_CARD", label: "ID Card" },
   { key: "ELECTRONICS", label: "Electronics" },
   { key: "KEYS", label: "Keys" },
+  { key: "WALLET", label: "Wallet" },
+  { key: "BAGS", label: "Bags" },
   { key: "BOOKS", label: "Books" },
+  { key: "DOCUMENTS", label: "Documents" },
+  { key: "ACCESSORIES", label: "Accessories" },
   { key: "CLOTHING", label: "Clothing" },
+  { key: "STATIONERY", label: "Stationery" },
+  { key: "UMBRELLA", label: "Umbrella" },
+  { key: "BOTTLE", label: "Bottle" },
   { key: "OTHER", label: "Other" },
 ];
 

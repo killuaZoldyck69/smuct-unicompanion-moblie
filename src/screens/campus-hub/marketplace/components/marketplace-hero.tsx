@@ -26,7 +26,6 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
           <Feather name="shopping-bag" size={12} color={ACCENT} />
           <Text style={styles.statsBarTagText}>CAMPUS HUB BUY & SELL</Text>
         </View>
-        <Text style={styles.statsBarSub}>Verified Student Trade</Text>
       </View>
 
       {/* Compact Modern Stats Row */}
@@ -51,7 +50,12 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
               { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccent },
             ]}
           />
-          <Text style={[styles.statCount, { color: CAMPUS_HUB_COLORS.marketplaceAccentText }]}>
+          <Text
+            style={[
+              styles.statCount,
+              { color: CAMPUS_HUB_COLORS.marketplaceAccentText },
+            ]}
+          >
             {stats.selling}
           </Text>
           <Text style={styles.statTitle}>For Sale</Text>
@@ -66,7 +70,12 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
               { backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccent },
             ]}
           />
-          <Text style={[styles.statCount, { color: CAMPUS_HUB_COLORS.lostFoundAccentText }]}>
+          <Text
+            style={[
+              styles.statCount,
+              { color: CAMPUS_HUB_COLORS.lostFoundAccentText },
+            ]}
+          >
             {stats.buying}
           </Text>
           <Text style={styles.statTitle}>Wanted</Text>
@@ -103,12 +112,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: ACCENT,
     letterSpacing: 0.6,
-  },
-  statsBarSub: {
-    fontFamily,
-    fontSize: 11,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    fontWeight: "500",
   },
   statsBarRow: {
     flexDirection: "row",

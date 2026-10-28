@@ -74,7 +74,9 @@ export function LostFoundSection({
   // Filters state
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-  const [categoryFilter, setCategoryFilter] = useState<"ALL" | LostFoundCategory>("ALL");
+  const [categoryFilter, setCategoryFilter] = useState<
+    "ALL" | LostFoundCategory
+  >("ALL");
   const [myPostsOnly, setMyPostsOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -156,7 +158,7 @@ export function LostFoundSection({
       setCategoryFilter(filters.category);
       setMyPostsOnly(filters.myPosts);
     },
-    []
+    [],
   );
 
   // Debounce search query to relieve frontend and trigger server-side query
@@ -207,9 +209,15 @@ export function LostFoundSection({
   // Overall quick stats
   const stats = useMemo(() => {
     return {
-      activeLost: posts.filter((p) => p.type === "LOST" && p.status === "ACTIVE").length,
-      activeFound: posts.filter((p) => p.type === "FOUND" && p.status === "ACTIVE").length,
-      resolved: posts.filter((p) => p.status === "RESOLVED" || p.status === "CLAIMED").length,
+      activeLost: posts.filter(
+        (p) => p.type === "LOST" && p.status === "ACTIVE",
+      ).length,
+      activeFound: posts.filter(
+        (p) => p.type === "FOUND" && p.status === "ACTIVE",
+      ).length,
+      resolved: posts.filter(
+        (p) => p.status === "RESOLVED" || p.status === "CLAIMED",
+      ).length,
     };
   }, [posts]);
 
@@ -233,7 +241,7 @@ export function LostFoundSection({
       setCampusHubActiveSection("LOST_FOUND");
       router.push(`/campus-hub/lost-found/${id}` as any);
     },
-    [router]
+    [router],
   );
 
   const toggleMyPosts = useCallback(() => {
@@ -252,13 +260,19 @@ export function LostFoundSection({
           <View style={styles.statsBarHeader}>
             <View style={styles.statsBarTag}>
               <Feather name="shield" size={12} color={ACCENT} />
-              <Text style={styles.statsBarTagText}>CAMPUS HUB LOST & FOUND</Text>
+              <Text style={styles.statsBarTagText}>
+                CAMPUS HUB LOST & FOUND
+              </Text>
             </View>
-            <Text style={styles.statsBarSub}>Verified Community Board</Text>
           </View>
           <View style={styles.statsBarRow}>
             <View style={styles.statCell}>
-              <View style={[styles.statDot, { backgroundColor: CAMPUS_HUB_COLORS.lostRose }]} />
+              <View
+                style={[
+                  styles.statDot,
+                  { backgroundColor: CAMPUS_HUB_COLORS.lostRose },
+                ]}
+              />
               <Text style={styles.statCount}>{stats.activeLost}</Text>
               <Text style={styles.statTitle}>Active Lost</Text>
             </View>
@@ -266,7 +280,12 @@ export function LostFoundSection({
             <View style={styles.statDivider} />
 
             <View style={styles.statCell}>
-              <View style={[styles.statDot, { backgroundColor: CAMPUS_HUB_COLORS.foundTeal }]} />
+              <View
+                style={[
+                  styles.statDot,
+                  { backgroundColor: CAMPUS_HUB_COLORS.foundTeal },
+                ]}
+              />
               <Text style={styles.statCount}>{stats.activeFound}</Text>
               <Text style={styles.statTitle}>Active Found</Text>
             </View>
@@ -274,7 +293,12 @@ export function LostFoundSection({
             <View style={styles.statDivider} />
 
             <View style={styles.statCell}>
-              <View style={[styles.statDot, { backgroundColor: CAMPUS_HUB_COLORS.resolvedGreen }]} />
+              <View
+                style={[
+                  styles.statDot,
+                  { backgroundColor: CAMPUS_HUB_COLORS.resolvedGreen },
+                ]}
+              />
               <Text style={styles.statCount}>{stats.resolved}</Text>
               <Text style={styles.statTitle}>Reunited</Text>
             </View>
@@ -294,7 +318,7 @@ export function LostFoundSection({
         onPress={() => navigateToDetail(item.id)}
       />
     ),
-    [currentUser?.id, currentUser?.role, handleDelete, navigateToDetail]
+    [currentUser?.id, currentUser?.role, handleDelete, navigateToDetail],
   );
 
   const renderFooter = useCallback(() => {
@@ -308,7 +332,9 @@ export function LostFoundSection({
     if (posts.length > 5 && !hasNextPage) {
       return (
         <View style={styles.endNotice}>
-          <Text style={styles.endNoticeText}>You've reached the end of listings</Text>
+          <Text style={styles.endNoticeText}>
+            You've reached the end of listings
+          </Text>
         </View>
       );
     }
@@ -339,7 +365,11 @@ export function LostFoundSection({
   if (isError) {
     return (
       <View style={styles.centerState}>
-        <Feather name="alert-circle" size={36} color={CAMPUS_HUB_COLORS.dangerText} />
+        <Feather
+          name="alert-circle"
+          size={36}
+          color={CAMPUS_HUB_COLORS.dangerText}
+        />
         <Text style={styles.stateTitle}>Could not load posts</Text>
         <TouchableOpacity
           style={[styles.retryBtn, { backgroundColor: ACCENT }]}
@@ -386,7 +416,11 @@ export function LostFoundSection({
                 accessibilityLabel="Clear search query"
                 style={styles.clearSearchBtn}
               >
-                <Feather name="x-circle" size={16} color={CAMPUS_HUB_COLORS.subtleText} />
+                <Feather
+                  name="x-circle"
+                  size={16}
+                  color={CAMPUS_HUB_COLORS.subtleText}
+                />
               </TouchableOpacity>
             )}
           </View>
@@ -406,7 +440,11 @@ export function LostFoundSection({
             <Feather
               name="sliders"
               size={18}
-              color={activeFilterCount > 0 ? "#ffffff" : CAMPUS_HUB_COLORS.neutralText}
+              color={
+                activeFilterCount > 0
+                  ? "#ffffff"
+                  : CAMPUS_HUB_COLORS.neutralText
+              }
             />
             {activeFilterCount > 0 && (
               <View style={styles.filterBadge}>
@@ -434,7 +472,11 @@ export function LostFoundSection({
                   <Text style={styles.activeChipText}>
                     {typeFilter === "LOST" ? "Lost" : "Found"}
                   </Text>
-                  <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.lostFoundAccentText} />
+                  <Feather
+                    name="x"
+                    size={12}
+                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+                  />
                 </TouchableOpacity>
               )}
               {statusFilter !== "ALL" && (
@@ -446,7 +488,11 @@ export function LostFoundSection({
                   <Text style={styles.activeChipText}>
                     {statusFilter === "ACTIVE" ? "Active" : "Resolved"}
                   </Text>
-                  <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.lostFoundAccentText} />
+                  <Feather
+                    name="x"
+                    size={12}
+                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+                  />
                 </TouchableOpacity>
               )}
               {categoryFilter !== "ALL" && (
@@ -458,7 +504,11 @@ export function LostFoundSection({
                   <Text style={styles.activeChipText}>
                     {CATEGORY_LABELS[categoryFilter] || categoryFilter}
                   </Text>
-                  <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.lostFoundAccentText} />
+                  <Feather
+                    name="x"
+                    size={12}
+                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+                  />
                 </TouchableOpacity>
               )}
               {myPostsOnly && (
@@ -468,7 +518,11 @@ export function LostFoundSection({
                   activeOpacity={0.7}
                 >
                   <Text style={styles.activeChipText}>My Posts</Text>
-                  <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.lostFoundAccentText} />
+                  <Feather
+                    name="x"
+                    size={12}
+                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+                  />
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -606,7 +660,10 @@ const LostFoundCard = React.memo(function LostFoundCard({
         </View>
 
         {/* Title & Description */}
-        <Text style={[styles.cardTitle, isResolved && styles.cardTitleResolved]} numberOfLines={2}>
+        <Text
+          style={[styles.cardTitle, isResolved && styles.cardTitleResolved]}
+          numberOfLines={2}
+        >
           {post.title}
         </Text>
 
@@ -616,7 +673,11 @@ const LostFoundCard = React.memo(function LostFoundCard({
 
         {/* Key Facts Row: Location */}
         <View style={styles.cardFooter}>
-          <Feather name="map-pin" size={11} color={CAMPUS_HUB_COLORS.subtleText} />
+          <Feather
+            name="map-pin"
+            size={11}
+            color={CAMPUS_HUB_COLORS.subtleText}
+          />
           <Text style={styles.locationText} numberOfLines={1}>
             {post.location}
           </Text>
@@ -627,7 +688,8 @@ const LostFoundCard = React.memo(function LostFoundCard({
           <View style={styles.claimBadge}>
             <Feather name="inbox" size={11} color="#0284c7" />
             <Text style={styles.claimBadgeText}>
-              {claimCount} {claimCount === 1 ? "claim received" : "claims received"}
+              {claimCount}{" "}
+              {claimCount === 1 ? "claim received" : "claims received"}
             </Text>
           </View>
         )}
@@ -651,7 +713,11 @@ const LostFoundCard = React.memo(function LostFoundCard({
 
         {/* Time directly under the card image */}
         <View style={styles.imageTimeRow}>
-          <Feather name="clock" size={10} color={CAMPUS_HUB_COLORS.subtleText} />
+          <Feather
+            name="clock"
+            size={10}
+            color={CAMPUS_HUB_COLORS.subtleText}
+          />
           <Text style={styles.imageTimeText} numberOfLines={1}>
             {timeAgo(post.createdAt)}
           </Text>
@@ -800,12 +866,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: ACCENT,
     letterSpacing: 0.6,
-  },
-  statsBarSub: {
-    fontFamily,
-    fontSize: 11,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    fontWeight: "500",
   },
   statsBarRow: {
     flexDirection: "row",

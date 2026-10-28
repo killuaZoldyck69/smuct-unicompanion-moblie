@@ -14,6 +14,13 @@ export type LostFoundCategory =
   | "ID_CARD"
   | "KEYS"
   | "CLOTHING"
+  | "WALLET"
+  | "BAGS"
+  | "DOCUMENTS"
+  | "ACCESSORIES"
+  | "STATIONERY"
+  | "UMBRELLA"
+  | "BOTTLE"
   | "OTHER";
 
 export interface LostFoundAuthor {

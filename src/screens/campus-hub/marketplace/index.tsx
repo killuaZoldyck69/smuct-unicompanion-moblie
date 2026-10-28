@@ -78,8 +78,10 @@ export function MarketplaceSection({
 
   // --- Filter state ---
   const [typeFilter, setTypeFilter] = useState<MarketplaceTypeFilter>("ALL");
-  const [statusFilter, setStatusFilter] = useState<MarketplaceStatusFilter>("ALL");
-  const [categoryFilter, setCategoryFilter] = useState<MarketplaceCategoryFilter>("ALL");
+  const [statusFilter, setStatusFilter] =
+    useState<MarketplaceStatusFilter>("ALL");
+  const [categoryFilter, setCategoryFilter] =
+    useState<MarketplaceCategoryFilter>("ALL");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // --- Search with debounce ---
@@ -120,9 +122,12 @@ export function MarketplaceSection({
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = useCallback((id: string, title: string, price?: number | null, image?: string) => {
-    setPostToDelete({ id, title, price, image });
-  }, []);
+  const handleDelete = useCallback(
+    (id: string, title: string, price?: number | null, image?: string) => {
+      setPostToDelete({ id, title, price, image });
+    },
+    [],
+  );
 
   const handleConfirmDelete = useCallback(() => {
     if (!postToDelete) return;
@@ -161,7 +166,8 @@ export function MarketplaceSection({
     const params: Omit<FeedQueryParams, "cursor" | "limit"> = {};
     if (typeFilter !== "ALL") params.type = typeFilter as ListingType;
     if (statusFilter !== "ALL") params.status = statusFilter as ListingStatus;
-    if (categoryFilter !== "ALL") params.category = categoryFilter as MarketplaceCategory;
+    if (categoryFilter !== "ALL")
+      params.category = categoryFilter as MarketplaceCategory;
     if (debouncedSearch) params.search = debouncedSearch;
     return params;
   }, [typeFilter, statusFilter, categoryFilter, debouncedSearch]);
@@ -210,7 +216,7 @@ export function MarketplaceSection({
       setCampusHubActiveSection("MARKETPLACE");
       router.push(`/campus-hub/marketplace/${id}` as any);
     },
-    [router]
+    [router],
   );
 
   // --- Filter handlers ---
@@ -230,7 +236,7 @@ export function MarketplaceSection({
       setStatusFilter(filters.status);
       setCategoryFilter(filters.category);
     },
-    []
+    [],
   );
 
   // --- Compose handlers ---
@@ -238,11 +244,15 @@ export function MarketplaceSection({
     if (!currentUser) {
       return Toast.show({ type: "error", text1: "Please log in first." });
     }
-    externalOnOpenCompose ? externalOnOpenCompose() : setInternalComposeVisible(true);
+    externalOnOpenCompose
+      ? externalOnOpenCompose()
+      : setInternalComposeVisible(true);
   }, [currentUser, externalOnOpenCompose]);
 
   const handleCloseCompose = useCallback(() => {
-    externalOnCloseCompose ? externalOnCloseCompose() : setInternalComposeVisible(false);
+    externalOnCloseCompose
+      ? externalOnCloseCompose()
+      : setInternalComposeVisible(false);
   }, [externalOnCloseCompose]);
 
   // ---------------------------------------------------------------------------
@@ -258,7 +268,7 @@ export function MarketplaceSection({
         onPress={() => navigateToDetail(item.id)}
       />
     ),
-    [cardWidth, currentUser?.role, handleDelete, navigateToDetail]
+    [cardWidth, currentUser?.role, handleDelete, navigateToDetail],
   );
 
   const keyExtractor = useCallback((item: MarketplacePost) => item.id, []);
@@ -308,7 +318,12 @@ export function MarketplaceSection({
             onPress={handleOpenCompose}
             activeOpacity={0.8}
           >
-            <Feather name="plus" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+            <Feather
+              name="plus"
+              size={14}
+              color="#ffffff"
+              style={{ marginRight: 6 }}
+            />
             <Text style={styles.emptyActionBtnText}>Post a Listing</Text>
           </TouchableOpacity>
         )}
@@ -330,7 +345,7 @@ export function MarketplaceSection({
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search textbooks, tech, essentials..."
+              placeholder="Search essentials..."
               placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
               value={searchInput}
               onChangeText={handleSearchChange}
@@ -361,7 +376,10 @@ export function MarketplaceSection({
           </View>
 
           <TouchableOpacity
-            style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
+            style={[
+              styles.filterBtn,
+              activeFilterCount > 0 && styles.filterBtnActive,
+            ]}
             onPress={() => setIsFilterModalOpen(true)}
             activeOpacity={0.8}
             accessible
@@ -371,7 +389,9 @@ export function MarketplaceSection({
             <Feather
               name="sliders"
               size={18}
-              color={activeFilterCount > 0 ? "#ffffff" : CAMPUS_HUB_COLORS.deepNavy}
+              color={
+                activeFilterCount > 0 ? "#ffffff" : CAMPUS_HUB_COLORS.deepNavy
+              }
             />
             {activeFilterCount > 0 && (
               <View style={styles.filterBadge}>
@@ -399,12 +419,16 @@ export function MarketplaceSection({
             {categoryFilter !== "ALL" && (
               <FilterChip
                 label={
-                  categoryFilter.charAt(0) + categoryFilter.slice(1).toLowerCase()
+                  categoryFilter.charAt(0) +
+                  categoryFilter.slice(1).toLowerCase()
                 }
                 onRemove={() => setCategoryFilter("ALL")}
               />
             )}
-            <TouchableOpacity onPress={handleResetFilters} style={styles.clearAllBtn}>
+            <TouchableOpacity
+              onPress={handleResetFilters}
+              style={styles.clearAllBtn}
+            >
               <Text style={styles.clearAllText}>Clear all</Text>
             </TouchableOpacity>
           </View>
@@ -429,7 +453,7 @@ export function MarketplaceSection({
       categoryFilter,
       totalCount,
       posts,
-    ]
+    ],
   );
 
   // --- Error state ---
@@ -437,18 +461,28 @@ export function MarketplaceSection({
     return (
       <View style={styles.centerState}>
         <View style={styles.errorIconWrap}>
-          <Feather name="alert-circle" size={32} color={CAMPUS_HUB_COLORS.dangerText} />
+          <Feather
+            name="alert-circle"
+            size={32}
+            color={CAMPUS_HUB_COLORS.dangerText}
+          />
         </View>
         <Text style={styles.stateTitle}>Could not load listings</Text>
         <Text style={styles.stateSubtitle}>
-          There was an issue fetching marketplace items. Please check your connection.
+          There was an issue fetching marketplace items. Please check your
+          connection.
         </Text>
         <TouchableOpacity
           style={styles.retryBtn}
           onPress={() => refetch()}
           activeOpacity={0.8}
         >
-          <Feather name="refresh-cw" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+          <Feather
+            name="refresh-cw"
+            size={14}
+            color="#ffffff"
+            style={{ marginRight: 6 }}
+          />
           <Text style={styles.retryBtnText}>Try Again</Text>
         </TouchableOpacity>
       </View>
