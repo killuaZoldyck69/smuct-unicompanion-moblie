@@ -50,6 +50,7 @@ interface Props {
   onClose: () => void;
   canManage: boolean;
   isTeacher?: boolean;
+  isAdmin?: boolean;
   onEditHub: () => void;
   onArchiveHub: () => void;
   onDeleteHub: () => void;
@@ -62,6 +63,7 @@ export default function HubOptionsModal({
   onClose,
   canManage,
   isTeacher,
+  isAdmin = false,
   onEditHub,
   onArchiveHub,
   onDeleteHub,
@@ -71,7 +73,7 @@ export default function HubOptionsModal({
   const insets = useSafeAreaInsets();
 
   // Show delete option only to lead teachers (or managers if isTeacher isn't explicitly passed)
-  const canDelete = isTeacher !== undefined ? isTeacher : canManage;
+  const canDelete = !isAdmin && (isTeacher !== undefined ? isTeacher : canManage);
 
   const handleArchive = () => {
     const title = "Archive Course Hub?";
@@ -221,6 +223,44 @@ export default function HubOptionsModal({
                   <Text style={styles.tileTitle}>See All Members</Text>
                 </TouchableOpacity>
 
+                {/* Admin Audit Mode Banner */}
+                {isAdmin && (
+                  <View
+                    style={[
+                      styles.bentoTile,
+                      { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.iconBox,
+                        { backgroundColor: "#dcfce7" },
+                      ]}
+                    >
+                      <Feather name="shield" size={17} color="#16a34a" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.tileTitle,
+                          { color: "#166534", fontWeight: "700" },
+                        ]}
+                      >
+                        Admin Audit Access
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: "#15803d",
+                          marginTop: 2,
+                        }}
+                      >
+                        Global read-only observation mode.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
                 {/* 2. Edit Hub Info */}
                 {canManage && (
                   <TouchableOpacity
@@ -276,6 +316,7 @@ export default function HubOptionsModal({
             </View>
 
             {/* Section 2: Danger Zone Bento Tiles */}
+            {!isAdmin && (
             <View style={styles.sectionBlock}>
               <Text style={[styles.sectionLabel, styles.dangerSectionLabel]}>
                 DANGER ZONE
@@ -337,6 +378,7 @@ export default function HubOptionsModal({
                 )}
               </View>
             </View>
+            )}
 
             {/* Close Button */}
             <TouchableOpacity

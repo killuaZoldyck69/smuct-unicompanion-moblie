@@ -14,14 +14,16 @@ interface MaterialsHeaderActionProps {
   canManage: boolean;
   activeTab: MaterialSectionTab;
   onUploadPress: () => void;
+  readOnly?: boolean;
 }
 
 export const MaterialsHeaderAction: React.FC<MaterialsHeaderActionProps> = React.memo(
-  ({ canManage, activeTab, onUploadPress }) => {
-    // Only Teachers and CRs (canManage) can upload Course Materials.
-    // Student Resources can be uploaded by all students & teachers.
+  ({ canManage, activeTab, onUploadPress, readOnly = false }) => {
+    // If readOnly (e.g. Administrator), cannot upload to either tab
+    // Otherwise: only Teachers and CRs (canManage) can upload Course Materials,
+    // and Student Resources can be uploaded by students & teachers.
     const isOfficialTab = activeTab === "OFFICIAL";
-    const canUpload = isOfficialTab ? canManage : true;
+    const canUpload = readOnly ? false : isOfficialTab ? canManage : true;
 
     const sectionTitle = isOfficialTab
       ? "Course Materials"
@@ -57,7 +59,7 @@ export const MaterialsHeaderAction: React.FC<MaterialsHeaderActionProps> = React
           >
             <Feather name="plus" size={18} color="#0f172a" />
           </TouchableOpacity>
-        ) : (
+        ) : !readOnly ? (
           <TouchableOpacity
             style={styles.lockBadge}
             onPress={handleLockNotice}
@@ -68,7 +70,7 @@ export const MaterialsHeaderAction: React.FC<MaterialsHeaderActionProps> = React
           >
             <Feather name="lock" size={13} color="#94a3b8" />
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
     );
   }

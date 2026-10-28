@@ -28,6 +28,7 @@ interface HubHeaderProps {
   hubDetails: any;
   canManage?: boolean;
   canEditClassLink?: boolean;
+  isAdmin?: boolean;
   onOptionsPress: () => void;
   onLiveClassPress?: () => void;
   onEditClassLink?: () => void;
@@ -48,6 +49,7 @@ export default function HubHeader({
   hubDetails,
   canManage,
   canEditClassLink,
+  isAdmin = false,
   onOptionsPress,
   onLiveClassPress,
   onEditClassLink,
@@ -218,6 +220,30 @@ export default function HubHeader({
             <Text style={styles.pillText}>Sec {cleanSection}</Text>
           </View>
         ) : null}
+
+        {isAdmin && (
+          <View
+            style={[
+              styles.pill,
+              { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
+            ]}
+          >
+            <Feather
+              name="shield"
+              size={11}
+              color="#2563eb"
+              style={styles.pillIcon}
+            />
+            <Text
+              style={[
+                styles.pillText,
+                { color: "#2563eb", fontWeight: "700" },
+              ]}
+            >
+              Admin Read-Only
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* 3. Inline Metadata Row: [Department] • [Batch] • [Course Credit] */}

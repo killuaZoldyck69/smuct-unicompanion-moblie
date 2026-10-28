@@ -14,14 +14,14 @@ interface MaterialsEmptyStateProps {
   canManage: boolean;
   onUploadPress: () => void;
   onSwitchToStudentNotes?: () => void;
+  readOnly?: boolean;
 }
 
 export const MaterialsEmptyState: React.FC<MaterialsEmptyStateProps> = React.memo(
-  ({ activeTab, canManage, onUploadPress, onSwitchToStudentNotes }) => {
+  ({ activeTab, canManage, onUploadPress, onSwitchToStudentNotes, readOnly = false }) => {
     const isOfficial = activeTab === "OFFICIAL";
-    // Only Teacher & CR (canManage) can upload Course Materials.
-    // Student Resources can be uploaded by all.
-    const canUpload = isOfficial ? canManage : true;
+    // If readOnly (e.g. Administrator), cannot upload
+    const canUpload = readOnly ? false : isOfficial ? canManage : true;
 
     return (
       <View style={styles.container}>

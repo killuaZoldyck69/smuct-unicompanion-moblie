@@ -26,12 +26,14 @@ interface MaterialsTabProps {
   hubId: string;
   canManage: boolean;
   currentUserId?: string;
+  readOnly?: boolean;
 }
 
 export default function MaterialsTab({
   hubId,
   canManage,
   currentUserId,
+  readOnly = false,
 }: MaterialsTabProps) {
   const queryClient = useQueryClient();
 
@@ -147,6 +149,7 @@ export default function MaterialsTab({
               canManage={canManage}
               activeTab={activeSection}
               onUploadPress={() => setIsUploadModalVisible(true)}
+              readOnly={readOnly}
             />
           }
           ListEmptyComponent={
@@ -154,6 +157,7 @@ export default function MaterialsTab({
               activeTab={activeSection}
               canManage={canManage}
               onUploadPress={() => setIsUploadModalVisible(true)}
+              readOnly={readOnly}
               onSwitchToStudentNotes={() => {
                 setActiveSection("STUDENT_NOTES");
                 setIsUploadModalVisible(true);

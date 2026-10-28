@@ -165,7 +165,7 @@ export const StatsGrid = React.memo(function StatsGrid({
           borderColor="#FEF3C7"
           iconBg="#FEF3C7"
           isLoading={isLoading}
-          onPress={() => router.push("/(tabs)/hubs")}
+          onPress={() => router.push("/(tabs)/admin_course_hubs")}
         />
       </View>
     </View>

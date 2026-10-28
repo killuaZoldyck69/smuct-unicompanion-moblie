@@ -34,17 +34,6 @@ export const CourseHubsHeader = React.memo(function CourseHubsHeader({
         </View>
 
         <View style={styles.actionButtonsGroup}>
-          {/* <TouchableOpacity
-            style={styles.iconButton}
-            onPress={onOpenNotifications}
-            activeOpacity={0.7}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="View university notices and notifications"
-          >
-            <Feather name="bell" size={19} color={BENTO_COLORS.deepNavy} />
-          </TouchableOpacity> */}
-
           <TouchableOpacity
             style={styles.iconButton}
             onPress={onOpenSettings}
@@ -136,5 +125,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
+  },
+  adminBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+  },
+  adminBadgeText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#2563eb",
+    letterSpacing: 0.4,
   },
 });

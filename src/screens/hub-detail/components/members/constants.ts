@@ -61,6 +61,13 @@ export const ROLE_CONFIG: Record<
     color: BENTO.navy,
     bg: "#f1f5f9",
   },
+  TA: {
+    title: "Teaching Assistant",
+    badgeLabel: "TA",
+    icon: "shield",
+    color: BENTO.purpleText,
+    bg: BENTO.purpleSoft,
+  },
 };
 
 export function formatSemester(sem?: number | string | null): string {

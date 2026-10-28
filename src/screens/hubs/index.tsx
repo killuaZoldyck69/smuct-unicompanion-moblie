@@ -106,9 +106,12 @@ export function Hubs() {
 
   const { data: myHubs, isLoading: isLoadingHubs, isRefetching } = useMyHubs();
 
+  const isAdmin = user?.role === "ADMIN" || currentUser?.role === "ADMIN";
+
   const canCreateHub =
-    currentUser?.role === "TEACHER" ||
-    (currentUser?.studentProfile as any)?.isCR === true;
+    !isAdmin &&
+    (currentUser?.role === "TEACHER" ||
+      (currentUser?.studentProfile as any)?.isCR === true);
 
   const isLoadingScreen =
     isSessionPending || isLoadingHubs || isLoadingStudent || isLoadingTeacher;
@@ -166,6 +169,12 @@ export function Hubs() {
     });
   };
 
+  useEffect(() => {
+    if (user?.role === "ADMIN") {
+      router.replace("/(tabs)/admin_course_hubs");
+    }
+  }, [user?.role, router]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar
@@ -201,48 +210,54 @@ export function Hubs() {
               color={BENTO_COLORS.primary}
             />
           </View>
-          <Text style={styles.emptyTitle}>No active courses yet</Text>
+          <Text style={styles.emptyTitle}>
+            {isAdmin ? "No course hubs found" : "No active courses yet"}
+          </Text>
           <Text style={styles.emptySubtitle}>
-            Your enrolled courses and academic hubs will appear here.
+            {isAdmin
+              ? "There are currently no course hubs created in the university system."
+              : "Your enrolled courses and academic hubs will appear here."}
           </Text>
 
-          <View style={styles.emptyActionsRow}>
-            <TouchableOpacity
-              style={styles.primaryActionButton}
-              onPress={() => setIsJoinModalVisible(true)}
-              activeOpacity={0.8}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Join a course using join code"
-            >
-              <Feather
-                name="plus-circle"
-                size={16}
-                color="#ffffff"
-                style={{ marginRight: 6 }}
-              />
-              <Text style={styles.primaryActionText}>Join with Code</Text>
-            </TouchableOpacity>
-
-            {canCreateHub && (
+          {!isAdmin && (
+            <View style={styles.emptyActionsRow}>
               <TouchableOpacity
-                style={styles.secondaryActionButton}
-                onPress={() => setIsCreateModalVisible(true)}
+                style={styles.primaryActionButton}
+                onPress={() => setIsJoinModalVisible(true)}
                 activeOpacity={0.8}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Create a new course hub"
+                accessibilityLabel="Join a course using join code"
               >
                 <Feather
-                  name="edit-3"
+                  name="plus-circle"
                   size={16}
-                  color={BENTO_COLORS.deepNavy}
+                  color="#ffffff"
                   style={{ marginRight: 6 }}
                 />
-                <Text style={styles.secondaryActionText}>Create Hub</Text>
+                <Text style={styles.primaryActionText}>Join with Code</Text>
               </TouchableOpacity>
-            )}
-          </View>
+
+              {canCreateHub && (
+                <TouchableOpacity
+                  style={styles.secondaryActionButton}
+                  onPress={() => setIsCreateModalVisible(true)}
+                  activeOpacity={0.8}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create a new course hub"
+                >
+                  <Feather
+                    name="edit-3"
+                    size={16}
+                    color={BENTO_COLORS.deepNavy}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.secondaryActionText}>Create Hub</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
       ) : displayedHubs.length === 0 ? (
         // Empty tab state (e.g. 0 archived courses)
@@ -260,12 +275,16 @@ export function Hubs() {
               : "No Archived Classes"}
           </Text>
           <Text style={styles.emptySubtitle}>
-            {activeTab === "ACTIVE"
+            {isAdmin
+              ? activeTab === "ACTIVE"
+                ? "No active courses found across the university."
+                : "No past course hubs have been archived."
+              : activeTab === "ACTIVE"
               ? "Your enrolled courses will appear here."
               : "You don't have any past classes archived."}
           </Text>
 
-          {activeTab === "ACTIVE" && (
+          {activeTab === "ACTIVE" && !isAdmin && (
             <TouchableOpacity
               style={styles.primaryActionButton}
               onPress={() => setIsJoinModalVisible(true)}

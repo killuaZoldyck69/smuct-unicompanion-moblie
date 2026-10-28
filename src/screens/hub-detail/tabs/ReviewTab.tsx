@@ -27,6 +27,8 @@ import {
 export default function ReviewTab({
   hubId,
   isTeacher = false,
+  canSubmit = true,
+  canManage = false,
 }: ReviewTabProps) {
   const insets = useSafeAreaInsets();
   const {
@@ -111,7 +113,7 @@ export default function ReviewTab({
             />
 
             {/* 2. STUDENT ACTIONS & PINNED "YOUR REVIEW" CARD */}
-            {!isTeacher && (
+            {!isTeacher && canSubmit && (
               <View style={styles.studentSection}>
                 {hasSubmitted || myReview ? (
                   myReview ? (

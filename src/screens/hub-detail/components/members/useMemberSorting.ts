@@ -12,7 +12,7 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
     members.forEach((m) => {
       if (m.role === "TEACHER") {
         teachers.push(m);
-      } else if (m.role === "CR") {
+      } else if (m.role === "CR" || m.role === "TA") {
         leadership.push(m);
       } else {
         students.push(m);

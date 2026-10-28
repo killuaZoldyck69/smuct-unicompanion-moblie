@@ -51,8 +51,8 @@ export function ManageMemberModal({
 
   const availableRoles: HubRole[] =
     myRole === "TEACHER"
-      ? ["STUDENT", "CR", "TEACHER"]
-      : ["STUDENT", "CR"];
+      ? ["STUDENT", "CR", "TA", "TEACHER"]
+      : ["STUDENT", "CR", "TA"];
 
   const modalTitle = isSelf
     ? "My Profile & Membership"

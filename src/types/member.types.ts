@@ -1,4 +1,4 @@
-export type HubRole = "TEACHER" | "CR" | "STUDENT";
+export type HubRole = "TEACHER" | "CR" | "STUDENT" | "TA";
 
 export interface StudentProfileData {
   studentId?: string | null;

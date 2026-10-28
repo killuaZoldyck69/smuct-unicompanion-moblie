@@ -180,6 +180,8 @@ export function HubDetail({ hubId }: HubDetailProps) {
   };
 
   const { user: currentUser, role: userGlobalRole } = useCurrentUser();
+  const isAdmin =
+    userGlobalRole === "ADMIN" || (currentUser as any)?.role === "ADMIN";
 
   // User membership & role resolution
   const myHubMembership = myHubs?.find(
@@ -191,20 +193,26 @@ export function HubDetail({ hubId }: HubDetailProps) {
     (m: any) => m.userId === myUserId || m.user?.id === myUserId
   );
 
-  const myRole = memberFromDetails?.role || myHubMembership?.role || (userGlobalRole === "TEACHER" ? "TEACHER" : "STUDENT");
+  const myRole = isAdmin
+    ? "ADMIN"
+    : memberFromDetails?.role ||
+      myHubMembership?.role ||
+      (userGlobalRole === "TEACHER" ? "TEACHER" : "STUDENT");
 
   const isTeacher =
-    userGlobalRole === "TEACHER" ||
-    myRole === "TEACHER" ||
-    hubDetails?.teacherId === myUserId;
+    !isAdmin &&
+    (userGlobalRole === "TEACHER" ||
+      myRole === "TEACHER" ||
+      hubDetails?.teacherId === myUserId);
 
   const isCR =
-    myRole === "CR" ||
-    (currentUser?.studentProfile as any)?.isCR === true;
+    !isAdmin &&
+    (myRole === "CR" ||
+      (currentUser?.studentProfile as any)?.isCR === true);
 
-  const canPostAnnouncement = isTeacher || isCR;
-  const canEditClassLink = isTeacher || isCR;
-  const canManage = canPostAnnouncement;
+  const canPostAnnouncement = !isAdmin && (isTeacher || isCR);
+  const canEditClassLink = !isAdmin && (isTeacher || isCR);
+  const canManage = !isAdmin && canPostAnnouncement;
 
   const handleBack = useCallback(() => {
     router.replace("/(tabs)/hubs");
@@ -346,6 +354,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
           hubDetails={hubDetails}
           canManage={canManage}
           canEditClassLink={canEditClassLink}
+          isAdmin={isAdmin}
           onOptionsPress={() => setIsHubOptionsVisible(true)}
           onLiveClassPress={() => setIsEditClassLinkModalVisible(true)}
           onEditClassLink={() => setIsEditClassLinkModalVisible(true)}
@@ -408,7 +417,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
             hubId={hubId}
             hubDetails={hubDetails}
             canManage={canManage}
-            canSubmit={!isTeacher}
+            canSubmit={!isTeacher && !isAdmin}
             isTeacher={isTeacher}
             currentUserId={myUserId}
           />
@@ -419,6 +428,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
             hubId={hubId}
             canManage={canManage}
             currentUserId={myUserId}
+            readOnly={isAdmin}
           />
         )}
 
@@ -426,8 +436,8 @@ export function HubDetail({ hubId }: HubDetailProps) {
           <ReviewTab
             hubId={hubId}
             isTeacher={isTeacher}
-            canManage={isTeacher}
-            canSubmit={!isTeacher}
+            canManage={!isAdmin && isTeacher}
+            canSubmit={!isTeacher && !isAdmin}
             currentUserId={myUserId}
           />
         )}
@@ -467,6 +477,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
         isVisible={isHubOptionsVisible}
         onClose={() => setIsHubOptionsVisible(false)}
         canManage={canManage}
+        isAdmin={isAdmin}
         isTeacher={myRole === "TEACHER"}
         onViewMembers={() => {
           setIsHubOptionsVisible(false);
