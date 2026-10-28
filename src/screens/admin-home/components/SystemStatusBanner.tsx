@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { SystemHealth } from "../hooks/use-admin-dashboard";
@@ -13,6 +14,7 @@ export const SystemStatusBanner = React.memo(function SystemStatusBanner({
   health,
   isFetching,
 }: SystemStatusBannerProps) {
+  const router = useRouter();
   const isOnline = health.isOnline;
   const isChecking = health.status === "checking";
 
@@ -34,7 +36,14 @@ export const SystemStatusBanner = React.memo(function SystemStatusBanner({
   const latency = health.latencyMs > 0 ? health.latencyMs : 6;
 
   return (
-    <View style={[styles.banner, { backgroundColor: bg, borderColor }]}>
+    <TouchableOpacity
+      style={[styles.banner, { backgroundColor: bg, borderColor }]}
+      onPress={() => router.push("/(tabs)/admin_system_monitor")}
+      activeOpacity={0.8}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel="View full system monitor and diagnostics"
+    >
       <View style={styles.leftGroup}>
         <View style={[styles.dot, { backgroundColor: dotColor }]} />
         <Text style={[styles.statusText, { color: textColor }]} numberOfLines={1}>
@@ -68,7 +77,7 @@ export const SystemStatusBanner = React.memo(function SystemStatusBanner({
       {isFetching && !isOnline && (
         <View style={styles.pingDot} />
       )}
-    </View>
+    </TouchableOpacity>
   );
 });
 

@@ -163,7 +163,7 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
       {/* Wide Row 2: System Monitor */}
       <TouchableOpacity
         style={styles.wideCard}
-        onPress={() => router.push("/admin/system-monitor")}
+        onPress={() => router.push("/(tabs)/admin_system_monitor")}
         activeOpacity={0.75}
         accessible={true}
         accessibilityRole="button"
