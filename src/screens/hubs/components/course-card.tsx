@@ -8,7 +8,7 @@ import {
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-import { fontFamily, getOrdinalSuffix } from "../constants";
+import { fontFamily, getOrdinalSuffix, splitOrdinal } from "../constants";
 import { resolveCourseTheme } from "../theme/course-theme-resolver";
 import { CourseDecorativeBackdrop } from "./course-decorative-backdrop";
 import { InstructorBlock } from "./instructor-block";
@@ -100,6 +100,7 @@ export const CourseCard = React.memo(function CourseCard({
   }, [upcomingAssessment]);
 
   const semesterVal = hub.semesterNumber || hub.semester;
+  const semesterOrdinal = splitOrdinal(semesterVal);
 
   // Bento Pill Colors aligned with the screenshot
   const isBlueCard = theme.colorIndex === 1;
@@ -199,14 +200,34 @@ export const CourseCard = React.memo(function CourseCard({
               size={13}
               color={semesterBadgeColor}
             />
-            <Text
-              style={[
-                styles.badgeText,
-                { color: semesterBadgeColor },
-              ]}
-            >
-              {getOrdinalSuffix(semesterVal)} Sem
-            </Text>
+            <View style={styles.semInlineWrapper}>
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: semesterBadgeColor },
+                ]}
+              >
+                {semesterOrdinal.number}
+              </Text>
+              {semesterOrdinal.suffix ? (
+                <Text
+                  style={[
+                    styles.semSuperscript,
+                    { color: semesterBadgeColor },
+                  ]}
+                >
+                  {semesterOrdinal.suffix}
+                </Text>
+              ) : null}
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: semesterBadgeColor },
+                ]}
+              >
+                {" Sem"}
+              </Text>
+            </View>
           </View>
         ) : null}
 
@@ -343,6 +364,19 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
+  },
+  semInlineWrapper: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  semSuperscript: {
+    fontFamily,
+    fontSize: 8.5,
+    fontWeight: "800",
+    lineHeight: 11,
+    marginTop: -2,
+    marginLeft: 0.5,
+    marginRight: 1,
   },
 
   // Footer Row

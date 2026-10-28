@@ -85,3 +85,28 @@ export const getOrdinalSuffix = (num: number | string): string => {
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
+
+/**
+ * Helper to split a number or ordinal string into number and suffix for superscript styling
+ * e.g. 1 -> { number: "1", suffix: "st" }
+ * e.g. 2 -> { number: "2", suffix: "nd" }
+ * e.g. "3rd" -> { number: "3", suffix: "rd" }
+ * e.g. 4 -> { number: "4", suffix: "th" }
+ */
+export const splitOrdinal = (
+  val?: number | string | null
+): { number: string; suffix: string } => {
+  if (val === undefined || val === null || val === "") {
+    return { number: "", suffix: "" };
+  }
+  const str = String(val).replace(/^(?:batch|sem|semester)\s*/i, "").trim();
+  const match = str.match(/^(\d+)(?:st|nd|rd|th)?/i);
+  if (match) {
+    const n = parseInt(match[1], 10);
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    const suffix = s[(v - 20) % 10] || s[v] || s[0];
+    return { number: String(n), suffix };
+  }
+  return { number: str, suffix: "" };
+};

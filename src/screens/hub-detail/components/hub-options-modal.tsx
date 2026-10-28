@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   Modal,
   Platform,
-  Alert,
   ScrollView,
   StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import HubConfirmView, { HubConfirmAction } from "./hub-confirm-view";
 
 const BENTO = {
   canvas: "#f8fafc",
@@ -51,10 +51,13 @@ interface Props {
   canManage: boolean;
   isTeacher?: boolean;
   isAdmin?: boolean;
+  isArchived?: boolean;
+  hubDetails?: any;
+  isPending?: boolean;
   onEditHub: () => void;
-  onArchiveHub: () => void;
-  onDeleteHub: () => void;
-  onLeaveHub: () => void;
+  onArchiveHub: () => void | Promise<void>;
+  onDeleteHub: () => void | Promise<void>;
+  onLeaveHub: () => void | Promise<void>;
   onViewMembers: () => void;
 }
 
@@ -64,6 +67,9 @@ export default function HubOptionsModal({
   canManage,
   isTeacher,
   isAdmin = false,
+  isArchived = false,
+  hubDetails,
+  isPending = false,
   onEditHub,
   onArchiveHub,
   onDeleteHub,
@@ -71,70 +77,42 @@ export default function HubOptionsModal({
   onViewMembers,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const [confirmAction, setConfirmAction] = useState<HubConfirmAction | null>(null);
 
-  // Show delete option only to lead teachers (or managers if isTeacher isn't explicitly passed)
-  const canDelete = !isAdmin && (isTeacher !== undefined ? isTeacher : canManage);
+  // Reset internal confirm state whenever modal opens or closes
+  useEffect(() => {
+    if (!isVisible) {
+      setConfirmAction(null);
+    }
+  }, [isVisible]);
+
+  // Allow archive and delete for managers and admins
+  const canArchive = isAdmin || canManage;
+  const canDelete = isAdmin || (isTeacher !== undefined ? isTeacher : canManage);
 
   const handleArchive = () => {
-    const title = "Archive Course Hub?";
-    const message =
-      "Archiving will lock new announcements and coursework submissions. The hub will remain read-only for future reference.";
-
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.confirm) {
-        if (window.confirm(`${title}\n\n${message}`)) {
-          onArchiveHub();
-        }
-      } else {
-        onArchiveHub();
-      }
-    } else {
-      Alert.alert(title, message, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Archive Hub", style: "default", onPress: onArchiveHub },
-      ]);
-    }
+    setConfirmAction(isArchived ? "unarchive" : "archive");
   };
 
   const handleDelete = () => {
-    const title = "Delete Course Hub?";
-    const message =
-      "This will permanently erase this hub, including all discussions, announcements, and coursework submissions. This action cannot be undone.";
-
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.confirm) {
-        if (window.confirm(`${title}\n\n${message}`)) {
-          onDeleteHub();
-        }
-      } else {
-        onDeleteHub();
-      }
-    } else {
-      Alert.alert(title, message, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete Hub", style: "destructive", onPress: onDeleteHub },
-      ]);
-    }
+    setConfirmAction("delete");
   };
 
   const handleLeave = () => {
-    const title = "Leave Course Hub?";
-    const message =
-      "Are you sure you want to leave this hub? You will need the course invite code to rejoin.";
+    setConfirmAction("leave");
+  };
 
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.confirm) {
-        if (window.confirm(`${title}\n\n${message}`)) {
-          onLeaveHub();
-        }
-      } else {
-        onLeaveHub();
+  const handleConfirmExecution = async () => {
+    try {
+      if (confirmAction === "archive" || confirmAction === "unarchive") {
+        await onArchiveHub();
+      } else if (confirmAction === "delete") {
+        await onDeleteHub();
+      } else if (confirmAction === "leave") {
+        await onLeaveHub();
       }
-    } else {
-      Alert.alert(title, message, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Leave Hub", style: "destructive", onPress: onLeaveHub },
-      ]);
+    } finally {
+      setConfirmAction(null);
     }
   };
 
@@ -143,7 +121,13 @@ export default function HubOptionsModal({
       visible={isVisible}
       animationType="fade"
       transparent={true}
-      onRequestClose={onClose}
+      onRequestClose={() => {
+        if (confirmAction) {
+          setConfirmAction(null);
+        } else {
+          onClose();
+        }
+      }}
       statusBarTranslucent={true}
     >
       <StatusBar
@@ -167,231 +151,306 @@ export default function HubOptionsModal({
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
-          onPress={onClose}
+          onPress={() => {
+            if (isPending) return;
+            if (confirmAction) {
+              setConfirmAction(null);
+            } else {
+              onClose();
+            }
+          }}
           accessible={false}
         />
 
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.modalHeader}>
+            {confirmAction && (
+              <TouchableOpacity
+                onPress={() => setConfirmAction(null)}
+                style={styles.backBtn}
+                disabled={isPending}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Back to Options"
+              >
+                <Feather name="arrow-left" size={17} color={BENTO.navy} />
+              </TouchableOpacity>
+            )}
+
             <View style={styles.headerLeftGroup}>
-              <View style={styles.pillTag}>
-                <Text style={styles.pillTagText}>COURSE HUB</Text>
+              <View
+                style={[
+                  styles.pillTag,
+                  confirmAction && {
+                    backgroundColor:
+                      confirmAction === "delete"
+                        ? "#fee2e2"
+                        : confirmAction === "unarchive"
+                        ? "#dcfce7"
+                        : "#fef3c7",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.pillTagText,
+                    confirmAction && {
+                      color:
+                        confirmAction === "delete"
+                          ? "#991b1b"
+                          : confirmAction === "unarchive"
+                          ? "#166534"
+                          : "#92400e",
+                    },
+                  ]}
+                >
+                  {confirmAction ? "CONFIRM ACTION" : "COURSE HUB"}
+                </Text>
               </View>
-              <Text style={styles.headerTitle}>Hub Options</Text>
+              <Text style={styles.headerTitle}>
+                {confirmAction === "delete"
+                  ? "Delete Hub"
+                  : confirmAction === "leave"
+                  ? "Leave Hub"
+                  : confirmAction === "unarchive"
+                  ? "Restore Hub"
+                  : confirmAction === "archive"
+                  ? "Archive Hub"
+                  : "Hub Options"}
+              </Text>
             </View>
 
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              disabled={isPending}
               activeOpacity={0.7}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Close Hub Options"
+              accessibilityLabel="Close"
             >
               <Feather name="x" size={16} color={BENTO.slateMuted} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.scrollBody}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            {/* Section 1: Actions & Navigation Bento Tiles */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.sectionLabel}>ACTIONS & NAVIGATION</Text>
+          {/* Body Content */}
+          {confirmAction ? (
+            <HubConfirmView
+              action={confirmAction}
+              hubDetails={hubDetails}
+              isPending={isPending}
+              onCancel={() => setConfirmAction(null)}
+              onConfirm={handleConfirmExecution}
+            />
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.scrollBody}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              {/* Section 1: Actions & Navigation Bento Tiles */}
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionLabel}>ACTIONS & NAVIGATION</Text>
 
-              <View style={styles.bentoStack}>
-                {/* 1. See Members */}
-                <TouchableOpacity
-                  style={styles.bentoTile}
-                  onPress={onViewMembers}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="See All Members"
-                >
-                  <View
-                    style={[
-                      styles.iconBox,
-                      { backgroundColor: BENTO.blueSoft },
-                    ]}
-                  >
-                    <Feather name="users" size={17} color={BENTO.blueIcon} />
-                  </View>
-                  <Text style={styles.tileTitle}>See All Members</Text>
-                </TouchableOpacity>
-
-                {/* Admin Audit Mode Banner */}
-                {isAdmin && (
-                  <View
-                    style={[
-                      styles.bentoTile,
-                      { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
-                    ]}
+                <View style={styles.bentoStack}>
+                  {/* 1. See Members */}
+                  <TouchableOpacity
+                    style={styles.bentoTile}
+                    onPress={onViewMembers}
+                    activeOpacity={0.7}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="See All Members"
                   >
                     <View
                       style={[
                         styles.iconBox,
-                        { backgroundColor: "#dcfce7" },
+                        { backgroundColor: BENTO.blueSoft },
                       ]}
                     >
-                      <Feather name="shield" size={17} color="#16a34a" />
+                      <Feather name="users" size={17} color={BENTO.blueIcon} />
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text
+                    <Text style={styles.tileTitle}>See All Members</Text>
+                  </TouchableOpacity>
+
+                  {/* Admin Audit Mode Banner */}
+                  {isAdmin && (
+                    <View
+                      style={[
+                        styles.bentoTile,
+                        { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
+                      ]}
+                    >
+                      <View
                         style={[
-                          styles.tileTitle,
-                          { color: "#166534", fontWeight: "700" },
+                          styles.iconBox,
+                          { backgroundColor: "#dcfce7" },
                         ]}
                       >
-                        Admin Audit Access
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: "#15803d",
-                          marginTop: 2,
-                        }}
+                        <Feather name="shield" size={17} color="#16a34a" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[
+                            styles.tileTitle,
+                            { color: "#166534", fontWeight: "700" },
+                          ]}
+                        >
+                          Admin Audit Access
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            color: "#15803d",
+                            marginTop: 2,
+                          }}
+                        >
+                          Global read-only observation mode.
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* 2. Edit Hub Info */}
+                  {canManage && (
+                    <TouchableOpacity
+                      style={styles.bentoTile}
+                      onPress={onEditHub}
+                      activeOpacity={0.7}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Update Course Hub Info"
+                    >
+                      <View
+                        style={[
+                          styles.iconBox,
+                          { backgroundColor: BENTO.purpleSoft },
+                        ]}
                       >
-                        Global read-only observation mode.
+                        <Feather
+                          name="edit-3"
+                          size={17}
+                          color={BENTO.purpleIcon}
+                        />
+                      </View>
+                      <Text style={styles.tileTitle}>Update Course Hub Info</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* 3. Archive Hub (Managers & Admins) */}
+                  {canArchive && (
+                    <TouchableOpacity
+                      style={styles.bentoTile}
+                      onPress={handleArchive}
+                      activeOpacity={0.7}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        isArchived ? "Unarchive Course Hub" : "Archive Course Hub"
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.iconBox,
+                          { backgroundColor: BENTO.amberSoft },
+                        ]}
+                      >
+                        <Feather
+                          name={isArchived ? "rotate-ccw" : "archive"}
+                          size={17}
+                          color={BENTO.amberIcon}
+                        />
+                      </View>
+                      <Text style={styles.tileTitle}>
+                        {isArchived ? "Unarchive Course Hub" : "Archive Course Hub"}
                       </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* 2. Edit Hub Info */}
-                {canManage && (
-                  <TouchableOpacity
-                    style={styles.bentoTile}
-                    onPress={onEditHub}
-                    activeOpacity={0.7}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Update Course Hub Info"
-                  >
-                    <View
-                      style={[
-                        styles.iconBox,
-                        { backgroundColor: BENTO.purpleSoft },
-                      ]}
-                    >
-                      <Feather
-                        name="edit-3"
-                        size={17}
-                        color={BENTO.purpleIcon}
-                      />
-                    </View>
-                    <Text style={styles.tileTitle}>Update Course Hub Info</Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* 3. Archive Hub */}
-                {canManage && (
-                  <TouchableOpacity
-                    style={styles.bentoTile}
-                    onPress={handleArchive}
-                    activeOpacity={0.7}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Archive Course Hub"
-                  >
-                    <View
-                      style={[
-                        styles.iconBox,
-                        { backgroundColor: BENTO.amberSoft },
-                      ]}
-                    >
-                      <Feather
-                        name="archive"
-                        size={17}
-                        color={BENTO.amberIcon}
-                      />
-                    </View>
-                    <Text style={styles.tileTitle}>Archive Course Hub</Text>
-                  </TouchableOpacity>
-                )}
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
 
-            {/* Section 2: Danger Zone Bento Tiles */}
-            {!isAdmin && (
-            <View style={styles.sectionBlock}>
-              <Text style={[styles.sectionLabel, styles.dangerSectionLabel]}>
-                DANGER ZONE
-              </Text>
-
-              <View style={styles.bentoStack}>
-                {/* Leave Hub */}
-                <TouchableOpacity
-                  style={[styles.bentoTile, styles.dangerBentoTile]}
-                  onPress={handleLeave}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Leave Hub"
-                >
-                  <View
-                    style={[
-                      styles.iconBox,
-                      { backgroundColor: BENTO.roseIconBg },
-                    ]}
-                  >
-                    <Feather
-                      name="log-out"
-                      size={17}
-                      color={BENTO.roseText}
-                    />
-                  </View>
-                  <Text style={[styles.tileTitle, styles.dangerTileTitle]}>
-                    Leave Course Hub
+              {/* Section 2: Danger Zone Bento Tiles */}
+              {(!isAdmin || canDelete) && (
+                <View style={styles.sectionBlock}>
+                  <Text style={[styles.sectionLabel, styles.dangerSectionLabel]}>
+                    DANGER ZONE
                   </Text>
-                </TouchableOpacity>
 
-                {/* Delete Hub (Only Lead Teacher / Manager) */}
-                {canDelete && (
-                  <TouchableOpacity
-                    style={[styles.bentoTile, styles.dangerBentoTile]}
-                    onPress={handleDelete}
-                    activeOpacity={0.7}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete Course Hub"
-                  >
-                    <View
-                      style={[
-                        styles.iconBox,
-                        { backgroundColor: BENTO.roseIconBg },
-                      ]}
-                    >
-                      <Feather
-                        name="trash-2"
-                        size={17}
-                        color={BENTO.roseText}
-                      />
-                    </View>
-                    <Text style={[styles.tileTitle, styles.dangerTileTitle]}>
-                      Delete Course Hub
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-            )}
+                  <View style={styles.bentoStack}>
+                    {/* Leave Hub (Only for enrolled students/teachers, not global admin) */}
+                    {!isAdmin && (
+                      <TouchableOpacity
+                        style={[styles.bentoTile, styles.dangerBentoTile]}
+                        onPress={handleLeave}
+                        activeOpacity={0.7}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel="Leave Hub"
+                      >
+                        <View
+                          style={[
+                            styles.iconBox,
+                            { backgroundColor: BENTO.roseIconBg },
+                          ]}
+                        >
+                          <Feather
+                            name="log-out"
+                            size={17}
+                            color={BENTO.roseText}
+                          />
+                        </View>
+                        <Text style={[styles.tileTitle, styles.dangerTileTitle]}>
+                          Leave Course Hub
+                        </Text>
+                      </TouchableOpacity>
+                    )}
 
-            {/* Close Button */}
-            <TouchableOpacity
-              style={styles.closeActionBtn}
-              onPress={onClose}
-              activeOpacity={0.8}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Close options"
-            >
-              <Text style={styles.closeActionBtnText}>Close</Text>
-            </TouchableOpacity>
-          </ScrollView>
+                    {/* Delete Hub (Lead Teacher, Manager & Admin) */}
+                    {canDelete && (
+                      <TouchableOpacity
+                        style={[styles.bentoTile, styles.dangerBentoTile]}
+                        onPress={handleDelete}
+                        activeOpacity={0.7}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel="Delete Course Hub"
+                      >
+                        <View
+                          style={[
+                            styles.iconBox,
+                            { backgroundColor: BENTO.roseIconBg },
+                          ]}
+                        >
+                          <Feather
+                            name="trash-2"
+                            size={17}
+                            color={BENTO.roseText}
+                          />
+                        </View>
+                        <Text style={[styles.tileTitle, styles.dangerTileTitle]}>
+                          Delete Course Hub
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* Close Button */}
+              <TouchableOpacity
+                style={styles.closeActionBtn}
+                onPress={onClose}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Close options"
+              >
+                <Text style={styles.closeActionBtnText}>Close</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          )}
         </View>
       </View>
     </Modal>
@@ -430,6 +489,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: BENTO.borderSubtle,
     backgroundColor: "#ffffff",
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: BENTO.neutralSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
   },
   headerLeftGroup: {
     flex: 1,
@@ -541,4 +609,3 @@ const styles = StyleSheet.create({
     color: BENTO.slate,
   },
 });
-

@@ -114,6 +114,7 @@ export const useCreateHub = () => {
     mutationFn: (data: CreateHubInput) => createHubAPI(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+      queryClient.invalidateQueries({ queryKey: ["adminCourseHubs"] });
     },
   });
 };
@@ -124,6 +125,7 @@ export const useJoinHub = () => {
     mutationFn: (joinCode: string) => joinHubAPI(joinCode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+      queryClient.invalidateQueries({ queryKey: ["adminCourseHubs"] });
     },
   });
 };
@@ -135,6 +137,7 @@ export const useUpdateHub = (hubId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
       queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+      queryClient.invalidateQueries({ queryKey: ["adminCourseHubs"] });
     },
   });
 };
@@ -146,6 +149,7 @@ export const useArchiveHub = (hubId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
       queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+      queryClient.invalidateQueries({ queryKey: ["adminCourseHubs"] });
     },
   });
 };
@@ -156,6 +160,7 @@ export const useDeleteHub = () => {
     mutationFn: (hubId: string) => deleteHubAPI(hubId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+      queryClient.invalidateQueries({ queryKey: ["adminCourseHubs"] });
     },
   });
 };
@@ -168,6 +173,7 @@ export const useUpdateMemberRole = (hubId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
       queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+      queryClient.invalidateQueries({ queryKey: ["adminCourseHubs"] });
     },
   });
 };
@@ -179,6 +185,7 @@ export const useRemoveMember = (hubId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
       queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+      queryClient.invalidateQueries({ queryKey: ["adminCourseHubs"] });
     },
   });
 };
@@ -503,6 +510,7 @@ export const useToggleLiveClass = (hubId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubDetails", hubId] });
       queryClient.invalidateQueries({ queryKey: ["myHubs"] });
+      queryClient.invalidateQueries({ queryKey: ["adminCourseHubs"] });
     },
   });
 };

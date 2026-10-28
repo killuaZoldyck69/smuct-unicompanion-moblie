@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { SMUCT_PROGRAM_DEPARTMENTS } from "@/data/programs";
 
 interface AdminCourseHubsFilterModalProps {
   isVisible: boolean;
@@ -48,6 +49,29 @@ export const AdminCourseHubsFilterModal: React.FC<
   const insets = useSafeAreaInsets();
 
   const isFiltered = status !== "ALL" || (department && department !== "ALL");
+
+  const departmentsList = React.useMemo(() => {
+    const list = [...SMUCT_PROGRAM_DEPARTMENTS];
+    if (availableDepartments && availableDepartments.length > 0) {
+      availableDepartments.forEach((serverDept) => {
+        const trimmed = serverDept.trim();
+        if (!trimmed) return;
+        const exists = list.some(
+          (d) =>
+            d.name.toLowerCase() === trimmed.toLowerCase() ||
+            d.code.toLowerCase() === trimmed.toLowerCase()
+        );
+        if (!exists) {
+          list.push({
+            code: trimmed,
+            name: trimmed,
+            faculty: "Other",
+          });
+        }
+      });
+    }
+    return list;
+  }, [availableDepartments]);
 
   return (
     <Modal
@@ -201,18 +225,21 @@ export const AdminCourseHubsFilterModal: React.FC<
                       </Text>
                     </TouchableOpacity>
 
-                    {availableDepartments.map((dept) => {
+                    {departmentsList.map((dept) => {
                       const isSelected =
-                        department.toUpperCase() === dept.toUpperCase();
+                        department.trim().toLowerCase() ===
+                          dept.name.toLowerCase() ||
+                        department.trim().toUpperCase() ===
+                          dept.code.toUpperCase();
                       return (
                         <TouchableOpacity
-                          key={dept}
+                          key={dept.code}
                           style={[
                             styles.chip,
                             isSelected && styles.chipActive,
                           ]}
                           onPress={() =>
-                            onDepartmentChange(isSelected ? "ALL" : dept)
+                            onDepartmentChange(isSelected ? "ALL" : dept.name)
                           }
                           activeOpacity={0.75}
                         >
@@ -228,7 +255,7 @@ export const AdminCourseHubsFilterModal: React.FC<
                               isSelected && styles.chipTextActive,
                             ]}
                           >
-                            {dept}
+                            {dept.name}
                           </Text>
                         </TouchableOpacity>
                       );

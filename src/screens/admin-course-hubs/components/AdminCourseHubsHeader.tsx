@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { getDepartmentShortName } from "@/data/programs";
 
 interface AdminCourseHubsHeaderProps {
   searchQuery: string;
@@ -158,7 +159,9 @@ export const AdminCourseHubsHeader: React.FC<AdminCourseHubsHeaderProps> = ({
                 color="#2563eb"
                 style={{ marginRight: 3 }}
               />
-              <Text style={styles.activePillText}>{department}</Text>
+              <Text style={styles.activePillText}>
+                {getDepartmentShortName(department) || department}
+              </Text>
               <Feather
                 name="x"
                 size={12}
@@ -191,8 +194,8 @@ const styles = StyleSheet.create({
   },
   glowCircle: {
     position: "absolute",
-    top: -24,
-    right: 16,
+    top: -40,
+    right: -10,
     width: 140,
     height: 140,
     borderRadius: 70,

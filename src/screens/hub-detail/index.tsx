@@ -269,8 +269,12 @@ export function HubDetail({ hubId }: HubDetailProps) {
 
   const handleArchiveHub = async () => {
     try {
-      await archiveHubMutation.mutateAsync(true);
-      Toast.show({ type: "success", text1: "Course Hub Archived" });
+      const nextArchived = !hubDetails?.isArchived;
+      await archiveHubMutation.mutateAsync(nextArchived);
+      Toast.show({
+        type: "success",
+        text1: nextArchived ? "Course Hub Archived" : "Course Hub Restored",
+      });
       setIsHubOptionsVisible(false);
     } catch (err: any) {
       Toast.show({
@@ -285,7 +289,11 @@ export function HubDetail({ hubId }: HubDetailProps) {
     try {
       await deleteHubMutation.mutateAsync(hubId);
       Toast.show({ type: "success", text1: "Course Hub Deleted" });
-      router.replace("/(tabs)/hubs");
+      if (isAdmin) {
+        router.replace("/(tabs)/admin_course_hubs");
+      } else {
+        router.replace("/(tabs)/hubs");
+      }
     } catch (err: any) {
       Toast.show({
         type: "error",
@@ -478,7 +486,14 @@ export function HubDetail({ hubId }: HubDetailProps) {
         onClose={() => setIsHubOptionsVisible(false)}
         canManage={canManage}
         isAdmin={isAdmin}
+        isArchived={hubDetails?.isArchived}
         isTeacher={myRole === "TEACHER"}
+        hubDetails={hubDetails}
+        isPending={
+          archiveHubMutation.isPending ||
+          deleteHubMutation.isPending ||
+          removeMemberMutation.isPending
+        }
         onViewMembers={() => {
           setIsHubOptionsVisible(false);
           handleTabPress("members");

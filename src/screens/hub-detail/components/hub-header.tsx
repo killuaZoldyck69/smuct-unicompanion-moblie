@@ -16,6 +16,7 @@ import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HubCardTheme } from "@/features/hubs/hub-themes";
 import { resolveCourseTheme } from "@/screens/hubs/theme/course-theme-resolver";
+import { getDepartmentShortName } from "@/data/programs";
 import { HubHeaderBackdrop } from "./hub-header-backdrop";
 
 const fontFamily = Platform.select({
@@ -43,6 +44,24 @@ const getOrdinal = (num?: number | string) => {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
+const splitOrdinal = (
+  num?: number | string | null
+): { number: string; suffix: string } => {
+  if (num === undefined || num === null || num === "") {
+    return { number: "", suffix: "" };
+  }
+  const rawStr = String(num).replace(/^(?:batch|sem|semester)\s*/i, "").trim();
+  const match = rawStr.match(/^(\d+)(?:st|nd|rd|th)?/i);
+  if (match) {
+    const n = parseInt(match[1], 10);
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    const suffix = s[(v - 20) % 10] || s[v] || s[0];
+    return { number: String(n), suffix };
+  }
+  return { number: rawStr, suffix: "" };
 };
 
 export default function HubHeader({
@@ -116,9 +135,14 @@ export default function HubHeader({
     ? String(rawSection).replace(/^sec(tion)?\s*/i, "").trim()
     : "";
 
-  const semesterDisplay = hubDetails?.semesterNumber
-    ? `${getOrdinal(hubDetails.semesterNumber)} Semester`
-    : hubDetails?.termOffer || "1st Semester";
+  const semesterOrdinal = splitOrdinal(
+    hubDetails?.semesterNumber || hubDetails?.termOffer || "1st Semester"
+  );
+
+  const departmentShortName = hubDetails?.department
+    ? getDepartmentShortName(hubDetails.department)
+    : "";
+  const batchOrdinal = splitOrdinal(hubDetails?.batch);
 
   const handleJoinMeet = () => {
     if (hubDetails?.meetUrl) {
@@ -206,7 +230,15 @@ export default function HubHeader({
             color="#0f172a"
             style={styles.pillIcon}
           />
-          <Text style={styles.pillText}>{semesterDisplay}</Text>
+          <View style={styles.pillInlineWrapper}>
+            <Text style={styles.pillText}>{semesterOrdinal.number}</Text>
+            {semesterOrdinal.suffix ? (
+              <Text style={styles.pillSuperscript}>
+                {semesterOrdinal.suffix}
+              </Text>
+            ) : null}
+            <Text style={styles.pillText}> Semester</Text>
+          </View>
         </View>
 
         {cleanSection ? (
@@ -220,35 +252,11 @@ export default function HubHeader({
             <Text style={styles.pillText}>Sec {cleanSection}</Text>
           </View>
         ) : null}
-
-        {isAdmin && (
-          <View
-            style={[
-              styles.pill,
-              { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
-            ]}
-          >
-            <Feather
-              name="shield"
-              size={11}
-              color="#2563eb"
-              style={styles.pillIcon}
-            />
-            <Text
-              style={[
-                styles.pillText,
-                { color: "#2563eb", fontWeight: "700" },
-              ]}
-            >
-              Admin Read-Only
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* 3. Inline Metadata Row: [Department] • [Batch] • [Course Credit] */}
       <View style={styles.inlineMetaRow}>
-        {hubDetails?.department ? (
+        {departmentShortName ? (
           <View style={styles.inlineMetaItem}>
             <Ionicons
               name="business-outline"
@@ -261,12 +269,12 @@ export default function HubHeader({
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {hubDetails.department}
+              {departmentShortName}
             </Text>
           </View>
         ) : null}
 
-        {hubDetails?.department && hubDetails?.batch ? (
+        {departmentShortName && hubDetails?.batch ? (
           <Text style={styles.inlineMetaDot}>•</Text>
         ) : null}
 
@@ -278,9 +286,16 @@ export default function HubHeader({
               color="#334155"
               style={styles.inlineMetaIcon}
             />
-            <Text style={styles.inlineMetaText}>
-              Batch {hubDetails.batch}
-            </Text>
+            <View style={styles.batchInlineWrapper}>
+              <Text style={styles.inlineMetaText}>
+                Batch {batchOrdinal.number}
+              </Text>
+              {batchOrdinal.suffix ? (
+                <Text style={styles.batchSuperscript}>
+                  {batchOrdinal.suffix}
+                </Text>
+              ) : null}
+            </View>
           </View>
         ) : null}
 
@@ -508,6 +523,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0f172a",
   },
+  pillInlineWrapper: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  pillSuperscript: {
+    fontFamily,
+    fontSize: 8,
+    fontWeight: "700",
+    color: "#0f172a",
+    lineHeight: 10,
+    marginTop: -2,
+    marginLeft: 0.5,
+    marginRight: 1,
+  },
   inlineMetaRow: {
     flexDirection: "row",
     flexWrap: "nowrap",
@@ -537,6 +566,19 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#334155",
     letterSpacing: -0.1,
+  },
+  batchInlineWrapper: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  batchSuperscript: {
+    fontFamily,
+    fontSize: 8.5,
+    fontWeight: "700",
+    color: "#334155",
+    lineHeight: 11,
+    marginTop: -1,
+    marginLeft: 0.5,
   },
   inlineMetaDot: {
     fontSize: 11,
