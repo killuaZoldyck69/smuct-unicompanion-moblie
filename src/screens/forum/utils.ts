@@ -76,31 +76,55 @@ export function isEdited(createdAt?: string, updatedAt?: string): boolean {
 export function sanitizeForumPost(input: {
   title: string;
   description: string;
-}): { title: string; description: string; error?: string } {
+}): { title: string; description: string; plainText: string; error?: string } {
   const cleanTitle = (input.title || "").trim().slice(0, MAX_TITLE_LENGTH);
-  const cleanDescription = (input.description || "")
-    .trim()
-    .slice(0, MAX_DESCRIPTION_LENGTH);
+  const cleanDescription = (input.description || "").trim();
+  const plainText = cleanDescription
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
   if (!cleanTitle) {
     return {
       title: "",
       description: cleanDescription,
-      error: "Question title is required.",
+      plainText,
+      error: "Please enter a question title.",
     };
   }
 
-  if (!cleanDescription) {
+  if (cleanTitle.length < 5) {
+    return {
+      title: cleanTitle,
+      description: cleanDescription,
+      plainText,
+      error: "Question title must be at least 5 characters.",
+    };
+  }
+
+  if (!cleanDescription || !plainText) {
     return {
       title: cleanTitle,
       description: "",
-      error: "Question details & context are required.",
+      plainText: "",
+      error: "Please provide details and context for your question.",
+    };
+  }
+
+  if (plainText.length < 10) {
+    return {
+      title: cleanTitle,
+      description: cleanDescription,
+      plainText,
+      error: "Please provide at least 10 characters of details and context.",
     };
   }
 
   return {
     title: cleanTitle,
-    description: cleanDescription,
+    description: cleanDescription.slice(0, MAX_DESCRIPTION_LENGTH),
+    plainText,
   };
 }
 

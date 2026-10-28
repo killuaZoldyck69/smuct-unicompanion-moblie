@@ -12,12 +12,28 @@ export function useComposePostForm(options?: UseComposePostFormOptions) {
   const [isComposeVisible, setIsComposeVisible] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [plainText, setPlainText] = useState("");
 
   const createPostMutation = useCreateForumPost();
+
+  const handleSetDescription = useCallback((html: string, plain?: string) => {
+    setDescription(html);
+    if (plain !== undefined) {
+      setPlainText(plain);
+    } else {
+      const extracted = html
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      setPlainText(extracted);
+    }
+  }, []);
 
   const resetForm = useCallback(() => {
     setTitle("");
     setDescription("");
+    setPlainText("");
   }, []);
 
   const openCompose = useCallback(() => {
@@ -47,6 +63,7 @@ export function useComposePostForm(options?: UseComposePostFormOptions) {
         type: "error",
         text1: "Missing Information",
         text2: validated.error,
+        visibilityTime: 4000,
       });
       return;
     }
@@ -58,21 +75,32 @@ export function useComposePostForm(options?: UseComposePostFormOptions) {
       },
       {
         onSuccess: () => {
-          Toast.show({ type: "success", text1: "Question Published!" });
           setIsComposeVisible(false);
           resetForm();
           options?.onSuccess?.();
+
+          // Show success toast on root screen after modal dismissal transition
+          setTimeout(() => {
+            Toast.show({
+              type: "success",
+              text1: "Question Published!",
+              text2: "Your question has been posted to the campus forum.",
+              visibilityTime: 4000,
+            });
+          }, 350);
         },
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message ||
+            err.response?.data?.error ||
             err.message ||
-            "Failed to publish question. Please try again.";
+            "Failed to publish question. Please check your connection and try again.";
 
           Toast.show({
             type: "error",
-            text1: "Failed to post",
+            text1: "Failed to Post",
             text2: errorMessage,
+            visibilityTime: 4000,
           });
         },
       },
@@ -87,7 +115,8 @@ export function useComposePostForm(options?: UseComposePostFormOptions) {
     title,
     setTitle,
     description,
-    setDescription,
+    setDescription: handleSetDescription,
+    plainText,
     isSubmitting: createPostMutation.isPending,
     handleSubmit,
     resetForm,

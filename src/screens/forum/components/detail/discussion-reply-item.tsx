@@ -6,9 +6,9 @@ import type { ForumResponseItem, ForumAuthor } from "../../types";
 import {
   timeAgo,
   getUserAcademicSubtitle,
+  getAuthorAcademicInfo,
   formatTimeOnly,
   isEdited,
-  formatEditedTime,
 } from "../../utils";
 
 interface DiscussionReplyItemProps {
@@ -39,7 +39,8 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
 
   const responderName = item.responder?.name || "University Member";
   const responderInitial = responderName.charAt(0).toUpperCase() || "U";
-  const responderSubtitle = getUserAcademicSubtitle(item.responder);
+  const responderAcademic = getAuthorAcademicInfo(item.responder);
+  const responderSubtitle = responderAcademic.fullText;
   const isReplyAuthor = Boolean(threadAuthorId && item.responderId === threadAuthorId);
   const isMyReply = Boolean(currentUserId && item.responderId === currentUserId);
   const canEdit = isMyReply && !isResolved;
@@ -49,7 +50,6 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
   const replyTime = timeAgo(item.createdAt);
   const replyTimeOnly = formatTimeOnly(item.createdAt);
   const responseEdited = isEdited(item.createdAt, item.updatedAt);
-  const editedLabel = responseEdited ? formatEditedTime(item.updatedAt) : null;
 
   return (
     <View style={styles.replyCard}>
@@ -85,23 +85,33 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
                 </View>
               )}
             </View>
-            <Text style={styles.replySubtitle} numberOfLines={1}>
-              {responderSubtitle}
-            </Text>
-          </View>
-
-          <View style={styles.replyHeaderRight}>
-            <Text style={styles.replyTime}>
-              {replyTime} • {replyTimeOnly}
-            </Text>
+            {responderAcademic.isStudent && responderAcademic.semesterNum ? (
+              <Text style={styles.replySubtitle} numberOfLines={1}>
+                {responderAcademic.semesterNum}
+                <Text style={styles.superscript}>
+                  {responderAcademic.superSuffix}
+                </Text>
+                {` Semester • ${responderAcademic.deptShort}`}
+              </Text>
+            ) : (
+              <Text style={styles.replySubtitle} numberOfLines={1}>
+                {responderSubtitle}
+              </Text>
+            )}
           </View>
         </View>
 
         <Text style={styles.replyBody}>{item.content}</Text>
 
-        {editedLabel && (
-          <Text style={styles.editedLabel}>✎ Edited {editedLabel}</Text>
-        )}
+        {/* Comment Date & Time bottom right side of comments with italic (Edited) */}
+        <View style={styles.commentTimeWrap}>
+          <Text style={styles.commentTimeText}>
+            {replyTime} • {replyTimeOnly}
+            {responseEdited && (
+              <Text style={styles.editedText}> (Edited)</Text>
+            )}
+          </Text>
+        </View>
 
         {/* Action Row */}
         {((!isResolved && onStartReply) ||
@@ -209,9 +219,10 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
                 reply.responder?.name || "University Member";
               const replyResponderInitial =
                 replyResponderName.charAt(0).toUpperCase() || "U";
-              const replyResponderSubtitle = getUserAcademicSubtitle(
+              const nestedResponderAcademic = getAuthorAcademicInfo(
                 reply.responder
               );
+              const replyResponderSubtitle = nestedResponderAcademic.fullText;
               const isReplyFromThreadAuthor = Boolean(
                 threadAuthorId && reply.responderId === threadAuthorId
               );
@@ -221,9 +232,8 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
               const canEditReply = isMyNestedReply && !isResolved;
               const canDeleteReply = Boolean(isMyNestedReply || isAdmin);
               const replyEdited = isEdited(reply.createdAt, reply.updatedAt);
-              const nestedEditedLabel = replyEdited
-                ? formatEditedTime(reply.updatedAt)
-                : null;
+              const nestedReplyTime = timeAgo(reply.createdAt);
+              const nestedReplyTimeOnly = formatTimeOnly(reply.createdAt);
 
               return (
                 <View key={reply.id} style={styles.replyRow}>
@@ -263,23 +273,34 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
                             </View>
                           )}
                         </View>
-                        <Text style={styles.replySubtitle} numberOfLines={1}>
-                          {replyResponderSubtitle}
-                        </Text>
+                        {nestedResponderAcademic.isStudent &&
+                        nestedResponderAcademic.semesterNum ? (
+                          <Text style={styles.replySubtitle} numberOfLines={1}>
+                            {nestedResponderAcademic.semesterNum}
+                            <Text style={styles.superscript}>
+                              {nestedResponderAcademic.superSuffix}
+                            </Text>
+                            {` Semester • ${nestedResponderAcademic.deptShort}`}
+                          </Text>
+                        ) : (
+                          <Text style={styles.replySubtitle} numberOfLines={1}>
+                            {replyResponderSubtitle}
+                          </Text>
+                        )}
                       </View>
-
-                      <Text style={styles.replyTime}>
-                        {timeAgo(reply.createdAt)}
-                      </Text>
                     </View>
 
                     <Text style={styles.replyBodySmall}>{reply.content}</Text>
 
-                    {nestedEditedLabel && (
-                      <Text style={styles.editedLabel}>
-                        ✎ Edited {nestedEditedLabel}
+                    {/* Nested Comment Date & Time on the bottom right side of comments */}
+                    <View style={styles.commentTimeWrap}>
+                      <Text style={styles.commentTimeTextSmall}>
+                        {nestedReplyTime} • {nestedReplyTimeOnly}
+                        {replyEdited && (
+                          <Text style={styles.editedTextSmall}> (Edited)</Text>
+                        )}
                       </Text>
-                    )}
+                    </View>
 
                     <View style={styles.actionsRow}>
                       <View style={styles.leftActions}>
@@ -433,19 +454,6 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
   },
-  replyTime: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "400",
-    color: BENTO_COLORS.subtleText,
-  },
-  replyHeaderRight: {
-    alignItems: "flex-end",
-  },
-  moreBtn: {
-    padding: 2,
-    marginTop: 4,
-  },
   replyBody: {
     fontFamily,
     fontSize: 13,
@@ -453,12 +461,43 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.neutralText,
     lineHeight: 19,
   },
-  editedLabel: {
+  commentTimeWrap: {
+    alignSelf: "flex-end",
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  commentTimeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+  },
+  editedText: {
+    fontFamily,
+    fontStyle: "italic",
+    fontSize: 11,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+  },
+  commentTimeTextSmall: {
     fontFamily,
     fontSize: 10,
     fontWeight: "500",
-    color: "#92400e",
-    marginTop: 4,
+    color: BENTO_COLORS.subtleText,
+  },
+  editedTextSmall: {
+    fontFamily,
+    fontStyle: "italic",
+    fontSize: 10,
+    fontWeight: "500",
+    color: BENTO_COLORS.subtleText,
+  },
+  superscript: {
+    fontFamily,
+    fontSize: 8,
+    lineHeight: 11,
+    fontWeight: "700",
+    color: BENTO_COLORS.subtleText,
   },
   actionsRow: {
     flexDirection: 'row',

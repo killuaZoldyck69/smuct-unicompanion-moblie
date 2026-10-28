@@ -290,9 +290,8 @@ export const RichNoticeText = React.memo(function RichNoticeText({
     const normalized = content
       .replace(/\\r\\n|\\n|\\r/g, "\n")
       .replace(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi, "\n\n<b>$1</b>\n\n")
-      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n• $1\n")
-      .replace(/<\/?ul[^>]*>/gi, "\n")
-      .replace(/<\/?ol[^>]*>/gi, "\n")
+      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n• $1")
+      .replace(/<\/?(?:ul|ol)[^>]*>/gi, "\n\n")
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(
         /<(?:p|div)[^>]*(?:align=["']justify["']|style=["'][^"']*text-align:\s*justify[^"']*["'])[^>]*>([\s\S]*?)<\/(?:p|div)>/gi,
@@ -331,6 +330,14 @@ export const RichNoticeText = React.memo(function RichNoticeText({
         /^\s*(?:[•\-*]|\d+[\.\)])\s+/.test(l)
       );
 
+      const cleanListStyle = style
+        ? (() => {
+            const { marginBottom, marginTop, marginVertical, ...rest } =
+              style as any;
+            return rest;
+          })()
+        : null;
+
       if (hasListLines) {
         return (
           <View key={pIdx} style={styles.paragraphContainer}>
@@ -349,7 +356,7 @@ export const RichNoticeText = React.memo(function RichNoticeText({
                     <Text
                       style={[
                         styles.listText,
-                        style,
+                        cleanListStyle,
                         isJustified && styles.justified,
                       ]}
                     >
@@ -382,7 +389,7 @@ export const RichNoticeText = React.memo(function RichNoticeText({
                     <Text
                       style={[
                         styles.listText,
-                        style,
+                        cleanListStyle,
                         isJustified && styles.justified,
                       ]}
                     >
@@ -493,30 +500,30 @@ const styles = StyleSheet.create({
   listRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 6,
+    marginBottom: 4,
     paddingLeft: 4,
   },
   listBullet: {
-    fontSize: 18,
+    fontSize: 16,
     color: NOTICE_COLORS.deepNavy,
-    marginRight: 10,
-    lineHeight: 24,
+    marginRight: 8,
+    lineHeight: 22,
     fontWeight: "800",
   },
   listNumber: {
     fontFamily,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: "800",
     color: NOTICE_COLORS.deepNavy,
-    marginRight: 8,
-    lineHeight: 25,
+    marginRight: 6,
+    lineHeight: 22,
   },
   listText: {
     flex: 1,
     fontFamily,
-    fontSize: 15.5,
+    fontSize: 14.5,
     color: NOTICE_COLORS.bodyText,
-    lineHeight: 25,
+    lineHeight: 22,
     letterSpacing: 0.1,
   },
 });

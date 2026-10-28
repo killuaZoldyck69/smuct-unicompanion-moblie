@@ -116,31 +116,39 @@ export function Forum({
   }, [setActiveFilter]);
 
   const handleResolve = useCallback(
-    (id: string, title: string) => {
+    (id: string, title: string, currentlyResolved: boolean = false) => {
+      const isReopening = currentlyResolved;
       setConfirmModal({
         type: "success",
-        title: "Mark as Solved",
-        message: `Mark "${title}" as solved?`,
-        confirmLabel: "Mark Solved",
+        title: isReopening ? "Reopen Discussion" : "Mark as Solved",
+        message: isReopening
+          ? `Reopen "${title}" for new answers and community replies?`
+          : `Mark "${title}" as solved?`,
+        confirmLabel: isReopening ? "Reopen" : "Mark Solved",
         action: () => {
-          resolveMutation.mutate(id, {
-            onSuccess: () => {
-              setConfirmModal(null);
-              Toast.show({
-                type: "success",
-                text1: "Discussion Resolved",
-                text2: "Marked as solved successfully.",
-              });
+          resolveMutation.mutate(
+            { id, isResolved: !isReopening },
+            {
+              onSuccess: () => {
+                setConfirmModal(null);
+                Toast.show({
+                  type: "success",
+                  text1: isReopening ? "Discussion Reopened" : "Discussion Resolved",
+                  text2: isReopening
+                    ? "This discussion is open for new replies."
+                    : "Marked as solved successfully.",
+                });
+              },
+              onError: (err: any) => {
+                setConfirmModal(null);
+                Toast.show({
+                  type: "error",
+                  text1: "Error",
+                  text2: err?.message || "Failed to update discussion status.",
+                });
+              },
             },
-            onError: (err: any) => {
-              setConfirmModal(null);
-              Toast.show({
-                type: "error",
-                text1: "Error",
-                text2: err?.message || "Failed to resolve discussion.",
-              });
-            },
-          });
+          );
         },
       });
     },
@@ -185,11 +193,12 @@ export function Forum({
         item={item}
         onPress={handleCardPress}
         isAdmin={currentUser?.role === "ADMIN"}
+        currentUserId={currentUser?.id}
         onResolve={handleResolve}
         onDelete={handleDelete}
       />
     ),
-    [handleCardPress, currentUser?.role, handleResolve, handleDelete],
+    [handleCardPress, currentUser?.role, currentUser?.id, handleResolve, handleDelete],
   );
 
   const renderFooter = useCallback(() => {

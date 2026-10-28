@@ -7,11 +7,13 @@ import { BENTO_COLORS, fontFamily } from "../../constants";
 interface DiscussionHeaderProps {
   canManage: boolean;
   onOverflowPress: () => void;
+  onSharePress?: () => void;
 }
 
 export const DiscussionHeader = memo(function DiscussionHeader({
   canManage,
   onOverflowPress,
+  onSharePress,
 }: DiscussionHeaderProps) {
   const router = useRouter();
 
@@ -42,6 +44,16 @@ export const DiscussionHeader = memo(function DiscussionHeader({
             size={18}
             color={BENTO_COLORS.deepNavy}
           />
+        </TouchableOpacity>
+      ) : onSharePress ? (
+        <TouchableOpacity
+          onPress={onSharePress}
+          style={styles.headerBtn}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Share discussion"
+        >
+          <Feather name="share-2" size={17} color={BENTO_COLORS.deepNavy} />
         </TouchableOpacity>
       ) : (
         <View style={styles.headerSpacer} />

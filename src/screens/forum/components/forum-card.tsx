@@ -23,7 +23,8 @@ interface ForumCardProps {
   item: ForumPostItem;
   onPress: (id: string) => void;
   isAdmin?: boolean;
-  onResolve?: (id: string, title: string) => void;
+  currentUserId?: string;
+  onResolve?: (id: string, title: string, isResolved: boolean) => void;
   onDelete?: (id: string, title: string) => void;
 }
 
@@ -31,10 +32,13 @@ export const ForumCard = memo(function ForumCard({
   item,
   onPress,
   isAdmin = false,
+  currentUserId,
   onResolve,
   onDelete,
 }: ForumCardProps) {
   const isResolved = item.isResolved;
+  const isAuthor = Boolean(currentUserId && currentUserId === item.authorId);
+  const canManage = isAdmin || isAuthor;
   const replyCount = item._count?.responses || item.responses?.length || 0;
   const authorName = item.author?.name || "University Member";
   const authorInitial = authorName.charAt(0).toUpperCase() || "U";
@@ -113,7 +117,7 @@ export const ForumCard = memo(function ForumCard({
           </View>
         </View>
 
-        {isAdmin && (
+        {canManage && (
           <View ref={buttonRef} collapsable={false}>
             <TouchableOpacity
               style={styles.moreBtn}
@@ -133,8 +137,8 @@ export const ForumCard = memo(function ForumCard({
         )}
       </View>
 
-      {/* WhatsApp-style Popover Dropdown */}
-      {isAdmin && (
+      {/* Popover Dropdown for Authors and Admins */}
+      {canManage && (
         <Modal
           visible={menuVisible}
           transparent={true}
@@ -154,18 +158,33 @@ export const ForumCard = memo(function ForumCard({
               ]}
               onStartShouldSetResponder={() => true}
             >
-              {!isResolved && (
+              {!isResolved ? (
                 <>
                   <TouchableOpacity
                     style={styles.dropdownItem}
                     onPress={() => {
                       setMenuVisible(false);
-                      onResolve?.(item.id, item.title);
+                      onResolve?.(item.id, item.title, false);
                     }}
                     activeOpacity={0.65}
                   >
                     <Feather name="check-circle" size={15} color="#16a34a" />
                     <Text style={styles.dropdownItemText}>Mark as Solved</Text>
+                  </TouchableOpacity>
+                  <View style={styles.dropdownDivider} />
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setMenuVisible(false);
+                      onResolve?.(item.id, item.title, true);
+                    }}
+                    activeOpacity={0.65}
+                  >
+                    <Feather name="rotate-ccw" size={15} color={BENTO_COLORS.primaryBlue} />
+                    <Text style={styles.dropdownItemText}>Reopen Discussion</Text>
                   </TouchableOpacity>
                   <View style={styles.dropdownDivider} />
                 </>
@@ -195,7 +214,11 @@ export const ForumCard = memo(function ForumCard({
 
       {item.description ? (
         <Text style={styles.descriptionText} numberOfLines={2}>
-          {item.description}
+          {item.description
+            .replace(/<[^>]+>/g, " ")
+            .replace(/&nbsp;/gi, " ")
+            .replace(/\s+/g, " ")
+            .trim()}
         </Text>
       ) : null}
 

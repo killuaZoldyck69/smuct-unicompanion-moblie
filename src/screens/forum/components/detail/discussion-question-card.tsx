@@ -2,18 +2,19 @@ import React, { memo } from "react";
 import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../../constants";
+import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
 import type { ForumPostItem, ForumAuthor } from "../../types";
 import {
   getUserAcademicSubtitle,
   getAuthorAcademicInfo,
   formatPostedTime,
   isEdited,
-  formatEditedTime,
 } from "../../utils";
 
 interface DiscussionQuestionCardProps {
   thread: ForumPostItem;
   isAuthor: boolean;
+  isAdmin?: boolean;
   onAuthorPress: (author: ForumAuthor) => void;
   onResolvePress: () => void;
 }
@@ -21,16 +22,17 @@ interface DiscussionQuestionCardProps {
 export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
   thread,
   isAuthor,
+  isAdmin = false,
   onAuthorPress,
   onResolvePress,
 }: DiscussionQuestionCardProps) {
+  const canManage = isAuthor || isAdmin;
   const authorName = thread.author?.name || "University Member";
   const authorInitial = authorName.charAt(0).toUpperCase() || "U";
   const authorAcademic = getAuthorAcademicInfo(thread.author);
   const authorSubtitle = authorAcademic.fullText;
   const fullPostedTime = formatPostedTime(thread.createdAt);
   const threadEdited = isEdited(thread.createdAt, thread.updatedAt);
-  const editedTime = threadEdited ? formatEditedTime(thread.updatedAt) : null;
   const responsesCount = thread.responses?.length || 0;
 
   return (
@@ -82,27 +84,29 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
             )}
             <Text style={styles.timestampText}>
               Posted on {fullPostedTime}
+              {threadEdited && (
+                <Text style={styles.editedInline}> (Edited)</Text>
+              )}
             </Text>
-            {editedTime && (
-              <Text style={styles.editedText}>
-                ✎ Edited {editedTime}
-              </Text>
-            )}
           </View>
         </TouchableOpacity>
 
         <View style={[styles.divider, thread.isResolved && styles.dividerResolved]} />
 
-        <Text style={styles.body}>{thread.description}</Text>
+        <RichNoticeText
+          content={thread.description}
+          defaultJustified={false}
+          style={styles.body}
+        />
 
-        {isAuthor && !thread.isResolved && (
+        {canManage && !thread.isResolved && (
           <TouchableOpacity
             style={styles.markResolvedBtn}
             onPress={onResolvePress}
             activeOpacity={0.8}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Mark as Resolved"
+            accessibilityLabel="Mark question as resolved"
           >
             <Feather
               name="check-circle"
@@ -112,6 +116,38 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
             />
             <Text style={styles.markResolvedBtnText}>Mark as Resolved</Text>
           </TouchableOpacity>
+        )}
+
+        {thread.isResolved && (
+          <View style={styles.resolvedStatusRow}>
+            <View style={styles.resolvedBadge}>
+              <Feather
+                name="check-circle"
+                size={13}
+                color={BENTO_COLORS.emerald}
+                style={styles.resolvedBadgeIcon}
+              />
+              <Text style={styles.resolvedBadgeText}>Resolved</Text>
+            </View>
+            {canManage && (
+              <TouchableOpacity
+                style={styles.reopenBtn}
+                onPress={onResolvePress}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Reopen this discussion"
+              >
+                <Feather
+                  name="rotate-ccw"
+                  size={12}
+                  color={BENTO_COLORS.primaryBlue}
+                  style={styles.reopenIcon}
+                />
+                <Text style={styles.reopenBtnText}>Reopen Discussion</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
       </View>
 
@@ -226,12 +262,12 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
   },
-  editedText: {
+  editedInline: {
     fontFamily,
-    fontSize: 10,
+    fontStyle: "italic",
+    fontSize: 11,
     fontWeight: "500",
-    color: "#92400e",
-    marginTop: 2,
+    color: BENTO_COLORS.subtleText,
   },
   divider: {
     height: 1,
@@ -266,6 +302,47 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#ffffff",
+  },
+  resolvedStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    paddingTop: 8,
+  },
+  resolvedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BENTO_COLORS.pillRadius,
+  },
+  resolvedBadgeIcon: {
+    marginRight: 5,
+  },
+  resolvedBadgeText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.emerald,
+  },
+  reopenBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(30, 58, 138, 0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BENTO_COLORS.pillRadius,
+  },
+  reopenIcon: {
+    marginRight: 5,
+  },
+  reopenBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.primaryBlue,
   },
   responsesHeaderRow: {
     flexDirection: "row",

@@ -76,36 +76,43 @@ export function useDiscussionDetail() {
   }, [thread]);
 
   const handleResolvePrompt = useCallback(() => {
+    const isReopening = Boolean(thread?.isResolved);
     setConfirmModal({
       type: "success",
       iconName: "check-circle",
-      title: "Mark as Resolved?",
-      message:
-        "Has this question or inquiry been satisfactorily resolved? Marking it as resolved indicates to the community that an answer has been found.",
-      confirmLabel: "Mark Resolved",
-      cancelLabel: "Keep Open",
+      title: isReopening ? "Reopen Discussion?" : "Mark as Resolved?",
+      message: isReopening
+        ? "Reopening this discussion will allow community members to submit new answers and replies."
+        : "Has this question or inquiry been satisfactorily resolved? Marking it as resolved indicates to the community that an answer has been found.",
+      confirmLabel: isReopening ? "Reopen Discussion" : "Mark Resolved",
+      cancelLabel: isReopening ? "Keep Closed" : "Keep Open",
       action: () => {
-        resolveMutation.mutate(postId, {
-          onSuccess: () => {
-            setConfirmModal(null);
-            Toast.show({
-              type: "success",
-              text1: "Question Resolved",
-              text2: "This discussion has been closed with answers.",
-            });
+        resolveMutation.mutate(
+          { id: postId, isResolved: !isReopening },
+          {
+            onSuccess: () => {
+              setConfirmModal(null);
+              Toast.show({
+                type: "success",
+                text1: isReopening ? "Discussion Reopened" : "Question Resolved",
+                text2: isReopening
+                  ? "This discussion is open for new replies."
+                  : "This discussion has been closed with answers.",
+              });
+            },
+            onError: (err: any) => {
+              setConfirmModal(null);
+              Toast.show({
+                type: "error",
+                text1: isReopening ? "Failed to reopen" : "Failed to resolve",
+                text2: err.message || "Please try again.",
+              });
+            },
           },
-          onError: (err: any) => {
-            setConfirmModal(null);
-            Toast.show({
-              type: "error",
-              text1: "Failed to resolve",
-              text2: err.message || "Please try again.",
-            });
-          },
-        });
+        );
       },
     });
-  }, [postId, resolveMutation]);
+  }, [postId, thread?.isResolved, resolveMutation]);
 
   const handleDeletePrompt = useCallback(() => {
     setConfirmModal({
@@ -151,12 +158,48 @@ export function useDiscussionDetail() {
   const handleSaveEdit = useCallback(() => {
     const trimmedTitle = editForm.title.trim();
     const trimmedDesc = editForm.description.trim();
+    const plainDesc = trimmedDesc
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-    if (!trimmedTitle || !trimmedDesc) {
+    if (!trimmedTitle) {
       Toast.show({
         type: "error",
-        text1: "Required fields",
-        text2: "Please provide both title and details.",
+        text1: "Title Required",
+        text2: "Please enter a question title.",
+        visibilityTime: 4000,
+      });
+      return;
+    }
+
+    if (trimmedTitle.length < 5) {
+      Toast.show({
+        type: "error",
+        text1: "Title Too Short",
+        text2: "Question title must be at least 5 characters.",
+        visibilityTime: 4000,
+      });
+      return;
+    }
+
+    if (!trimmedDesc || !plainDesc) {
+      Toast.show({
+        type: "error",
+        text1: "Details Required",
+        text2: "Please provide details and context for your question.",
+        visibilityTime: 4000,
+      });
+      return;
+    }
+
+    if (plainDesc.length < 10) {
+      Toast.show({
+        type: "error",
+        text1: "More Context Needed",
+        text2: "Please provide at least 10 characters of details.",
+        visibilityTime: 4000,
       });
       return;
     }
@@ -166,16 +209,26 @@ export function useDiscussionDetail() {
       {
         onSuccess: () => {
           setIsEditModalVisible(false);
-          Toast.show({
-            type: "success",
-            text1: "Discussion Updated",
-          });
+          setTimeout(() => {
+            Toast.show({
+              type: "success",
+              text1: "Question Updated",
+              text2: "Your question changes have been saved.",
+              visibilityTime: 4000,
+            });
+          }, 350);
         },
         onError: (err: any) => {
+          const errorMessage =
+            err.response?.data?.message ||
+            err.response?.data?.error ||
+            err.message ||
+            "Failed to save changes. Please try again.";
           Toast.show({
             type: "error",
-            text1: "Update failed",
-            text2: err.message || "Please try again.",
+            text1: "Update Failed",
+            text2: errorMessage,
+            visibilityTime: 4000,
           });
         },
       },

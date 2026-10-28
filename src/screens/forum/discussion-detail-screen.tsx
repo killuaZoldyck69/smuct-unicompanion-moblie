@@ -88,6 +88,7 @@ export function DiscussionDetailScreen() {
     setSelectedProfile,
     confirmModal,
     setConfirmModal,
+    handleShare,
     handleResolvePrompt,
     handleDeletePrompt,
     isDeleting,
@@ -147,11 +148,12 @@ export function DiscussionDetailScreen() {
       <DiscussionQuestionCard
         thread={thread}
         isAuthor={isAuthor}
+        isAdmin={isAdmin}
         onAuthorPress={handleProfilePress}
         onResolvePress={handleResolvePrompt}
       />
     );
-  }, [thread, isAuthor, handleProfilePress, handleResolvePrompt]);
+  }, [thread, isAuthor, isAdmin, handleProfilePress, handleResolvePrompt]);
 
   const keyExtractor = useCallback((item: ForumResponseItem) => item.id, []);
 
@@ -199,6 +201,7 @@ export function DiscussionDetailScreen() {
         <DiscussionHeader
           canManage={canManage}
           onOverflowPress={handleOverflowPress}
+          onSharePress={handleShare}
         />
 
         <FlatList
@@ -249,6 +252,7 @@ export function DiscussionDetailScreen() {
         onEdit={handleOpenEdit}
         onResolve={handleResolvePrompt}
         onDelete={handleDeletePrompt}
+        onShare={handleShare}
       />
 
       {confirmModal && (

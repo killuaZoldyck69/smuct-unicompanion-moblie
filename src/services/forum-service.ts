@@ -62,8 +62,11 @@ export const updateForumPost = async (
 };
 export const updateForumPostAPI = updateForumPost;
 
-export const resolveForumPost = async (id: string) => {
-  const res = await api.patch(`/forum/${id}/resolve`);
+export const resolveForumPost = async (id: string, isResolved?: boolean) => {
+  const res = await api.patch(
+    `/forum/${id}/resolve`,
+    isResolved !== undefined ? { isResolved } : undefined,
+  );
   return res.data?.data;
 };
 export const resolveForumPostAPI = resolveForumPost;

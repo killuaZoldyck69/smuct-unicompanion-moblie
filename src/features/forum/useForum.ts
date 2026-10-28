@@ -86,13 +86,35 @@ export const useCreateForumPost = () => {
   });
 };
 
-export const useUpdateForumPost = (id: string) => {
+export const useUpdateForumPost = (defaultId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: UpdateForumPostInput) => updateForumPostAPI(id, data),
-    onSuccess: () => {
+    mutationFn: (
+      params:
+        | UpdateForumPostInput
+        | { id: string; data: UpdateForumPostInput },
+    ) => {
+      const targetId =
+        "id" in params && (params as any).id ? (params as any).id : defaultId;
+      const data =
+        "data" in params
+          ? (params as any).data
+          : (params as UpdateForumPostInput);
+
+      if (!targetId) {
+        throw new Error("Missing forum post ID for update");
+      }
+      return updateForumPostAPI(targetId, data);
+    },
+    onSuccess: (_, params) => {
+      const targetId =
+        "id" in params && (params as any).id ? (params as any).id : defaultId;
       queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
-      queryClient.invalidateQueries({ queryKey: forumQueryKeys.detail(id) });
+      if (targetId) {
+        queryClient.invalidateQueries({
+          queryKey: forumQueryKeys.detail(targetId),
+        });
+      }
     },
   });
 };
@@ -100,10 +122,20 @@ export const useUpdateForumPost = (id: string) => {
 export const useResolveForumPost = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => resolveForumPostAPI(id),
-    onSuccess: (_, id) => {
+    mutationFn: (variables: string | { id: string; isResolved?: boolean }) => {
+      const postId =
+        typeof variables === "string" ? variables : variables.id;
+      const isResolved =
+        typeof variables === "object" ? variables.isResolved : undefined;
+      return resolveForumPostAPI(postId, isResolved);
+    },
+    onSuccess: (_, variables) => {
+      const postId =
+        typeof variables === "string" ? variables : variables.id;
       queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
-      queryClient.invalidateQueries({ queryKey: forumQueryKeys.detail(id) });
+      queryClient.invalidateQueries({
+        queryKey: forumQueryKeys.detail(postId),
+      });
     },
   });
 };

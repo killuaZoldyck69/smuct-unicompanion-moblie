@@ -19,6 +19,7 @@ interface ForumOptionsModalProps {
   onEdit: () => void;
   onResolve: () => void;
   onDelete: () => void;
+  onShare?: () => void;
 }
 
 export const ForumOptionsModal = memo(function ForumOptionsModal({
@@ -30,9 +31,12 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
   onEdit,
   onResolve,
   onDelete,
+  onShare,
 }: ForumOptionsModalProps) {
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, 20) + 12;
+
+  const canEdit = isAuthor || canManage;
 
   return (
     <Modal
@@ -75,7 +79,7 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
           </View>
 
           <View style={styles.actionGroup}>
-            {isAuthor && (
+            {canEdit && (
               <TouchableOpacity
                 style={styles.actionRow}
                 onPress={() => {
@@ -99,9 +103,9 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
               </TouchableOpacity>
             )}
 
-            {!isResolved && canManage && (
+            {canManage && (
               <>
-                {isAuthor && <View style={styles.rowDivider} />}
+                {canEdit && <View style={styles.rowDivider} />}
                 <TouchableOpacity
                   style={styles.actionRow}
                   onPress={() => {
@@ -111,16 +115,56 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
                   activeOpacity={0.65}
                   accessible={true}
                   accessibilityRole="button"
-                  accessibilityLabel="Mark as Resolved"
+                  accessibilityLabel={
+                    isResolved ? "Reopen Discussion" : "Mark as Resolved"
+                  }
                 >
-                  <View style={[styles.iconBox, styles.iconBoxEmerald]}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      isResolved ? styles.iconBoxNavy : styles.iconBoxEmerald,
+                    ]}
+                  >
                     <Feather
-                      name="check-circle"
+                      name={isResolved ? "rotate-ccw" : "check-circle"}
                       size={16}
-                      color={BENTO_COLORS.emerald}
+                      color={
+                        isResolved
+                          ? BENTO_COLORS.primaryBlue
+                          : BENTO_COLORS.emerald
+                      }
                     />
                   </View>
-                  <Text style={styles.actionText}>Mark as Resolved</Text>
+                  <Text style={styles.actionText}>
+                    {isResolved ? "Reopen Discussion" : "Mark as Resolved"}
+                  </Text>
+                  <Feather name="chevron-right" size={16} color="#cbd5e1" />
+                </TouchableOpacity>
+              </>
+            )}
+
+            {onShare && (
+              <>
+                {(canEdit || canManage) && <View style={styles.rowDivider} />}
+                <TouchableOpacity
+                  style={styles.actionRow}
+                  onPress={() => {
+                    onClose();
+                    onShare();
+                  }}
+                  activeOpacity={0.65}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share Discussion"
+                >
+                  <View style={[styles.iconBox, styles.iconBoxSky]}>
+                    <Feather
+                      name="share-2"
+                      size={16}
+                      color={BENTO_COLORS.sky}
+                    />
+                  </View>
+                  <Text style={styles.actionText}>Share Discussion</Text>
                   <Feather name="chevron-right" size={16} color="#cbd5e1" />
                 </TouchableOpacity>
               </>
@@ -128,7 +172,7 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
 
             {canManage && (
               <>
-                {(isAuthor || !isResolved) && <View style={styles.rowDivider} />}
+                <View style={styles.rowDivider} />
                 <TouchableOpacity
                   style={styles.actionRow}
                   onPress={() => {
@@ -251,6 +295,9 @@ const styles = StyleSheet.create({
   },
   iconBoxNavy: {
     backgroundColor: "rgba(30, 58, 138, 0.08)",
+  },
+  iconBoxSky: {
+    backgroundColor: "rgba(14, 165, 233, 0.1)",
   },
   iconBoxEmerald: {
     backgroundColor: BENTO_COLORS.emeraldBg,
