@@ -13,6 +13,7 @@ import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 
 interface MemeOptionsModalProps {
   visible: boolean;
+  isAuthor?: boolean;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -20,6 +21,7 @@ interface MemeOptionsModalProps {
 
 export const MemeOptionsModal = React.memo(function MemeOptionsModal({
   visible,
+  isAuthor = true,
   onClose,
   onEdit,
   onDelete,
@@ -69,27 +71,29 @@ export const MemeOptionsModal = React.memo(function MemeOptionsModal({
 
           {/* Action List */}
           <View style={styles.actionGroup}>
-            {/* Edit Option */}
-            <TouchableOpacity
-              style={styles.actionRow}
-              onPress={() => {
-                onClose();
-                onEdit();
-              }}
-              activeOpacity={0.7}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Edit Meme"
-            >
-              <View style={[styles.iconBox, styles.iconBoxAccent]}>
-                <Feather name="edit-2" size={16} color={CAMPUS_HUB_COLORS.memeAccent} />
-              </View>
-              <View style={styles.actionTextCol}>
-                <Text style={styles.actionTitle}>Edit Caption</Text>
-                <Text style={styles.actionSubtitle}>Update the caption of your meme</Text>
-              </View>
-              <Feather name="chevron-right" size={16} color="#cbd5e1" />
-            </TouchableOpacity>
+            {/* Edit Option — visible to author only */}
+            {isAuthor && (
+              <TouchableOpacity
+                style={styles.actionRow}
+                onPress={() => {
+                  onClose();
+                  onEdit();
+                }}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Edit Meme"
+              >
+                <View style={[styles.iconBox, styles.iconBoxAccent]}>
+                  <Feather name="edit-2" size={16} color={CAMPUS_HUB_COLORS.memeAccent} />
+                </View>
+                <View style={styles.actionTextCol}>
+                  <Text style={styles.actionTitle}>Edit Caption</Text>
+                  <Text style={styles.actionSubtitle}>Update the caption of your meme</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color="#cbd5e1" />
+              </TouchableOpacity>
+            )}
 
             {/* Delete Option */}
             <TouchableOpacity

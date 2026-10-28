@@ -17,6 +17,7 @@ interface MemeCardProps {
   userRole?: string;
   onReact: (memeId: string, type: "LIKE" | "DISLIKE") => void;
   onOptions: (meme: Meme) => void;
+  onDeleteDirect?: (memeId: string) => void;
   onPreviewImage: (imageUrl: string, caption?: string | null, authorName?: string) => void;
   onViewProfile?: (author: any) => void;
   isReacting?: boolean;
@@ -28,6 +29,7 @@ export const MemeCard = React.memo(function MemeCard({
   userRole,
   onReact,
   onOptions,
+  onDeleteDirect,
   onPreviewImage,
   onViewProfile,
   isReacting,
@@ -120,7 +122,20 @@ export const MemeCard = React.memo(function MemeCard({
           </View>
         </TouchableOpacity>
 
-        {canManage && (
+        {isAdmin ? (
+          <TouchableOpacity
+            style={styles.adminDeleteBtn}
+            onPress={() => (onDeleteDirect ? onDeleteDirect(meme.id) : onOptions(meme))}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete meme by ${authorName}`}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="trash-2" size={13} color="#dc2626" />
+            <Text style={styles.adminDeleteBtnText}>Delete</Text>
+          </TouchableOpacity>
+        ) : canManage ? (
           <TouchableOpacity
             style={styles.moreBtn}
             onPress={() => onOptions(meme)}
@@ -132,7 +147,7 @@ export const MemeCard = React.memo(function MemeCard({
           >
             <Feather name="more-vertical" size={18} color="#64748b" />
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
       {/* 2. Caption (Optional) */}
@@ -338,6 +353,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     alignItems: "center",
     justifyContent: "center",
+  },
+  adminDeleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fee2e2",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    gap: 4,
+  },
+  adminDeleteBtnText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#dc2626",
   },
   editedText: {
     fontFamily,

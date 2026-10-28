@@ -30,6 +30,7 @@ interface CampusHubProps {
 export function CampusHub({ initialSection }: CampusHubProps) {
   const router = useRouter();
   const { user: currentUser } = useCurrentUser();
+  const isAdmin = currentUser?.role === "ADMIN";
   const [isForumComposeVisible, setIsForumComposeVisible] = useState(false);
   const [isLostFoundComposeVisible, setIsLostFoundComposeVisible] =
     useState(false);
@@ -76,6 +77,11 @@ export function CampusHub({ initialSection }: CampusHubProps) {
       <View style={styles.topNavBar}>
         <View style={styles.topNavLeft}>
           <Text style={styles.navBrandTitle}>Campus Hub</Text>
+          {isAdmin && (
+            <View style={styles.adminBadge}>
+              <Text style={styles.adminBadgeText}>Admin</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.topNavRight}>
@@ -96,17 +102,6 @@ export function CampusHub({ initialSection }: CampusHubProps) {
             activeOpacity={0.7}
           >
             <Feather name="plus" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => router.push("/(tabs)/notices")}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="View notices"
-            activeOpacity={0.7}
-          >
-            <Feather name="bell" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
           </TouchableOpacity>
         </View>
       </View>
@@ -165,6 +160,24 @@ const styles = StyleSheet.create({
   topNavLeft: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+  },
+  adminBadge: {
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    marginLeft: 2,
+  },
+  adminBadgeText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#1d4ed8",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   topNavRight: {
     flexDirection: "row",

@@ -236,6 +236,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="admin_alumni" options={{ href: null }} />
       <Tabs.Screen name="admin_blood" options={{ href: null }} />
       <Tabs.Screen name="admin_course_hubs" options={{ href: null }} />
+      <Tabs.Screen name="admin_campus_hubs" options={{ href: null }} />
       <Tabs.Screen name="admin_system_monitor" options={{ href: null }} />
       <Tabs.Screen name="blood" options={{ href: null }} />
       <Tabs.Screen name="cgpa-calculator" options={{ href: null }} />

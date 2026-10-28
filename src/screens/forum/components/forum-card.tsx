@@ -1,18 +1,38 @@
-import React, { memo } from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import React, { memo, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  Modal,
+  Dimensions,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
 import type { ForumPostItem } from "../types";
-import { timeAgo, getUserAcademicSubtitle, formatTimeOnly, isEdited } from "../utils";
+import {
+  timeAgo,
+  getUserAcademicSubtitle,
+  getAuthorAcademicInfo,
+  formatTimeOnly,
+  isEdited,
+} from "../utils";
 
 interface ForumCardProps {
   item: ForumPostItem;
   onPress: (id: string) => void;
+  isAdmin?: boolean;
+  onResolve?: (id: string, title: string) => void;
+  onDelete?: (id: string, title: string) => void;
 }
 
 export const ForumCard = memo(function ForumCard({
   item,
   onPress,
+  isAdmin = false,
+  onResolve,
+  onDelete,
 }: ForumCardProps) {
   const isResolved = item.isResolved;
   const replyCount = item._count?.responses || item.responses?.length || 0;
@@ -20,8 +40,30 @@ export const ForumCard = memo(function ForumCard({
   const authorInitial = authorName.charAt(0).toUpperCase() || "U";
   const formattedTime = timeAgo(item.createdAt);
   const timeOnly = formatTimeOnly(item.createdAt);
-  const academicSubtitle = getUserAcademicSubtitle(item.author);
+  const academicInfo = getAuthorAcademicInfo(item.author);
+  const academicSubtitle = academicInfo.fullText;
   const postEdited = isEdited(item.createdAt, item.updatedAt);
+
+  const buttonRef = useRef<View>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 16 });
+
+  const handleOpenMenu = () => {
+    if (buttonRef.current) {
+      buttonRef.current.measureInWindow((x, y, width, height) => {
+        const windowWidth = Dimensions.get("window").width;
+        const windowHeight = Dimensions.get("window").height;
+        const right = Math.max(16, windowWidth - (x + width));
+        // Dropdown menu height is ~95px. If too close to bottom, open upward
+        const top =
+          y + height + 100 > windowHeight - 40 ? Math.max(40, y - 95) : y + height + 4;
+        setMenuPosition({ top, right });
+        setMenuVisible(true);
+      });
+    } else {
+      setMenuVisible(true);
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -55,12 +97,97 @@ export const ForumCard = memo(function ForumCard({
             <Text style={styles.authorName} numberOfLines={1}>
               {authorName}
             </Text>
-            <Text style={styles.authorSubtitle} numberOfLines={1}>
-              {academicSubtitle}
-            </Text>
+            {academicInfo.isStudent && academicInfo.semesterNum ? (
+              <Text style={styles.authorSubtitle} numberOfLines={1}>
+                {academicInfo.semesterNum}
+                <Text style={styles.superscript}>
+                  {academicInfo.superSuffix}
+                </Text>
+                {` Semester • ${academicInfo.deptShort}`}
+              </Text>
+            ) : (
+              <Text style={styles.authorSubtitle} numberOfLines={1}>
+                {academicSubtitle}
+              </Text>
+            )}
           </View>
         </View>
+
+        {isAdmin && (
+          <View ref={buttonRef} collapsable={false}>
+            <TouchableOpacity
+              style={styles.moreBtn}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                handleOpenMenu();
+              }}
+              activeOpacity={0.65}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Discussion options"
+            >
+              <Feather name="more-vertical" size={18} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+
+      {/* WhatsApp-style Popover Dropdown */}
+      {isAdmin && (
+        <Modal
+          visible={menuVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setMenuVisible(false)}
+          statusBarTranslucent={true}
+        >
+          <TouchableOpacity
+            style={styles.menuBackdrop}
+            activeOpacity={1}
+            onPress={() => setMenuVisible(false)}
+          >
+            <View
+              style={[
+                styles.whatsappDropdown,
+                { top: menuPosition.top, right: menuPosition.right },
+              ]}
+              onStartShouldSetResponder={() => true}
+            >
+              {!isResolved && (
+                <>
+                  <TouchableOpacity
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setMenuVisible(false);
+                      onResolve?.(item.id, item.title);
+                    }}
+                    activeOpacity={0.65}
+                  >
+                    <Feather name="check-circle" size={15} color="#16a34a" />
+                    <Text style={styles.dropdownItemText}>Mark as Solved</Text>
+                  </TouchableOpacity>
+                  <View style={styles.dropdownDivider} />
+                </>
+              )}
+
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  onDelete?.(item.id, item.title);
+                }}
+                activeOpacity={0.65}
+              >
+                <Feather name="trash-2" size={15} color="#dc2626" />
+                <Text style={[styles.dropdownItemText, styles.dropdownDeleteText]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
 
       <Text style={styles.titleText} numberOfLines={2}>
         {item.title}
@@ -167,6 +294,13 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
   },
+  superscript: {
+    fontFamily,
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.subtleText,
+  },
   titleText: {
     fontFamily,
     fontSize: 16,
@@ -237,5 +371,52 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#92400e",
     marginLeft: 6,
+  },
+  moreBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+  },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  whatsappDropdown: {
+    position: "absolute",
+    minWidth: 175,
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: "rgba(15, 23, 42, 0.08)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 10,
+  },
+  dropdownItemText: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "500",
+    color: "#1e293b",
+  },
+  dropdownDeleteText: {
+    color: "#dc2626",
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+    marginVertical: 2,
   },
 });

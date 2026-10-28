@@ -21,12 +21,16 @@ interface ListingCardProps {
   post: MarketplacePost;
   cardWidth?: number;
   onPress: () => void;
+  isAdmin?: boolean;
+  onDelete?: (id: string, title: string, price?: number | null, image?: string) => void;
 }
 
 export const ListingCard = React.memo(function ListingCard({
   post,
   cardWidth,
   onPress,
+  isAdmin = false,
+  onDelete,
 }: ListingCardProps) {
   const isSelling = post.type === "SELLING";
   const isSold = post.status === "SOLD";
@@ -118,6 +122,24 @@ export const ListingCard = React.memo(function ListingCard({
             <Feather name="camera" size={10} color="#ffffff" />
             <Text style={styles.photoCountText}>{post.images.length}</Text>
           </View>
+        )}
+
+        {/* Admin Floating Delete Button */}
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.adminDeleteBtn}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onDelete?.(post.id, post.title, post.price, post.images?.[0]);
+            }}
+            activeOpacity={0.8}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete listing: ${post.title}`}
+          >
+            <Feather name="trash-2" size={13} color="#ffffff" />
+          </TouchableOpacity>
         )}
 
         {/* Sold Overlay Scrim */}
@@ -331,6 +353,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6.5,
     paddingVertical: 2.5,
     borderRadius: 6,
+  },
+  adminDeleteBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(220, 38, 38, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
   },
   photoCountText: {
     fontFamily,

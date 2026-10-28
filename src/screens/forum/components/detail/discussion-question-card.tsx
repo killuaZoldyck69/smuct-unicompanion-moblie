@@ -5,6 +5,7 @@ import { BENTO_COLORS, fontFamily } from "../../constants";
 import type { ForumPostItem, ForumAuthor } from "../../types";
 import {
   getUserAcademicSubtitle,
+  getAuthorAcademicInfo,
   formatPostedTime,
   isEdited,
   formatEditedTime,
@@ -25,7 +26,8 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
 }: DiscussionQuestionCardProps) {
   const authorName = thread.author?.name || "University Member";
   const authorInitial = authorName.charAt(0).toUpperCase() || "U";
-  const authorSubtitle = getUserAcademicSubtitle(thread.author);
+  const authorAcademic = getAuthorAcademicInfo(thread.author);
+  const authorSubtitle = authorAcademic.fullText;
   const fullPostedTime = formatPostedTime(thread.createdAt);
   const threadEdited = isEdited(thread.createdAt, thread.updatedAt);
   const editedTime = threadEdited ? formatEditedTime(thread.updatedAt) : null;
@@ -65,9 +67,19 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
                 <Text style={styles.authorTagText}>Author</Text>
               </View>
             </View>
-            <Text style={styles.authorSubtitle} numberOfLines={1}>
-              {authorSubtitle}
-            </Text>
+            {authorAcademic.isStudent && authorAcademic.semesterNum ? (
+              <Text style={styles.authorSubtitle} numberOfLines={1}>
+                {authorAcademic.semesterNum}
+                <Text style={styles.superscript}>
+                  {authorAcademic.superSuffix}
+                </Text>
+                {` Semester • ${authorAcademic.deptShort}`}
+              </Text>
+            ) : (
+              <Text style={styles.authorSubtitle} numberOfLines={1}>
+                {authorSubtitle}
+              </Text>
+            )}
             <Text style={styles.timestampText}>
               Posted on {fullPostedTime}
             </Text>
@@ -199,6 +211,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
+  },
+  superscript: {
+    fontFamily,
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.subtleText,
   },
   timestampText: {
     fontFamily,

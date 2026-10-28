@@ -357,13 +357,13 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
   },
   {
     id: "manage_forum",
-    title: "Campus Forum",
-    desc: "Moderation & discussions",
-    category: "SUPPORT",
+    title: "Campus Hubs",
+    desc: "Forum, lost & found, market & memes",
+    category: "CAMPUS",
     assetIcon: require("@/assets/icons/forum.png"),
     fallbackIcon: "message-square",
     roles: ["ADMIN"],
-    route: "/admin/forum" as Href,
+    route: "/(tabs)/admin_campus_hubs" as Href,
   },
   {
     id: "manage_blood",

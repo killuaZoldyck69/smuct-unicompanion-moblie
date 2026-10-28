@@ -105,14 +105,14 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
           </Text>
         </TouchableOpacity>
 
-        {/* 4. Community */}
+        {/* 4. Campus Hubs */}
         <TouchableOpacity
           style={styles.gridCard}
-          onPress={() => router.push("/(tabs)/community")}
+          onPress={() => router.push("/(tabs)/admin_campus_hubs")}
           activeOpacity={0.75}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Community: Review campus forum"
+          accessibilityLabel="Campus Hubs: Forum, items, marketplace and memes"
         >
           <View style={styles.cardHeader}>
             <View style={[styles.iconWrap, { backgroundColor: "#FFF1F2" }]}>
@@ -125,10 +125,10 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
             <Feather name="arrow-right" size={18} color="#E11D48" />
           </View>
           <Text style={styles.cardTitle} numberOfLines={1}>
-            Community
+            Campus Hubs
           </Text>
           <Text style={styles.cardSubtitle} numberOfLines={2}>
-            Review campus forum
+            Forum, items & memes
           </Text>
         </TouchableOpacity>
       </View>

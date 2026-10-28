@@ -25,6 +25,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   useMarketplaceFeed,
   flattenFeedPages,
+  useDeleteMarketplacePost,
 } from "@/features/campus-hub/useMarketplace";
 import type {
   MarketplacePost,
@@ -44,6 +45,7 @@ import {
   type MarketplaceCategoryFilter,
 } from "./components/marketplace-filter-modal";
 import { ListingCard } from "./components/listing-card";
+import { MarketplaceDeleteModal } from "./components/marketplace-delete-modal";
 import { MarketplaceSkeleton } from "./components/marketplace-skeleton";
 
 // ---------------------------------------------------------------------------
@@ -106,6 +108,46 @@ export function MarketplaceSection({
     externalIsComposeVisible !== undefined
       ? externalIsComposeVisible
       : internalComposeVisible;
+
+  // --- Admin / Owner delete state ---
+  const deleteMutation = useDeleteMarketplacePost();
+  const [postToDelete, setPostToDelete] = useState<{
+    id: string;
+    title: string;
+    price?: number | null;
+    type?: ListingType;
+    image?: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = useCallback((id: string, title: string, price?: number | null, image?: string) => {
+    setPostToDelete({ id, title, price, image });
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!postToDelete) return;
+    setIsDeleting(true);
+    deleteMutation.mutate(postToDelete.id, {
+      onSuccess: () => {
+        setIsDeleting(false);
+        setPostToDelete(null);
+        Toast.show({
+          type: "success",
+          text1: "Listing Deleted",
+          text2: "Item was removed from Marketplace.",
+        });
+      },
+      onError: (err: any) => {
+        setIsDeleting(false);
+        setPostToDelete(null);
+        Toast.show({
+          type: "error",
+          text1: "Delete Failed",
+          text2: err?.message || "Failed to delete listing.",
+        });
+      },
+    });
+  }, [postToDelete, deleteMutation]);
 
   // --- Responsive card width ---
   const cardWidth = useMemo(() => {
@@ -211,10 +253,12 @@ export function MarketplaceSection({
       <ListingCard
         post={item}
         cardWidth={cardWidth}
+        isAdmin={currentUser?.role === "ADMIN"}
+        onDelete={handleDelete}
         onPress={() => navigateToDetail(item.id)}
       />
     ),
-    [cardWidth, navigateToDetail]
+    [cardWidth, currentUser?.role, handleDelete, navigateToDetail]
   );
 
   const keyExtractor = useCallback((item: MarketplacePost) => item.id, []);
@@ -466,6 +510,20 @@ export function MarketplaceSection({
         onApply={handleApplyFilters}
         onReset={handleResetFilters}
       />
+
+      {/* Delete Confirmation Modal for Admin / Owner */}
+      {postToDelete && (
+        <MarketplaceDeleteModal
+          visible={Boolean(postToDelete)}
+          isDeleting={isDeleting}
+          postTitle={postToDelete.title}
+          postPrice={postToDelete.price}
+          postType={postToDelete.type}
+          postImage={postToDelete.image}
+          onConfirm={handleConfirmDelete}
+          onClose={() => setPostToDelete(null)}
+        />
+      )}
     </View>
   );
 }

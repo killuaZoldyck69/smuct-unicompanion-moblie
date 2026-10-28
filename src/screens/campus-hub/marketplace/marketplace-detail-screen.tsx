@@ -412,6 +412,7 @@ export function MarketplaceDetailScreen() {
           <MPListingInfoCard
             post={post}
             isAuthor={isAuthor}
+            isAdmin={currentUser?.role === "ADMIN"}
             isEdited={isEdited}
             authorDept={authorDept}
             authorInitial={authorInitial}

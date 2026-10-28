@@ -44,6 +44,7 @@ const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
 interface MPListingInfoCardProps {
   post: MarketplacePost;
   isAuthor: boolean;
+  isAdmin?: boolean;
   isEdited: boolean;
   authorDept: string;
   authorInitial: string;
@@ -60,6 +61,7 @@ interface MPListingInfoCardProps {
 export function MPListingInfoCard({
   post,
   isAuthor,
+  isAdmin = false,
   isEdited,
   authorDept,
   authorInitial,
@@ -259,6 +261,23 @@ export function MPListingInfoCard({
           >
             <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
             <Text style={styles.deleteBtnText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Admin delete action (when not author) */}
+      {isAdmin && !isAuthor && (
+        <View style={styles.ownerActions}>
+          <TouchableOpacity
+            style={[styles.deleteBtn, { flex: 1 }]}
+            onPress={onDelete}
+            activeOpacity={0.8}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Delete listing"
+          >
+            <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
+            <Text style={styles.deleteBtnText}>Delete Listing (Admin)</Text>
           </TouchableOpacity>
         </View>
       )}

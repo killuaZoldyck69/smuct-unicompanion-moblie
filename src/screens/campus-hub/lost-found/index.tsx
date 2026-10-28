@@ -17,7 +17,10 @@ import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useInfiniteLostFoundFeed } from "@/features/campus-hub/useLostFound";
+import {
+  useInfiniteLostFoundFeed,
+  useDeleteLostFoundPost,
+} from "@/features/campus-hub/useLostFound";
 import type {
   LostFoundPost,
   LostFoundType,
@@ -32,6 +35,7 @@ import {
 } from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
 import { ComposeLostFoundModal } from "./compose-modal";
+import { LostFoundDeleteModal } from "./components/lost-found-delete-modal";
 import {
   TypeBadge,
   StatusBadge,
@@ -77,6 +81,52 @@ export function LostFoundSection({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [internalComposeVisible, setInternalComposeVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+
+  // Admin / Owner delete state
+  const deleteMutation = useDeleteLostFoundPost();
+  const [postToDelete, setPostToDelete] = useState<{
+    id: string;
+    title: string;
+    type?: "LOST" | "FOUND";
+    location?: string;
+    image?: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = useCallback((post: LostFoundPost) => {
+    setPostToDelete({
+      id: post.id,
+      title: post.title,
+      type: post.type,
+      location: post.location,
+      image: post.images?.[0],
+    });
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!postToDelete) return;
+    setIsDeleting(true);
+    deleteMutation.mutate(postToDelete.id, {
+      onSuccess: () => {
+        setIsDeleting(false);
+        setPostToDelete(null);
+        Toast.show({
+          type: "success",
+          text1: "Post Deleted",
+          text2: "Lost & Found post has been removed.",
+        });
+      },
+      onError: (err: any) => {
+        setIsDeleting(false);
+        setPostToDelete(null);
+        Toast.show({
+          type: "error",
+          text1: "Delete Failed",
+          text2: err?.message || "Failed to delete post.",
+        });
+      },
+    });
+  }, [postToDelete, deleteMutation]);
 
   const activeFilterCount = useMemo(() => {
     return (
@@ -239,10 +289,12 @@ export function LostFoundSection({
       <LostFoundCard
         post={item}
         currentUserId={currentUser?.id}
+        isAdmin={currentUser?.role === "ADMIN"}
+        onDelete={handleDelete}
         onPress={() => navigateToDetail(item.id)}
       />
     ),
-    [currentUser?.id, navigateToDetail]
+    [currentUser?.id, currentUser?.role, handleDelete, navigateToDetail]
   );
 
   const renderFooter = useCallback(() => {
@@ -478,6 +530,20 @@ export function LostFoundSection({
         onReset={resetAllFilters}
         currentUser={currentUser}
       />
+
+      {/* Delete Confirmation Modal for Admin / Owner */}
+      {postToDelete && (
+        <LostFoundDeleteModal
+          visible={Boolean(postToDelete)}
+          isDeleting={isDeleting}
+          postTitle={postToDelete.title}
+          postType={postToDelete.type}
+          postLocation={postToDelete.location}
+          postImage={postToDelete.image}
+          onConfirm={handleConfirmDelete}
+          onClose={() => setPostToDelete(null)}
+        />
+      )}
     </View>
   );
 }
@@ -486,12 +552,16 @@ interface LostFoundCardProps {
   post: LostFoundPost;
   onPress: () => void;
   currentUserId?: string;
+  isAdmin?: boolean;
+  onDelete?: (post: LostFoundPost) => void;
 }
 
 const LostFoundCard = React.memo(function LostFoundCard({
   post,
   onPress,
   currentUserId,
+  isAdmin = false,
+  onDelete,
 }: LostFoundCardProps) {
   const isOwner = currentUserId === post.authorId;
   const isResolved = post.status === "RESOLVED" || post.status === "CLAIMED";
@@ -510,9 +580,29 @@ const LostFoundCard = React.memo(function LostFoundCard({
       <View style={styles.cardLeft}>
         {/* Semantic Badges Row */}
         <View style={styles.cardTopRow}>
-          <TypeBadge type={post.type} />
-          {post.category && <CategoryBadge category={post.category} />}
-          {isResolved && <StatusBadge status="RESOLVED" />}
+          <View style={styles.badgeGroup}>
+            <TypeBadge type={post.type} />
+            {post.category && <CategoryBadge category={post.category} />}
+            {isResolved && <StatusBadge status="RESOLVED" />}
+          </View>
+
+          {isAdmin && (
+            <TouchableOpacity
+              style={styles.adminDeleteBtn}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onDelete?.(post);
+              }}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={`Delete listing: ${post.title}`}
+            >
+              <Feather name="trash-2" size={12} color="#dc2626" />
+              <Text style={styles.adminDeleteBtnText}>Delete</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Title & Description */}
@@ -778,9 +868,33 @@ const styles = StyleSheet.create({
   cardTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: 6,
     marginBottom: 2,
+  },
+  badgeGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    flex: 1,
+  },
+  adminDeleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fee2e2",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    gap: 4,
+  },
+  adminDeleteBtnText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#dc2626",
   },
   cardTitle: {
     fontFamily,

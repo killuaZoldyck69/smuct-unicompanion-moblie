@@ -169,6 +169,7 @@ export const MemesSection = React.memo(function MemesSection({
         userRole={user?.role ?? undefined}
         onReact={handleReact}
         onOptions={handleOpenOptions}
+        onDeleteDirect={(id) => setMemeToDelete(id)}
         onPreviewImage={handlePreviewImage}
         onViewProfile={handleViewProfile}
       />
@@ -319,6 +320,7 @@ export const MemesSection = React.memo(function MemesSection({
       {/* 3-Dot Options Modal */}
       <MemeOptionsModal
         visible={!!memeForOptions}
+        isAuthor={user?.id === memeForOptions?.authorId}
         onClose={() => setMemeForOptions(null)}
         onEdit={handleEditFromOptions}
         onDelete={handleDeleteFromOptions}

@@ -1,5 +1,7 @@
 import type { FilterType, ForumCounts, ForumPostItem } from "./types";
 import { MAX_TITLE_LENGTH, MAX_DESCRIPTION_LENGTH } from "./constants";
+import { getDepartmentShortName } from "@/data/programs";
+import { parseOrdinalParts } from "@/utils/academic-formatters";
 
 export function timeAgo(dateString?: string): string {
   if (!dateString) return "";
@@ -154,16 +156,109 @@ export function computeForumFeed(
   };
 }
 
-export function getUserAcademicSubtitle(author?: any): string {
-  if (!author) return "University Member";
-  if (author.studentProfile) {
-    return author.studentProfile.department || "Student";
+export const ORDINAL_SUPERSCRIPTS: Record<string, string> = {
+  st: "\u02E2\u1D57", // ˢᵗ
+  nd: "\u207F\u1D48", // ⁿᵈ
+  rd: "\u02B3\u1D48", // ʳᵈ
+  th: "\u1D57\u02B0", // ᵗʰ
+};
+
+export function getOrdinalSuperscript(suffix?: string): string {
+  if (!suffix) return "";
+  return ORDINAL_SUPERSCRIPTS[suffix.toLowerCase()] || suffix;
+}
+
+export interface AuthorAcademicInfo {
+  isStudent: boolean;
+  isTeacher: boolean;
+  isAdmin: boolean;
+  semesterNum?: string;
+  suffix?: string;
+  superSuffix?: string;
+  deptShort?: string;
+  designation?: string;
+  fullText: string;
+}
+
+export function getAuthorAcademicInfo(author?: any): AuthorAcademicInfo {
+  if (!author) {
+    return {
+      isStudent: false,
+      isTeacher: false,
+      isAdmin: false,
+      fullText: "University Member",
+    };
   }
+
   if (author.teacherProfile) {
-    const { department, designation } = author.teacherProfile;
-    return [designation || "Faculty", department].filter(Boolean).join(" • ");
+    const rawDept = author.teacherProfile.department;
+    const deptShort = rawDept ? getDepartmentShortName(rawDept) : "";
+    const designation = author.teacherProfile.designation?.trim() || "Faculty";
+    const parts = [designation, deptShort].filter(Boolean);
+    const fullText = parts.length > 0 ? parts.join(" • ") : "Faculty";
+
+    return {
+      isStudent: false,
+      isTeacher: true,
+      isAdmin: false,
+      designation,
+      deptShort,
+      fullText,
+    };
   }
-  if (author.role === "ADMIN") return "Administrator";
-  return "University Member";
+
+  if (author.studentProfile) {
+    const rawDept = author.studentProfile.department;
+    const deptShort = rawDept ? getDepartmentShortName(rawDept) : "";
+    const sem =
+      author.studentProfile.currentSemester ?? author.studentProfile.semester;
+
+    if (sem != null && String(sem).trim() !== "") {
+      const { numberPart, suffix } = parseOrdinalParts(sem);
+      const superSuffix = getOrdinalSuperscript(suffix);
+      const semLabel = `${numberPart}${superSuffix} Semester`;
+      const fullText = deptShort ? `${semLabel} • ${deptShort}` : semLabel;
+
+      return {
+        isStudent: true,
+        isTeacher: false,
+        isAdmin: false,
+        semesterNum: numberPart,
+        suffix,
+        superSuffix,
+        deptShort,
+        fullText,
+      };
+    }
+
+    const fullText = deptShort ? `Student • ${deptShort}` : "Student";
+    return {
+      isStudent: true,
+      isTeacher: false,
+      isAdmin: false,
+      deptShort,
+      fullText,
+    };
+  }
+
+  if (author.role === "ADMIN") {
+    return {
+      isStudent: false,
+      isTeacher: false,
+      isAdmin: true,
+      fullText: "Administrator",
+    };
+  }
+
+  return {
+    isStudent: false,
+    isTeacher: false,
+    isAdmin: false,
+    fullText: "University Member",
+  };
+}
+
+export function getUserAcademicSubtitle(author?: any): string {
+  return getAuthorAcademicInfo(author).fullText;
 }
 

@@ -23,6 +23,9 @@ import { ForumCard } from "./components/forum-card";
 import { ForumSkeleton } from "./components/forum-skeleton";
 import { ForumEmptyState } from "./components/forum-empty-state";
 import { ForumComposeModal } from "./components/forum-compose-modal";
+import { ForumConfirmModal } from "./components/forum-confirm-modal";
+import { useResolveForumPost, useDeleteForumPost } from "@/features/forum/useForum";
+import Toast from "react-native-toast-message";
 
 export type { ForumProps };
 
@@ -49,6 +52,16 @@ export function Forum({
   const insets = useSafeAreaInsets();
   const [internalIsComposeVisible, setInternalIsComposeVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    type: "danger" | "success";
+    title: string;
+    message: string;
+    confirmLabel: string;
+    action: () => void;
+  } | null>(null);
+
+  const resolveMutation = useResolveForumPost();
+  const deleteMutation = useDeleteForumPost();
 
   const isComposeVisible =
     externalIsComposeVisible !== undefined
@@ -102,11 +115,81 @@ export function Forum({
     setActiveFilter("ALL");
   }, [setActiveFilter]);
 
+  const handleResolve = useCallback(
+    (id: string, title: string) => {
+      setConfirmModal({
+        type: "success",
+        title: "Mark as Solved",
+        message: `Mark "${title}" as solved?`,
+        confirmLabel: "Mark Solved",
+        action: () => {
+          resolveMutation.mutate(id, {
+            onSuccess: () => {
+              setConfirmModal(null);
+              Toast.show({
+                type: "success",
+                text1: "Discussion Resolved",
+                text2: "Marked as solved successfully.",
+              });
+            },
+            onError: (err: any) => {
+              setConfirmModal(null);
+              Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: err?.message || "Failed to resolve discussion.",
+              });
+            },
+          });
+        },
+      });
+    },
+    [resolveMutation],
+  );
+
+  const handleDelete = useCallback(
+    (id: string, title: string) => {
+      setConfirmModal({
+        type: "danger",
+        title: "Delete Discussion",
+        message: `Are you sure you want to permanently delete "${title}"? This action cannot be undone.`,
+        confirmLabel: "Delete",
+        action: () => {
+          deleteMutation.mutate(id, {
+            onSuccess: () => {
+              setConfirmModal(null);
+              Toast.show({
+                type: "success",
+                text1: "Discussion Deleted",
+                text2: "Discussion was permanently removed.",
+              });
+            },
+            onError: (err: any) => {
+              setConfirmModal(null);
+              Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: err?.message || "Failed to delete discussion.",
+              });
+            },
+          });
+        },
+      });
+    },
+    [deleteMutation],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: ForumPostItem }) => (
-      <ForumCard item={item} onPress={handleCardPress} />
+      <ForumCard
+        item={item}
+        onPress={handleCardPress}
+        isAdmin={currentUser?.role === "ADMIN"}
+        onResolve={handleResolve}
+        onDelete={handleDelete}
+      />
     ),
-    [handleCardPress],
+    [handleCardPress, currentUser?.role, handleResolve, handleDelete],
   );
 
   const renderFooter = useCallback(() => {
@@ -240,6 +323,19 @@ export function Forum({
         onClose={handleCloseCompose}
         onSuccess={onRefresh}
       />
+
+      {confirmModal && (
+        <ForumConfirmModal
+          visible={Boolean(confirmModal)}
+          onClose={() => setConfirmModal(null)}
+          onConfirm={confirmModal.action}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel}
+          type={confirmModal.type}
+          isLoading={resolveMutation.isPending || deleteMutation.isPending}
+        />
+      )}
     </ContainerComponent>
   );
 }
