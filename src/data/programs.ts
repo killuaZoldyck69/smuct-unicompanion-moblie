@@ -55,6 +55,7 @@ export const PROGRAM_SHORT_NAMES: Record<string, string> = {
   "M.A. in Graphic Design and Multimedia": "M.A. GDM",
   "MBA in Product & Fashion Merchandizing": "MBA (PFM)",
   "Masters of Business Administration (MBA)": "MBA",
+  "Executive Master of Business Administration (EMBA)": "EMBA",
   "MA in English": "M.A. ENG",
   "Master of Laws (LLM)": "LL.M",
   "MA in Bangla": "M.A. BAN",
@@ -83,6 +84,7 @@ export const getProgramShortName = (programName?: string | null): string => {
   const lower = trimmed.toLowerCase();
 
   // Postgraduate programs
+  if (lower.includes("emba") || (lower.includes("executive") && lower.includes("mba"))) return "EMBA";
   if (lower.includes("mba") && (lower.includes("product") || lower.includes("merchandiz") || lower.includes("pfm"))) return "MBA (PFM)";
   if (lower.includes("masters of business") || (lower.includes("mba") && !lower.includes("product"))) return "MBA";
   if (lower.includes("llm") || lower.includes("master of laws")) return "LL.M";
@@ -402,6 +404,15 @@ export const universityPrograms: AcademicProgram[] = [
     departmentShortName: "BBA",
     name: "Masters of Business Administration (MBA)",
     shortName: "MBA",
+  },
+  {
+    id: "PG-FOB-02",
+    level: "Postgraduate",
+    faculty: "FACULTY OF BUSINESS",
+    department: "Business Administration",
+    departmentShortName: "BBA",
+    name: "Executive Master of Business Administration (EMBA)",
+    shortName: "EMBA",
   },
 
   // FACULTY OF HUMANITIES & SOCIAL SCIENCES

@@ -11,6 +11,7 @@ export interface AdminDashboardStats {
   restrictedUsers: number;
   pendingApprovals: number;
   activeNotices: number;
+  totalCourseHubs: number;
   recentActivity: ActivityItem[];
 }
 
@@ -84,6 +85,7 @@ export function useAdminDashboard() {
           restrictedUsers: d?.restrictedUsers ?? 0,
           pendingApprovals: d?.pendingApprovals ?? 0,
           activeNotices: d?.activeNotices ?? 0,
+          totalCourseHubs: d?.totalCourseHubs ?? 0,
           recentActivity: d?.recentActivity ?? [],
         };
       } catch {
@@ -95,6 +97,7 @@ export function useAdminDashboard() {
           restrictedUsers: 0,
           pendingApprovals: 0,
           activeNotices: 0,
+          totalCourseHubs: 0,
           recentActivity: [],
         };
       }

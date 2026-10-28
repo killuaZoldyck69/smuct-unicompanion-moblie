@@ -1,7 +1,16 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+
+const QUICK_ACCESS_ICONS = {
+  manageStudents: require("@/assets/icons/user-management.png"),
+  addRegistration: require("@/assets/icons/add-teacher.png"),
+  postNotice: require("@/assets/icons/notice.png"),
+  community: require("@/assets/icons/forum.png"),
+  calendar: require("@/assets/icons/calendar.png"),
+  systemMonitor: require("@/assets/icons/system-monitor.png"),
+} as const;
 
 export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
   const router = useRouter();
@@ -23,7 +32,11 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
         >
           <View style={styles.cardHeader}>
             <View style={[styles.iconWrap, { backgroundColor: "#EFF6FF" }]}>
-              <Ionicons name="people-outline" size={20} color="#3B82F6" />
+              <Image
+                source={QUICK_ACCESS_ICONS.manageStudents}
+                style={styles.iconImage}
+                resizeMode="contain"
+              />
             </View>
             <Feather name="arrow-right" size={18} color="#3B82F6" />
           </View>
@@ -46,7 +59,11 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
         >
           <View style={styles.cardHeader}>
             <View style={[styles.iconWrap, { backgroundColor: "#ECFDF5" }]}>
-              <Feather name="user-plus" size={18} color="#10B981" />
+              <Image
+                source={QUICK_ACCESS_ICONS.addRegistration}
+                style={styles.iconImage}
+                resizeMode="contain"
+              />
             </View>
             <Feather name="arrow-right" size={18} color="#10B981" />
           </View>
@@ -72,7 +89,11 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
         >
           <View style={styles.cardHeader}>
             <View style={[styles.iconWrap, { backgroundColor: "#FFFBEB" }]}>
-              <Feather name="bell" size={18} color="#F59E0B" />
+              <Image
+                source={QUICK_ACCESS_ICONS.postNotice}
+                style={styles.iconImage}
+                resizeMode="contain"
+              />
             </View>
             <Feather name="arrow-right" size={18} color="#F59E0B" />
           </View>
@@ -95,10 +116,10 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
         >
           <View style={styles.cardHeader}>
             <View style={[styles.iconWrap, { backgroundColor: "#FFF1F2" }]}>
-              <Ionicons
-                name="chatbubble-ellipses-outline"
-                size={18}
-                color="#E11D48"
+              <Image
+                source={QUICK_ACCESS_ICONS.community}
+                style={styles.iconImage}
+                resizeMode="contain"
               />
             </View>
             <Feather name="arrow-right" size={18} color="#E11D48" />
@@ -122,7 +143,11 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
         accessibilityLabel="Academic Calendar: Manage academic events and terms"
       >
         <View style={[styles.wideIconWrap, { backgroundColor: "#ECFDF5" }]}>
-          <Feather name="calendar" size={20} color="#10B981" />
+          <Image
+            source={QUICK_ACCESS_ICONS.calendar}
+            style={styles.wideIconImage}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.wideTextBlock}>
           <Text style={styles.wideTitle} numberOfLines={1}>
@@ -145,7 +170,11 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
         accessibilityLabel="System Monitor: Health, server logs and diagnostics"
       >
         <View style={[styles.wideIconWrap, { backgroundColor: "#EEF2FF" }]}>
-          <Feather name="zap" size={20} color="#6366F1" />
+          <Image
+            source={QUICK_ACCESS_ICONS.systemMonitor}
+            style={styles.wideIconImage}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.wideTextBlock}>
           <Text style={styles.wideTitle} numberOfLines={1}>
@@ -252,5 +281,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748B",
     fontWeight: "500",
+  },
+  iconImage: {
+    width: 22,
+    height: 22,
+  },
+  wideIconImage: {
+    width: 24,
+    height: 24,
   },
 });

@@ -89,7 +89,7 @@ export const StatsGrid = React.memo(function StatsGrid({
     <View style={styles.container}>
       <Text style={styles.sectionLabel}>LIVE OVERVIEW</Text>
 
-      {/* Row 1: Students & Faculty */}
+      {/* Row 1: Students & Teachers */}
       <View style={styles.row}>
         {/* 1. Total Students */}
         <StatCard
@@ -110,24 +110,24 @@ export const StatsGrid = React.memo(function StatsGrid({
           onPress={() => router.push("/(tabs)/admin_users")}
         />
 
-        {/* 2. Total Faculty */}
+        {/* 2. Total Teachers */}
         <StatCard
           iconNode={
             <MaterialCommunityIcons
-              name="shield-check-outline"
-              size={18}
+              name="human-male-board"
+              size={19}
               color="#6366F1"
             />
           }
           watermarkNode={
             <MaterialCommunityIcons
-              name="office-building-outline"
+              name="human-male-board"
               size={76}
               color="#6366F1"
             />
           }
           value={stats?.totalTeachers ?? 0}
-          label="Total Faculty"
+          label="Total Teachers"
           cardBg="#F8FAFF"
           borderColor="#E0E7FF"
           iconBg="#EEF2FF"
@@ -153,19 +153,19 @@ export const StatsGrid = React.memo(function StatsGrid({
           onPress={() => router.push("/(tabs)/admin_users")}
         />
 
-        {/* 4. Published Notices */}
+        {/* 4. Total Course Hubs */}
         <StatCard
-          iconNode={<Feather name="bell" size={18} color="#D97706" />}
+          iconNode={<Feather name="book-open" size={18} color="#D97706" />}
           watermarkNode={
-            <Ionicons name="megaphone-outline" size={74} color="#D97706" />
+            <Ionicons name="book-outline" size={74} color="#D97706" />
           }
-          value={stats?.activeNotices ?? 0}
-          label="Published Notices"
+          value={stats?.totalCourseHubs ?? 0}
+          label="Total Course Hubs"
           cardBg="#FFFDF5"
           borderColor="#FEF3C7"
           iconBg="#FEF3C7"
           isLoading={isLoading}
-          onPress={() => router.push("/(tabs)/notices")}
+          onPress={() => router.push("/(tabs)/hubs")}
         />
       </View>
     </View>

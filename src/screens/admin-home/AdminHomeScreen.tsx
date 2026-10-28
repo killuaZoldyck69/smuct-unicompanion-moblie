@@ -15,6 +15,7 @@ import { useAdminDashboard } from "./hooks/use-admin-dashboard";
 import { AdminAmbientBackground } from "./components/AdminAmbientBackground";
 import { AdminHeroHeader } from "./components/AdminHeroHeader";
 import { SystemStatusBanner } from "./components/SystemStatusBanner";
+import { AcademicStatsBanner } from "./components/AcademicStatsBanner";
 import { StatsGrid } from "./components/StatsGrid";
 import { QuickAccessGrid } from "./components/QuickAccessGrid";
 import { ActivityFeed } from "./components/ActivityFeed";
@@ -75,7 +76,10 @@ export function AdminHomeScreen() {
         {/* 2. System Health Banner */}
         <SystemStatusBanner health={health} isFetching={isHealthFetching} />
 
-        {/* 3. Live Stats Overview Grid */}
+        {/* 3. Academic Structure Stats (Programs, Departments, Faculties) */}
+        <AcademicStatsBanner />
+
+        {/* 4. Live Stats Overview Grid */}
         <StatsGrid stats={stats} isLoading={isStatsLoading} />
 
         {/* 4. Admin Quick Access Grid */}
