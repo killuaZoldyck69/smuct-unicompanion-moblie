@@ -28,7 +28,6 @@ import {
   useAcceptLostFoundClaim,
   useRejectLostFoundClaim,
   useWithdrawLostFoundClaim,
-  usePossibleMatches,
 } from "@/features/campus-hub/useLostFound";
 import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
 import {
@@ -48,7 +47,6 @@ import type { LostFoundClaim } from "@/services/lost-found-service";
 import { LFDetailHeader } from "./components/detail/lf-detail-header";
 import { LFImageGallery } from "./components/detail/lf-image-gallery";
 import { LFInfoCard } from "./components/detail/lf-info-card";
-import { LFPossibleMatches } from "./components/detail/lf-possible-matches";
 import { LFClaimsSection } from "./components/detail/lf-claims-section";
 import { LFMyClaimCard } from "./components/detail/lf-my-claim-card";
 
@@ -127,7 +125,6 @@ export function LostFoundDetailScreen() {
   // Queries & mutations
   // ---------------------------------------------------------------------------
   const { data: post, isLoading, isError, refetch } = useLostFoundPost(id);
-  const { data: matches } = usePossibleMatches(id);
   const { data: claimsData, isLoading: isClaimsLoading } = useLostFoundClaims(id);
 
   const deleteMutation = useDeleteLostFoundPost();
@@ -340,13 +337,6 @@ export function LostFoundDetailScreen() {
     openModal("claim");
   }, [currentUser, openModal]);
 
-  const handleMatchPress = useCallback(
-    (matchId: string) => {
-      router.push(`/campus-hub/lost-found/${matchId}` as any);
-    },
-    [router]
-  );
-
   const handleViewAuthor = useCallback((author: AuthorProfileModalData) => {
     setSelectedAuthor(author);
   }, []);
@@ -402,12 +392,6 @@ export function LostFoundDetailScreen() {
           onViewAuthor={handleViewAuthor}
           onEdit={handleEditPress}
           onDelete={handleDeletePress}
-        />
-
-        <LFPossibleMatches
-          matches={matches ?? []}
-          isLost={isLost}
-          onPressMatch={handleMatchPress}
         />
 
         {isResolved && post.handoverData && (
@@ -473,6 +457,9 @@ export function LostFoundDetailScreen() {
       <EditLostFoundModal
         visible={modals.edit}
         onClose={() => closeModal("edit")}
+        onSuccess={() => {
+          refetch();
+        }}
         post={post}
       />
 

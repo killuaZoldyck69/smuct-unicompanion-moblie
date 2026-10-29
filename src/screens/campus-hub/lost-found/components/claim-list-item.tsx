@@ -10,7 +10,12 @@ import {
 import { Feather } from "@expo/vector-icons";
 
 import type { LostFoundClaim, LostFoundAuthor } from "@/services/lost-found-service";
-import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  timeAgo,
+  formatCampusUserSubtitle,
+} from "../../shared/design-tokens";
 
 interface ClaimListItemProps {
   claim: LostFoundClaim;
@@ -36,15 +41,7 @@ export const ClaimListItem = React.memo(function ClaimListItem({
   const isAccepted = claim.status === "ACCEPTED";
   const isRejected = claim.status === "REJECTED";
 
-  const studentInfo = claimant?.studentProfile
-    ? `${claimant.studentProfile.department || ""} • ID: ${
-        claimant.studentProfile.studentId || ""
-      }`
-    : claimant?.teacherProfile
-    ? `${claimant.teacherProfile.designation || ""} • ${
-        claimant.teacherProfile.department || ""
-      }`
-    : "SMUCT Member";
+  const claimantSubtitle = formatCampusUserSubtitle(claimant, "SMUCT Member");
 
   return (
     <View style={[styles.card, isAccepted && styles.cardAccepted]}>
@@ -72,7 +69,7 @@ export const ClaimListItem = React.memo(function ClaimListItem({
               {claimant?.name ?? "Unknown User"}
             </Text>
             <Text style={styles.subtitle} numberOfLines={1}>
-              {studentInfo}
+              {claimantSubtitle}
             </Text>
           </View>
         </TouchableOpacity>
@@ -319,6 +316,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.neutralText,
     lineHeight: 19,
+  },
+  proofAttachmentsContainer: {
+    gap: 8,
   },
   proofAttachmentCard: {
     flexDirection: "row",

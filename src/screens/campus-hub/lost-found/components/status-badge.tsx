@@ -173,6 +173,46 @@ export const CategoryBadge = React.memo(function CategoryBadge({
   );
 });
 
+interface LocationBadgeProps {
+  location: string;
+  size?: "small" | "medium";
+}
+
+export const LocationBadge = React.memo(function LocationBadge({
+  location,
+  size = "small",
+}: LocationBadgeProps) {
+  if (!location) return null;
+
+  return (
+    <View
+      style={[
+        styles.locationBadge,
+        size === "medium" && styles.locationBadgeMedium,
+      ]}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`Location: ${location}`}
+    >
+      <Feather
+        name="map-pin"
+        size={size === "medium" ? 11 : 10}
+        color="#dc2626"
+        style={{ marginRight: 4 }}
+      />
+      <Text
+        style={[
+          styles.locationBadgeText,
+          size === "medium" && styles.locationBadgeTextMedium,
+        ]}
+        numberOfLines={1}
+      >
+        {location}
+      </Text>
+    </View>
+  );
+});
+
 const styles = StyleSheet.create({
   badge: {
     flexDirection: "row",
@@ -217,5 +257,32 @@ const styles = StyleSheet.create({
   },
   categoryBadgeTextMedium: {
     fontSize: 10,
+  },
+  locationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+  },
+  locationBadgeMedium: {
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+  },
+  locationBadgeText: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#1e293b",
+    letterSpacing: -0.1,
+    flexShrink: 1,
+  },
+  locationBadgeTextMedium: {
+    fontSize: 11.5,
   },
 });

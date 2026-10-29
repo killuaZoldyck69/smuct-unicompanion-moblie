@@ -19,7 +19,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
 
@@ -132,10 +132,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
     }
   }, [hasContent, onClose]);
 
-  const canSubmit =
-    form.title.trim().length > 0 &&
-    form.description.trim().length > 0 &&
-    form.location.trim().length > 0;
+  const canSubmit = form.title.trim().length > 0;
 
   const handleSubmit = useCallback(async () => {
     if (!form.title.trim()) {
@@ -143,20 +140,6 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
         type: "error",
         text1: "Title Required",
         text2: "Please enter an item title.",
-      });
-    }
-    if (!form.description.trim()) {
-      return Toast.show({
-        type: "error",
-        text1: "Description Required",
-        text2: "Please describe the item in detail.",
-      });
-    }
-    if (!form.location.trim()) {
-      return Toast.show({
-        type: "error",
-        text1: "Location Required",
-        text2: "Please specify where the item was lost or found.",
       });
     }
 
@@ -217,9 +200,9 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
     const payload: CreateLostFoundInput = {
       type: form.type,
       title: form.title.trim(),
-      description: form.description.trim(),
+      description: form.description.trim() || undefined,
       category: form.category,
-      location: form.location.trim(),
+      location: form.location.trim() || undefined,
       images: imageUrls,
       verificationQuestion:
         form.type === "FOUND" && form.verificationQuestion.trim()
@@ -399,7 +382,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
             {/* Description Input */}
             <View style={styles.formGroup}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>DESCRIPTION</Text>
+                <Text style={styles.label}>DESCRIPTION (OPTIONAL)</Text>
                 <Text style={styles.counterText}>
                   {form.description.length}/1000
                 </Text>
@@ -459,7 +442,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
 
             {/* Location Input */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>LOCATION</Text>
+              <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Where was it lost or found?"

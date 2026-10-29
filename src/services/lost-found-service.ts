@@ -68,9 +68,9 @@ export interface LostFoundPost {
   id: string;
   type: LostFoundType;
   title: string;
-  description: string;
+  description?: string | null;
   category: LostFoundCategory;
-  location: string;
+  location?: string | null;
   status: LostFoundStatus;
   images: string[];
   verificationQuestion?: string | null;
@@ -88,10 +88,10 @@ export interface LostFoundPost {
 export interface CreateLostFoundInput {
   type: LostFoundType;
   title: string;
-  description: string;
+  description?: string | null;
   category: LostFoundCategory;
-  location: string;
-  images: string[];
+  location?: string | null;
+  images?: string[];
   verificationQuestion?: string | null;
   verificationAnswer?: string | null;
 }

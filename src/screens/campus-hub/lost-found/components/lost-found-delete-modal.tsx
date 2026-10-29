@@ -12,14 +12,15 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
+import { LocationBadge } from "@/screens/campus-hub/lost-found/components/status-badge";
 
 interface LostFoundDeleteModalProps {
   visible: boolean;
   isDeleting: boolean;
   postTitle: string;
   postType?: "LOST" | "FOUND";
-  postLocation?: string;
-  postImage?: string;
+  postLocation?: string | null;
+  postImage?: string | null;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -119,15 +120,8 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
                     </View>
 
                     {!!postLocation && (
-                      <View style={styles.locationRow}>
-                        <Feather
-                          name="map-pin"
-                          size={11}
-                          color={CAMPUS_HUB_COLORS.subtleText}
-                        />
-                        <Text style={styles.locationText} numberOfLines={1}>
-                          {postLocation}
-                        </Text>
+                      <View style={{ marginTop: 4 }}>
+                        <LocationBadge location={postLocation} />
                       </View>
                     )}
                   </View>

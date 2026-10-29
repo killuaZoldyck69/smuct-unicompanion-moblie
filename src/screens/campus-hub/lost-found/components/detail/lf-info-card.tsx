@@ -1,7 +1,13 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { CAMPUS_HUB_COLORS, fontFamily, timeAgo, formatDateTime } from "@/screens/campus-hub/shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  timeAgo,
+  formatDateTime,
+  formatCampusUserSubtitle,
+} from "@/screens/campus-hub/shared/design-tokens";
 import { AvatarChip } from "@/screens/campus-hub/shared/avatar-chip";
 import {
   TypeBadge,
@@ -52,12 +58,18 @@ export function LFInfoCard({
 
       {/* Key Facts & Timestamps */}
       <View style={styles.metaCard}>
-        <View style={styles.factsRow}>
-          <View style={styles.factItem}>
-            <Feather name="map-pin" size={12} color={CAMPUS_HUB_COLORS.subtleText} />
-            <Text style={styles.factText} numberOfLines={1}>{post.location}</Text>
+        {/* Dedicated Single Row for Location without trailing dot */}
+        {!!post.location && (
+          <View style={styles.locationRow}>
+            <Feather name="map-pin" size={13} color="#dc2626" />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {post.location}
+            </Text>
           </View>
-          <Text style={styles.factDot}>•</Text>
+        )}
+
+        {/* Date & Time Row */}
+        <View style={styles.dateTimeRow}>
           <View style={styles.factItem}>
             <Feather name="calendar" size={12} color={CAMPUS_HUB_COLORS.subtleText} />
             <Text style={styles.factText}>{formatDateTime(post.createdAt)}</Text>
@@ -89,19 +101,19 @@ export function LFInfoCard({
       <AvatarChip
         name={post.author?.name ?? "SMUCT Member"}
         image={post.author?.image}
-        subtitle={
-          post.author?.studentProfile?.department ||
-          post.author?.teacherProfile?.department ||
-          "Campus Hub"
-        }
+        subtitle={formatCampusUserSubtitle(post.author, "Campus Hub")}
         onPress={() => onViewAuthor(post.author as AuthorProfileModalData)}
       />
 
       <View style={styles.divider} />
 
       {/* Description */}
-      <Text style={styles.sectionLabel}>DESCRIPTION</Text>
-      <Text style={styles.description}>{post.description}</Text>
+      {!!post.description?.trim() && (
+        <>
+          <Text style={styles.sectionLabel}>DESCRIPTION</Text>
+          <Text style={styles.description}>{post.description}</Text>
+        </>
+      )}
 
       {/* Verification question */}
       {!!post.verificationQuestion && (
@@ -197,18 +209,30 @@ const styles = StyleSheet.create({
   metaCard: {
     backgroundColor: "#f8fafc",
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 12,
-    gap: 6,
+    gap: 7,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.04)",
     marginBottom: 8,
   },
-  factsRow: {
+  locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
     gap: 6,
+  },
+  locationText: {
+    fontFamily,
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#1e293b",
+    flex: 1,
+  },
+  dateTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
   },
   editedRow: {
     flexDirection: "row",

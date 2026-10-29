@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { getDepartmentShortName } from "@/data/programs";
 
 export const CAMPUS_HUB_COLORS = {
   background: "#f7f9fb",
@@ -104,3 +105,79 @@ export function formatDateTime(dateString: string): string {
   });
 }
 
+/**
+ * Formats a semester number or string into ordinal superscript representation
+ * e.g. 10 -> "10ᵗʰ Semester", 1 -> "1ˢᵗ Semester", 2 -> "2ⁿᵈ Semester", 3 -> "3ʳᵈ Semester".
+ */
+export function formatSemesterOrdinal(
+  sem: number | string | null | undefined
+): string {
+  if (sem === null || sem === undefined || sem === "") return "";
+  const num = typeof sem === "number" ? sem : parseInt(String(sem).trim(), 10);
+  if (!isNaN(num) && num > 0) {
+    const s = ["ᵗʰ", "ˢᵗ", "ⁿᵈ", "ʳᵈ"];
+    const v = num % 100;
+    const suffix = s[(v - 20) % 10] || s[v] || s[0];
+    return `${num}${suffix} Semester`;
+  }
+  const str = String(sem).trim();
+  return str ? `${str} Semester` : "";
+}
+
+/**
+ * Standard user subtitle formatter for Campus Hub (author, claimer, counterpart).
+ * - If student: "{N}ᵗʰ Semester • {DeptShort}" (e.g. "10ᵗʰ Semester • CSE")
+ * - If teacher: "{Designation} • {DeptShort}" (e.g. "Lecturer • CSE")
+ * - If admin / fallback: role-based or custom fallback (e.g. "Campus Hub" or "SMUCT Member")
+ */
+export function formatCampusUserSubtitle(
+  user?: {
+    role?: string | null;
+    studentProfile?: {
+      department?: string | null;
+      currentSemester?: number | string | null;
+      semester?: number | string | null;
+      studentId?: string | null;
+    } | null;
+    teacherProfile?: {
+      department?: string | null;
+      designation?: string | null;
+    } | null;
+  } | null,
+  fallback = "Campus Hub"
+): string {
+  if (!user) return fallback;
+
+  // 1. Student
+  if (user.studentProfile) {
+    const sem = formatSemesterOrdinal(
+      user.studentProfile.currentSemester ?? user.studentProfile.semester
+    );
+    const rawDept = user.studentProfile.department?.trim();
+    const dept = rawDept ? getDepartmentShortName(rawDept) : "";
+
+    if (sem && dept) return `${sem} • ${dept}`;
+    if (sem) return sem;
+    if (dept) return dept;
+    return "Student";
+  }
+
+  // 2. Teacher
+  if (user.teacherProfile) {
+    const designation = user.teacherProfile.designation?.trim() || "Faculty";
+    const rawDept = user.teacherProfile.department?.trim();
+    const dept = rawDept ? getDepartmentShortName(rawDept) : "";
+
+    if (designation && dept) return `${designation} • ${dept}`;
+    if (designation) return designation;
+    if (dept) return dept;
+    return "Faculty";
+  }
+
+  // 3. Admin / Fallback
+  if (user.role === "ADMIN") return "System Administrator";
+  if (user.role === "TEACHER") return "Faculty";
+  if (user.role === "STUDENT") return "Student";
+
+  return fallback;
+}

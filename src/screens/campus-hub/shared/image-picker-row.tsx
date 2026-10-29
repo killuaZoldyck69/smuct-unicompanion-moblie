@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
 import { Feather } from "@expo/vector-icons";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
@@ -113,7 +113,10 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
           {label ?? `PHOTOS (${images.length}/${maxImages})`}
         </Text>
         <Text style={styles.hintText}>
-          {hint ?? `Max 2 photos • Up to ${limitMb}MB each`}
+          {hint ??
+            (maxImages === 1
+              ? `Max 1 photo • Up to ${limitMb}MB`
+              : `Max ${maxImages} photos • Up to ${limitMb}MB each`)}
         </Text>
       </View>
 

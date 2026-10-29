@@ -103,7 +103,13 @@ export const useUpdateLostFoundPost = () => {
       id: string;
       data: Partial<CreateLostFoundInput>;
     }) => updateLostFoundPost(id, data),
-    onSuccess: (_data, variables) => {
+    onSuccess: (updatedPost, variables) => {
+      if (updatedPost) {
+        queryClient.setQueryData(
+          lostFoundKeys.detail(variables.id),
+          (old: any) => (old ? { ...old, ...updatedPost } : updatedPost)
+        );
+      }
       queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
       queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(variables.id) });
     },

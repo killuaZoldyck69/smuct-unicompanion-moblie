@@ -10,10 +10,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  StatusBar,
+  Keyboard,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
 
 import { useSubmitLostFoundClaim } from "@/features/campus-hub/useLostFound";
 import {
@@ -23,6 +30,7 @@ import {
 import type { LostFoundPost } from "@/services/lost-found-service";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
+import { LocationBadge } from "./status-badge";
 
 interface ClaimModalProps {
   visible: boolean;
@@ -61,7 +69,12 @@ export const ClaimModal = React.memo(function ClaimModal({
     onClose();
   }, [onClose]);
 
+  const canSubmit =
+    message.trim().length >= 5 &&
+    (!post.verificationQuestion || answer.trim().length > 0);
+
   const handleSubmit = useCallback(async () => {
+    Keyboard.dismiss();
     const trimmedMessage = message.trim();
     if (trimmedMessage.length < 5) {
       return Toast.show({
@@ -79,21 +92,50 @@ export const ClaimModal = React.memo(function ClaimModal({
       });
     }
 
+    if (localImages.length > 1) {
+      return Toast.show({
+        type: "error",
+        text1: "Photo Limit Exceeded",
+        text2: "Only 1 proof photo can be attached.",
+      });
+    }
+
     let proofImageUrl: string | null = null;
-    if (localImages.length > 0) {
+    if (localImages.length > 0 && localImages[0]) {
+      const uri = localImages[0];
+      try {
+        const info = await FileSystem.getInfoAsync(uri);
+        if (
+          info.exists &&
+          typeof (info as any).size === "number" &&
+          (info as any).size > 5 * 1024 * 1024
+        ) {
+          return Toast.show({
+            type: "error",
+            text1: "Photo Exceeds 5MB",
+            text2:
+              "Proof photo exceeds 5MB limit. Please choose a smaller photo.",
+          });
+        }
+      } catch {}
+
       setIsUploading(true);
       try {
-        const uploadRes = await uploadImageToCloudinary(
-          localImages[0],
-          CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS
+        const result = await uploadImageToCloudinary(
+          uri,
+          CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS,
         );
-        proofImageUrl = uploadRes.secureUrl;
+        proofImageUrl = result.secureUrl;
       } catch (err: any) {
         setIsUploading(false);
+        const errMsg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Could not upload proof image. Check connection.";
         return Toast.show({
           type: "error",
           text1: "Upload Failed",
-          text2: "Could not upload proof image. Check connection.",
+          text2: errMsg,
         });
       }
       setIsUploading(false);
@@ -103,63 +145,98 @@ export const ClaimModal = React.memo(function ClaimModal({
       {
         message: trimmedMessage,
         answer: answer.trim() ? answer.trim() : null,
-        proofImage: proofImageUrl,
+        proofImage: proofImageUrl || null,
       },
       {
         onSuccess: () => {
-          Toast.show({
-            type: "success",
-            text1: "Claim Submitted!",
-            text2: "The post owner has been notified and will review your claim.",
-          });
           handleClose();
           onSuccess?.();
+          setTimeout(() => {
+            Toast.show({
+              type: "success",
+              text1: "Claim Submitted!",
+              text2:
+                "The post owner has been notified and will review your claim.",
+            });
+          }, 350);
         },
         onError: (err: any) => {
+          const errorSources = err.response?.data?.errorSources;
+          const detailedMsg =
+            Array.isArray(errorSources) && errorSources.length > 0
+              ? errorSources
+                  .map((e: any) => e.message || `${e.path}: invalid`)
+                  .join(". ")
+              : null;
           const msg =
-            err.response?.data?.message || err.message || "Failed to submit claim.";
+            detailedMsg ||
+            err.response?.data?.message ||
+            err.message ||
+            "Failed to submit claim.";
           Toast.show({
             type: "error",
             text1: "Submission Failed",
             text2: msg,
           });
         },
-      }
+      },
     );
-  }, [message, answer, localImages, post.verificationQuestion, submitMutation, handleClose, onSuccess]);
+  }, [
+    message,
+    answer,
+    localImages,
+    post.verificationQuestion,
+    submitMutation,
+    handleClose,
+    onSuccess,
+  ]);
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
+      statusBarTranslucent={true}
       onRequestClose={handleClose}
     >
-      {/* edges=["top"] only — bottom inset applied manually to avoid the double-gap
-          that SafeAreaView produces inside a pageSheet modal on Android */}
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <KeyboardAvoidingView
-          style={styles.flexFill}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={0}
-        >
-          {/* Modal Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={handleClose}
-              style={styles.closeBtn}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel="Close claim modal"
-            >
-              <Feather name="x" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
-            </TouchableOpacity>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="#ffffff"
+        translucent={true}
+      />
+      <SafeAreaView
+        style={styles.fullScreenContainer}
+        edges={["top", "bottom"]}
+      >
+        {/* Top Header Navigation Bar */}
+        <View style={styles.topHeader}>
+          <View style={styles.headerTitleGroup}>
             <Text style={styles.headerTitle}>{claimActionTitle}</Text>
-            <View style={styles.headerSpacer} />
+            <View style={styles.hubBadge}>
+              <Text style={styles.hubBadgeText}>CAMPUS HUB</Text>
+            </View>
           </View>
 
+          <TouchableOpacity
+            onPress={handleClose}
+            style={styles.circleBtn}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Close claim modal"
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
+          </TouchableOpacity>
+        </View>
+
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoid}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           {/* Scrollable form content */}
           <ScrollView
+            style={styles.scrollView}
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -190,14 +267,10 @@ export const ClaimModal = React.memo(function ClaimModal({
                     {isLost ? "LOST ITEM" : "FOUND ITEM"}
                   </Text>
                 </View>
-                <Text style={styles.summaryLocation} numberOfLines={1}>
-                  <Feather name="map-pin" size={11} color={CAMPUS_HUB_COLORS.subtleText} />{" "}
-                  {post.location}
-                </Text>
+                {!!post.location && <LocationBadge location={post.location} />}
               </View>
-              <Text style={styles.summaryTitle} numberOfLines={1}>
-                {post.title}
-              </Text>
+              {/* Show FULL title, no truncation */}
+              <Text style={styles.summaryTitle}>{post.title}</Text>
             </View>
 
             {/* Verification Question Prompt (if configured by author) */}
@@ -205,14 +278,16 @@ export const ClaimModal = React.memo(function ClaimModal({
               <View style={styles.verificationBox}>
                 <View style={styles.verificationHeader}>
                   <Feather name="shield" size={15} color="#0284c7" />
-                  <Text style={styles.verificationLabel}>OWNER'S VERIFICATION QUESTION</Text>
+                  <Text style={styles.verificationLabel}>
+                    OWNER'S VERIFICATION QUESTION
+                  </Text>
                 </View>
                 <Text style={styles.verificationQuestion}>
                   {post.verificationQuestion}
                 </Text>
                 <TextInput
                   style={styles.answerInput}
-                  placeholder="Your answer (e.g. secret detail, serial number)..."
+                  placeholder="Your answer..."
                   placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                   value={answer}
                   onChangeText={setAnswer}
@@ -243,33 +318,34 @@ export const ClaimModal = React.memo(function ClaimModal({
               />
             </View>
 
-            {/* Optional Proof Image Picker */}
+            {/* Optional Proof Image Picker - 1 photo */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>ATTACH PROOF PHOTO (OPTIONAL)</Text>
               <Text style={styles.helpText}>
-                Upload a photo of an invoice, previous photo with the item, student ID, or screenshot.
+                Upload a proof photo (invoice, photo with item, serial number,
+                ID, or receipt).
               </Text>
               <ImagePickerRow
                 images={localImages}
                 onImagesChange={setLocalImages}
                 maxImages={1}
+                maxSizeBytes={5 * 1024 * 1024}
                 accent={ACCENT}
+                hint="Max 1 photo • Up to 5MB"
               />
             </View>
           </ScrollView>
 
-          {/* Submit CTA — pinned outside ScrollView, always visible above keyboard */}
-          <View
-            style={[
-              styles.submitFooter,
-              { paddingBottom: Math.max(insets.bottom, 20) },
-            ]}
-          >
+          {/* Bottom Docked Action Footer with Safe Area */}
+          <View style={styles.modalFooter}>
             <TouchableOpacity
-              style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
+              style={[
+                styles.submitBtn,
+                (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
+              ]}
               onPress={handleSubmit}
-              disabled={isSubmitting}
-              activeOpacity={0.85}
+              disabled={!canSubmit || isSubmitting}
+              activeOpacity={0.8}
               accessible
               accessibilityRole="button"
               accessibilityLabel="Submit claim"
@@ -278,46 +354,69 @@ export const ClaimModal = React.memo(function ClaimModal({
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
                 <>
-                  <Feather name="send" size={16} color="#ffffff" style={styles.submitIcon} />
+                  <Feather
+                    name="send"
+                    size={16}
+                    color="#ffffff"
+                    style={{ marginRight: 8 }}
+                  />
                   <Text style={styles.submitBtnText}>Submit Claim</Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+
+        {/* Embedded Toast Overlay for Modal Viewport */}
+        <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
       </SafeAreaView>
     </Modal>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
+  fullScreenContainer: {
     flex: 1,
-    backgroundColor: CAMPUS_HUB_COLORS.background,
+    backgroundColor: "#ffffff",
   },
-  flexFill: {
-    flex: 1,
-  },
-  header: {
+  topHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderBottomColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
+  },
+  headerTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    marginRight: 8,
   },
   headerTitle: {
     fontFamily,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    letterSpacing: -0.3,
   },
-  headerSpacer: {
-    width: 36,
+  hubBadge: {
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  closeBtn: {
+  hubBadgeText: {
+    fontFamily,
+    fontSize: 9,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
+    letterSpacing: 0.5,
+  },
+  circleBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -325,23 +424,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
   scroll: {
     padding: 20,
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
   summaryCard: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
+    backgroundColor: "#f8fafc",
     borderRadius: 16,
     padding: 16,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
-    gap: 8,
+    borderColor: "#e2e8f0",
+    gap: 10,
   },
   summaryTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
   },
   typeBadge: {
     paddingHorizontal: 8,
@@ -354,17 +461,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.4,
   },
-  summaryLocation: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
   summaryTitle: {
     fontFamily,
     fontSize: 16,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    lineHeight: 22,
   },
   verificationBox: {
     backgroundColor: "#f0f9ff",
@@ -452,8 +554,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     lineHeight: 16,
   },
-  submitFooter: {
+  modalFooter: {
     paddingTop: 12,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,

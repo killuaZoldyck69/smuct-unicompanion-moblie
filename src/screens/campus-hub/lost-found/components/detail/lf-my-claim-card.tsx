@@ -167,6 +167,9 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
     lineHeight: 18,
   },
+  proofContainer: {
+    gap: 8,
+  },
   proofBtn: {
     flexDirection: "row",
     alignItems: "center",

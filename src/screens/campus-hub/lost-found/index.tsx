@@ -40,6 +40,7 @@ import {
   TypeBadge,
   StatusBadge,
   CategoryBadge,
+  LocationBadge,
 } from "./components/status-badge";
 import {
   FilterModal,
@@ -90,8 +91,8 @@ export function LostFoundSection({
     id: string;
     title: string;
     type?: "LOST" | "FOUND";
-    location?: string;
-    image?: string;
+    location?: string | null;
+    image?: string | null;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -639,24 +640,6 @@ const LostFoundCard = React.memo(function LostFoundCard({
             {post.category && <CategoryBadge category={post.category} />}
             {isResolved && <StatusBadge status="RESOLVED" />}
           </View>
-
-          {isAdmin && (
-            <TouchableOpacity
-              style={styles.adminDeleteBtn}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                onDelete?.(post);
-              }}
-              activeOpacity={0.7}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={`Delete listing: ${post.title}`}
-            >
-              <Feather name="trash-2" size={12} color="#dc2626" />
-              <Text style={styles.adminDeleteBtnText}>Delete</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Title & Description */}
@@ -667,21 +650,18 @@ const LostFoundCard = React.memo(function LostFoundCard({
           {post.title}
         </Text>
 
-        <Text style={styles.cardDesc} numberOfLines={2}>
-          {post.description}
-        </Text>
-
-        {/* Key Facts Row: Location */}
-        <View style={styles.cardFooter}>
-          <Feather
-            name="map-pin"
-            size={11}
-            color={CAMPUS_HUB_COLORS.subtleText}
-          />
-          <Text style={styles.locationText} numberOfLines={1}>
-            {post.location}
+        {!!post.description?.trim() && (
+          <Text style={styles.cardDesc} numberOfLines={2}>
+            {post.description}
           </Text>
-        </View>
+        )}
+
+        {/* Key Facts Row: Location Badge */}
+        {!!post.location && (
+          <View style={styles.cardFooter}>
+            <LocationBadge location={post.location} />
+          </View>
+        )}
 
         {/* Owner-only Claim notification badge */}
         {isOwner && claimCount > 0 && !isResolved && (
@@ -695,7 +675,7 @@ const LostFoundCard = React.memo(function LostFoundCard({
         )}
       </View>
 
-      {/* Right Column: 84x84 Framed Thumbnail + Posted Time underneath */}
+      {/* Right Column: 84x84 Framed Thumbnail + Posted Time + Admin Delete underneath */}
       <View style={styles.cardRightCol}>
         <View style={styles.thumbWrapper}>
           {hasImage ? (
@@ -722,6 +702,25 @@ const LostFoundCard = React.memo(function LostFoundCard({
             {timeAgo(post.createdAt)}
           </Text>
         </View>
+
+        {/* Admin Delete Action Button moved under the thumbnail image */}
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.adminDeleteBtn}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onDelete?.(post);
+            }}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`Delete listing: ${post.title}`}
+          >
+            <Feather name="trash-2" size={11} color="#dc2626" />
+            <Text style={styles.adminDeleteBtnText}>Delete</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -942,19 +941,22 @@ const styles = StyleSheet.create({
   adminDeleteBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#fee2e2",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    width: "100%",
+    paddingVertical: 4.5,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#fecaca",
     gap: 4,
+    marginTop: 6,
   },
   adminDeleteBtnText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "700",
     color: "#dc2626",
+    letterSpacing: 0.1,
   },
   cardTitle: {
     fontFamily,
@@ -976,7 +978,6 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
     marginTop: 4,
   },
   locationText: {

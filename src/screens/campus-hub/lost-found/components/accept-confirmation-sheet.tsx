@@ -11,7 +11,11 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  formatCampusUserSubtitle,
+} from "../../shared/design-tokens";
 import type { LostFoundClaim } from "@/services/lost-found-service";
 
 // ---------------------------------------------------------------------------
@@ -80,11 +84,7 @@ export function AcceptConfirmationSheet({
   const claimant = claim.claimant;
   const claimantInitial = (claimant?.name ?? "?").charAt(0).toUpperCase();
 
-  const claimantSubtitle = claimant?.teacherProfile
-    ? `${claimant.teacherProfile.designation || "Lecturer"} • ${claimant.teacherProfile.department || ""}`
-    : claimant?.studentProfile
-    ? `${claimant.studentProfile.department || ""} • ID ${claimant.studentProfile.studentId || ""}`
-    : "SMUCT Member";
+  const claimantSubtitle = formatCampusUserSubtitle(claimant, "SMUCT Member");
 
   return (
     <Modal

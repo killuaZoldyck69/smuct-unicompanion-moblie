@@ -11,7 +11,11 @@ import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
 import type { LostFoundAuthor } from "@/services/lost-found-service";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  formatCampusUserSubtitle,
+} from "../../shared/design-tokens";
 
 interface HandoverCardProps {
   counterpart: LostFoundAuthor;
@@ -27,15 +31,10 @@ export const HandoverCard = React.memo(function HandoverCard({
   const isAuthor = role === "AUTHOR";
 
   const counterpartRoleLabel = isAuthor ? "Verified Owner" : "Finder / Post Author";
-  const studentInfo = counterpart?.studentProfile
-    ? `${counterpart.studentProfile.department || ""} • ID: ${
-        counterpart.studentProfile.studentId || ""
-      }`
-    : counterpart?.teacherProfile
-    ? `${counterpart.teacherProfile.designation || ""} • ${
-        counterpart.teacherProfile.department || ""
-      }`
-    : "SMUCT Community Member";
+  const counterpartSubtitle = formatCampusUserSubtitle(
+    counterpart,
+    "SMUCT Community Member"
+  );
 
   const handleEmail = () => {
     if (!counterpart.email) return;
@@ -93,7 +92,7 @@ export const HandoverCard = React.memo(function HandoverCard({
                 {counterpart.name}
               </Text>
               <Text style={styles.personSub} numberOfLines={1}>
-                {studentInfo}
+                {counterpartSubtitle}
               </Text>
             </View>
           </TouchableOpacity>

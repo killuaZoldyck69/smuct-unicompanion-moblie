@@ -52,6 +52,7 @@ export function LFImageGallery({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.thumbScrollView}
           contentContainerStyle={styles.thumbnailRow}
         >
           {images.map((img, idx) => (
@@ -105,10 +106,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#ffffff",
   },
+  thumbScrollView: {
+    width: "100%",
+  },
   thumbnailRow: {
     flexDirection: "row",
-    gap: 8,
-    paddingVertical: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 4,
+    flexGrow: 1,
   },
   thumbBtn: {
     width: 52,

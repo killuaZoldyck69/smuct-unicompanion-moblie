@@ -19,7 +19,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
 
@@ -40,6 +40,7 @@ import { ImagePickerRow } from "../shared/image-picker-row";
 interface EditLostFoundModalProps {
   visible: boolean;
   onClose: () => void;
+  onSuccess?: (updatedPost?: LostFoundPost) => void;
   post: LostFoundPost;
 }
 
@@ -72,9 +73,15 @@ interface FormState {
   verificationAnswer: string;
 }
 
+const areArraysEqual = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false;
+  return a.every((val, idx) => val === b[idx]);
+};
+
 export const EditLostFoundModal = React.memo(function EditLostFoundModal({
   visible,
   onClose,
+  onSuccess,
   post,
 }: EditLostFoundModalProps) {
   const insets = useSafeAreaInsets();
@@ -82,31 +89,33 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
   const [form, setForm] = useState<FormState>({
     type: post.type,
     title: post.title,
-    description: post.description,
+    description: post.description ?? "",
     category: post.category,
-    location: post.location,
-    images: post.images ?? [],
+    location: post.location ?? "",
+    images: Array.isArray(post.images) ? [...post.images] : [],
     verificationQuestion: post.verificationQuestion ?? "",
     verificationAnswer: post.verificationAnswer ?? "",
   });
 
   const initialFormRef = useRef(form);
+  const prevVisibleRef = useRef(false);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && !prevVisibleRef.current) {
       const initial: FormState = {
         type: post.type,
         title: post.title,
-        description: post.description,
+        description: post.description ?? "",
         category: post.category,
-        location: post.location,
-        images: post.images ?? [],
+        location: post.location ?? "",
+        images: Array.isArray(post.images) ? [...post.images] : [],
         verificationQuestion: post.verificationQuestion ?? "",
         verificationAnswer: post.verificationAnswer ?? "",
       };
       setForm(initial);
       initialFormRef.current = initial;
     }
+    prevVisibleRef.current = visible;
   }, [visible, post]);
 
   const [isUploading, setIsUploading] = useState(false);
@@ -125,7 +134,7 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
     form.description !== initialFormRef.current.description ||
     form.category !== initialFormRef.current.category ||
     form.location !== initialFormRef.current.location ||
-    form.images !== initialFormRef.current.images ||
+    !areArraysEqual(form.images, initialFormRef.current.images) ||
     form.verificationQuestion !== initialFormRef.current.verificationQuestion ||
     form.verificationAnswer !== initialFormRef.current.verificationAnswer;
 
@@ -149,10 +158,7 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
     }
   }, [isDirty, onClose]);
 
-  const canSubmit =
-    form.title.trim().length > 0 &&
-    form.description.trim().length > 0 &&
-    form.location.trim().length > 0;
+  const canSubmit = form.title.trim().length > 0;
 
   const handleSubmit = useCallback(async () => {
     if (!form.title.trim()) {
@@ -162,18 +168,12 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
         text2: "Please enter an item title.",
       });
     }
-    if (!form.description.trim()) {
+
+    if (form.title.trim().length < 2) {
       return Toast.show({
         type: "error",
-        text1: "Description Required",
-        text2: "Please describe the item in detail.",
-      });
-    }
-    if (!form.location.trim()) {
-      return Toast.show({
-        type: "error",
-        text1: "Location Required",
-        text2: "Please specify where the item was lost or found.",
+        text1: "Title Too Short",
+        text2: "Title must be at least 2 characters.",
       });
     }
 
@@ -187,9 +187,6 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
 
     const localUris = form.images.filter(
       (uri) => !uri.startsWith("http://") && !uri.startsWith("https://"),
-    );
-    const existingUrls = form.images.filter(
-      (uri) => uri.startsWith("http://") || uri.startsWith("https://"),
     );
 
     let newlyUploadedUrls: string[] = [];
@@ -238,14 +235,22 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
       setIsUploading(false);
     }
 
-    const finalImages = [...existingUrls, ...newlyUploadedUrls].slice(0, 2);
+    let uploadIdx = 0;
+    const finalImages: string[] = [];
+    for (const img of form.images) {
+      if (img.startsWith("http://") || img.startsWith("https://")) {
+        finalImages.push(img);
+      } else if (uploadIdx < newlyUploadedUrls.length) {
+        finalImages.push(newlyUploadedUrls[uploadIdx++]);
+      }
+    }
 
     const payload: Partial<CreateLostFoundInput> = {
       type: form.type,
       title: form.title.trim(),
-      description: form.description.trim(),
+      description: form.description.trim() ? form.description.trim() : null,
       category: form.category,
-      location: form.location.trim(),
+      location: form.location.trim() ? form.location.trim() : null,
       images: finalImages,
       verificationQuestion:
         form.type === "FOUND" && form.verificationQuestion.trim()
@@ -260,8 +265,9 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
     updateMutation.mutate(
       { id: post.id, data: payload },
       {
-        onSuccess: () => {
+        onSuccess: (updatedPost) => {
           Keyboard.dismiss();
+          onSuccess?.(updatedPost);
           onClose();
           setTimeout(() => {
             Toast.show({
@@ -284,7 +290,7 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
         },
       },
     );
-  }, [form, post.id, updateMutation, onClose]);
+  }, [form, post.id, updateMutation, onClose, onSuccess]);
 
   return (
     <Modal
@@ -427,7 +433,7 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
             {/* Description Input */}
             <View style={styles.formGroup}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>DESCRIPTION</Text>
+                <Text style={styles.label}>DESCRIPTION (OPTIONAL)</Text>
                 <Text style={styles.counterText}>
                   {form.description.length}/1000
                 </Text>
@@ -487,7 +493,7 @@ export const EditLostFoundModal = React.memo(function EditLostFoundModal({
 
             {/* Location Input */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>LOCATION</Text>
+              <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Where was it lost or found?"
