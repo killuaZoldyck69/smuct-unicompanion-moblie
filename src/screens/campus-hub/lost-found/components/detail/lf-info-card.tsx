@@ -25,8 +25,6 @@ interface LFInfoCardProps {
   onViewAuthor: (author: AuthorProfileModalData) => void;
   onEdit: () => void;
   onDelete: () => void;
-  onUpdateStatus?: (status: "RESOLVED" | "CLOSED") => void;
-  isUpdatingStatus?: boolean;
 }
 
 export function LFInfoCard({
@@ -37,8 +35,6 @@ export function LFInfoCard({
   onViewAuthor,
   onEdit,
   onDelete,
-  onUpdateStatus,
-  isUpdatingStatus = false,
 }: LFInfoCardProps) {
   const isResolved = post.status === "RESOLVED" || post.status === "CLAIMED";
   const canManage = isAuthor || isAdmin;
@@ -148,37 +144,6 @@ export function LFInfoCard({
             <View style={styles.adminIndicator}>
               <Feather name="shield" size={12} color="#4338ca" />
               <Text style={styles.adminIndicatorText}>ADMIN MODERATION CONTROLS</Text>
-            </View>
-          )}
-
-          {/* Status Quick Transitions (Mark as Resolved / Close) for Active items */}
-          {post.status === "ACTIVE" && onUpdateStatus && (
-            <View style={styles.statusActionRow}>
-              <TouchableOpacity
-                style={styles.resolveQuickBtn}
-                onPress={() => onUpdateStatus("RESOLVED")}
-                disabled={isUpdatingStatus}
-                activeOpacity={0.8}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Mark listing as resolved"
-              >
-                <Feather name="check-circle" size={13} color="#047857" />
-                <Text style={styles.resolveQuickBtnText}>Mark Resolved</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.closeQuickBtn}
-                onPress={() => onUpdateStatus("CLOSED")}
-                disabled={isUpdatingStatus}
-                activeOpacity={0.8}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Close listing"
-              >
-                <Feather name="slash" size={13} color="#475569" />
-                <Text style={styles.closeQuickBtnText}>Close</Text>
-              </TouchableOpacity>
             </View>
           )}
 
@@ -418,46 +383,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#4338ca",
     letterSpacing: 0.5,
-  },
-  statusActionRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  resolveQuickBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    backgroundColor: "#ecfdf5",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#a7f3d0",
-  },
-  resolveQuickBtnText: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#047857",
-  },
-  closeQuickBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  closeQuickBtnText: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#475569",
   },
   ownerActions: {
     flexDirection: "row",

@@ -101,7 +101,8 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
 export function MarketplaceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user: currentUser } = useCurrentUser();
+  const { user: currentUser, role: currentUserRole } = useCurrentUser();
+  const isAdmin = currentUserRole === "ADMIN";
 
   // Gallery state
   const [selectedImage, setSelectedImage] = useState(0);
@@ -204,11 +205,12 @@ export function MarketplaceDetailScreen() {
   // ---------------------------------------------------------------------------
   const handleBack = useCallback(() => {
     setCampusHubActiveSection("MARKETPLACE");
+    const targetRoute = isAdmin ? "/(tabs)/admin_campus_hubs" : "/(tabs)/forum";
     router.replace({
-      pathname: "/(tabs)/forum",
+      pathname: targetRoute as any,
       params: { section: "MARKETPLACE" },
     });
-  }, [router]);
+  }, [isAdmin, router]);
 
   const handleCancelEdit = useCallback(() => {
     setEditingComment(null);
@@ -412,7 +414,7 @@ export function MarketplaceDetailScreen() {
           <MPListingInfoCard
             post={post}
             isAuthor={isAuthor}
-            isAdmin={currentUser?.role === "ADMIN"}
+            isAdmin={isAdmin}
             isEdited={isEdited}
             authorDept={authorDept}
             authorInitial={authorInitial}
