@@ -18,6 +18,7 @@ interface LFClaimsSectionProps {
   onReject: (claimId: string) => void;
   onImagePress: (url: string) => void;
   onViewClaimant: (author: AuthorProfileModalData) => void;
+  isAuthor?: boolean;
 }
 
 export function LFClaimsSection({
@@ -30,6 +31,7 @@ export function LFClaimsSection({
   onReject,
   onImagePress,
   onViewClaimant,
+  isAuthor = true,
 }: LFClaimsSectionProps) {
   return (
     <View style={styles.section}>
@@ -61,6 +63,7 @@ export function LFClaimsSection({
             onViewClaimant={onViewClaimant as any}
             isAccepting={isAccepting && claimToAcceptId === claim.id}
             isRejecting={isRejecting}
+            isAuthor={isAuthor}
           />
         ))
       )}

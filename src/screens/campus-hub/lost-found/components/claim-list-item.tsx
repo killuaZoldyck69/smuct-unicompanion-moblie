@@ -25,6 +25,7 @@ interface ClaimListItemProps {
   onViewClaimant: (claimant: LostFoundAuthor) => void;
   isAccepting?: boolean;
   isRejecting?: boolean;
+  isAuthor?: boolean;
 }
 
 export const ClaimListItem = React.memo(function ClaimListItem({
@@ -35,6 +36,7 @@ export const ClaimListItem = React.memo(function ClaimListItem({
   onViewClaimant,
   isAccepting = false,
   isRejecting = false,
+  isAuthor = true,
 }: ClaimListItemProps) {
   const claimant = claim.claimant;
   const isPending = claim.status === "PENDING";
@@ -162,27 +164,31 @@ export const ClaimListItem = React.memo(function ClaimListItem({
               {isRejecting ? (
                 <ActivityIndicator size="small" color="#64748b" />
               ) : (
-                <Text style={styles.rejectBtnText}>Decline</Text>
+                <Text style={styles.rejectBtnText}>
+                  {isAuthor ? "Decline" : "Decline Claim"}
+                </Text>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.acceptBtn, isAccepting && { opacity: 0.6 }]}
-              onPress={() => onAccept(claim)}
-              disabled={isAccepting || isRejecting}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel="Accept claim and verify owner"
-            >
-              {isAccepting ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <>
-                  <Feather name="check" size={13} color="#ffffff" style={{ marginRight: 4 }} />
-                  <Text style={styles.acceptBtnText}>Accept Claim</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {isAuthor && (
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.acceptBtn, isAccepting && { opacity: 0.6 }]}
+                onPress={() => onAccept(claim)}
+                disabled={isAccepting || isRejecting}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Accept claim and verify owner"
+              >
+                {isAccepting ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Feather name="check" size={13} color="#ffffff" style={{ marginRight: 4 }} />
+                    <Text style={styles.acceptBtnText}>Accept Claim</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>

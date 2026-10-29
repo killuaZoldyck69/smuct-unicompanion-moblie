@@ -108,6 +108,11 @@ export interface LostFoundFeedMeta {
   total: number;
   totalPages: number;
   hasMore: boolean;
+  counts?: {
+    activeLost: number;
+    activeFound: number;
+    resolved: number;
+  };
 }
 
 export interface LostFoundFeedResponse {

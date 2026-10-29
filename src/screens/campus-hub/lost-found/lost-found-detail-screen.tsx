@@ -28,6 +28,8 @@ import {
   useAcceptLostFoundClaim,
   useRejectLostFoundClaim,
   useWithdrawLostFoundClaim,
+  usePossibleMatches,
+  useUpdateLostFoundStatus,
 } from "@/features/campus-hub/useLostFound";
 import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
 import {
@@ -49,6 +51,7 @@ import { LFImageGallery } from "./components/detail/lf-image-gallery";
 import { LFInfoCard } from "./components/detail/lf-info-card";
 import { LFClaimsSection } from "./components/detail/lf-claims-section";
 import { LFMyClaimCard } from "./components/detail/lf-my-claim-card";
+import { LFMatchesSection } from "./components/detail/lf-matches-section";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -126,11 +129,13 @@ export function LostFoundDetailScreen() {
   // ---------------------------------------------------------------------------
   const { data: post, isLoading, isError, refetch } = useLostFoundPost(id);
   const { data: claimsData, isLoading: isClaimsLoading } = useLostFoundClaims(id);
+  const { data: matchesData, isLoading: isMatchesLoading } = usePossibleMatches(id);
 
   const deleteMutation = useDeleteLostFoundPost();
   const acceptClaimMutation = useAcceptLostFoundClaim(id);
   const rejectClaimMutation = useRejectLostFoundClaim(id);
   const withdrawClaimMutation = useWithdrawLostFoundClaim(id);
+  const statusMutation = useUpdateLostFoundStatus();
 
   // ---------------------------------------------------------------------------
   // Derived values
@@ -139,7 +144,7 @@ export function LostFoundDetailScreen() {
     () => Boolean(currentUser?.id && currentUser.id === post?.authorId),
     [currentUser?.id, post?.authorId]
   );
-  const canDelete = isAuthor || isAdmin;
+  const canViewClaims = isAuthor || isAdmin;
 
   const isEdited = useMemo(
     () =>
@@ -163,15 +168,62 @@ export function LostFoundDetailScreen() {
   const claimButtonLabel = isLost ? "I Found This Item" : "This Item Is Mine";
 
   // ---------------------------------------------------------------------------
-  // Navigation
+  // Navigation & Status Handlers
   // ---------------------------------------------------------------------------
   const handleBack = useCallback(() => {
     setCampusHubActiveSection("LOST_FOUND");
-    router.replace({
-      pathname: "/(tabs)/forum",
-      params: { section: "LOST_FOUND" },
-    });
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace({
+        pathname: "/(tabs)/forum",
+        params: { section: "LOST_FOUND" },
+      });
+    }
   }, [router]);
+
+  const handleUpdateStatus = useCallback(
+    (status: "RESOLVED" | "CLOSED") => {
+      const actionLabel =
+        status === "RESOLVED" ? "Mark as Resolved" : "Close Listing";
+      const actionMsg =
+        status === "RESOLVED"
+          ? "Has this item been safely reunited or handed over?"
+          : "Are you sure you want to close this listing? Pending claims will be declined.";
+
+      Alert.alert(actionLabel, actionMsg, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: actionLabel,
+          onPress: () => {
+            statusMutation.mutate(
+              { id, status },
+              {
+                onSuccess: () => {
+                  Toast.show({
+                    type: "success",
+                    text1: `Listing ${
+                      status === "RESOLVED" ? "Resolved" : "Closed"
+                    }`,
+                    text2: "Item status has been updated.",
+                  });
+                  refetch();
+                },
+                onError: (err: any) => {
+                  Toast.show({
+                    type: "error",
+                    text1: "Status update failed",
+                    text2: err?.response?.data?.message || err.message,
+                  });
+                },
+              }
+            );
+          },
+        },
+      ]);
+    },
+    [id, statusMutation, refetch]
+  );
 
   // Android back-press — dismiss modals in priority order
   useEffect(() => {
@@ -387,12 +439,26 @@ export function LostFoundDetailScreen() {
 
         <LFInfoCard
           post={post}
-          isAuthor={canDelete}
+          isAuthor={isAuthor}
+          isAdmin={isAdmin}
           isEdited={isEdited}
           onViewAuthor={handleViewAuthor}
           onEdit={handleEditPress}
           onDelete={handleDeletePress}
+          onUpdateStatus={handleUpdateStatus}
+          isUpdatingStatus={statusMutation.isPending}
         />
+
+        {post.status === "ACTIVE" && (
+          <LFMatchesSection
+            matches={matchesData ?? []}
+            isLoading={isMatchesLoading}
+            onSelectMatch={(matchId) => {
+              router.push(`/campus-hub/lost-found/${matchId}` as any);
+            }}
+            postType={post.type}
+          />
+        )}
 
         {isResolved && post.handoverData && (
           <View style={styles.handoverSection}>
@@ -406,7 +472,7 @@ export function LostFoundDetailScreen() {
           </View>
         )}
 
-        {isAuthor && (
+        {canViewClaims && (
           <LFClaimsSection
             claims={claims}
             isLoading={isClaimsLoading}
@@ -417,6 +483,7 @@ export function LostFoundDetailScreen() {
             onReject={handleRejectClaim}
             onImagePress={openProofImageViewer}
             onViewClaimant={handleViewAuthor as any}
+            isAuthor={isAuthor}
           />
         )}
 

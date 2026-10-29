@@ -20,21 +20,28 @@ import type { AuthorProfileModalData } from "@/screens/campus-hub/shared/author-
 interface LFInfoCardProps {
   post: LostFoundPost;
   isAuthor: boolean;
+  isAdmin?: boolean;
   isEdited: boolean;
   onViewAuthor: (author: AuthorProfileModalData) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onUpdateStatus?: (status: "RESOLVED" | "CLOSED") => void;
+  isUpdatingStatus?: boolean;
 }
 
 export function LFInfoCard({
   post,
   isAuthor,
+  isAdmin = false,
   isEdited,
   onViewAuthor,
   onEdit,
   onDelete,
+  onUpdateStatus,
+  isUpdatingStatus = false,
 }: LFInfoCardProps) {
   const isResolved = post.status === "RESOLVED" || post.status === "CLAIMED";
+  const canManage = isAuthor || isAdmin;
 
   return (
     <View style={styles.card}>
@@ -134,32 +141,74 @@ export function LFInfoCard({
         </View>
       )}
 
-      {/* Owner Actions: Edit and Delete buttons */}
-      {isAuthor && (
-        <View style={styles.ownerActions}>
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={onEdit}
-            activeOpacity={0.8}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Edit listing"
-          >
-            <Feather name="edit-3" size={14} color={CAMPUS_HUB_COLORS.deepNavy} />
-            <Text style={styles.editBtnText}>Edit</Text>
-          </TouchableOpacity>
+      {/* Owner / Admin Management Section */}
+      {canManage && (
+        <View style={styles.managementContainer}>
+          {isAdmin && !isAuthor && (
+            <View style={styles.adminIndicator}>
+              <Feather name="shield" size={12} color="#4338ca" />
+              <Text style={styles.adminIndicatorText}>ADMIN MODERATION CONTROLS</Text>
+            </View>
+          )}
 
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={onDelete}
-            activeOpacity={0.8}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Delete listing"
-          >
-            <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
-            <Text style={styles.deleteBtnText}>Delete</Text>
-          </TouchableOpacity>
+          {/* Status Quick Transitions (Mark as Resolved / Close) for Active items */}
+          {post.status === "ACTIVE" && onUpdateStatus && (
+            <View style={styles.statusActionRow}>
+              <TouchableOpacity
+                style={styles.resolveQuickBtn}
+                onPress={() => onUpdateStatus("RESOLVED")}
+                disabled={isUpdatingStatus}
+                activeOpacity={0.8}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Mark listing as resolved"
+              >
+                <Feather name="check-circle" size={13} color="#047857" />
+                <Text style={styles.resolveQuickBtnText}>Mark Resolved</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.closeQuickBtn}
+                onPress={() => onUpdateStatus("CLOSED")}
+                disabled={isUpdatingStatus}
+                activeOpacity={0.8}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Close listing"
+              >
+                <Feather name="slash" size={13} color="#475569" />
+                <Text style={styles.closeQuickBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.ownerActions}>
+            {!isResolved && (
+              <TouchableOpacity
+                style={styles.editBtn}
+                onPress={onEdit}
+                activeOpacity={0.8}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Edit listing"
+              >
+                <Feather name="edit-3" size={14} color={CAMPUS_HUB_COLORS.deepNavy} />
+                <Text style={styles.editBtnText}>Edit</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={onDelete}
+              activeOpacity={0.8}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Delete listing"
+            >
+              <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -349,10 +398,71 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0369a1",
   },
+  managementContainer: {
+    marginTop: 14,
+    gap: 8,
+  },
+  adminIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#eef2ff",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  adminIndicatorText: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#4338ca",
+    letterSpacing: 0.5,
+  },
+  statusActionRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  resolveQuickBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    backgroundColor: "#ecfdf5",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+  },
+  resolveQuickBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#047857",
+  },
+  closeQuickBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  closeQuickBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#475569",
+  },
   ownerActions: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 14,
+    marginTop: 2,
   },
   editBtn: {
     flex: 1,

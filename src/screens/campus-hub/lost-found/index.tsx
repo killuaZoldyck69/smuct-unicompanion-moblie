@@ -23,8 +23,6 @@ import {
 } from "@/features/campus-hub/useLostFound";
 import type {
   LostFoundPost,
-  LostFoundType,
-  LostFoundStatus,
   LostFoundCategory,
   GetLostFoundFeedParams,
 } from "@/services/lost-found-service";
@@ -41,21 +39,13 @@ import {
   StatusBadge,
   CategoryBadge,
   LocationBadge,
+  CATEGORY_LABELS,
 } from "./components/status-badge";
 import {
   FilterModal,
   type TypeFilter,
   type StatusFilter,
 } from "./components/filter-modal";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  ID_CARD: "ID Card",
-  ELECTRONICS: "Electronics",
-  KEYS: "Keys",
-  BOOKS: "Books",
-  CLOTHING: "Clothing",
-  OTHER: "Other",
-};
 
 const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
 
@@ -207,8 +197,16 @@ export function LostFoundSection({
     return data.pages.flatMap((page) => page.data);
   }, [data]);
 
-  // Overall quick stats
+  // Overall quick stats (uses backend aggregate counts when available)
   const stats = useMemo(() => {
+    const serverCounts = data?.pages?.[0]?.meta?.counts;
+    if (serverCounts) {
+      return {
+        activeLost: serverCounts.activeLost,
+        activeFound: serverCounts.activeFound,
+        resolved: serverCounts.resolved,
+      };
+    }
     return {
       activeLost: posts.filter(
         (p) => p.type === "LOST" && p.status === "ACTIVE",
@@ -220,7 +218,7 @@ export function LostFoundSection({
         (p) => p.status === "RESOLVED" || p.status === "CLAIMED",
       ).length,
     };
-  }, [posts]);
+  }, [data?.pages, posts]);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -244,14 +242,6 @@ export function LostFoundSection({
     },
     [router],
   );
-
-  const toggleMyPosts = useCallback(() => {
-    if (!currentUser) {
-      Toast.show({ type: "info", text1: "Sign in to view your posts" });
-      return;
-    }
-    setMyPostsOnly((prev) => !prev);
-  }, [currentUser]);
 
   const renderHeader = useCallback(() => {
     return (
@@ -350,6 +340,8 @@ export function LostFoundSection({
         </View>
       );
     }
+    const hasActiveFiltersOrSearch = activeFilterCount > 0 || debouncedSearch.length > 0;
+
     return (
       <View style={styles.emptyCard}>
         <Feather name="inbox" size={38} color={CAMPUS_HUB_COLORS.subtleText} />
@@ -359,9 +351,25 @@ export function LostFoundSection({
             ? `No items matching "${debouncedSearch}".`
             : "No items match your active filters. Try adjusting them or post a new item."}
         </Text>
+        {hasActiveFiltersOrSearch && (
+          <TouchableOpacity
+            style={styles.resetEmptyBtn}
+            onPress={() => {
+              resetAllFilters();
+              setSearchQuery("");
+            }}
+            activeOpacity={0.8}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Reset all filters and search"
+          >
+            <Feather name="rotate-ccw" size={13} color="#ffffff" style={{ marginRight: 6 }} />
+            <Text style={styles.resetEmptyBtnText}>Reset Filters & Search</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
-  }, [isLoading, debouncedSearch]);
+  }, [isLoading, debouncedSearch, activeFilterCount, resetAllFilters]);
 
   if (isError) {
     return (
@@ -1078,6 +1086,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
+  },
+  resetEmptyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    backgroundColor: ACCENT,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+  },
+  resetEmptyBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   footerLoader: {
     paddingVertical: 18,

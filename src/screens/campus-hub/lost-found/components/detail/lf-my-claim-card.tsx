@@ -11,8 +11,6 @@ import { Feather } from "@expo/vector-icons";
 import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "@/screens/campus-hub/shared/design-tokens";
 import type { LostFoundClaim } from "@/services/lost-found-service";
 
-const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
-
 interface LFMyClaimCardProps {
   claim: LostFoundClaim;
   isResolved: boolean;
