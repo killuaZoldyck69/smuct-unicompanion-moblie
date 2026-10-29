@@ -34,10 +34,6 @@ export const ListingCard = React.memo(function ListingCard({
 }: ListingCardProps) {
   const isSelling = post.type === "SELLING";
   const isSold = post.status === "SOLD";
-  const isEdited =
-    !!post.updatedAt &&
-    !!post.createdAt &&
-    new Date(post.updatedAt).getTime() - new Date(post.createdAt).getTime() > 10000;
 
   const conditionInfo = post.condition ? CONDITION_STYLES[post.condition] : null;
 

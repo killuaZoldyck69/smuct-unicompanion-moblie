@@ -12,10 +12,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import type {
   ListingType,
-  ListingStatus,
   MarketplaceCategory,
 } from "@/services/marketplace-service";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import { MARKETPLACE_CATEGORIES } from "../marketplace-constants";
 
 export type MarketplaceTypeFilter = "ALL" | ListingType;
 export type MarketplaceStatusFilter = "ALL" | "ACTIVE" | "SOLD";
@@ -49,11 +49,10 @@ const STATUS_OPTIONS: { key: MarketplaceStatusFilter; label: string }[] = [
 
 const CATEGORY_OPTIONS: { key: MarketplaceCategoryFilter; label: string }[] = [
   { key: "ALL", label: "All Categories" },
-  { key: "TEXTBOOKS", label: "Textbooks" },
-  { key: "ELECTRONICS", label: "Electronics" },
-  { key: "STATIONERY", label: "Stationery" },
-  { key: "CLOTHING", label: "Clothing" },
-  { key: "OTHER", label: "Other" },
+  ...MARKETPLACE_CATEGORIES.map((cat) => ({
+    key: cat.key as MarketplaceCategoryFilter,
+    label: cat.label,
+  })),
 ];
 
 const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;

@@ -9,8 +9,16 @@ export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
 export type MarketplaceCategory =
   | "TEXTBOOKS"
   | "ELECTRONICS"
+  | "CALCULATORS"
+  | "COMPUTERS_ACCESSORIES"
+  | "LAB_DRAWING_TOOLS"
   | "STATIONERY"
+  | "CYCLES_VEHICLES"
+  | "ROOM_HOSTEL_ESSENTIALS"
+  | "FURNITURE"
+  | "SPORTS_FITNESS"
   | "CLOTHING"
+  | "MOBILE_ACCESSORIES"
   | "OTHER";
 
 export interface MarketplaceAuthor {

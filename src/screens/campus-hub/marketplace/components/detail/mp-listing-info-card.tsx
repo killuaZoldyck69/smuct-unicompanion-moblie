@@ -15,6 +15,8 @@ import {
 } from "@/screens/campus-hub/shared/design-tokens";
 import type { MarketplacePost } from "@/services/marketplace-service";
 import type { AuthorProfileModalData } from "@/screens/campus-hub/shared/author-modal";
+import { MARKETPLACE_CATEGORY_LABELS } from "../../marketplace-constants";
+import { MarketplaceRichTextDisplay } from "../marketplace-rich-editor";
 
 // ---------------------------------------------------------------------------
 // Label maps — defined once, shared across the component
@@ -26,15 +28,7 @@ const CONDITION_LABELS: Readonly<Record<string, string>> = {
   FAIR: "Fair Condition",
 };
 
-const CATEGORY_LABELS: Readonly<Record<string, string>> = {
-  TEXTBOOKS: "Textbooks",
-  ELECTRONICS: "Electronics",
-  STATIONERY: "Stationery",
-  CLOTHING: "Clothing",
-  OTHER: "Other",
-};
-
-const EDIT_THRESHOLD_MS = 10_000;
+const CATEGORY_LABELS = MARKETPLACE_CATEGORY_LABELS;
 
 const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
 
@@ -199,10 +193,10 @@ export function MPListingInfoCard({
 
       <View style={styles.divider} />
 
-      {/* Description */}
+      {/* Description with Rich Text rendering */}
       <View style={styles.descSection}>
         <Text style={styles.sectionLabel}>DESCRIPTION</Text>
-        <Text style={styles.description}>{post.description}</Text>
+        <MarketplaceRichTextDisplay text={post.description} />
       </View>
 
       {/* Contact CTA — non-owners only */}
