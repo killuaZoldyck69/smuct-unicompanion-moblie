@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,10 +14,14 @@ import {
   StatusBar,
   Alert,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
 
 import { useCreateMarketplacePost } from "@/features/campus-hub/useMarketplace";
 import {
@@ -93,13 +97,27 @@ export const ComposeMarketplaceModal = React.memo(
     const [descriptionLength, setDescriptionLength] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
 
+    useEffect(() => {
+      if (visible && currentUser?.phoneNumber) {
+        const formatted = formatBangladeshiPhone(currentUser.phoneNumber);
+        if (isValidBangladeshiPhone(formatted)) {
+          setForm((prev) => {
+            if (!prev.contactPhone || prev.contactPhone === "+880") {
+              return { ...prev, contactPhone: formatted };
+            }
+            return prev;
+          });
+        }
+      }
+    }, [visible, currentUser?.phoneNumber]);
+
     const createMutation = useCreateMarketplacePost();
     const isSubmitting = isUploading || createMutation.isPending;
 
     const update = useCallback(
       <K extends keyof FormState>(key: K, value: FormState[K]) =>
         setForm((prev) => ({ ...prev, [key]: value })),
-      []
+      [],
     );
 
     const handlePhoneChange = useCallback((raw: string) => {
@@ -109,11 +127,11 @@ export const ComposeMarketplaceModal = React.memo(
 
     const isPhoneValid = useMemo(
       () => isValidBangladeshiPhone(form.contactPhone),
-      [form.contactPhone]
+      [form.contactPhone],
     );
 
     const isPriceValid = useMemo(() => {
-      if (!form.price.trim()) return false;
+      if (!form.price.trim()) return true;
       const num = parseInt(form.price, 10);
       return !isNaN(num) && num >= 0 && num <= 10000000;
     }, [form.price]);
@@ -149,7 +167,7 @@ export const ComposeMarketplaceModal = React.memo(
                 onClose();
               },
             },
-          ]
+          ],
         );
       } else {
         setForm({ ...INITIAL_FORM, contactPhone: initialPhone });
@@ -166,6 +184,8 @@ export const ComposeMarketplaceModal = React.memo(
       !isSubmitting;
 
     const handleSubmit = useCallback(async () => {
+      if (isSubmitting) return;
+
       if (!form.title.trim()) {
         return Toast.show({
           type: "error",
@@ -174,21 +194,24 @@ export const ComposeMarketplaceModal = React.memo(
         });
       }
 
-      if (!form.price.trim()) {
+      if (form.title.trim().length < 2) {
         return Toast.show({
           type: "error",
-          text1: "Price Required",
-          text2: "Please enter the listing price in BDT (৳).",
+          text1: "Title Too Short",
+          text2: "Title must be at least 2 characters.",
         });
       }
 
-      const priceNum = parseInt(form.price, 10);
-      if (isNaN(priceNum) || priceNum < 0) {
-        return Toast.show({
-          type: "error",
-          text1: "Invalid Price",
-          text2: "Price must be a valid number in Bangladeshi Taka (৳).",
-        });
+      let priceNum = 0;
+      if (form.price.trim()) {
+        priceNum = parseInt(form.price, 10);
+        if (isNaN(priceNum) || priceNum < 0) {
+          return Toast.show({
+            type: "error",
+            text1: "Invalid Price",
+            text2: "Price must be a valid number in Bangladeshi Taka (৳).",
+          });
+        }
       }
 
       if (!form.description.trim() || form.description.trim().length < 5) {
@@ -202,8 +225,9 @@ export const ComposeMarketplaceModal = React.memo(
       if (!isValidBangladeshiPhone(form.contactPhone)) {
         return Toast.show({
           type: "error",
-          text1: "Valid Phone Required",
-          text2: "Please enter a valid 14-character BD phone (e.g. +8801956014045).",
+          text1: "Contact Phone Required",
+          text2:
+            "Please enter a valid 11-digit mobile number (e.g. 01956014045).",
         });
       }
 
@@ -243,7 +267,7 @@ export const ComposeMarketplaceModal = React.memo(
         try {
           const results = await uploadMultipleImages(
             form.localImages,
-            CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE
+            CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE,
           );
           imageUrls = results.map((r) => r.secureUrl);
         } catch (err: any) {
@@ -298,7 +322,7 @@ export const ComposeMarketplaceModal = React.memo(
           });
         },
       });
-    }, [form, createMutation, initialPhone, onClose]);
+    }, [form, createMutation, initialPhone, isSubmitting, onClose]);
 
     const isSelling = form.type === "SELLING";
 
@@ -422,7 +446,9 @@ export const ComposeMarketplaceModal = React.memo(
                   <Text style={styles.fieldLabel}>
                     TITLE <Text style={styles.requiredStar}>*</Text>
                   </Text>
-                  <Text style={styles.counterText}>{form.title.length}/100</Text>
+                  <Text style={styles.counterText}>
+                    {form.title.length}/100
+                  </Text>
                 </View>
                 <TextInput
                   style={styles.textInput}
@@ -479,9 +505,7 @@ export const ComposeMarketplaceModal = React.memo(
               {/* Price in BDT */}
               <View style={styles.formGroup}>
                 <View style={styles.labelRow}>
-                  <Text style={styles.fieldLabel}>
-                    PRICE (BDT) <Text style={styles.requiredStar}>*</Text>
-                  </Text>
+                  <Text style={styles.fieldLabel}>PRICE (BDT)</Text>
                   {Boolean(formattedPricePreview) && (
                     <Text style={styles.priceFormattedText}>
                       {formattedPricePreview}
@@ -562,16 +586,14 @@ export const ComposeMarketplaceModal = React.memo(
                         ? form.contactPhone.slice(4)
                         : form.contactPhone
                     }
-                    onChangeText={(digits) =>
-                      handlePhoneChange(`+880${digits.replace(/\D/g, "")}`)
-                    }
+                    onChangeText={(digits) => handlePhoneChange(digits)}
                     keyboardType="phone-pad"
-                    maxLength={10}
+                    maxLength={11}
                   />
                 </View>
               </View>
 
-              {/* Photos (Max 4) */}
+              {/* Photos (Max 4, Optional) */}
               <View style={styles.formGroup}>
                 <ImagePickerRow
                   images={form.localImages}
@@ -580,6 +602,8 @@ export const ComposeMarketplaceModal = React.memo(
                   }
                   maxImages={4}
                   accent={ACCENT}
+                  label={`PHOTOS (OPTIONAL) • ${form.localImages.length}/4`}
+                  hint="max up to 5 MB for each"
                 />
               </View>
             </ScrollView>
@@ -594,10 +618,10 @@ export const ComposeMarketplaceModal = React.memo(
               <TouchableOpacity
                 style={[
                   styles.publishBtn,
-                  (!canSubmit || isSubmitting) && styles.publishBtnDisabled,
+                  isSubmitting && styles.publishBtnDisabled,
                 ]}
                 onPress={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
+                disabled={isSubmitting}
                 activeOpacity={0.85}
               >
                 {isSubmitting ? (
@@ -631,10 +655,16 @@ export const ComposeMarketplaceModal = React.memo(
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
+
+          {/* Embedded Toast Overlay for Modal Viewport */}
+          <Toast
+            config={toastConfig}
+            topOffset={Math.max(insets.top + 8, 44)}
+          />
         </SafeAreaView>
       </Modal>
     );
-  }
+  },
 );
 
 const styles = StyleSheet.create({

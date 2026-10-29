@@ -275,6 +275,12 @@ export function MarketplaceDetailScreen() {
       addCommentMutation.mutate(
         { content, parentId: parentId ?? undefined },
         {
+          onSuccess: () => {
+            Toast.show({
+              type: "success",
+              text1: parentId ? "Reply posted" : "Comment posted",
+            });
+          },
           onError: () =>
             Toast.show({ type: "error", text1: "Failed to post comment" }),
         }
@@ -286,6 +292,9 @@ export function MarketplaceDetailScreen() {
   const handleDeleteComment = useCallback(
     (commentId: string) => {
       deleteCommentMutation.mutate(commentId, {
+        onSuccess: () => {
+          Toast.show({ type: "success", text1: "Comment deleted" });
+        },
         onError: () =>
           Toast.show({ type: "error", text1: "Failed to delete comment" }),
       });

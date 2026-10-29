@@ -27,7 +27,7 @@ export function MPImageGallery({
   onSelectIndex,
   onOpenViewer,
 }: MPImageGalleryProps) {
-  if (!images.length) return null;
+  if (!images || !images.length) return null;
 
   return (
     <View style={styles.container}>

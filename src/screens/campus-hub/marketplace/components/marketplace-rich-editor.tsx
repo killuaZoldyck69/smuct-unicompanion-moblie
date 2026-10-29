@@ -182,7 +182,29 @@ const STATIC_EDITOR_HTML = `
       editor.focus();
       restoreSavedSelection();
       if (cmd === 'heading') {
-        document.execCommand('formatBlock', false, '<h3>');
+        var isH = false;
+        var sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+          var el = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+          while (el && el !== editor && el !== document.body) {
+            if (/^H[1-6]$/i.test(el.tagName)) {
+              isH = true;
+              break;
+            }
+            el = el.parentElement;
+          }
+        }
+        try {
+          var targetTag = isH ? '<p>' : '<h3>';
+          var ok = document.execCommand('formatBlock', false, targetTag);
+          if (!ok) {
+            document.execCommand('formatBlock', false, isH ? 'p' : 'h3');
+          }
+        } catch (e) {
+          try {
+            document.execCommand('formatBlock', false, isH ? 'p' : 'h3');
+          } catch (e2) {}
+        }
       } else if (cmd === 'insertHTML') {
         document.execCommand('insertHTML', false, val || '');
       } else {
@@ -267,6 +289,10 @@ function decodeHtml(raw?: string | null): string {
     .replace(/&([a-zA-Z0-9]+);/g, (match, entity) => HTML_ENTITIES[entity] ?? match);
 }
 
+function stripRemainingHtml(text: string): string {
+  return text.replace(/<[^>]+>/g, "");
+}
+
 interface InlineToken {
   text: string;
   bold?: boolean;
@@ -275,16 +301,43 @@ interface InlineToken {
 }
 
 const INLINE_TAGS = [
+  // Combined Bold + Italic
   { regex: /\*\*\*([\s\S]+?)\*\*\*/, bold: true, italic: true },
+
+  // Bold
   { regex: /\*\*([\s\S]+?)\*\*/, bold: true },
   { regex: /<b(?:\s+[^>]*)?>([\s\S]+?)<\/b>/i, bold: true },
   { regex: /<strong(?:\s+[^>]*)?>([\s\S]+?)<\/strong>/i, bold: true },
+  {
+    regex: /<span[^>]*style="[^"]*font-weight:\s*(?:bold|[789]00)[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
+    bold: true,
+  },
+
+  // Underline
   { regex: /__([\s\S]+?)__/, underline: true },
   { regex: /<u(?:\s+[^>]*)?>([\s\S]+?)<\/u>/i, underline: true },
+  { regex: /<ins(?:\s+[^>]*)?>([\s\S]+?)<\/ins>/i, underline: true },
+  {
+    regex: /<span[^>]*style="[^"]*text-decoration:\s*underline[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
+    underline: true,
+  },
+
+  // Italic
   { regex: /\*([\s\S]+?)\*/, italic: true },
   { regex: /_([\s\S]+?)_/, italic: true },
   { regex: /<i(?:\s+[^>]*)?>([\s\S]+?)<\/i>/i, italic: true },
   { regex: /<em(?:\s+[^>]*)?>([\s\S]+?)<\/em>/i, italic: true },
+  {
+    regex: /<span[^>]*style="[^"]*font-style:\s*italic[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
+    italic: true,
+  },
+
+  // Generic span wrapper (e.g. <span style="font-size: 14px;">...</span>) — unwrap inner content
+  { regex: /<span(?:\s+[^>]*)?>([\s\S]+?)<\/span>/i },
+
+  // Generic font/div wrapper
+  { regex: /<font(?:\s+[^>]*)?>([\s\S]+?)<\/font>/i },
+  { regex: /<div(?:\s+[^>]*)?>([\s\S]+?)<\/div>/i },
 ];
 
 function parseTokens(
@@ -301,7 +354,10 @@ function parseTokens(
       const after = raw.slice(match.index + match[0].length);
 
       const tokens: InlineToken[] = [];
-      if (before) tokens.push({ text: decodeHtml(before), ...flags });
+      if (before) {
+        const cleanedBefore = stripRemainingHtml(decodeHtml(before));
+        if (cleanedBefore) tokens.push({ text: cleanedBefore, ...flags });
+      }
 
       const newFlags = {
         bold: flags.bold || !!tag.bold,
@@ -315,7 +371,99 @@ function parseTokens(
     }
   }
 
-  return [{ text: decodeHtml(raw), ...flags }];
+  const cleanedRaw = stripRemainingHtml(decodeHtml(raw));
+  return cleanedRaw ? [{ text: cleanedRaw, ...flags }] : [];
+}
+
+type RichBlock =
+  | { type: "heading"; content: string }
+  | { type: "bullet"; tokens: InlineToken[] }
+  | { type: "paragraph"; tokens: InlineToken[] }
+  | { type: "spacer" };
+
+function parseRichBlocks(text: string): RichBlock[] {
+  if (!text || !text.trim()) return [];
+
+  const preprocessed = text
+    .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, "\n###HEADING:$2###\n")
+    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n###BULLET:$1###\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|div|blockquote|tr|table|ul|ol)>/gi, "\n")
+    .replace(/<(?:p|div|blockquote|tr|table|ul|ol)[^>]*>/gi, "\n")
+    .replace(/<hr\s*\/?>/gi, "\n");
+
+  const lines = preprocessed.split("\n");
+  const blocks: RichBlock[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (blocks.length > 0 && blocks[blocks.length - 1].type !== "spacer") {
+        blocks.push({ type: "spacer" });
+      }
+      continue;
+    }
+
+    // HTML Heading marker
+    if (trimmed.startsWith("###HEADING:") && trimmed.endsWith("###")) {
+      const content = trimmed.slice("###HEADING:".length, -3).trim();
+      const cleaned = stripRemainingHtml(decodeHtml(content)).trim();
+      if (cleaned) blocks.push({ type: "heading", content: cleaned });
+      continue;
+    }
+
+    // Markdown Heading: ### Heading or ## Heading or # Heading
+    const mdHeading = trimmed.match(/^(?:###|##|#)\s+(.*)$/);
+    if (mdHeading) {
+      const cleaned = stripRemainingHtml(decodeHtml(mdHeading[1])).trim();
+      if (cleaned) blocks.push({ type: "heading", content: cleaned });
+      continue;
+    }
+
+    // HTML Bullet marker
+    if (trimmed.startsWith("###BULLET:") && trimmed.endsWith("###")) {
+      if (blocks.length > 0 && blocks[blocks.length - 1].type === "spacer") {
+        if (blocks.length > 1 && blocks[blocks.length - 2].type === "bullet") {
+          blocks.pop();
+        }
+      }
+      const content = trimmed.slice("###BULLET:".length, -3).trim();
+      const tokens = parseTokens(content);
+      if (tokens.length) blocks.push({ type: "bullet", tokens });
+      continue;
+    }
+
+    // Markdown or unicode bullet: •, -, *, 1.
+    if (
+      trimmed.startsWith("• ") ||
+      trimmed.startsWith("- ") ||
+      (trimmed.startsWith("* ") && !trimmed.endsWith("*")) ||
+      /^\d+\.\s+/.test(trimmed)
+    ) {
+      if (blocks.length > 0 && blocks[blocks.length - 1].type === "spacer") {
+        if (blocks.length > 1 && blocks[blocks.length - 2].type === "bullet") {
+          blocks.pop();
+        }
+      }
+      const content = trimmed.replace(/^([•\-*]|\d+\.)\s+/, "");
+      const tokens = parseTokens(content);
+      if (tokens.length) blocks.push({ type: "bullet", tokens });
+      continue;
+    }
+
+    // Regular paragraph
+    const tokens = parseTokens(trimmed);
+    if (tokens.length) {
+      blocks.push({ type: "paragraph", tokens });
+    }
+  }
+
+  // Remove trailing spacer
+  if (blocks.length > 0 && blocks[blocks.length - 1].type === "spacer") {
+    blocks.pop();
+  }
+
+  return blocks;
 }
 
 export function MarketplaceRichTextDisplay({
@@ -327,41 +475,31 @@ export function MarketplaceRichTextDisplay({
 }) {
   if (!text || !text.trim()) return null;
 
-  const normalized = text.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n");
-  const lines = normalized.split("\n");
+  const blocks = parseRichBlocks(text);
+  if (!blocks.length) return null;
 
   return (
     <View style={styles.displayContainer}>
-      {lines.map((line, idx) => {
-        const trimmed = line.trim();
-        if (!trimmed) return <View key={idx} style={styles.lineSpacer} />;
+      {blocks.map((block, idx) => {
+        if (block.type === "spacer") {
+          return <View key={idx} style={styles.lineSpacer} />;
+        }
 
-        // Heading
-        const hMatch = trimmed.match(/^(?:###|##|#)\s+(.*)$/) || trimmed.match(/^<h[1-3]>(.*?)<\/h[1-3]>$/i);
-        if (hMatch) {
-          const content = hMatch[1].replace(/<[^>]+>/g, "");
+        if (block.type === "heading") {
           return (
             <View key={idx} style={styles.headingBlock}>
               <View style={styles.headingAccentBar} />
-              <Text style={styles.previewH2}>{content}</Text>
+              <Text style={styles.previewH2}>{block.content}</Text>
             </View>
           );
         }
 
-        // Bullet item
-        if (
-          trimmed.startsWith("• ") ||
-          trimmed.startsWith("- ") ||
-          (trimmed.startsWith("* ") && !trimmed.endsWith("*")) ||
-          trimmed.startsWith("<li>")
-        ) {
-          const bulletContent = trimmed.replace(/^([•\-*])\s+/, "").replace(/<\/?li>/gi, "");
-          const tokens = parseTokens(bulletContent);
+        if (block.type === "bullet") {
           return (
             <View key={idx} style={styles.bulletRow}>
               <View style={styles.bulletDot} />
               <Text style={[styles.previewBody, Boolean(textColor) && { color: textColor }]}>
-                {tokens.map((t, tIdx) => (
+                {block.tokens.map((t, tIdx) => (
                   <Text
                     key={tIdx}
                     style={[
@@ -378,11 +516,10 @@ export function MarketplaceRichTextDisplay({
           );
         }
 
-        // Normal paragraph
-        const tokens = parseTokens(line);
+        // Paragraph
         return (
           <Text key={idx} style={[styles.previewBody, Boolean(textColor) && { color: textColor }]}>
-            {tokens.map((t, tIdx) => (
+            {block.tokens.map((t, tIdx) => (
               <Text
                 key={tIdx}
                 style={[
@@ -519,7 +656,21 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         if (typeof document === "undefined") return;
         webEditorRef.current?.focus();
         if (command === "heading") {
-          document.execCommand("formatBlock", false, "<h3>");
+          let isH = false;
+          if (typeof window !== "undefined") {
+            const sel = window.getSelection();
+            if (sel && sel.anchorNode) {
+              let el: any = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+              while (el && el !== webEditorRef.current && el !== document.body) {
+                if (/^H[1-6]$/i.test(el.tagName)) {
+                  isH = true;
+                  break;
+                }
+                el = el.parentElement;
+              }
+            }
+          }
+          document.execCommand("formatBlock", false, isH ? "<p>" : "<h3>");
         } else if (command === "insertHTML") {
           document.execCommand("insertHTML", false, arg || "");
         } else {

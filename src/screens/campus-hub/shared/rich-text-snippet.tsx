@@ -57,12 +57,29 @@ const INLINE_TAGS = [
   { regex: /\*\*([\s\S]+?)\*\*/, bold: true },
   { regex: /<b(?:\s+[^>]*)?>([\s\S]+?)<\/b>/i, bold: true },
   { regex: /<strong(?:\s+[^>]*)?>([\s\S]+?)<\/strong>/i, bold: true },
+  {
+    regex: /<span[^>]*style="[^"]*font-weight:\s*(?:bold|[789]00)[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
+    bold: true,
+  },
   { regex: /__([\s\S]+?)__/, underline: true },
   { regex: /<u(?:\s+[^>]*)?>([\s\S]+?)<\/u>/i, underline: true },
+  { regex: /<ins(?:\s+[^>]*)?>([\s\S]+?)<\/ins>/i, underline: true },
+  {
+    regex: /<span[^>]*style="[^"]*text-decoration:\s*underline[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
+    underline: true,
+  },
   { regex: /\*([\s\S]+?)\*/, italic: true },
   { regex: /_([\s\S]+?)_/, italic: true },
   { regex: /<i(?:\s+[^>]*)?>([\s\S]+?)<\/i>/i, italic: true },
   { regex: /<em(?:\s+[^>]*)?>([\s\S]+?)<\/em>/i, italic: true },
+  {
+    regex: /<span[^>]*style="[^"]*font-style:\s*italic[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
+    italic: true,
+  },
+  // Generic span, font, or div wrapper — unwrap inner text
+  { regex: /<span(?:\s+[^>]*)?>([\s\S]+?)<\/span>/i },
+  { regex: /<font(?:\s+[^>]*)?>([\s\S]+?)<\/font>/i },
+  { regex: /<div(?:\s+[^>]*)?>([\s\S]+?)<\/div>/i },
 ];
 
 function parseTokens(

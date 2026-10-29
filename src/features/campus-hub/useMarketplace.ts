@@ -100,8 +100,9 @@ export const useDeleteMarketplacePost = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteMarketplacePost(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: marketplaceKeys.all });
+      qc.removeQueries({ queryKey: marketplaceKeys.post(id) });
     },
   });
 };
@@ -139,6 +140,7 @@ export const useAddMarketplaceComment = (postId: string) => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: marketplaceKeys.post(postId) });
+      qc.invalidateQueries({ queryKey: marketplaceKeys.all });
     },
   });
 };
@@ -166,6 +168,7 @@ export const useDeleteMarketplaceComment = (postId: string) => {
       deleteMarketplaceComment(postId, commentId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: marketplaceKeys.post(postId) });
+      qc.invalidateQueries({ queryKey: marketplaceKeys.all });
     },
   });
 };

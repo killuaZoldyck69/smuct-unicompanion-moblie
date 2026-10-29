@@ -164,6 +164,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+    gap: 8,
   },
   label: {
     fontFamily,
@@ -177,6 +178,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
+    flexShrink: 1,
+    textAlign: "right",
   },
   row: {
     flexDirection: "row",

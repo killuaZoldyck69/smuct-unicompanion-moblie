@@ -131,38 +131,21 @@ export function formatBangladeshiPhone(input: string): string {
     return "+880";
   }
 
-  // If it starts with +880, extract following digits
-  if (cleaned.startsWith("+880")) {
-    const digits = cleaned.slice(4).replace(/\D/g, "");
-    return `+880${digits.slice(0, 10)}`;
+  // Strip non-digits
+  let digits = cleaned.replace(/\D/g, "");
+
+  // If starts with 880, strip the country code
+  if (digits.startsWith("880")) {
+    digits = digits.slice(3);
   }
 
-  // If it starts with 880 without +, add +
-  if (cleaned.startsWith("880")) {
-    const digits = cleaned.slice(3).replace(/\D/g, "");
-    return `+880${digits.slice(0, 10)}`;
+  // If starts with 0 (e.g. 017..., 019...), strip the leading 0
+  if (digits.startsWith("0")) {
+    digits = digits.slice(1);
   }
 
-  // If it starts with 01, strip leading 0 and prepend +880
-  if (cleaned.startsWith("01")) {
-    const digits = cleaned.replace(/\D/g, "").slice(1);
-    return `+880${digits.slice(0, 10)}`;
-  }
-
-  // If user types 1... (like 1956014045)
-  if (cleaned.startsWith("1")) {
-    const digits = cleaned.replace(/\D/g, "");
-    return `+880${digits.slice(0, 10)}`;
-  }
-
-  // Generic fallback: strip non-digits, take last 10 digits
-  const rawDigits = cleaned.replace(/\D/g, "");
-  if (rawDigits.length >= 10) {
-    const last10 = rawDigits.slice(-10);
-    return `+880${last10}`;
-  }
-
-  return `+880${rawDigits}`;
+  // Cap at 10 digits (the 1 + 9 digits of a BD mobile number)
+  return `+880${digits.slice(0, 10)}`;
 }
 
 export function isValidBangladeshiPhone(phone: string): boolean {

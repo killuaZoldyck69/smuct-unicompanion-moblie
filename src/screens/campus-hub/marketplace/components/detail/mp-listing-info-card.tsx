@@ -1,12 +1,8 @@
-import React from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-toast-message";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
@@ -73,6 +69,24 @@ export function MPListingInfoCard({
   const sellerSubtitle =
     authorSubtitle || formatCampusUserSubtitle(post.author, "") || authorDept;
 
+  const handleCopyPhone = useCallback(async () => {
+    if (!post.contactPhone) return;
+    try {
+      await Clipboard.setStringAsync(post.contactPhone);
+      Toast.show({
+        type: "success",
+        text1: "Number Copied!",
+        text2: `${post.contactPhone} copied to clipboard.`,
+      });
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Failed to Copy",
+        text2: "Could not copy phone number to clipboard.",
+      });
+    }
+  }, [post.contactPhone]);
+
   return (
     <View style={styles.card}>
       {/* Status badges */}
@@ -83,8 +97,8 @@ export function MPListingInfoCard({
             isSold
               ? styles.typeBadgeSold
               : isSelling
-              ? styles.typeBadgeSelling
-              : styles.typeBadgeWanted,
+                ? styles.typeBadgeSelling
+                : styles.typeBadgeWanted,
           ]}
         >
           <View
@@ -93,8 +107,8 @@ export function MPListingInfoCard({
               isSold
                 ? styles.statusDotSold
                 : isSelling
-                ? styles.statusDotSelling
-                : styles.statusDotWanted,
+                  ? styles.statusDotSelling
+                  : styles.statusDotWanted,
             ]}
           />
           <Text
@@ -103,8 +117,8 @@ export function MPListingInfoCard({
               isSold
                 ? styles.typeBadgeTextSold
                 : isSelling
-                ? styles.typeBadgeTextSelling
-                : styles.typeBadgeTextWanted,
+                  ? styles.typeBadgeTextSelling
+                  : styles.typeBadgeTextWanted,
             ]}
           >
             {isSold ? "SOLD" : isSelling ? "SELLING" : "WANTED"}
@@ -141,8 +155,14 @@ export function MPListingInfoCard({
       {/* Timestamp + Edit badge */}
       <View style={styles.metaCard}>
         <View style={styles.metaRow}>
-          <Feather name="calendar" size={13} color={CAMPUS_HUB_COLORS.subtleText} />
-          <Text style={styles.postedDate}>Posted {formatDateTime(post.createdAt)}</Text>
+          <Feather
+            name="calendar"
+            size={13}
+            color={CAMPUS_HUB_COLORS.subtleText}
+          />
+          <Text style={styles.postedDate}>
+            Posted {formatDateTime(post.createdAt)}
+          </Text>
           <Text style={styles.relativeTime}>• {timeAgo(post.createdAt)}</Text>
         </View>
 
@@ -157,7 +177,8 @@ export function MPListingInfoCard({
               <Text style={styles.editedPillText}>EDITED</Text>
             </View>
             <Text style={styles.editedDate}>
-              Last edited {formatDateTime(post.updatedAt)} ({timeAgo(post.updatedAt)})
+              Last edited {formatDateTime(post.updatedAt)} (
+              {timeAgo(post.updatedAt)})
             </Text>
           </View>
         )}
@@ -175,7 +196,10 @@ export function MPListingInfoCard({
         accessibilityLabel={`View ${post.author?.name}'s profile`}
       >
         {post.author?.image ? (
-          <Image source={{ uri: post.author.image }} style={styles.sellerAvatar} />
+          <Image
+            source={{ uri: post.author.image }}
+            style={styles.sellerAvatar}
+          />
         ) : (
           <View style={styles.sellerAvatarFallback}>
             <Text style={styles.sellerAvatarFallbackText}>{authorInitial}</Text>
@@ -193,7 +217,11 @@ export function MPListingInfoCard({
           )}
         </View>
 
-        <Feather name="chevron-right" size={18} color={CAMPUS_HUB_COLORS.subtleText} />
+        <Feather
+          name="chevron-right"
+          size={18}
+          color={CAMPUS_HUB_COLORS.subtleText}
+        />
       </TouchableOpacity>
 
       <View style={styles.divider} />
@@ -204,19 +232,68 @@ export function MPListingInfoCard({
         <MarketplaceRichTextDisplay text={post.description} />
       </View>
 
-      {/* Contact CTA — non-owners only */}
+      {/* Contact CTA & Copy Button — non-owners */}
       {post.contactPhone && !isAuthor && (
-        <TouchableOpacity
-          style={styles.contactBtn}
-          onPress={onContact}
-          activeOpacity={0.85}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={`Call seller at ${post.contactPhone}`}
-        >
-          <Feather name="phone-call" size={16} color="#ffffff" />
-          <Text style={styles.contactBtnText}>Call Seller ({post.contactPhone})</Text>
-        </TouchableOpacity>
+        <View style={styles.contactActionRow}>
+          <TouchableOpacity
+            style={styles.contactBtn}
+            onPress={onContact}
+            activeOpacity={0.85}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`${isSelling ? "Call seller" : "Call contact"} at ${post.contactPhone}`}
+          >
+            <Feather name="phone-call" size={16} color="#ffffff" />
+            <Text style={styles.contactBtnText} numberOfLines={1}>
+              {isSelling ? "Call Seller" : "Call Contact"} ({post.contactPhone})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.copyPhoneBtn}
+            onPress={handleCopyPhone}
+            activeOpacity={0.8}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`Copy contact phone number ${post.contactPhone}`}
+          >
+            <Feather name="copy" size={16} color={CAMPUS_HUB_COLORS.deepNavy} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Author contact display with copy button */}
+      {post.contactPhone && isAuthor && (
+        <View style={styles.authorContactBox}>
+          <View style={styles.authorContactLeft}>
+            <View style={styles.authorPhoneIconWrap}>
+              <Feather
+                name="phone"
+                size={13}
+                color={CAMPUS_HUB_COLORS.marketplaceAccentText}
+              />
+            </View>
+            <View>
+              <Text style={styles.authorContactSubtext}>
+                YOUR CONTACT PHONE
+              </Text>
+              <Text style={styles.authorContactNumber}>
+                {post.contactPhone}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.authorCopyBtn}
+            onPress={handleCopyPhone}
+            activeOpacity={0.75}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Copy contact phone number"
+          >
+            <Feather name="copy" size={12} color={CAMPUS_HUB_COLORS.deepNavy} />
+            <Text style={styles.authorCopyBtnText}>Copy</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Owner management actions */}
@@ -230,7 +307,11 @@ export function MPListingInfoCard({
             accessibilityRole="button"
             accessibilityLabel="Edit listing"
           >
-            <Feather name="edit-3" size={14} color={CAMPUS_HUB_COLORS.deepNavy} />
+            <Feather
+              name="edit-3"
+              size={14}
+              color={CAMPUS_HUB_COLORS.deepNavy}
+            />
             <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
 
@@ -258,7 +339,11 @@ export function MPListingInfoCard({
             accessibilityRole="button"
             accessibilityLabel="Delete listing"
           >
-            <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
+            <Feather
+              name="trash-2"
+              size={14}
+              color={CAMPUS_HUB_COLORS.dangerText}
+            />
             <Text style={styles.deleteBtnText}>Delete</Text>
           </TouchableOpacity>
         </View>
@@ -275,7 +360,11 @@ export function MPListingInfoCard({
             accessibilityRole="button"
             accessibilityLabel="Delete listing"
           >
-            <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
+            <Feather
+              name="trash-2"
+              size={14}
+              color={CAMPUS_HUB_COLORS.dangerText}
+            />
             <Text style={styles.deleteBtnText}>Delete Listing (Admin)</Text>
           </TouchableOpacity>
         </View>
@@ -314,11 +403,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
   },
-  typeBadgeSelling: { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight },
+  typeBadgeSelling: {
+    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
+  },
   typeBadgeWanted: { backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight },
   typeBadgeSold: { backgroundColor: "#f1f5f9" },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusDotSelling: { backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentText },
+  statusDotSelling: {
+    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentText,
+  },
   statusDotWanted: { backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentText },
   statusDotSold: { backgroundColor: CAMPUS_HUB_COLORS.subtleText },
   typeBadgeText: {
@@ -501,15 +594,22 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
     lineHeight: 22,
   },
+  contactActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
   contactBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     paddingVertical: 13,
+    paddingHorizontal: 12,
     backgroundColor: ACCENT,
     borderRadius: 14,
-    marginTop: 6,
     ...CAMPUS_HUB_COLORS.heroShadow,
   },
   contactBtnText: {
@@ -517,6 +617,72 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: "700",
     color: "#ffffff",
+  },
+  copyPhoneBtn: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.06)",
+  },
+  authorContactBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  authorContactLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  authorPhoneIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  authorContactSubtext: {
+    fontFamily,
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.subtleText,
+    letterSpacing: 0.5,
+  },
+  authorContactNumber: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  authorCopyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  authorCopyBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.deepNavy,
   },
   ownerActions: {
     flexDirection: "row",

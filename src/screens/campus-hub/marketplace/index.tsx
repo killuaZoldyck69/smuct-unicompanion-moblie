@@ -15,6 +15,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -518,15 +519,10 @@ export function MarketplaceSection({
             tintColor={ACCENT}
           />
         }
-        removeClippedSubviews
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        initialNumToRender={10}
-        getItemLayout={(_data, index) => ({
-          length: cardWidth + 12,
-          offset: (cardWidth + 12) * Math.floor(index / 2),
-          index,
-        })}
+        removeClippedSubviews={Platform.OS === "android"}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        initialNumToRender={8}
       />
 
       <ComposeMarketplaceModal
