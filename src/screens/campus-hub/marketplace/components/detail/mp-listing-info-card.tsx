@@ -12,6 +12,7 @@ import {
   fontFamily,
   timeAgo,
   formatDateTime,
+  formatCampusUserSubtitle,
 } from "@/screens/campus-hub/shared/design-tokens";
 import type { MarketplacePost } from "@/services/marketplace-service";
 import type { AuthorProfileModalData } from "@/screens/campus-hub/shared/author-modal";
@@ -40,7 +41,8 @@ interface MPListingInfoCardProps {
   isAuthor: boolean;
   isAdmin?: boolean;
   isEdited: boolean;
-  authorDept: string;
+  authorDept?: string;
+  authorSubtitle?: string;
   authorInitial: string;
   onViewAuthor: (author: AuthorProfileModalData) => void;
   onContact: () => void;
@@ -58,6 +60,7 @@ export function MPListingInfoCard({
   isAdmin = false,
   isEdited,
   authorDept,
+  authorSubtitle,
   authorInitial,
   onViewAuthor,
   onContact,
@@ -67,6 +70,8 @@ export function MPListingInfoCard({
 }: MPListingInfoCardProps) {
   const isSelling = post.type === "SELLING";
   const isSold = post.status === "SOLD";
+  const sellerSubtitle =
+    authorSubtitle || formatCampusUserSubtitle(post.author, "") || authorDept;
 
   return (
     <View style={styles.card}>
@@ -181,9 +186,9 @@ export function MPListingInfoCard({
           <Text style={styles.sellerName} numberOfLines={1}>
             {post.author?.name ?? "University Member"}
           </Text>
-          {!!authorDept && (
+          {!!sellerSubtitle && (
             <Text style={styles.sellerMeta} numberOfLines={1}>
-              {authorDept}
+              {sellerSubtitle}
             </Text>
           )}
         </View>

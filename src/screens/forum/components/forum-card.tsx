@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
+import { RichTextSnippet } from "@/screens/campus-hub/shared/rich-text-snippet";
 import type { ForumPostItem } from "../types";
 import {
   timeAgo,
@@ -213,13 +214,11 @@ export const ForumCard = memo(function ForumCard({
       </Text>
 
       {item.description ? (
-        <Text style={styles.descriptionText} numberOfLines={2}>
-          {item.description
-            .replace(/<[^>]+>/g, " ")
-            .replace(/&nbsp;/gi, " ")
-            .replace(/\s+/g, " ")
-            .trim()}
-        </Text>
+        <RichTextSnippet
+          text={item.description}
+          numberOfLines={2}
+          style={styles.descriptionText}
+        />
       ) : null}
 
       <View style={[styles.divider, isResolved && styles.dividerResolved]} />

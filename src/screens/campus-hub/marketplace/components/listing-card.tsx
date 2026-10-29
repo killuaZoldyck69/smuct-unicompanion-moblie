@@ -9,6 +9,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import type { MarketplacePost } from "@/services/marketplace-service";
 import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../../shared/design-tokens";
+import { RichTextSnippet } from "../../shared/rich-text-snippet";
 
 const CONDITION_STYLES: Record<string, { label: string; bg: string; text: string; border: string }> = {
   NEW: { label: "Brand New", bg: "#f0fdf4", text: "#166534", border: "rgba(22, 101, 52, 0.12)" },
@@ -187,9 +188,11 @@ export const ListingCard = React.memo(function ListingCard({
 
         {/* Description Snippet */}
         {post.description ? (
-          <Text style={styles.description} numberOfLines={2}>
-            {post.description}
-          </Text>
+          <RichTextSnippet
+            text={post.description}
+            numberOfLines={2}
+            style={styles.description}
+          />
         ) : null}
 
         {/* Hairline Divider */}

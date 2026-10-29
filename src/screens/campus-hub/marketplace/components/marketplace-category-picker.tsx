@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-  SafeAreaView,
   TextInput,
+  Platform,
+  StatusBar,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import type { MarketplaceCategory } from "@/services/marketplace-service";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
@@ -30,6 +32,7 @@ export function MarketplaceCategoryPicker({
   label = "CATEGORY",
   required = true,
 }: MarketplaceCategoryPickerProps) {
+  const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -93,13 +96,22 @@ export function MarketplaceCategoryPicker({
       <Modal
         visible={modalVisible}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
+        statusBarTranslucent={true}
         onRequestClose={() => {
           setModalVisible(false);
           setSearch("");
         }}
       >
-        <SafeAreaView style={styles.modalContainer}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="#ffffff"
+          translucent={true}
+        />
+        <SafeAreaView
+          style={styles.modalContainer}
+          edges={["top", "bottom"]}
+        >
           {/* Modal Header */}
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Category</Text>
@@ -139,8 +151,12 @@ export function MarketplaceCategoryPicker({
           {/* Category List */}
           <ScrollView
             style={styles.listScroll}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[
+              styles.listContent,
+              { paddingBottom: Math.max(insets.bottom + 20, 28) },
+            ]}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             {filteredCategories.map((cat) => {
               const isSelected = cat.key === value;
@@ -180,7 +196,7 @@ export function MarketplaceCategoryPicker({
                     >
                       {cat.label}
                     </Text>
-                    <Text style={styles.rowDesc} numberOfLines={1}>
+                    <Text style={styles.rowDesc} numberOfLines={2}>
                       {cat.description}
                     </Text>
                   </View>
@@ -260,7 +276,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingTop: Platform.OS === "android" ? 12 : 8,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(19, 27, 46, 0.08)",
   },
@@ -343,9 +360,10 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
   },
   rowDesc: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontFamily,
     color: CAMPUS_HUB_COLORS.subtleText,
     marginTop: 2,
+    lineHeight: 16,
   },
 });

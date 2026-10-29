@@ -90,6 +90,7 @@ export const ComposeMarketplaceModal = React.memo(
       ...INITIAL_FORM,
       contactPhone: initialPhone,
     });
+    const [descriptionLength, setDescriptionLength] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
 
     const createMutation = useCreateMarketplacePost();
@@ -144,6 +145,7 @@ export const ComposeMarketplaceModal = React.memo(
               style: "destructive",
               onPress: () => {
                 setForm({ ...INITIAL_FORM, contactPhone: initialPhone });
+                setDescriptionLength(0);
                 onClose();
               },
             },
@@ -151,6 +153,7 @@ export const ComposeMarketplaceModal = React.memo(
         );
       } else {
         setForm({ ...INITIAL_FORM, contactPhone: initialPhone });
+        setDescriptionLength(0);
         onClose();
       }
     }, [hasContent, initialPhone, onClose]);
@@ -273,6 +276,7 @@ export const ComposeMarketplaceModal = React.memo(
         onSuccess: () => {
           Keyboard.dismiss();
           setForm({ ...INITIAL_FORM, contactPhone: initialPhone });
+          setDescriptionLength(0);
           onClose();
           setTimeout(() => {
             Toast.show({
@@ -503,12 +507,18 @@ export const ComposeMarketplaceModal = React.memo(
 
               {/* Description & Rich Text Formatter */}
               <View style={styles.formGroup}>
-                <Text style={styles.fieldLabel}>
-                  DESCRIPTION <Text style={styles.requiredStar}>*</Text>
-                </Text>
+                <View style={styles.labelRow}>
+                  <Text style={styles.fieldLabel}>
+                    DESCRIPTION <Text style={styles.requiredStar}>*</Text>
+                  </Text>
+                  <Text style={styles.charCountText}>
+                    {descriptionLength}/3000
+                  </Text>
+                </View>
                 <MarketplaceRichEditor
                   value={form.description}
                   onChangeText={(val) => update("description", val)}
+                  onLengthChange={setDescriptionLength}
                   placeholder="Mention item condition, edition, included accessories, or campus meetup point..."
                   maxLength={3000}
                   minHeight={130}
@@ -778,7 +788,9 @@ const styles = StyleSheet.create({
   },
   conditionChip: {
     flex: 1,
-    paddingVertical: 8,
+    minHeight: 46,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
     borderRadius: 8,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
@@ -795,10 +807,19 @@ const styles = StyleSheet.create({
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+    textAlignVertical: "center",
+    lineHeight: 16,
   },
   conditionChipTextActive: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
     fontWeight: "700",
+  },
+  charCountText: {
+    fontSize: 12,
+    fontFamily,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.subtleText,
   },
 
   // Price Input

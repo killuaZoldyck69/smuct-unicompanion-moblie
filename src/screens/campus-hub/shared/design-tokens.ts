@@ -76,20 +76,16 @@ export const fontFamily = Platform.select({
 
 export function timeAgo(dateString: string): string {
   if (!dateString) return "";
-  const seconds = Math.floor(
-    (Date.now() - new Date(dateString).getTime()) / 1000
-  );
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  if (isNaN(diffMs) || diffMs < 0) return "Just now";
+  const seconds = Math.floor(diffMs / 1000);
   if (seconds < 60) return "Just now";
   const mins = Math.floor(seconds / 60);
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateString).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
+  return `${days}d ago`;
 }
 
 export function formatDateTime(dateString: string): string {
@@ -103,6 +99,27 @@ export function formatDateTime(dateString: string): string {
     minute: "2-digit",
     hour12: true,
   });
+}
+
+/**
+ * Formats a comment timestamp as e.g. "25 Sep, 11:00 AM"
+ */
+export function formatCommentDateTime(dateString?: string | null): string {
+  if (!dateString) return "";
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return "";
+
+  const day = d.getDate();
+  const month = d.toLocaleDateString("en-US", { month: "short" });
+
+  let hours = d.getHours();
+  const minutes = d.getMinutes();
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const minutesFormatted = minutes < 10 ? `0${minutes}` : String(minutes);
+
+  return `${day} ${month}, ${hours}:${minutesFormatted} ${ampm}`;
 }
 
 /**
@@ -148,12 +165,29 @@ export function formatCampusUserSubtitle(
 ): string {
   if (!user) return fallback;
 
-  // 1. Student
-  if (user.studentProfile) {
+  // 1. Teacher (check if explicitly TEACHER or only teacherProfile has data)
+  const isTeacher =
+    user.role === "TEACHER" ||
+    (Boolean(user.teacherProfile?.designation || user.teacherProfile?.department) &&
+      !user.studentProfile?.currentSemester);
+
+  if (isTeacher && user.teacherProfile) {
+    const designation = user.teacherProfile.designation?.trim() || "Faculty";
+    const rawDept = user.teacherProfile.department?.trim();
+    const dept = rawDept ? getDepartmentShortName(rawDept) : "";
+
+    if (designation && dept) return `${designation} • ${dept}`;
+    if (designation) return designation;
+    if (dept) return dept;
+    return "Faculty";
+  }
+
+  // 2. Student
+  if (user.studentProfile || user.role === "STUDENT") {
     const sem = formatSemesterOrdinal(
-      user.studentProfile.currentSemester ?? user.studentProfile.semester
+      user.studentProfile?.currentSemester ?? user.studentProfile?.semester
     );
-    const rawDept = user.studentProfile.department?.trim();
+    const rawDept = user.studentProfile?.department?.trim();
     const dept = rawDept ? getDepartmentShortName(rawDept) : "";
 
     if (sem && dept) return `${sem} • ${dept}`;
@@ -162,7 +196,7 @@ export function formatCampusUserSubtitle(
     return "Student";
   }
 
-  // 2. Teacher
+  // 3. Fallback Teacher if teacherProfile exists
   if (user.teacherProfile) {
     const designation = user.teacherProfile.designation?.trim() || "Faculty";
     const rawDept = user.teacherProfile.department?.trim();
@@ -174,7 +208,7 @@ export function formatCampusUserSubtitle(
     return "Faculty";
   }
 
-  // 3. Admin / Fallback
+  // 4. Admin / Fallback
   if (user.role === "ADMIN") return "System Administrator";
   if (user.role === "TEACHER") return "Faculty";
   if (user.role === "STUDENT") return "Student";

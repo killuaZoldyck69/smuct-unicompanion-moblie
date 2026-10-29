@@ -17,6 +17,7 @@ export interface MarketplaceRichEditorProps {
   placeholder?: string;
   maxLength?: number;
   minHeight?: number;
+  onLengthChange?: (length: number) => void;
 }
 
 interface FormatStatus {
@@ -400,6 +401,9 @@ export function MarketplaceRichTextDisplay({
   );
 }
 
+const getPlainTextLength = (html: string) =>
+  (html || "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim().length;
+
 // ---------------------------------------------------------------------------
 // WYSIWYG Formatter Component (Instant Live Formatting with Connected Toolbar)
 // ---------------------------------------------------------------------------
@@ -407,15 +411,22 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
   value = "",
   onChangeText,
   placeholder = "Describe condition, edition, accessories, campus meetup spot...",
-  maxLength = 3000,
+  maxLength: _maxLength = 3000,
   minHeight = 135,
+  onLengthChange,
 }: MarketplaceRichEditorProps) {
   const webViewRef = useRef<WebView>(null);
   const webEditorRef = useRef<any>(null);
   const isReadyRef = useRef(false);
   const isTypingRef = useRef(false);
   const currentHtmlRef = useRef(value);
-  const [plainTextLength, setPlainTextLength] = useState(value.replace(/<[^>]+>/g, "").length);
+
+  const updateLength = useCallback(
+    (len: number) => {
+      onLengthChange?.(len);
+    },
+    [onLengthChange]
+  );
 
   const [formatStatus, setFormatStatus] = useState<FormatStatus>({
     bold: false,
@@ -455,7 +466,8 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         } else if (data.type === "change") {
           isTypingRef.current = true;
           currentHtmlRef.current = data.html || "";
-          setPlainTextLength((data.text || "").trim().length);
+          const len = (data.text || "").trim().length;
+          updateLength(len);
           onChangeText(data.html || "");
         } else if (data.type === "formatStatus") {
           setFormatStatus({
@@ -468,7 +480,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         }
       } catch {}
     },
-    [placeholder, value, onChangeText]
+    [placeholder, value, onChangeText, updateLength]
   );
 
   // Sync external changes (e.g. form reset)
@@ -477,6 +489,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
       if (webEditorRef.current && value !== currentHtmlRef.current) {
         currentHtmlRef.current = value;
         webEditorRef.current.innerHTML = value || "";
+        updateLength(getPlainTextLength(value));
       }
       return;
     }
@@ -487,6 +500,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
     }
     if (value !== currentHtmlRef.current) {
       currentHtmlRef.current = value;
+      updateLength(getPlainTextLength(value));
       if (isReadyRef.current) {
         const escaped = JSON.stringify(value);
         webViewRef.current?.injectJavaScript(`
@@ -497,7 +511,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         `);
       }
     }
-  }, [value]);
+  }, [value, updateLength]);
 
   const executeCommand = useCallback(
     (command: string, arg?: string) => {
@@ -515,7 +529,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
           const html = webEditorRef.current.innerHTML || "";
           const text = webEditorRef.current.innerText || "";
           currentHtmlRef.current = html;
-          setPlainTextLength(text.trim().length);
+          updateLength(text.trim().length);
           onChangeText(html);
         }
         return;
@@ -530,7 +544,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         true;
       `);
     },
-    [onChangeText]
+    [onChangeText, updateLength]
   );
 
   const handleBold = useCallback(() => executeCommand("bold"), [executeCommand]);
@@ -567,7 +581,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
               const html = target.innerHTML || "";
               const text = target.innerText || target.textContent || "";
               currentHtmlRef.current = html;
-              setPlainTextLength(text.trim().length);
+              updateLength(text.trim().length);
               onChangeText(html);
             },
           })
@@ -683,13 +697,6 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
           />
           <Text style={styles.toolBtnTemplateLabel}>Template</Text>
         </TouchableOpacity>
-
-        <View style={styles.flexSpacer} />
-
-        {/* Real-time character counter */}
-        <Text style={styles.charCounter}>
-          {plainTextLength}/{maxLength}
-        </Text>
       </View>
     </View>
   );
@@ -805,16 +812,6 @@ const styles = StyleSheet.create({
     height: 18,
     backgroundColor: "#cbd5e1",
     marginHorizontal: 2,
-  },
-  flexSpacer: {
-    flex: 1,
-  },
-  charCounter: {
-    fontSize: 10.5,
-    fontFamily,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
-    marginLeft: 4,
   },
 
   // Native Rich-Text Tokens

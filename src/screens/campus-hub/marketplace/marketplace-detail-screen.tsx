@@ -34,7 +34,11 @@ import {
   useDeleteMarketplaceComment,
   useUpdateMarketplaceComment,
 } from "@/features/campus-hub/useMarketplace";
-import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  formatCampusUserSubtitle,
+} from "@/screens/campus-hub/shared/design-tokens";
 import {
   InlineComments,
   CommentInputBar,
@@ -181,12 +185,8 @@ export function MarketplaceDetailScreen() {
     return !isNaN(created) && !isNaN(updated) && updated - created > EDIT_THRESHOLD_MS;
   }, [post?.createdAt, post?.updatedAt]);
 
-  const authorDept = useMemo(
-    () =>
-      post?.author?.studentProfile?.department ??
-      post?.author?.teacherProfile?.department ??
-      post?.author?.role ??
-      "",
+  const authorSubtitle = useMemo(
+    () => formatCampusUserSubtitle(post?.author, ""),
     [post?.author]
   );
 
@@ -351,6 +351,16 @@ export function MarketplaceDetailScreen() {
     replyTarget?.id,
   ]);
 
+  const handleOpenViewer = useCallback(
+    (idx?: number) => {
+      if (typeof idx === "number") {
+        setSelectedImage(idx);
+      }
+      openModal("imageViewer");
+    },
+    [openModal]
+  );
+
   const handleViewAuthor = useCallback((author: AuthorProfileModalData) => {
     setSelectedAuthor(author);
   }, []);
@@ -408,7 +418,7 @@ export function MarketplaceDetailScreen() {
             selectedIndex={selectedImage}
             isSold={isSold}
             onSelectIndex={setSelectedImage}
-            onOpenViewer={() => openModal("imageViewer")}
+            onOpenViewer={handleOpenViewer}
           />
 
           <MPListingInfoCard
@@ -416,7 +426,7 @@ export function MarketplaceDetailScreen() {
             isAuthor={isAuthor}
             isAdmin={isAdmin}
             isEdited={isEdited}
-            authorDept={authorDept}
+            authorSubtitle={authorSubtitle}
             authorInitial={authorInitial}
             onViewAuthor={handleViewAuthor}
             onContact={handleContact}

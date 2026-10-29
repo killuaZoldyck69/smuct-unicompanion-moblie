@@ -13,7 +13,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "./design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  timeAgo,
+  formatCampusUserSubtitle,
+  formatCommentDateTime,
+} from "./design-tokens";
 import { AuthorProfileModalData } from "./author-modal";
 
 export interface CommentAuthor extends AuthorProfileModalData {
@@ -39,18 +45,15 @@ export interface ReplyTarget {
 
 function getAuthorAcademicSubtitle(author?: CommentAuthor): string | null {
   if (!author) return null;
-  if (author.studentProfile?.department) {
-    return author.studentProfile.department;
-  }
-  if (author.teacherProfile?.department) {
-    return author.teacherProfile.department;
-  }
-  return null;
+  const subtitle = formatCampusUserSubtitle(author, "");
+  return subtitle || null;
 }
 
 function isCommentEdited(createdAt?: string, updatedAt?: string): boolean {
   if (!createdAt || !updatedAt) return false;
-  return new Date(updatedAt).getTime() - new Date(createdAt).getTime() > 1000;
+  const created = new Date(createdAt).getTime();
+  const updated = new Date(updatedAt).getTime();
+  return !isNaN(created) && !isNaN(updated) && updated - created > 1000;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,14 +131,18 @@ const InlineCommentCard = memo(function InlineCommentCard({
               </Text>
             )}
           </View>
-
-          <Text style={styles.timeText}>{timeAgo(comment.createdAt)}</Text>
         </View>
 
         {/* Body Content */}
         <Text style={styles.commentBody}>{comment.content}</Text>
 
-        {edited && <Text style={styles.editedLabel}>✎ Edited</Text>}
+        {/* Bottom-right date-time & edited indicator */}
+        <View style={styles.commentMetaBottom}>
+          <Text style={styles.bottomTimeText}>
+            {formatCommentDateTime(comment.createdAt)}
+          </Text>
+          {edited && <Text style={styles.editedTag}>(Edited)</Text>}
+        </View>
 
       {/* Actions Row */}
       <View style={styles.actionsRow}>
@@ -273,12 +280,17 @@ const InlineCommentCard = memo(function InlineCommentCard({
                         </Text>
                       )}
                     </View>
-                    <Text style={styles.timeText}>{timeAgo(reply.createdAt)}</Text>
                   </View>
 
                   <Text style={styles.replyBodySmall}>{reply.content}</Text>
 
-                  {replyEdited && <Text style={styles.editedLabel}>✎ Edited</Text>}
+                  {/* Bottom-right date-time & edited indicator */}
+                  <View style={styles.commentMetaBottom}>
+                    <Text style={styles.bottomTimeText}>
+                      {formatCommentDateTime(reply.createdAt)}
+                    </Text>
+                    {replyEdited && <Text style={styles.editedTag}>(Edited)</Text>}
+                  </View>
 
                   <View style={styles.actionsRow}>
                     <View style={styles.leftActions}>
@@ -748,12 +760,6 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
     marginTop: 1,
   },
-  timeText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "400",
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
   commentBody: {
     fontFamily,
     fontSize: 13,
@@ -761,12 +767,26 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
     lineHeight: 19,
   },
-  editedLabel: {
+  commentMetaBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 5,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  editedTag: {
     fontFamily,
     fontSize: 10,
+    fontStyle: "italic",
     fontWeight: "500",
-    color: "#92400e",
-    marginTop: 4,
+    color: CAMPUS_HUB_COLORS.subtleText,
+  },
+  bottomTimeText: {
+    fontFamily,
+    fontSize: 10.5,
+    fontWeight: "400",
+    color: CAMPUS_HUB_COLORS.subtleText,
   },
   actionsRow: {
     flexDirection: 'row',

@@ -79,6 +79,12 @@ export const EditMarketplaceModal = React.memo(
       images: post.images ?? [],
     });
 
+    const [descriptionLength, setDescriptionLength] = useState(() =>
+      post.description
+        ? post.description.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim().length
+        : 0
+    );
+
     useEffect(() => {
       setForm({
         type: post.type,
@@ -92,6 +98,11 @@ export const EditMarketplaceModal = React.memo(
           : "+880",
         images: post.images ?? [],
       });
+      setDescriptionLength(
+        post.description
+          ? post.description.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim().length
+          : 0
+      );
     }, [post]);
 
     const [isUploading, setIsUploading] = useState(false);
@@ -479,12 +490,18 @@ export const EditMarketplaceModal = React.memo(
 
               {/* Description with Rich Editor */}
               <View style={styles.formGroup}>
-                <Text style={styles.fieldLabel}>
-                  DESCRIPTION <Text style={styles.requiredStar}>*</Text>
-                </Text>
+                <View style={styles.labelRow}>
+                  <Text style={styles.fieldLabel}>
+                    DESCRIPTION <Text style={styles.requiredStar}>*</Text>
+                  </Text>
+                  <Text style={styles.charCountText}>
+                    {descriptionLength}/3000
+                  </Text>
+                </View>
                 <MarketplaceRichEditor
                   value={form.description}
                   onChangeText={(val) => update("description", val)}
+                  onLengthChange={setDescriptionLength}
                   placeholder="Update condition details, accessories, meeting location..."
                   maxLength={3000}
                   minHeight={130}
@@ -740,7 +757,9 @@ const styles = StyleSheet.create({
   },
   conditionChip: {
     flex: 1,
-    paddingVertical: 8,
+    minHeight: 46,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
     borderRadius: 8,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
@@ -757,10 +776,19 @@ const styles = StyleSheet.create({
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+    textAlignVertical: "center",
+    lineHeight: 16,
   },
   conditionChipTextActive: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
     fontWeight: "700",
+  },
+  charCountText: {
+    fontSize: 12,
+    fontFamily,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.subtleText,
   },
   priceFormattedText: {
     fontSize: 12,

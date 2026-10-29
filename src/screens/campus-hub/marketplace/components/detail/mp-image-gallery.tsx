@@ -15,9 +15,9 @@ const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
 interface MPImageGalleryProps {
   images: string[];
   selectedIndex: number;
-  isSold: boolean;
+  isSold?: boolean;
   onSelectIndex: (idx: number) => void;
-  onOpenViewer: () => void;
+  onOpenViewer: (idx?: number) => void;
 }
 
 export function MPImageGallery({
@@ -30,33 +30,24 @@ export function MPImageGallery({
   if (!images.length) return null;
 
   return (
-    <View style={styles.card}>
+    <View style={styles.container}>
       <TouchableOpacity
-        activeOpacity={0.92}
-        onPress={onOpenViewer}
-        style={styles.mainTouchable}
+        activeOpacity={0.9}
+        onPress={() => onOpenViewer(selectedIndex)}
+        style={styles.mainWrapper}
         accessible
         accessibilityRole="imagebutton"
-        accessibilityLabel="Product photo. Tap to view full screen."
+        accessibilityLabel="Product photo in fullscreen"
       >
         <Image
           source={{ uri: images[selectedIndex] }}
           style={styles.mainImage}
-          resizeMode="contain"
+          resizeMode="cover"
         />
 
-        {images.length > 1 && (
-          <View style={styles.counterBadge}>
-            <Feather name="camera" size={11} color="#ffffff" />
-            <Text style={styles.counterText}>
-              {selectedIndex + 1} / {images.length}
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.zoomBadge}>
+        <View style={styles.zoomPill}>
           <Feather name="maximize-2" size={11} color="#ffffff" />
-          <Text style={styles.zoomText}>Tap to enlarge</Text>
+          <Text style={styles.zoomPillText}>Tap to enlarge</Text>
         </View>
 
         {isSold && (
@@ -72,19 +63,22 @@ export function MPImageGallery({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.thumbScrollView}
           contentContainerStyle={styles.thumbnailRow}
         >
           {images.map((img, idx) => (
             <TouchableOpacity
               key={img}
               onPress={() => onSelectIndex(idx)}
-              activeOpacity={0.8}
               style={[
-                styles.thumbWrapper,
-                selectedIndex === idx && styles.thumbWrapperActive,
+                styles.thumbBtn,
+                selectedIndex === idx && styles.thumbBtnActive,
               ]}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={`Select photo ${idx + 1}`}
             >
-              <Image source={{ uri: img }} style={styles.thumb} />
+              <Image source={{ uri: img }} style={styles.thumbImage} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -94,51 +88,30 @@ export function MPImageGallery({
 }
 
 const styles = StyleSheet.create({
-  card: {
+  container: {
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 4,
-    borderRadius: 22,
-    overflow: "hidden",
-    backgroundColor: "#0f172a",
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.06)",
-    ...CAMPUS_HUB_COLORS.shadow,
+    gap: 8,
   },
-  mainTouchable: {
-    position: "relative",
+  mainWrapper: {
     width: "100%",
-    height: 260,
-    backgroundColor: "#0f172a",
-    justifyContent: "center",
-    alignItems: "center",
+    height: 220,
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "#e2e8f0",
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    ...CAMPUS_HUB_COLORS.shadow,
   },
   mainImage: {
     width: "100%",
     height: "100%",
   },
-  counterBadge: {
+  zoomPill: {
     position: "absolute",
-    top: 12,
-    right: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
-    paddingHorizontal: 9,
-    paddingVertical: 4.5,
-    borderRadius: 10,
-  },
-  counterText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
-  zoomBadge: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
+    bottom: 10,
+    right: 10,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -147,7 +120,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 12,
   },
-  zoomText: {
+  zoomPillText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
@@ -176,26 +149,31 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: 1.5,
   },
-  thumbnailRow: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    backgroundColor: "#1e293b",
+  thumbScrollView: {
+    width: "100%",
   },
-  thumbWrapper: {
-    borderRadius: 10,
+  thumbnailRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 4,
+    flexGrow: 1,
+  },
+  thumbBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "transparent",
-    opacity: 0.65,
+    backgroundColor: "#e2e8f0",
   },
-  thumbWrapperActive: {
+  thumbBtnActive: {
     borderColor: ACCENT,
-    opacity: 1,
   },
-  thumb: {
-    width: 52,
-    height: 52,
-    resizeMode: "cover",
+  thumbImage: {
+    width: "100%",
+    height: "100%",
   },
 });
