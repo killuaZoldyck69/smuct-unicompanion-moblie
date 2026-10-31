@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, TextInput } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { BENTO, fontFamily } from "./constants";
 
 interface Props {
@@ -18,16 +19,14 @@ export const CourseworkInstructionsInput: React.FC<Props> = ({
         <Text style={styles.fieldLabel}>INSTRUCTIONS & RUBRIC (OPTIONAL)</Text>
       </View>
       <View style={styles.textAreaCard}>
-        <TextInput
-          style={styles.textArea}
-          value={value}
-          onChangeText={onChangeText}
+        <RichTextEditor
+          initialValue={value}
+          onChange={(html) => onChangeText(html)}
           placeholder="Provide clear guidelines, problem statements, rubric criteria, or submission format for students..."
-          placeholderTextColor="#94a3b8"
-          multiline
-          textAlignVertical="top"
-          accessible={true}
-          accessibilityLabel="Instructions and Description"
+          minHeight={150}
+          accentColor={BENTO.blueText}
+          showJustify={false}
+          showHelperText={false}
         />
       </View>
     </View>
@@ -62,13 +61,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: BENTO.border,
-    padding: 12,
-  },
-  textArea: {
-    fontFamily,
-    fontSize: 13,
-    color: BENTO.navy,
-    lineHeight: 19,
-    minHeight: 80,
+    padding: 8,
   },
 });

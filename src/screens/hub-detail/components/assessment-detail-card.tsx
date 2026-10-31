@@ -411,7 +411,7 @@ export default function AssessmentCard({
             </View>
           )}
 
-          {/* TEACHER / TA VIEW: Grading List */}
+          {/* TEACHER VIEW: Grading List */}
           {canManage && (
             <View style={styles.gradingSection}>
               <View style={styles.gradingSectionHeader}>

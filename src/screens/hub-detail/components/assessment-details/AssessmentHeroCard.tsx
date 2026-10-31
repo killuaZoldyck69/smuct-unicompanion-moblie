@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { AssessmentData, AssessmentTypeConfig } from "./types";
 import { formatDueDate, formatFileSize, openSafeUrl } from "./utils";
 import { formatDateTime12h } from "@/utils/date-formatter";
+import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -170,7 +171,10 @@ export const AssessmentHeroCard: React.FC<AssessmentHeroCardProps> = React.memo(
               />
               <Text style={styles.instructionsHeading}>Instructions</Text>
             </View>
-            <Text style={styles.instructionsBody}>{assessment.description}</Text>
+            <RichNoticeText
+              content={assessment.description}
+              style={styles.instructionsBody}
+            />
           </View>
         ) : null}
 

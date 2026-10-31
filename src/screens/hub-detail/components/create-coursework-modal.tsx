@@ -233,19 +233,14 @@ export default function CreateCourseworkModal({
           >
             <CourseworkHeroBanner />
 
-            <CourseworkTitleInput
-              value={form.title}
-              onChangeText={(t) => setForm((prev) => ({ ...prev, title: t }))}
-            />
-
             <CourseworkTypeSelector
               selectedType={form.type}
               onSelectType={(t) => setForm((prev) => ({ ...prev, type: t }))}
             />
 
-            <CourseworkSubmissionMethod
-              selectedMethod={form.submissionType}
-              onSelectMethod={(m) => setForm((prev) => ({ ...prev, submissionType: m }))}
+            <CourseworkTitleInput
+              value={form.title}
+              onChangeText={(t) => setForm((prev) => ({ ...prev, title: t }))}
             />
 
             <CourseworkMarksInput
@@ -253,15 +248,10 @@ export default function CreateCourseworkModal({
               onChangeText={(m) => setForm((prev) => ({ ...prev, totalMarks: m }))}
             />
 
-            <CourseworkDeadlineSection
-              deadline={deadline}
-              onChangeDeadline={setDeadline}
-            />
-
-            <CourseworkLateSubmissionToggle
-              value={form.allowLateSubmission}
-              onToggle={(enabled) =>
-                setForm((prev) => ({ ...prev, allowLateSubmission: enabled }))
+            <CourseworkInstructionsInput
+              value={form.description}
+              onChangeText={(description) =>
+                setForm((prev) => ({ ...prev, description }))
               }
             />
 
@@ -276,9 +266,21 @@ export default function CreateCourseworkModal({
               setIsUploading={setIsUploading}
             />
 
-            <CourseworkInstructionsInput
-              value={form.description}
-              onChangeText={(d) => setForm((prev) => ({ ...prev, description: d }))}
+            <CourseworkSubmissionMethod
+              selectedMethod={form.submissionType}
+              onSelectMethod={(m) => setForm((prev) => ({ ...prev, submissionType: m }))}
+            />
+
+            <CourseworkDeadlineSection
+              deadline={deadline}
+              onChangeDeadline={setDeadline}
+            />
+
+            <CourseworkLateSubmissionToggle
+              value={form.allowLateSubmission}
+              onToggle={(enabled) =>
+                setForm((prev) => ({ ...prev, allowLateSubmission: enabled }))
+              }
             />
           </ScrollView>
 

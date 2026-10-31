@@ -3,6 +3,24 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { BENTO, fontFamily, RatingDistribution } from "./types";
 
+const RatingStars = ({ rating }: { rating: number }) => (
+  <View style={styles.starsRow}>
+    {[1, 2, 3, 4, 5].map((star) => {
+      const fill = Math.max(0, Math.min(1, rating - star + 1));
+      return (
+        <View key={star} style={styles.starCell}>
+          <Ionicons name="star" size={14} color="#e2e8f0" />
+          {fill > 0 && (
+            <View style={[styles.starFill, { width: 14 * fill }]}>
+              <Ionicons name="star" size={14} color="#f59e0b" />
+            </View>
+          )}
+        </View>
+      );
+    })}
+  </View>
+);
+
 interface ReviewMetricsCardProps {
   isTeacher?: boolean;
   isReviewOpen: boolean;
@@ -57,16 +75,7 @@ export const ReviewMetricsCard: React.FC<ReviewMetricsCardProps> = React.memo(
         <View style={styles.metricsContainer}>
           <View style={styles.scoreBox}>
             <Text style={styles.scoreText}>{averageRating > 0 ? averageRating : "—"}</Text>
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Ionicons
-                  key={star}
-                  name="star"
-                  size={14}
-                  color={star <= Math.round(Number(averageRating)) ? "#f59e0b" : "#e2e8f0"}
-                />
-              ))}
-            </View>
+            <RatingStars rating={Number(averageRating) || 0} />
             <Text style={styles.totalReviewsText}>
               {totalReviews} {totalReviews === 1 ? "Review" : "Reviews"}
             </Text>
@@ -194,6 +203,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 2,
     marginTop: 4,
+  },
+  starCell: {
+    width: 14,
+    height: 14,
+    overflow: "hidden",
+  },
+  starFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    height: 14,
+    overflow: "hidden",
   },
   totalReviewsText: {
     fontFamily,

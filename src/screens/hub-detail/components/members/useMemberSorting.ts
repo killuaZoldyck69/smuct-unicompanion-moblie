@@ -7,7 +7,6 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
 
     const teachers: CourseHubMember[] = [];
     const classRepresentatives: CourseHubMember[] = [];
-    const teachingAssistants: CourseHubMember[] = [];
     const students: CourseHubMember[] = [];
 
     members.forEach((m) => {
@@ -15,8 +14,6 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
         teachers.push(m);
       } else if (m.role === "CR") {
         classRepresentatives.push(m);
-      } else if (m.role === "TA") {
-        teachingAssistants.push(m);
       } else {
         students.push(m);
       }
@@ -30,15 +27,11 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
       (a.user?.name || "").localeCompare(b.user?.name || ""),
     );
 
-    teachingAssistants.sort((a, b) =>
-      (a.user?.name || "").localeCompare(b.user?.name || ""),
-    );
-
     students.sort((a, b) =>
       (a.user?.name || "").localeCompare(b.user?.name || ""),
     );
 
-    return [...teachers, ...classRepresentatives, ...teachingAssistants, ...students];
+    return [...teachers, ...classRepresentatives, ...students];
   }, [members]);
 
   const counts = useMemo<MemberCounts>(() => {

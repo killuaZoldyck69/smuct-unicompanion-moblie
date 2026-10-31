@@ -9,6 +9,7 @@ import {
 } from "../types";
 import { formatDueDate, formatFileSize, openSafeUrl } from "../utils";
 import { formatDateTime12h } from "@/utils/date-formatter";
+import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
 import { styles } from "./styles";
 
 interface StudentHeroSummaryProps {
@@ -222,7 +223,10 @@ export const StudentHeroSummary: React.FC<StudentHeroSummaryProps> = React.memo(
               />
               <Text style={styles.instructionsHeading}>Instructions</Text>
             </View>
-            <Text style={styles.instructionsBody}>{assessment.description}</Text>
+            <RichNoticeText
+              content={assessment.description}
+              style={styles.instructionsBody}
+            />
           </View>
         ) : null}
 

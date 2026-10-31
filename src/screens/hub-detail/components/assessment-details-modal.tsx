@@ -66,7 +66,7 @@ function AssessmentDetailsContent({
   onDelete,
 }: AssessmentDetailsContentProps) {
   // Check if current user has the TEACHER role.
-  // CR and TA are treated as students for coursework submission and cannot view/grade peer submissions.
+  // Class representatives are treated as students for coursework submission and cannot grade peer submissions.
   const isTeacherUser = Boolean(
     isTeacher ||
       hubMembers?.some(
@@ -82,7 +82,7 @@ function AssessmentDetailsContent({
   const submitMutation = useSubmitAssessment(hubId, assessment.id);
   const gradeMutation = useGradeSubmission(assessment.id);
 
-  // Tab State: Teachers default to DETAILS; CR, TA, and Students default to MY_SUBMISSION
+  // Tab State: Teachers default to DETAILS; students and class representatives default to MY_SUBMISSION
   const [activeTab, setActiveTab] = useState<"DETAILS" | "MY_SUBMISSION">(
     isTeacherUser ? "DETAILS" : "MY_SUBMISSION"
   );

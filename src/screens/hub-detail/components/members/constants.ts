@@ -20,8 +20,6 @@ export const BENTO = {
   roseText: "#e11d48",
   amberSoft: "#fffbeb",
   amberText: "#b45309",
-  purpleSoft: "#faf5ff",
-  purpleText: "#7e22ce",
 };
 
 export const fontFamily = Platform.select({
@@ -60,13 +58,6 @@ export const ROLE_CONFIG: Record<
     icon: "award",
     color: BENTO.navy,
     bg: "#f1f5f9",
-  },
-  TA: {
-    title: "Teaching Assistant",
-    badgeLabel: "TA",
-    icon: "shield",
-    color: BENTO.purpleText,
-    bg: BENTO.purpleSoft,
   },
 };
 

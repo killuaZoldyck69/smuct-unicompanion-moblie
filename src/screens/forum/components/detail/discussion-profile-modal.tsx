@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  // CR / TA badges
+  // CR badge
   badgeRow: {
     flexDirection: "row",
     gap: 8,
@@ -499,9 +499,6 @@ const styles = StyleSheet.create({
     borderRadius: BENTO_COLORS.pillRadius,
     paddingHorizontal: 10,
     paddingVertical: 5,
-  },
-  rolePillTA: {
-    backgroundColor: BENTO_COLORS.emeraldBg,
   },
   pillIcon: {
     marginRight: 4,

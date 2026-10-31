@@ -67,7 +67,7 @@ export const ASSESSMENT_TYPES: Array<{
   },
 ];
 
-export const MARKS_PRESETS = ["10", "20", "25", "50", "100"];
+export const MARKS_PRESETS = ["5", "10", "15"];
 
 export const DEADLINE_PRESETS = [
   { label: "Tomorrow", days: 1 },

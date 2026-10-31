@@ -18,7 +18,7 @@ export const CourseworkMarksInput: React.FC<Props> = ({
         <View style={styles.labelDot} />
         <Text style={styles.fieldLabel}>TOTAL MARKS</Text>
       </View>
-      <View style={styles.marksContainer}>
+      <View style={styles.marksRow}>
         <View style={styles.inputCard}>
           <Feather name="award" size={16} color={BENTO.navy} style={styles.inputIcon} />
           <TextInput
@@ -89,37 +89,41 @@ const styles = StyleSheet.create({
     color: BENTO.slate,
     letterSpacing: 0.5,
   },
-  marksContainer: {
+  marksRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
     gap: 8,
   },
   inputCard: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    borderRadius: 14,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: BENTO.border,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: 6,
   },
   textInput: {
     flex: 1,
     fontFamily,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: BENTO.navy,
   },
   unitSuffix: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
     color: BENTO.slate,
-    marginLeft: 8,
+    marginLeft: 4,
   },
   marksChipsRow: {
+    flex: 2,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -132,7 +136,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: BENTO.border,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   marksChipSelected: {
     backgroundColor: BENTO.navy,
@@ -140,7 +144,7 @@ const styles = StyleSheet.create({
   },
   marksChipText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: BENTO.navy,
   },

@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { MaterialItem } from "./types";
-import { formatDate } from "@/utils/date-formatter";
 import {
   getMaterialTheme,
   getMaterialSubtitle,
@@ -26,6 +25,23 @@ const fontFamily = Platform.select({
   android: "sans-serif",
   default: "sans-serif",
 });
+
+const formatPublishedAt = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const datePart = date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+  const timePart = date
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+    .toUpperCase();
+  return `${datePart}, ${timePart}`;
+};
 
 interface MaterialCardProps {
   item: MaterialItem;
@@ -121,7 +137,7 @@ export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
             onPress={handleCardPress}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={`${item.title}, ${subtitle}, ${formatDate(item.createdAt)}`}
+            accessibilityLabel={`${item.title}, ${subtitle}, published ${formatPublishedAt(item.createdAt)}`}
           >
           {/* File Icon Badge */}
           <View
@@ -170,15 +186,9 @@ export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
             </View>
           </View>
 
-          {/* Date Column */}
-          <View style={styles.dateCol}>
-            <Text style={styles.dateText}>
-              {formatDate(item.createdAt)}
-            </Text>
-          </View>
           </TouchableOpacity>
 
-          {/* Actions Column */}
+          {/* Actions and publication time */}
           <View style={styles.rightCol}>
             <View style={styles.actionsRow}>
               {primaryAttachment ? (
@@ -240,6 +250,9 @@ export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
                 </TouchableOpacity>
               )}
             </View>
+            <Text style={styles.dateText} numberOfLines={1}>
+              {formatPublishedAt(item.createdAt)}
+            </Text>
           </View>
         </View>
 
@@ -426,7 +439,7 @@ const styles = StyleSheet.create({
   },
   rowMain: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -469,26 +482,23 @@ const styles = StyleSheet.create({
     color: "#64748b",
   },
   rightCol: {
+    minHeight: 44,
     alignItems: "flex-end",
-    justifyContent: "center",
+    justifyContent: "space-between",
     marginLeft: 8,
-  },
-  dateCol: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-    paddingRight: 4,
+    paddingVertical: 1,
   },
   dateText: {
     fontFamily,
-    fontSize: 11.5,
+    fontSize: 10,
     fontWeight: "600",
     color: "#64748b",
+    marginTop: 6,
   },
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 2,
   },
   downloadIconBtn: {
     width: 27,
