@@ -53,6 +53,7 @@ import { ImageViewerModal } from "@/screens/campus-hub/shared/image-viewer-modal
 import { MarketplaceDeleteModal } from "@/screens/campus-hub/marketplace/components/marketplace-delete-modal";
 import { MarketplaceSoldModal } from "@/screens/campus-hub/marketplace/components/marketplace-sold-modal";
 import { EditMarketplaceModal } from "@/screens/campus-hub/marketplace/edit-modal";
+import { MarketplaceDetailSkeleton } from "../shared/skeleton-loaders";
 import { setCampusHubActiveSection } from "@/screens/campus-hub";
 import type { MarketplaceComment } from "@/services/marketplace-service";
 
@@ -378,11 +379,7 @@ export function MarketplaceDetailScreen() {
   // Loading / error states
   // ---------------------------------------------------------------------------
   if (isLoading) {
-    return (
-      <SafeAreaView style={styles.center} edges={["top"]}>
-        <ActivityIndicator size="large" color={ACCENT} />
-      </SafeAreaView>
-    );
+    return <MarketplaceDetailSkeleton />;
   }
 
   if (isError || !post) {

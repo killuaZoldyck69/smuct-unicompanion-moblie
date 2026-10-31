@@ -26,6 +26,7 @@ import { DiscussionProfileModal } from "./components/detail/discussion-profile-m
 import { DiscussionEditModal } from "./components/detail/discussion-edit-modal";
 import { ForumOptionsModal } from "./components/forum-options-modal";
 import { ForumConfirmModal } from "./components/forum-confirm-modal";
+import { ForumDiscussionDetailSkeleton } from "../campus-hub/shared/skeleton-loaders";
 
 export function DiscussionDetailScreen() {
   const [keyboardBehavior, setKeyboardBehavior] = useState<
@@ -158,14 +159,7 @@ export function DiscussionDetailScreen() {
   const keyExtractor = useCallback((item: ForumResponseItem) => item.id, []);
 
   if (isLoading) {
-    return (
-      <SafeAreaView
-        style={[styles.container, styles.centerBox]}
-        edges={["top"]}
-      >
-        <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
-      </SafeAreaView>
-    );
+    return <ForumDiscussionDetailSkeleton />;
   }
 
   if (isError || !thread) {

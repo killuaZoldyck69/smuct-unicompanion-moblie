@@ -30,6 +30,7 @@ import { MemeImageModal } from "./components/meme-image-modal";
 import { MemeDeleteModal } from "./components/meme-delete-modal";
 import { MemeOptionsModal } from "./components/meme-options-modal";
 import { MemeEditModal } from "./components/meme-edit-modal";
+import { MemeFeedSkeleton } from "../shared/skeleton-loaders";
 
 const FILTER_TABS: { label: string; value: MemeFilter; icon: keyof typeof Feather.glyphMap }[] = [
   { label: "Latest", value: "latest", icon: "clock" },
@@ -258,10 +259,7 @@ export const MemesSection = React.memo(function MemesSection({
 
       {/* Meme Feed */}
       {isLoading && allMemes.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={CAMPUS_HUB_COLORS.memeAccent} />
-          <Text style={styles.loadingText}>Loading campus memes...</Text>
-        </View>
+        <MemeFeedSkeleton />
       ) : (
         <FlatList
           data={allMemes}

@@ -32,6 +32,7 @@ import {
   timeAgo,
 } from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
+import { LostFoundFeedSkeleton } from "../shared/skeleton-loaders";
 import { ComposeLostFoundModal } from "./compose-modal";
 import { LostFoundDeleteModal } from "./components/lost-found-delete-modal";
 import {
@@ -334,11 +335,7 @@ export function LostFoundSection({
 
   const renderEmpty = useCallback(() => {
     if (isLoading) {
-      return (
-        <View style={styles.centerState}>
-          <ActivityIndicator size="large" color={ACCENT} />
-        </View>
-      );
+      return <LostFoundFeedSkeleton />;
     }
     const hasActiveFiltersOrSearch = activeFilterCount > 0 || debouncedSearch.length > 0;
 

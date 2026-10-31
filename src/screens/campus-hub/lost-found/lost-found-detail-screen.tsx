@@ -41,6 +41,7 @@ import { HandoverCard } from "@/screens/campus-hub/lost-found/components/handove
 import { AcceptConfirmationSheet } from "@/screens/campus-hub/lost-found/components/accept-confirmation-sheet";
 import { EditLostFoundModal } from "./edit-modal";
 import { LostFoundDeleteModal } from "./components/lost-found-delete-modal";
+import { LostFoundDetailSkeleton } from "../shared/skeleton-loaders";
 import type { LostFoundClaim } from "@/services/lost-found-service";
 
 // Detail sub-components
@@ -346,11 +347,7 @@ export function LostFoundDetailScreen() {
   // Loading / error states
   // ---------------------------------------------------------------------------
   if (isLoading) {
-    return (
-      <SafeAreaView style={styles.center} edges={["top"]}>
-        <ActivityIndicator size="large" color={ACCENT} />
-      </SafeAreaView>
-    );
+    return <LostFoundDetailSkeleton />;
   }
 
   if (isError || !post) {
