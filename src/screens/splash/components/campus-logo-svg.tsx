@@ -25,7 +25,6 @@ export const CampusLogoSvg = React.memo(function CampusLogoSvg({
       height={height}
       viewBox="0 0 120 108"
       fill="none"
-      accessible={true}
       accessibilityLabel="CampusHub Graduation Cap and Book Emblem"
     >
       <Defs>

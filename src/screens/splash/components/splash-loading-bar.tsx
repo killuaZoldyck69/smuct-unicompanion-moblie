@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, Animated, Easing } from "react-native";
+import { View, StyleSheet, Animated, Easing, Platform } from "react-native";
 import { SPLASH_COLORS, SPLASH_DURATION_MS } from "../constants";
 import { SplashLoadingBarProps } from "../types";
 
@@ -17,7 +17,7 @@ export const SplashLoadingBar = React.memo(function SplashLoadingBar({
       toValue: 1,
       duration: durationMs,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
     });
 
     animation.start(({ finished }) => {

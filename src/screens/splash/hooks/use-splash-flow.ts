@@ -91,7 +91,7 @@ export function useSplashFlow(): SplashFlowResult {
   }, [navigateToDestination]);
 
   const handleSkip = useCallback(() => {
-    navigateToDestination();
+    setTimeout(navigateToDestination, 100);
   }, [navigateToDestination]);
 
   return {

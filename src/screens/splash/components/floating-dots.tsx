@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, Animated, Easing } from "react-native";
+import { View, StyleSheet, Animated, Easing, Platform } from "react-native";
 import { FLOATING_DOTS } from "../constants";
 import { FloatingDotConfig } from "../types";
 
@@ -39,25 +39,25 @@ const FloatingDotItem = React.memo(function FloatingDotItem({
           toValue: targetY1,
           duration: durY,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(translateY, {
           toValue: 0,
           duration: durY,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(translateY, {
           toValue: targetY2,
           duration: durY,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(translateY, {
           toValue: 0,
           duration: durY,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
       ]),
     );
@@ -69,25 +69,25 @@ const FloatingDotItem = React.memo(function FloatingDotItem({
           toValue: targetX1,
           duration: durX,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(translateX, {
           toValue: 0,
           duration: durX,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(translateX, {
           toValue: targetX2,
           duration: durX,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(translateX, {
           toValue: 0,
           duration: durX,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
       ]),
     );
@@ -100,25 +100,25 @@ const FloatingDotItem = React.memo(function FloatingDotItem({
           toValue: 1.03,
           duration: durScale,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(scale, {
           toValue: 1.0,
           duration: durScale,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(scale, {
           toValue: 0.97,
           duration: durScale,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(scale, {
           toValue: 1.0,
           duration: durScale,
           easing: smoothEasing,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
       ]),
     );
