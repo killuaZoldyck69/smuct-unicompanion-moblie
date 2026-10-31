@@ -8,7 +8,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  timeAgo,
+  formatMemePosterSubtitle,
+} from "../../shared/design-tokens";
 import type { Meme } from "@/services/meme-service";
 
 interface MemeCardProps {
@@ -52,10 +57,7 @@ export const MemeCard = React.memo(function MemeCard({
     .slice(0, 2)
     .toUpperCase();
 
-  const authorSubtitle =
-    meme.author?.studentProfile?.department ||
-    meme.author?.teacherProfile?.department ||
-    (meme.author?.role === "ADMIN" ? "Staff" : "Student");
+  const posterSubtitle = formatMemePosterSubtitle(meme.author);
 
   const isEdited =
     Boolean(meme.updatedAt && meme.createdAt) &&
@@ -106,12 +108,26 @@ export const MemeCard = React.memo(function MemeCard({
               </Text>
               {meme.author?.role === "ADMIN" && (
                 <View style={styles.adminBadge}>
-                  <Text style={styles.adminBadgeText}>Staff</Text>
+                  <Text style={styles.adminBadgeText}>Admin</Text>
                 </View>
               )}
             </View>
             <View style={styles.subMetaRow}>
-              <Text style={styles.authorSubText}>{authorSubtitle}</Text>
+              {posterSubtitle.isStudentWithSemester ? (
+                <Text style={styles.authorSubText} numberOfLines={1}>
+                  {posterSubtitle.semesterNum}
+                  <Text style={styles.superscript}>
+                    {posterSubtitle.superSuffix}
+                  </Text>
+                  {posterSubtitle.deptShort
+                    ? ` • ${posterSubtitle.deptShort}`
+                    : ""}
+                </Text>
+              ) : (
+                <Text style={styles.authorSubText} numberOfLines={1}>
+                  {posterSubtitle.text}
+                </Text>
+              )}
               {isEdited && (
                 <>
                   <Text style={styles.dotSeparator}>•</Text>
@@ -339,6 +355,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: CAMPUS_HUB_COLORS.subtleText,
     fontWeight: "500",
+    flexShrink: 1,
+  },
+  superscript: {
+    fontFamily,
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.subtleText,
   },
   dotSeparator: {
     marginHorizontal: 5,

@@ -26,8 +26,12 @@ import {
   useCreateNotice,
   useUpdateNotice,
 } from "@/features/notices/useNotices";
-import { NormalizedNotice } from "../types";
-import { NOTICE_COLORS, fontFamily } from "../constants";
+import { NoticeCategoryKey, NormalizedNotice } from "../types";
+import {
+  NOTICE_COLORS,
+  fontFamily,
+  NOTICE_CREATION_CATEGORIES,
+} from "../constants";
 import { OfficialIdentityBlock } from "./official-identity-block";
 import { CampusWatermarkSvg } from "./illustrations/campus-watermark-svg";
 import { RichNoticeText } from "./rich-notice-text";
@@ -47,6 +51,7 @@ export interface CreateNoticeModalProps {
 interface SavedDraftData {
   title: string;
   referenceNo: string;
+  category?: NoticeCategoryKey;
   body: string;
   isJustified?: boolean;
   issuerName: string;
@@ -55,13 +60,25 @@ interface SavedDraftData {
   savedAt: string;
 }
 
+function extractCategoryFromBody(raw: string): NoticeCategoryKey | null {
+  if (!raw) return null;
+  const match = raw.match(/<!--category:(ACADEMIC|HOLIDAY|TRANSPORT|GENERAL|ADMIN|EXAM|EMERGENCY)-->/i);
+  if (match) {
+    const cat = match[1].toUpperCase();
+    if (cat === "ADMIN" || cat === "GENERAL") return "GENERAL";
+    return cat as NoticeCategoryKey;
+  }
+  return null;
+}
+
 /**
  * Prepares raw body content (legacy Markdown, [justify] tags, or HTML) for the WYSIWYG editor.
  */
 function convertToEditorHtml(raw: string): string {
   if (!raw) return "";
 
-  let formatted = raw.replace(/\\r\\n|\\n|\\r/g, "\n");
+  let formatted = raw.replace(/<!--category:[^>]*-->\s*/gi, "");
+  formatted = formatted.replace(/\\r\\n|\\n|\\r/g, "\n");
 
   // Convert legacy [justify]...[/justify] tags to justified div blocks
   formatted = formatted.replace(
@@ -103,6 +120,16 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
   // Form states - initialized with noticeToEdit data on first render if editing
   const [title, setTitle] = useState(() => noticeToEdit?.title || "");
   const [referenceNo, setReferenceNo] = useState(() => noticeToEdit?.referenceNo || "");
+  const [category, setCategory] = useState<NoticeCategoryKey | "">(() => {
+    if (noticeToEdit?.category && noticeToEdit.category !== "ALL") {
+      return noticeToEdit.category === "ADMIN" ? "GENERAL" : noticeToEdit.category;
+    }
+    if (noticeToEdit?.body) {
+      const extracted = extractCategoryFromBody(noticeToEdit.body);
+      if (extracted) return extracted;
+    }
+    return "";
+  });
   const [body, setBody] = useState(() => {
     if (noticeToEdit?.body) {
       return convertToEditorHtml(noticeToEdit.body);
@@ -140,6 +167,10 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       const formattedBody = convertToEditorHtml(noticeToEdit.body || "");
       setTitle(noticeToEdit.title || "");
       setReferenceNo(noticeToEdit.referenceNo || "");
+      const initialCat = (noticeToEdit.category && noticeToEdit.category !== "ALL")
+        ? (noticeToEdit.category === "ADMIN" ? "GENERAL" : noticeToEdit.category)
+        : (extractCategoryFromBody(noticeToEdit.body || "") || "");
+      setCategory(initialCat);
       setBody(formattedBody);
       setIsJustified(/text-align:\s*justify|align=["']justify/i.test(formattedBody));
       setIssuerName(noticeToEdit.issuerName || "");
@@ -160,11 +191,17 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
                 parsed.title ||
                 parsed.body ||
                 parsed.issuerName ||
-                parsed.referenceNo
+                parsed.referenceNo ||
+                parsed.category
               ) {
                 const formattedBody = convertToEditorHtml(parsed.body || "");
                 setTitle(parsed.title || "");
                 setReferenceNo(parsed.referenceNo || "");
+                if (parsed.category) {
+                  setCategory(parsed.category === "ADMIN" ? "GENERAL" : parsed.category);
+                } else {
+                  setCategory("");
+                }
                 setBody(formattedBody);
                 setIsJustified(
                   parsed.isJustified ??
@@ -193,6 +230,7 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
         // Default empty form
         setTitle("");
         setReferenceNo("");
+        setCategory("");
         setBody("");
         setIsJustified(false);
         setIssuerName("");
@@ -212,6 +250,7 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       const data: SavedDraftData = {
         title,
         referenceNo,
+        category: category || undefined,
         body,
         isJustified,
         issuerName,
@@ -244,6 +283,7 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
   }, [
     title,
     referenceNo,
+    category,
     body,
     isJustified,
     issuerName,
@@ -259,6 +299,7 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       }
       setTitle("");
       setReferenceNo("");
+      setCategory("");
       setBody("");
       setIsJustified(false);
       setIssuerName("");
@@ -311,6 +352,15 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       return;
     }
 
+    if (!category) {
+      Toast.show({
+        type: "error",
+        text1: "Category Required",
+        text2: "Please select a category (Academic, Holiday, Transport, or General) for this notice.",
+      });
+      return;
+    }
+
     if (!trimmedReferenceNo) {
       Toast.show({
         type: "error",
@@ -354,6 +404,7 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
         JSON.stringify({
           title,
           referenceNo,
+          category,
           body,
           isJustified,
           issuerName,
@@ -381,6 +432,15 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
         type: "error",
         text1: "Title Required",
         text2: "Please enter a subject or title for the official notice.",
+      });
+      return;
+    }
+
+    if (!category) {
+      Toast.show({
+        type: "error",
+        text1: "Category Required",
+        text2: "Please select a category (Academic, Holiday, Transport, or General) for this notice.",
       });
       return;
     }
@@ -421,6 +481,9 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       return;
     }
 
+    const cleanBody = finalBody.replace(/<!--category:[^>]*-->\s*/gi, "").trim();
+    const bodyWithCategory = `<!--category:${category}-->\n${cleanBody}`;
+
     try {
       if (isEditing && noticeToEdit) {
         await updateNoticeMutation.mutateAsync({
@@ -428,20 +491,22 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
           data: {
             title: trimmedTitle,
             referenceNo: trimmedReferenceNo,
-            body: finalBody,
+            body: bodyWithCategory,
             issuerName: trimmedIssuerName,
             issuerDesignation: trimmedIssuerDesignation,
             copyTo,
+            category,
           },
         });
       } else {
         await createNoticeMutation.mutateAsync({
           title: trimmedTitle,
           referenceNo: trimmedReferenceNo,
-          body: finalBody,
+          body: bodyWithCategory,
           issuerName: trimmedIssuerName,
           issuerDesignation: trimmedIssuerDesignation,
           copyTo,
+          category,
         });
 
         // Clear local draft upon successful publication
@@ -472,16 +537,18 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
   };
 
   // Category theme resolution for preview view
-  const previewCategory = detectNoticeCategory({
-    id: "preview",
-    title,
-    referenceNo,
-    body,
-    issuerName,
-    issuerDesignation,
-    copyTo,
-    createdAt: new Date().toISOString(),
-  });
+  const previewCategory: NoticeCategoryKey =
+    (category as NoticeCategoryKey) ||
+    detectNoticeCategory({
+      id: "preview",
+      title,
+      referenceNo,
+      body,
+      issuerName,
+      issuerDesignation,
+      copyTo,
+      createdAt: new Date().toISOString(),
+    });
   const previewTheme = resolveNoticeVisualTheme(previewCategory);
   const formattedToday = formatDate(new Date().toISOString());
 
@@ -645,6 +712,65 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
                   accessible={true}
                   accessibilityLabel="Reference Number"
                 />
+              </View>
+
+              {/* Notice Category (Mandatory: Academic, Holiday, Transport, General) */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>
+                    Category <Text style={styles.required}>*</Text>
+                  </Text>
+                  {!category && (
+                    <Text style={styles.categoryRequiredHint}>Mandatory</Text>
+                  )}
+                </View>
+                <View style={styles.categoryPickerRow}>
+                  {NOTICE_CREATION_CATEGORIES.map((cat) => {
+                    const isSelected = category === cat.key;
+                    return (
+                      <TouchableOpacity
+                        key={cat.key}
+                        onPress={() => setCategory(cat.key)}
+                        style={[
+                          styles.categoryChip,
+                          isSelected && [
+                            styles.categoryChipSelected,
+                            {
+                              backgroundColor: cat.theme.badgeBg,
+                              borderColor: cat.theme.badgeBorder,
+                            },
+                          ],
+                        ]}
+                        activeOpacity={0.7}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Select category ${cat.label}`}
+                      >
+                        <Feather
+                          name={cat.theme.icon}
+                          size={14}
+                          color={
+                            isSelected
+                              ? cat.theme.badgeText
+                              : NOTICE_COLORS.subtleText
+                          }
+                          style={{ marginRight: 6 }}
+                        />
+                        <Text
+                          style={[
+                            styles.categoryChipText,
+                            isSelected && {
+                              color: cat.theme.badgeText,
+                              fontWeight: "800",
+                            },
+                          ]}
+                        >
+                          {cat.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
 
               {/* 2. Main Announcement Body (ONLY location with rich text format tools) */}
@@ -1484,5 +1610,36 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: {
     opacity: 0.6,
+  },
+  categoryPickerRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: NOTICE_COLORS.white,
+    paddingVertical: 9,
+    paddingHorizontal: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+  },
+  categoryChipSelected: {
+    borderWidth: 1.5,
+  },
+  categoryChipText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: NOTICE_COLORS.deepNavy,
+  },
+  categoryRequiredHint: {
+    fontFamily,
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#ef4444",
   },
 });

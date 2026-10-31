@@ -70,6 +70,16 @@ export const CATEGORY_THEMES: Record<
     icon: "book-open",
     iconBg: "rgba(55, 48, 163, 0.12)",
   },
+  GENERAL: {
+    key: "GENERAL",
+    label: "General",
+    badgeBg: "#f1f5f9",
+    badgeText: "#475569",
+    badgeBorder: "rgba(71, 85, 105, 0.15)",
+    accentBarColor: "#64748b",
+    icon: "file-text",
+    iconBg: "rgba(71, 85, 105, 0.12)",
+  },
   ADMIN: {
     key: "ADMIN",
     label: "Admin",
@@ -116,10 +126,21 @@ export const DEFAULT_CATEGORY_THEME: NoticeCategoryTheme = {
 export const ORDERED_CATEGORIES: NoticeCategoryKey[] = [
   "ALL",
   "ACADEMIC",
-  "ADMIN",
-  "TRANSPORT",
   "HOLIDAY",
+  "TRANSPORT",
+  "GENERAL",
   "EXAM",
+];
+
+export const NOTICE_CREATION_CATEGORIES: Array<{
+  key: "ACADEMIC" | "HOLIDAY" | "TRANSPORT" | "GENERAL";
+  label: string;
+  theme: NoticeCategoryTheme;
+}> = [
+  { key: "ACADEMIC", label: "Academic", theme: CATEGORY_THEMES.ACADEMIC },
+  { key: "HOLIDAY", label: "Holiday", theme: CATEGORY_THEMES.HOLIDAY },
+  { key: "TRANSPORT", label: "Transport", theme: CATEGORY_THEMES.TRANSPORT },
+  { key: "GENERAL", label: "General", theme: CATEGORY_THEMES.GENERAL },
 ];
 
 export const fontFamily = Platform.select({

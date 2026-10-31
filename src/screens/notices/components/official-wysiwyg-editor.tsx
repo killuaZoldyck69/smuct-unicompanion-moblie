@@ -26,6 +26,37 @@ interface FormatStatus {
   justify: boolean;
 }
 
+const isWeb = Platform.OS === "web";
+
+const WEB_STYLES = `
+.notice-web-editor:empty:before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+  display: block;
+}
+.notice-web-editor p {
+  margin: 0 0 10px 0;
+  min-height: 1.2em;
+}
+.notice-web-editor b, .notice-web-editor strong {
+  font-weight: bold;
+}
+.notice-web-editor i, .notice-web-editor em {
+  font-style: italic;
+}
+.notice-web-editor u {
+  text-decoration: underline;
+}
+.notice-web-editor ul {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+.notice-web-editor li {
+  margin-bottom: 4px;
+}
+`;
+
 // Static HTML document for WebView to ensure it NEVER reloads during typing
 const STATIC_EDITOR_HTML = `
 <!DOCTYPE html>
@@ -67,8 +98,7 @@ const STATIC_EDITOR_HTML = `
       display: block;
     }
     b, strong {
-      font-weight: 800;
-      color: #0f172a;
+      font-weight: bold;
     }
     i, em {
       font-style: italic;
@@ -86,6 +116,7 @@ const STATIC_EDITOR_HTML = `
     }
     p {
       margin: 0 0 10px 0;
+      min-height: 1.2em;
     }
     div[align="justify"], p[align="justify"], div[style*="text-align: justify"], p[style*="text-align: justify"] {
       text-align: justify;
@@ -98,7 +129,8 @@ const STATIC_EDITOR_HTML = `
 
   <script>
     var editor = document.getElementById('editor');
-    var savedSelectionRange = null;
+    var savedRange = null;
+    var isBusy = false;
 
     document.body.addEventListener('click', function(e) {
       if (e.target !== editor && !editor.contains(e.target)) {
@@ -106,25 +138,49 @@ const STATIC_EDITOR_HTML = `
       }
     });
 
+    function isEditorNode(node) {
+      if (!node) return false;
+      return node === editor || editor.contains(node);
+    }
+
     function saveCurrentSelection() {
+      if (isBusy) return;
       var sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        savedSelectionRange = sel.getRangeAt(0).cloneRange();
+      if (!sel || sel.rangeCount === 0) return;
+      var anchor = sel.anchorNode;
+      if (anchor && isEditorNode(anchor)) {
+        try {
+          savedRange = sel.getRangeAt(0).cloneRange();
+        } catch (e) {}
       }
     }
 
     function restoreSavedSelection() {
       var sel = window.getSelection();
-      if (savedSelectionRange && sel) {
+      if (savedRange && sel) {
         try {
           sel.removeAllRanges();
-          sel.addRange(savedSelectionRange);
+          sel.addRange(savedRange);
         } catch (e) {}
       }
     }
 
+    function getActiveRange() {
+      var sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        var r = sel.getRangeAt(0);
+        if (r.commonAncestorContainer && isEditorNode(r.commonAncestorContainer)) {
+          return r;
+        }
+      }
+      if (savedRange && savedRange.commonAncestorContainer && isEditorNode(savedRange.commonAncestorContainer)) {
+        return savedRange;
+      }
+      return null;
+    }
+
     function post(type, data) {
-      if (window.ReactNativeWebView) {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
         var payload = Object.assign({ type: type }, data || {});
         window.ReactNativeWebView.postMessage(JSON.stringify(payload));
       }
@@ -143,15 +199,73 @@ const STATIC_EDITOR_HTML = `
       }
     };
 
-    function findJustifiedAncestor(node) {
-      var curr = node && node.nodeType === 3 ? node.parentNode : node;
+    function isNodeBold(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        if (tag === 'B' || tag === 'STRONG') return true;
+        if (curr.style && (curr.style.fontWeight === 'bold' || parseInt(curr.style.fontWeight, 10) >= 700)) {
+          return true;
+        }
+        curr = curr.parentElement;
+      }
+      return false;
+    }
+
+    function isNodeItalic(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        if (tag === 'I' || tag === 'EM') return true;
+        if (curr.style && curr.style.fontStyle === 'italic') return true;
+        curr = curr.parentElement;
+      }
+      return false;
+    }
+
+    function isNodeUnderline(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        if (tag === 'U' || tag === 'INS') return true;
+        if (curr.style && curr.style.textDecoration && curr.style.textDecoration.indexOf('underline') !== -1) {
+          return true;
+        }
+        curr = curr.parentElement;
+      }
+      return false;
+    }
+
+    function isNodeList(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        if (tag === 'LI' || tag === 'UL' || tag === 'OL') return true;
+        curr = curr.parentElement;
+      }
+      return false;
+    }
+
+    function isNodeJustified(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
       while (curr && curr !== editor && curr !== document.body) {
         if (
-          curr.getAttribute &&
-          (curr.getAttribute('align') === 'justify' ||
-           (curr.style && curr.style.textAlign === 'justify'))
+          (curr.getAttribute && curr.getAttribute('align') === 'justify') ||
+          (curr.style && curr.style.textAlign === 'justify')
         ) {
-          return curr;
+          return true;
+        }
+        curr = curr.parentElement;
+      }
+      return false;
+    }
+
+    function findEnclosingTag(node, tagNames) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        for (var i = 0; i < tagNames.length; i++) {
+          if (tag === tagNames[i]) return curr;
         }
         curr = curr.parentElement;
       }
@@ -166,114 +280,184 @@ const STATIC_EDITOR_HTML = `
       if (!sel || sel.rangeCount === 0) return;
       var range = sel.getRangeAt(0);
 
-      var justifiedEl = findJustifiedAncestor(sel.anchorNode) || findJustifiedAncestor(range.commonAncestorContainer);
-
-      if (justifiedEl) {
-        // --- UNDO / UNLOCK JUSTIFY ---
-        if (justifiedEl.style) {
-          justifiedEl.style.textAlign = '';
-          if (justifiedEl.style.textJustify) justifiedEl.style.textJustify = '';
-        }
-        if (justifiedEl.hasAttribute('align')) {
-          justifiedEl.removeAttribute('align');
-        }
-
-        // Clean up wrapper div if it has no styles left
-        if (
-          justifiedEl.tagName === 'DIV' &&
-          (!justifiedEl.getAttribute('style') || justifiedEl.getAttribute('style').trim() === '') &&
-          !justifiedEl.getAttribute('class')
-        ) {
-          var parent = justifiedEl.parentNode;
-          if (parent) {
-            while (justifiedEl.firstChild) {
-              parent.insertBefore(justifiedEl.firstChild, justifiedEl);
-            }
-            parent.removeChild(justifiedEl);
+      var isJustified = isNodeJustified(range.commonAncestorContainer);
+      if (isJustified) {
+        var curr = range.commonAncestorContainer && range.commonAncestorContainer.nodeType === 3
+          ? range.commonAncestorContainer.parentElement
+          : range.commonAncestorContainer;
+        while (curr && curr !== editor && curr !== document.body) {
+          if (
+            (curr.getAttribute && curr.getAttribute('align') === 'justify') ||
+            (curr.style && curr.style.textAlign === 'justify')
+          ) {
+            curr.style.textAlign = '';
+            if (curr.hasAttribute('align')) curr.removeAttribute('align');
           }
+          curr = curr.parentElement;
         }
       } else {
-        // --- APPLY JUSTIFY (To selected text or current paragraph only) ---
         if (!sel.isCollapsed) {
           var commonParent = range.commonAncestorContainer;
-          var block = commonParent.nodeType === 3 ? commonParent.parentNode : commonParent;
-
-          if (block !== editor && (block.tagName === 'P' || block.tagName === 'DIV' || block.tagName === 'LI')) {
+          var block = commonParent.nodeType === 3 ? commonParent.parentElement : commonParent;
+          if (block && block !== editor && (block.tagName === 'P' || block.tagName === 'DIV' || block.tagName === 'LI')) {
             block.style.textAlign = 'justify';
           } else {
             try {
-              var frag = range.extractContents();
-              var div = document.createElement('div');
-              div.style.textAlign = 'justify';
-              div.appendChild(frag);
-              range.insertNode(div);
-
-              var newRange = document.createRange();
-              newRange.selectNodeContents(div);
-              sel.removeAllRanges();
-              sel.addRange(newRange);
-              savedSelectionRange = newRange.cloneRange();
-            } catch (err) {
               document.execCommand('justifyFull', false, null);
-            }
+            } catch (err) {}
           }
         } else {
-          var curr = sel.anchorNode ? (sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode) : null;
-          if (curr && curr !== editor) {
-            curr.style.textAlign = 'justify';
+          var block = sel.anchorNode && sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+          if (block && block !== editor) {
+            block.style.textAlign = 'justify';
           } else {
-            document.execCommand('justifyFull', false, null);
+            try {
+              document.execCommand('justifyFull', false, null);
+            } catch (err) {}
           }
         }
       }
 
       if (editor.hasAttribute('align')) editor.removeAttribute('align');
       if (editor.style && editor.style.textAlign) editor.style.textAlign = '';
+      saveCurrentSelection();
+    }
+
+    var FORMAT_MAP = {
+      bold: { tags: ['B', 'STRONG'], tag: 'b', check: isNodeBold },
+      italic: { tags: ['I', 'EM'], tag: 'i', check: isNodeItalic },
+      underline: { tags: ['U', 'INS'], tag: 'u', check: isNodeUnderline }
+    };
+
+    function toggleInline(cmd) {
+      var config = FORMAT_MAP[cmd];
+      if (!config) return;
+
+      var sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        var r = document.createRange();
+        r.selectNodeContents(editor);
+        r.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        savedRange = r.cloneRange();
+      }
+
+      var range = sel.getRangeAt(0);
+
+      if (range.collapsed) {
+        var enclosing = findEnclosingTag(range.startContainer, config.tags);
+        if (enclosing) {
+          var text = (enclosing.textContent || '').replace(/\\u200B/g, '');
+          if (text.length === 0) {
+            var parent = enclosing.parentNode;
+            var newR = document.createRange();
+            newR.setStartBefore(enclosing);
+            newR.collapse(true);
+            if (parent) parent.removeChild(enclosing);
+            sel.removeAllRanges();
+            sel.addRange(newR);
+            savedRange = newR.cloneRange();
+          } else {
+            var newR = document.createRange();
+            newR.setStartAfter(enclosing);
+            newR.collapse(true);
+            var zw = document.createTextNode('\\u200B');
+            newR.insertNode(zw);
+            newR.setStartAfter(zw);
+            newR.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newR);
+            savedRange = newR.cloneRange();
+          }
+        } else {
+          var el = document.createElement(config.tag);
+          var zw = document.createTextNode('\\u200B');
+          el.appendChild(zw);
+          range.insertNode(el);
+          var newR = document.createRange();
+          newR.setStart(zw, 1);
+          newR.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newR);
+          savedRange = newR.cloneRange();
+        }
+      } else {
+        var isCurrentlyFormatted = config.check(range.commonAncestorContainer);
+        document.execCommand(cmd, false, null);
+
+        var stillFormatted = config.check(window.getSelection()?.getRangeAt(0)?.commonAncestorContainer);
+        if (isCurrentlyFormatted && stillFormatted) {
+          var enclosing = findEnclosingTag(window.getSelection()?.getRangeAt(0)?.commonAncestorContainer, config.tags);
+          if (enclosing && enclosing.parentNode) {
+            var parent = enclosing.parentNode;
+            while (enclosing.firstChild) {
+              parent.insertBefore(enclosing.firstChild, enclosing);
+            }
+            parent.removeChild(enclosing);
+          }
+        }
+        saveCurrentSelection();
+      }
     }
 
     window.formatCommand = function(cmd) {
-      editor.focus();
-      restoreSavedSelection();
+      isBusy = true;
+      try {
+        editor.focus();
+        restoreSavedSelection();
 
-      if (cmd === 'justify') {
-        toggleJustify();
-      } else {
-        document.execCommand(cmd, false, null);
+        if (cmd === 'bold' || cmd === 'italic' || cmd === 'underline') {
+          toggleInline(cmd);
+        } else if (cmd === 'justify') {
+          toggleJustify();
+        } else if (cmd === 'insertUnorderedList') {
+          document.execCommand('insertUnorderedList', false, null);
+          saveCurrentSelection();
+        }
+      } finally {
+        isBusy = false;
       }
 
-      saveCurrentSelection();
       notifyChange();
       checkFormatStatus();
     };
 
     function notifyChange() {
+      var html = editor.innerHTML || '';
+      var text = (editor.innerText || editor.textContent || '').replace(/\\u200B/g, '');
       post('change', {
-        html: editor.innerHTML,
-        text: editor.innerText
+        html: html.replace(/\\u200B/g, ''),
+        text: text
       });
     }
 
     function checkFormatStatus() {
-      if (editor.hasAttribute('align')) editor.removeAttribute('align');
-      if (editor.style && editor.style.textAlign) editor.style.textAlign = '';
+      var range = getActiveRange();
+      var bold = false;
+      var italic = false;
+      var underline = false;
+      var list = false;
+      var justify = false;
 
-      var isJustified = false;
-      var sel = window.getSelection();
-      if (sel && sel.anchorNode) {
-        var justifiedEl = findJustifiedAncestor(sel.anchorNode);
-        if (justifiedEl) isJustified = true;
+      if (range && range.commonAncestorContainer && isEditorNode(range.commonAncestorContainer)) {
+        var target = range.commonAncestorContainer;
+        bold = isNodeBold(target);
+        italic = isNodeItalic(target);
+        underline = isNodeUnderline(target);
+        list = isNodeList(target);
+        justify = isNodeJustified(target);
       }
 
       post('formatStatus', {
-        bold: document.queryCommandState('bold'),
-        italic: document.queryCommandState('italic'),
-        underline: document.queryCommandState('underline'),
-        list: document.queryCommandState('insertUnorderedList'),
-        justify: isJustified
+        bold: bold,
+        italic: italic,
+        underline: underline,
+        list: list,
+        justify: justify
       });
     }
 
-    // Debounced input handler (50ms) to ensure keyboard stays smooth without bridge flooding
     var timeoutId;
     editor.addEventListener('input', function() {
       clearTimeout(timeoutId);
@@ -284,6 +468,23 @@ const STATIC_EDITOR_HTML = `
     });
 
     document.addEventListener('selectionchange', function() {
+      if (!isBusy) {
+        saveCurrentSelection();
+        checkFormatStatus();
+      }
+    });
+
+    editor.addEventListener('mouseup', function() {
+      saveCurrentSelection();
+      checkFormatStatus();
+    });
+
+    editor.addEventListener('touchend', function() {
+      saveCurrentSelection();
+      checkFormatStatus();
+    });
+
+    editor.addEventListener('keyup', function() {
       saveCurrentSelection();
       checkFormatStatus();
     });
@@ -296,8 +497,147 @@ const STATIC_EDITOR_HTML = `
 </html>
 `;
 
-// Top-level immutable source object ensures WebView native component NEVER reloads or resets on renders
 const STATIC_WEBVIEW_SOURCE = { html: STATIC_EDITOR_HTML };
+
+// ── Web Platform Helpers ──
+function isNodeBoldWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    if (tag === "B" || tag === "STRONG") return true;
+    if (curr.style && (curr.style.fontWeight === "bold" || parseInt(curr.style.fontWeight, 10) >= 700)) {
+      return true;
+    }
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function isNodeItalicWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    if (tag === "I" || tag === "EM") return true;
+    if (curr.style && curr.style.fontStyle === "italic") return true;
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function isNodeUnderlineWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    if (tag === "U" || tag === "INS") return true;
+    if (curr.style && curr.style.textDecoration && curr.style.textDecoration.indexOf("underline") !== -1) {
+      return true;
+    }
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function isNodeListWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    if (tag === "LI" || tag === "UL" || tag === "OL") return true;
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function isNodeJustifiedWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    if (
+      (curr.getAttribute && curr.getAttribute("align") === "justify") ||
+      (curr.style && curr.style.textAlign === "justify")
+    ) {
+      return true;
+    }
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function findEnclosingTagWeb(node: any, root: any, tagNames: string[]): any {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    for (const t of tagNames) {
+      if (tag === t) return curr;
+    }
+    curr = curr.parentElement;
+  }
+  return null;
+}
+
+const WEB_FORMAT_MAP: Record<string, { tags: string[]; tag: string; check: (n: any, r: any) => boolean }> = {
+  bold: { tags: ["B", "STRONG"], tag: "b", check: isNodeBoldWeb },
+  italic: { tags: ["I", "EM"], tag: "i", check: isNodeItalicWeb },
+  underline: { tags: ["U", "INS"], tag: "u", check: isNodeUnderlineWeb },
+};
+
+function toggleInlineWeb(editor: any, cmd: string) {
+  if (typeof window === "undefined" || !editor) return;
+  const config = WEB_FORMAT_MAP[cmd];
+  if (!config) return;
+
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+
+  if (range.collapsed) {
+    const enclosing = findEnclosingTagWeb(range.startContainer, editor, config.tags);
+    if (enclosing) {
+      const text = (enclosing.textContent || "").replace(/\u200B/g, "");
+      if (text.length === 0) {
+        const parent = enclosing.parentNode;
+        const newR = document.createRange();
+        newR.setStartBefore(enclosing);
+        newR.collapse(true);
+        if (parent) parent.removeChild(enclosing);
+        sel.removeAllRanges();
+        sel.addRange(newR);
+      } else {
+        const newR = document.createRange();
+        newR.setStartAfter(enclosing);
+        newR.collapse(true);
+        const zw = document.createTextNode("\u200B");
+        newR.insertNode(zw);
+        newR.setStartAfter(zw);
+        newR.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newR);
+      }
+    } else {
+      const el = document.createElement(config.tag);
+      const zw = document.createTextNode("\u200B");
+      el.appendChild(zw);
+      range.insertNode(el);
+      const newR = document.createRange();
+      newR.setStart(zw, 1);
+      newR.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newR);
+    }
+  } else {
+    const isCurrentlyFormatted = config.check(range.commonAncestorContainer, editor);
+    document.execCommand(cmd, false, undefined);
+    const stillFormatted = config.check(window.getSelection()?.getRangeAt(0)?.commonAncestorContainer, editor);
+    if (isCurrentlyFormatted && stillFormatted) {
+      const enclosing = findEnclosingTagWeb(window.getSelection()?.getRangeAt(0)?.commonAncestorContainer, editor, config.tags);
+      if (enclosing && enclosing.parentNode) {
+        const parent = enclosing.parentNode;
+        while (enclosing.firstChild) {
+          parent.insertBefore(enclosing.firstChild, enclosing);
+        }
+        parent.removeChild(enclosing);
+      }
+    }
+  }
+}
 
 export const OfficialWysiwygEditor = React.memo(function OfficialWysiwygEditor({
   initialValue = "",
@@ -306,6 +646,7 @@ export const OfficialWysiwygEditor = React.memo(function OfficialWysiwygEditor({
   minHeight = 240,
 }: OfficialWysiwygEditorProps) {
   const webViewRef = useRef<WebView>(null);
+  const webEditorRef = useRef<any>(null);
   const isReadyRef = useRef(false);
   const isTypingRef = useRef(false);
   const currentHtmlRef = useRef(initialValue);
@@ -320,13 +661,52 @@ export const OfficialWysiwygEditor = React.memo(function OfficialWysiwygEditor({
     justify: false,
   });
 
+  useEffect(() => {
+    if (isWeb && typeof document !== "undefined") {
+      const styleId = "notice-web-editor-styles";
+      if (!document.getElementById(styleId)) {
+        const styleEl = document.createElement("style");
+        styleEl.id = styleId;
+        styleEl.innerHTML = WEB_STYLES;
+        document.head.appendChild(styleEl);
+      }
+    }
+  }, []);
+
+  const checkWebFormatStatus = useCallback(() => {
+    if (typeof document === "undefined" || !webEditorRef.current) return;
+    const editor = webEditorRef.current;
+    const sel = window.getSelection();
+    let bold = false;
+    let italic = false;
+    let underline = false;
+    let list = false;
+    let justify = false;
+
+    if (sel && sel.anchorNode && (sel.anchorNode === editor || editor.contains(sel.anchorNode))) {
+      const target = sel.anchorNode;
+      bold = isNodeBoldWeb(target, editor);
+      italic = isNodeItalicWeb(target, editor);
+      underline = isNodeUnderlineWeb(target, editor);
+      list = isNodeListWeb(target, editor);
+      justify = isNodeJustifiedWeb(target, editor);
+    }
+
+    setFormatStatus({
+      bold,
+      italic,
+      underline,
+      list,
+      justify,
+    });
+  }, []);
+
   // Handle messages from WebView
   const handleMessage = useCallback((event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === "ready") {
         isReadyRef.current = true;
-        // Inject placeholder and initial content once upon load
         const escapedPlaceholder = JSON.stringify(placeholder);
         const contentToInject = currentHtmlRef.current || initialValue || "";
         currentHtmlRef.current = contentToInject;
@@ -337,28 +717,16 @@ export const OfficialWysiwygEditor = React.memo(function OfficialWysiwygEditor({
           true;
         `);
       } else if (data.type === "change") {
-        // Record typing flag so the immediate re-render does not re-inject content and blur
         isTypingRef.current = true;
-        currentHtmlRef.current = data.html;
-        onChangeRef.current(data.html);
+        currentHtmlRef.current = data.html || "";
+        onChangeRef.current(data.html || "");
       } else if (data.type === "formatStatus") {
-        setFormatStatus((prev) => {
-          if (
-            prev.bold === !!data.bold &&
-            prev.italic === !!data.italic &&
-            prev.underline === !!data.underline &&
-            prev.list === !!data.list &&
-            prev.justify === !!data.justify
-          ) {
-            return prev;
-          }
-          return {
-            bold: !!data.bold,
-            italic: !!data.italic,
-            underline: !!data.underline,
-            list: !!data.list,
-            justify: !!data.justify,
-          };
+        setFormatStatus({
+          bold: !!data.bold,
+          italic: !!data.italic,
+          underline: !!data.underline,
+          list: !!data.list,
+          justify: !!data.justify,
         });
       }
     } catch {
@@ -368,7 +736,16 @@ export const OfficialWysiwygEditor = React.memo(function OfficialWysiwygEditor({
 
   // Sync external changes (e.g., reset form, loaded draft, or opening notice to edit)
   useEffect(() => {
-    // If the change came from the user typing inside the WebView, don't overwrite DOM
+    if (isWeb) {
+      if (webEditorRef.current && initialValue !== currentHtmlRef.current) {
+        currentHtmlRef.current = initialValue;
+        if (webEditorRef.current.innerHTML !== initialValue) {
+          webEditorRef.current.innerHTML = initialValue || "";
+        }
+      }
+      return;
+    }
+
     if (isTypingRef.current) {
       isTypingRef.current = false;
       return;
@@ -389,37 +766,110 @@ export const OfficialWysiwygEditor = React.memo(function OfficialWysiwygEditor({
 
   // Execute rich formatting commands inside the contenteditable
   const executeCommand = useCallback((command: string) => {
-    webViewRef.current?.injectJavaScript(`
-      if (window.formatCommand) {
-        window.formatCommand('${command}');
-      }
-      true;
-    `);
-  }, []);
+    if (isWeb) {
+      if (typeof document === "undefined") return;
+      const editor = webEditorRef.current;
+      if (!editor) return;
+      editor.focus();
 
-  const handleBold = () => executeCommand("bold");
-  const handleItalic = () => executeCommand("italic");
-  const handleUnderline = () => executeCommand("underline");
-  const handleList = () => executeCommand("insertUnorderedList");
-  const handleJustify = () => executeCommand("justify");
+      if (command === "bold" || command === "italic" || command === "underline") {
+        toggleInlineWeb(editor, command);
+      } else if (command === "justify") {
+        document.execCommand("justifyFull", false, undefined);
+      } else if (command === "insertUnorderedList") {
+        document.execCommand("insertUnorderedList", false, undefined);
+      }
+
+      if (editor) {
+        const html = (editor.innerHTML || "").replace(/\u200B/g, "");
+        currentHtmlRef.current = html;
+        onChangeRef.current(html);
+      }
+      checkWebFormatStatus();
+    } else {
+      webViewRef.current?.injectJavaScript(`
+        if (window.formatCommand) {
+          window.formatCommand('${command}');
+        }
+        true;
+      `);
+    }
+  }, [checkWebFormatStatus]);
+
+  const handleBold = useCallback(() => {
+    executeCommand("bold");
+  }, [executeCommand]);
+
+  const handleItalic = useCallback(() => {
+    executeCommand("italic");
+  }, [executeCommand]);
+
+  const handleUnderline = useCallback(() => {
+    executeCommand("underline");
+  }, [executeCommand]);
+
+  const handleList = useCallback(() => {
+    executeCommand("insertUnorderedList");
+  }, [executeCommand]);
+
+  const handleJustify = useCallback(() => {
+    executeCommand("justify");
+  }, [executeCommand]);
 
   return (
     <View style={styles.container}>
       {/* ── WYSIWYG Editable Area (Top) ── */}
       <View style={[styles.editorWrap, { minHeight }]}>
-        <WebView
-          ref={webViewRef}
-          originWhitelist={["*"]}
-          source={STATIC_WEBVIEW_SOURCE}
-          onMessage={handleMessage}
-          style={styles.webView}
-          nestedScrollEnabled={true}
-          scrollEnabled={true}
-          showsVerticalScrollIndicator={true}
-          keyboardDisplayRequiresUserAction={false}
-          hideKeyboardAccessoryView={true}
-          overScrollMode="never"
-        />
+        {isWeb ? (
+          React.createElement("div", {
+            ref: webEditorRef,
+            className: "notice-web-editor",
+            contentEditable: true,
+            spellCheck: true,
+            "data-placeholder": placeholder,
+            style: {
+              width: "100%",
+              minHeight,
+              padding: "14px 16px",
+              fontSize: "15px",
+              lineHeight: "1.65",
+              color: "#131b2e",
+              fontFamily:
+                '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+              wordBreak: "break-word",
+              overflowWrap: "break-word",
+              whiteSpace: "pre-wrap",
+              backgroundColor: "#ffffff",
+              outline: "none",
+              overflowY: "auto",
+              boxSizing: "border-box",
+            },
+            onInput: (e: any) => {
+              const target = e.currentTarget;
+              const html = (target.innerHTML || "").replace(/\u200B/g, "");
+              currentHtmlRef.current = html;
+              onChangeRef.current(html);
+              checkWebFormatStatus();
+            },
+            onKeyUp: checkWebFormatStatus,
+            onMouseUp: checkWebFormatStatus,
+            onSelect: checkWebFormatStatus,
+          })
+        ) : (
+          <WebView
+            ref={webViewRef}
+            originWhitelist={["*"]}
+            source={STATIC_WEBVIEW_SOURCE}
+            onMessage={handleMessage}
+            style={styles.webView}
+            nestedScrollEnabled={true}
+            scrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            keyboardDisplayRequiresUserAction={false}
+            hideKeyboardAccessoryView={true}
+            overScrollMode="never"
+          />
+        )}
       </View>
 
       {/* ── Native Rich Formatting Toolbar (Bottom of Official Text Box) ── */}

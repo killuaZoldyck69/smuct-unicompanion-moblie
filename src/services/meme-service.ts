@@ -14,6 +14,7 @@ export interface MemeAuthor {
     department?: string | null;
     batch?: string | null;
     currentSemester?: number | string | null;
+    semester?: number | string | null;
     section?: string | null;
   } | null;
   teacherProfile?: {

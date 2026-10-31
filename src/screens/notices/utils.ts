@@ -13,6 +13,7 @@ import { NoticeCategoryKey, NormalizedNotice } from "./types";
 export const sanitizeText = (text?: string | null): string => {
   if (!text) return "";
   return text
+    .replace(/<!--category:[^>]*-->/gi, "")
     .replace(/<[^>]*>?/gm, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
@@ -28,7 +29,8 @@ export const sanitizeText = (text?: string | null): string => {
  */
 export const extractParagraphs = (rawBody?: string | null): string[] => {
   if (!rawBody) return [];
-  const normalized = rawBody.replace(/\\r\\n|\\n|\\r/g, "\n");
+  const cleaned = rawBody.replace(/<!--category:[^>]*-->/gi, "");
+  const normalized = cleaned.replace(/\\r\\n|\\n|\\r/g, "\n");
   const paragraphs = normalized
     .split(/\n\s*\n|\n/)
     .map((p) => p.trim())
@@ -37,7 +39,7 @@ export const extractParagraphs = (rawBody?: string | null): string[] => {
 };
 
 /**
- * Dynamically resolves category key from explicit backend metadata or content heuristics.
+ * Dynamically resolves category key from explicit backend metadata, embedded tag, or content heuristics.
  */
 export const detectNoticeCategory = (notice: NoticeItem): NoticeCategoryKey => {
   if (notice.category && notice.category.trim()) {
@@ -45,7 +47,18 @@ export const detectNoticeCategory = (notice: NoticeItem): NoticeCategoryKey => {
       NoticeCategoryKey,
       "ALL"
     >;
+    if (raw === "ADMIN" || raw === "GENERAL") return "GENERAL";
     if (CATEGORY_THEMES[raw]) return raw;
+  }
+
+  // Check embedded category comment inside HTML body: <!--category:ACADEMIC-->
+  if (notice.body) {
+    const match = notice.body.match(/<!--category:(ACADEMIC|HOLIDAY|TRANSPORT|GENERAL|ADMIN|EXAM|EMERGENCY)-->/i);
+    if (match) {
+      const raw = match[1].toUpperCase() as Exclude<NoticeCategoryKey, "ALL">;
+      if (raw === "ADMIN" || raw === "GENERAL") return "GENERAL";
+      if (CATEGORY_THEMES[raw]) return raw;
+    }
   }
 
   const text = `${notice.title || ""} ${notice.referenceNo || ""} ${notice.body || ""}`.toLowerCase();
@@ -73,16 +86,6 @@ export const detectNoticeCategory = (notice: NoticeItem): NoticeCategoryKey => {
   }
 
   if (
-    text.includes("exam") ||
-    text.includes("midterm") ||
-    text.includes("final") ||
-    text.includes("routine") ||
-    text.includes("পরীক্ষা")
-  ) {
-    return "EXAM";
-  }
-
-  if (
     text.includes("academic") ||
     text.includes("semester") ||
     text.includes("class") ||
@@ -96,6 +99,16 @@ export const detectNoticeCategory = (notice: NoticeItem): NoticeCategoryKey => {
   }
 
   if (
+    text.includes("exam") ||
+    text.includes("midterm") ||
+    text.includes("final") ||
+    text.includes("routine") ||
+    text.includes("পরীক্ষা")
+  ) {
+    return "EXAM";
+  }
+
+  if (
     text.includes("urgent") ||
     text.includes("emergency") ||
     text.includes("warning") ||
@@ -105,7 +118,7 @@ export const detectNoticeCategory = (notice: NoticeItem): NoticeCategoryKey => {
     return "EMERGENCY";
   }
 
-  return "ADMIN";
+  return "GENERAL";
 };
 
 export const isImportantNotice = (notice: NoticeItem): boolean => {
@@ -142,7 +155,7 @@ export const normalizeNotice = (item: NoticeItem): NormalizedNotice => {
   const theme =
     category !== "ALL" && CATEGORY_THEMES[category]
       ? CATEGORY_THEMES[category]
-      : CATEGORY_THEMES.ADMIN;
+      : CATEGORY_THEMES.GENERAL;
   const rawDate = item.issueDate || item.createdAt || new Date().toISOString();
   const formattedDate = formatDate(rawDate);
   const bodyParagraphs = extractParagraphs(item.body);

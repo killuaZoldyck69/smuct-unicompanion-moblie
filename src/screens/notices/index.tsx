@@ -77,14 +77,15 @@ export function NoticeboardScreen({
         [
           "ALL",
           "ACADEMIC",
-          "ADMIN",
-          "TRANSPORT",
           "HOLIDAY",
+          "TRANSPORT",
+          "GENERAL",
+          "ADMIN",
           "EXAM",
           "EMERGENCY",
         ].includes(upper)
       ) {
-        return upper;
+        return upper === "ADMIN" ? "GENERAL" : upper;
       }
     }
     return "ALL";
@@ -126,14 +127,15 @@ export function NoticeboardScreen({
         [
           "ALL",
           "ACADEMIC",
-          "ADMIN",
-          "TRANSPORT",
           "HOLIDAY",
+          "TRANSPORT",
+          "GENERAL",
+          "ADMIN",
           "EXAM",
           "EMERGENCY",
         ].includes(upper)
       ) {
-        setSelectedCategory(upper);
+        setSelectedCategory(upper === "ADMIN" ? "GENERAL" : upper);
       }
     }
     if (searchParams.search !== undefined && searchParams.search !== searchQuery) {
@@ -289,22 +291,23 @@ export function NoticeboardScreen({
     const counts: Record<string, number> = {
       ALL: normalizedNotices.length,
       ACADEMIC: 0,
-      ADMIN: 0,
-      TRANSPORT: 0,
       HOLIDAY: 0,
+      TRANSPORT: 0,
+      GENERAL: 0,
       EXAM: 0,
     };
 
     normalizedNotices.forEach((item) => {
-      counts[item.category] = (counts[item.category] || 0) + 1;
+      const key = item.category === "ADMIN" ? "GENERAL" : item.category;
+      counts[key] = (counts[key] || 0) + 1;
     });
 
     const categories: Array<{ key: NoticeCategoryKey; label: string }> = [
       { key: "ALL", label: "All Notices" },
       { key: "ACADEMIC", label: "Academic" },
-      { key: "ADMIN", label: "Admin" },
-      { key: "TRANSPORT", label: "Transport" },
       { key: "HOLIDAY", label: "Holiday" },
+      { key: "TRANSPORT", label: "Transport" },
+      { key: "GENERAL", label: "General" },
     ];
 
     if ((counts.EXAM || 0) > 0) {

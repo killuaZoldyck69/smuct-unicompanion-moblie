@@ -4,9 +4,10 @@ import { Feather } from "@expo/vector-icons";
 export type NoticeCategoryKey =
   | "ALL"
   | "ACADEMIC"
-  | "ADMIN"
-  | "TRANSPORT"
   | "HOLIDAY"
+  | "TRANSPORT"
+  | "GENERAL"
+  | "ADMIN"
   | "EXAM"
   | "EMERGENCY";
 

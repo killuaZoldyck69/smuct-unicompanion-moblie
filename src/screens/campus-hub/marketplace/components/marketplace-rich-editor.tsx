@@ -24,13 +24,12 @@ interface FormatStatus {
   bold: boolean;
   italic: boolean;
   underline: boolean;
-  heading: boolean;
   list: boolean;
 }
 
 const isWeb = Platform.OS === "web";
 
-const TEMPLATE_HTML = `<h3>Item Overview</h3><ul><li><b>Condition:</b> Gently used / tested working</li><li><b>Accessories:</b> Original packaging & accessories included</li></ul><h3>Handover</h3><ul><li>SMUCT Main Campus / Library</li><li>Available: Weekdays 10 AM - 4 PM</li></ul>`;
+const TEMPLATE_HTML = `<p><b>Item Overview</b></p><ul><li><b>Condition:</b> Gently used / tested working</li><li><b>Accessories:</b> Original packaging & accessories included</li></ul><p><b>Handover</b></p><ul><li>SMUCT Main Campus / Library</li><li>Available: Weekdays 10 AM - 4 PM</li></ul>`;
 
 const WEB_STYLES = `
 .marketplace-web-editor:empty:before {
@@ -42,18 +41,21 @@ const WEB_STYLES = `
 .marketplace-web-editor p {
   margin: 0 0 8px 0;
 }
+.marketplace-web-editor b, .marketplace-web-editor strong {
+  font-weight: bold;
+}
+.marketplace-web-editor i, .marketplace-web-editor em {
+  font-style: italic;
+}
+.marketplace-web-editor u {
+  text-decoration: underline;
+}
 .marketplace-web-editor ul {
   margin: 6px 0;
   padding-left: 22px;
 }
 .marketplace-web-editor li {
   margin-bottom: 4px;
-}
-.marketplace-web-editor h3 {
-  margin: 10px 0 4px 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: #131b2e;
 }
 `;
 
@@ -101,23 +103,13 @@ function getEditorHtml(initialContent: string = "", placeholderText: string = ""
       display: block;
     }
     b, strong {
-      font-weight: 800;
-      color: #0f172a;
+      font-weight: bold;
     }
     i, em {
       font-style: italic;
     }
     u {
       text-decoration: underline;
-    }
-    h1, h2, h3 {
-      margin: 8px 0 4px 0;
-      font-weight: 800;
-      color: #131b2e;
-      line-height: 1.3;
-    }
-    h3 {
-      font-size: 15px;
     }
     ul {
       margin: 6px 0;
@@ -129,6 +121,7 @@ function getEditorHtml(initialContent: string = "", placeholderText: string = ""
     }
     p {
       margin: 0 0 8px 0;
+      min-height: 1.2em;
     }
   </style>
 </head>
@@ -139,7 +132,8 @@ function getEditorHtml(initialContent: string = "", placeholderText: string = ""
     var INITIAL_CONTENT = ${safeContent};
     var INITIAL_PLACEHOLDER = ${safePlaceholder};
     var editor = document.getElementById('editor');
-    var savedSelectionRange = null;
+    var savedRange = null;
+    var isBusy = false;
 
     if (INITIAL_CONTENT) {
       editor.innerHTML = INITIAL_CONTENT;
@@ -154,21 +148,45 @@ function getEditorHtml(initialContent: string = "", placeholderText: string = ""
       }
     });
 
+    function isEditorNode(node) {
+      if (!node) return false;
+      return node === editor || editor.contains(node);
+    }
+
     function saveCurrentSelection() {
+      if (isBusy) return;
       var sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        savedSelectionRange = sel.getRangeAt(0).cloneRange();
+      if (!sel || sel.rangeCount === 0) return;
+      var anchor = sel.anchorNode;
+      if (anchor && isEditorNode(anchor)) {
+        try {
+          savedRange = sel.getRangeAt(0).cloneRange();
+        } catch (e) {}
       }
     }
 
     function restoreSavedSelection() {
       var sel = window.getSelection();
-      if (savedSelectionRange && sel) {
+      if (savedRange && sel) {
         try {
           sel.removeAllRanges();
-          sel.addRange(savedSelectionRange);
+          sel.addRange(savedRange);
         } catch (e) {}
       }
+    }
+
+    function getActiveRange() {
+      var sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        var r = sel.getRangeAt(0);
+        if (r.commonAncestorContainer && isEditorNode(r.commonAncestorContainer)) {
+          return r;
+        }
+      }
+      if (savedRange && savedRange.commonAncestorContainer && isEditorNode(savedRange.commonAncestorContainer)) {
+        return savedRange;
+      }
+      return null;
     }
 
     function post(type, data) {
@@ -182,16 +200,6 @@ function getEditorHtml(initialContent: string = "", placeholderText: string = ""
       if (editor.innerHTML !== (html || '')) {
         editor.innerHTML = html || '';
         checkFormatStatus();
-        try {
-          var range = document.createRange();
-          range.selectNodeContents(editor);
-          range.collapse(false);
-          var sel = window.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(range);
-          }
-        } catch (e) {}
       }
     };
 
@@ -201,69 +209,195 @@ function getEditorHtml(initialContent: string = "", placeholderText: string = ""
       }
     };
 
-    window.execFormat = function(cmd, val) {
-      editor.focus();
-      restoreSavedSelection();
-      if (cmd === 'heading') {
-        var isH = false;
-        var sel = window.getSelection();
-        if (sel && sel.anchorNode) {
-          var el = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
-          while (el && el !== editor && el !== document.body) {
-            if (/^H[1-6]$/i.test(el.tagName)) {
-              isH = true;
-              break;
-            }
-            el = el.parentElement;
-          }
+    function isNodeBold(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        if (tag === 'B' || tag === 'STRONG') return true;
+        if (curr.style && (curr.style.fontWeight === 'bold' || parseInt(curr.style.fontWeight, 10) >= 700)) {
+          return true;
         }
-        try {
-          var targetTag = isH ? '<p>' : '<h3>';
-          var ok = document.execCommand('formatBlock', false, targetTag);
-          if (!ok) {
-            document.execCommand('formatBlock', false, isH ? 'p' : 'h3');
-          }
-        } catch (e) {
-          try {
-            document.execCommand('formatBlock', false, isH ? 'p' : 'h3');
-          } catch (e2) {}
-        }
-      } else if (cmd === 'insertHTML') {
-        document.execCommand('insertHTML', false, val || '');
-      } else {
-        document.execCommand(cmd, false, val || null);
+        curr = curr.parentElement;
       }
-      saveCurrentSelection();
-      checkFormatStatus();
+      return false;
+    }
+
+    function isNodeItalic(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        if (tag === 'I' || tag === 'EM') return true;
+        if (curr.style && curr.style.fontStyle === 'italic') return true;
+        curr = curr.parentElement;
+      }
+      return false;
+    }
+
+    function isNodeUnderline(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        if (tag === 'U' || tag === 'INS') return true;
+        if (curr.style && curr.style.textDecoration && curr.style.textDecoration.indexOf('underline') !== -1) {
+          return true;
+        }
+        curr = curr.parentElement;
+      }
+      return false;
+    }
+
+    function isNodeList(node) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        if (tag === 'LI' || tag === 'UL' || tag === 'OL') return true;
+        curr = curr.parentElement;
+      }
+      return false;
+    }
+
+    function findEnclosingTag(node, tagNames) {
+      var curr = node && node.nodeType === 3 ? node.parentElement : node;
+      while (curr && curr !== editor && curr !== document.body) {
+        var tag = (curr.tagName || '').toUpperCase();
+        for (var i = 0; i < tagNames.length; i++) {
+          if (tag === tagNames[i]) return curr;
+        }
+        curr = curr.parentElement;
+      }
+      return null;
+    }
+
+    var FORMAT_MAP = {
+      bold: { tags: ['B', 'STRONG'], tag: 'b', check: isNodeBold },
+      italic: { tags: ['I', 'EM'], tag: 'i', check: isNodeItalic },
+      underline: { tags: ['U', 'INS'], tag: 'u', check: isNodeUnderline }
+    };
+
+    function toggleInline(cmd) {
+      var config = FORMAT_MAP[cmd];
+      if (!config) return;
+
+      var sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        var r = document.createRange();
+        r.selectNodeContents(editor);
+        r.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        savedRange = r.cloneRange();
+      }
+
+      var range = sel.getRangeAt(0);
+
+      if (range.collapsed) {
+        var enclosing = findEnclosingTag(range.startContainer, config.tags);
+        if (enclosing) {
+          var text = (enclosing.textContent || '').replace(/\\u200B/g, '');
+          if (text.length === 0) {
+            var parent = enclosing.parentNode;
+            var newR = document.createRange();
+            newR.setStartBefore(enclosing);
+            newR.collapse(true);
+            if (parent) parent.removeChild(enclosing);
+            sel.removeAllRanges();
+            sel.addRange(newR);
+            savedRange = newR.cloneRange();
+          } else {
+            var newR = document.createRange();
+            newR.setStartAfter(enclosing);
+            newR.collapse(true);
+            var zw = document.createTextNode('\\u200B');
+            newR.insertNode(zw);
+            newR.setStartAfter(zw);
+            newR.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newR);
+            savedRange = newR.cloneRange();
+          }
+        } else {
+          var el = document.createElement(config.tag);
+          var zw = document.createTextNode('\\u200B');
+          el.appendChild(zw);
+          range.insertNode(el);
+          var newR = document.createRange();
+          newR.setStart(zw, 1);
+          newR.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newR);
+          savedRange = newR.cloneRange();
+        }
+      } else {
+        var isCurrentlyFormatted = config.check(range.commonAncestorContainer);
+        document.execCommand(cmd, false, null);
+
+        var stillFormatted = config.check(window.getSelection()?.getRangeAt(0)?.commonAncestorContainer);
+        if (isCurrentlyFormatted && stillFormatted) {
+          var enclosing = findEnclosingTag(window.getSelection()?.getRangeAt(0)?.commonAncestorContainer, config.tags);
+          if (enclosing && enclosing.parentNode) {
+            var parent = enclosing.parentNode;
+            while (enclosing.firstChild) {
+              parent.insertBefore(enclosing.firstChild, enclosing);
+            }
+            parent.removeChild(enclosing);
+          }
+        }
+        saveCurrentSelection();
+      }
+    }
+
+    window.execFormat = function(cmd, val) {
+      isBusy = true;
+      try {
+        editor.focus();
+        restoreSavedSelection();
+
+        if (cmd === 'bold' || cmd === 'italic' || cmd === 'underline') {
+          toggleInline(cmd);
+        } else if (cmd === 'insertUnorderedList') {
+          document.execCommand('insertUnorderedList', false, null);
+          saveCurrentSelection();
+        } else if (cmd === 'insertHTML') {
+          document.execCommand('insertHTML', false, val || '');
+          saveCurrentSelection();
+        }
+      } finally {
+        isBusy = false;
+      }
+
       notifyChange();
+      checkFormatStatus();
     };
 
     function notifyChange() {
       var html = editor.innerHTML || '';
-      var text = editor.innerText || editor.textContent || '';
-      post('change', { html: html, text: text });
+      var text = (editor.innerText || editor.textContent || '').replace(/\\u200B/g, '');
+      post('change', {
+        html: html.replace(/\\u200B/g, ''),
+        text: text
+      });
     }
 
     function checkFormatStatus() {
-      var isHeading = false;
-      var sel = window.getSelection();
-      if (sel && sel.anchorNode) {
-        var el = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
-        while (el && el !== editor && el !== document.body) {
-          if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3') {
-            isHeading = true;
-            break;
-          }
-          el = el.parentElement;
-        }
+      var range = getActiveRange();
+      var bold = false;
+      var italic = false;
+      var underline = false;
+      var list = false;
+
+      if (range && range.commonAncestorContainer && isEditorNode(range.commonAncestorContainer)) {
+        var target = range.commonAncestorContainer;
+        bold = isNodeBold(target);
+        italic = isNodeItalic(target);
+        underline = isNodeUnderline(target);
+        list = isNodeList(target);
       }
 
       post('formatStatus', {
-        bold: document.queryCommandState('bold'),
-        italic: document.queryCommandState('italic'),
-        underline: document.queryCommandState('underline'),
-        heading: isHeading,
-        list: document.queryCommandState('insertUnorderedList')
+        bold: bold,
+        italic: italic,
+        underline: underline,
+        list: list
       });
     }
 
@@ -273,6 +407,23 @@ function getEditorHtml(initialContent: string = "", placeholderText: string = ""
     });
 
     document.addEventListener('selectionchange', function() {
+      if (!isBusy) {
+        saveCurrentSelection();
+        checkFormatStatus();
+      }
+    });
+
+    editor.addEventListener('mouseup', function() {
+      saveCurrentSelection();
+      checkFormatStatus();
+    });
+
+    editor.addEventListener('touchend', function() {
+      saveCurrentSelection();
+      checkFormatStatus();
+    });
+
+    editor.addEventListener('keyup', function() {
       saveCurrentSelection();
       checkFormatStatus();
     });
@@ -364,7 +515,7 @@ const INLINE_TAGS = [
     italic: true,
   },
 
-  // Generic span wrapper (e.g. <span style="font-size: 14px;">...</span>) — unwrap inner content
+  // Generic span wrapper
   { regex: /<span(?:\s+[^>]*)?>([\s\S]+?)<\/span>/i },
 
   // Generic font/div wrapper
@@ -571,7 +722,133 @@ export function MarketplaceRichTextDisplay({
 }
 
 const getPlainTextLength = (html: string) =>
-  (html || "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim().length;
+  (html || "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/\u200B/g, "").trim().length;
+
+// ── Web Platform Helpers ──
+function isNodeBoldWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    if (tag === "B" || tag === "STRONG") return true;
+    if (curr.style && (curr.style.fontWeight === "bold" || parseInt(curr.style.fontWeight, 10) >= 700)) {
+      return true;
+    }
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function isNodeItalicWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    if (tag === "I" || tag === "EM") return true;
+    if (curr.style && curr.style.fontStyle === "italic") return true;
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function isNodeUnderlineWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    if (tag === "U" || tag === "INS") return true;
+    if (curr.style && curr.style.textDecoration && curr.style.textDecoration.indexOf("underline") !== -1) {
+      return true;
+    }
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function isNodeListWeb(node: any, root: any): boolean {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    if (tag === "LI" || tag === "UL" || tag === "OL") return true;
+    curr = curr.parentElement;
+  }
+  return false;
+}
+
+function findEnclosingTagWeb(node: any, root: any, tagNames: string[]): any {
+  let curr = node && node.nodeType === 3 ? node.parentElement : node;
+  while (curr && curr !== root && curr !== document.body) {
+    const tag = (curr.tagName || "").toUpperCase();
+    for (const t of tagNames) {
+      if (tag === t) return curr;
+    }
+    curr = curr.parentElement;
+  }
+  return null;
+}
+
+const WEB_FORMAT_MAP: Record<string, { tags: string[]; tag: string; check: (n: any, r: any) => boolean }> = {
+  bold: { tags: ["B", "STRONG"], tag: "b", check: isNodeBoldWeb },
+  italic: { tags: ["I", "EM"], tag: "i", check: isNodeItalicWeb },
+  underline: { tags: ["U", "INS"], tag: "u", check: isNodeUnderlineWeb },
+};
+
+function toggleInlineWeb(editor: any, cmd: string) {
+  if (typeof window === "undefined" || !editor) return;
+  const config = WEB_FORMAT_MAP[cmd];
+  if (!config) return;
+
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+
+  if (range.collapsed) {
+    const enclosing = findEnclosingTagWeb(range.startContainer, editor, config.tags);
+    if (enclosing) {
+      const text = (enclosing.textContent || "").replace(/\u200B/g, "");
+      if (text.length === 0) {
+        const parent = enclosing.parentNode;
+        const newR = document.createRange();
+        newR.setStartBefore(enclosing);
+        newR.collapse(true);
+        if (parent) parent.removeChild(enclosing);
+        sel.removeAllRanges();
+        sel.addRange(newR);
+      } else {
+        const newR = document.createRange();
+        newR.setStartAfter(enclosing);
+        newR.collapse(true);
+        const zw = document.createTextNode("\u200B");
+        newR.insertNode(zw);
+        newR.setStartAfter(zw);
+        newR.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newR);
+      }
+    } else {
+      const el = document.createElement(config.tag);
+      const zw = document.createTextNode("\u200B");
+      el.appendChild(zw);
+      range.insertNode(el);
+      const newR = document.createRange();
+      newR.setStart(zw, 1);
+      newR.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newR);
+    }
+  } else {
+    const isCurrentlyFormatted = config.check(range.commonAncestorContainer, editor);
+    document.execCommand(cmd, false, undefined);
+    const stillFormatted = config.check(window.getSelection()?.getRangeAt(0)?.commonAncestorContainer, editor);
+    if (isCurrentlyFormatted && stillFormatted) {
+      const enclosing = findEnclosingTagWeb(window.getSelection()?.getRangeAt(0)?.commonAncestorContainer, editor, config.tags);
+      if (enclosing && enclosing.parentNode) {
+        const parent = enclosing.parentNode;
+        while (enclosing.firstChild) {
+          parent.insertBefore(enclosing.firstChild, enclosing);
+        }
+        parent.removeChild(enclosing);
+      }
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // WYSIWYG Formatter Component (Instant Live Formatting with Connected Toolbar)
@@ -607,7 +884,6 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
     bold: false,
     italic: false,
     underline: false,
-    heading: false,
     list: false,
   });
 
@@ -649,7 +925,6 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
             bold: !!data.bold,
             italic: !!data.italic,
             underline: !!data.underline,
-            heading: !!data.heading,
             list: !!data.list,
           });
         }
@@ -658,12 +933,11 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
     [placeholder, value, onChangeText, updateLength]
   );
 
-  // Sync external changes (e.g. form reset or initial post value loading or Clear button)
+  // Sync external changes
   useEffect(() => {
     if (isWeb) {
       if (!webEditorRef.current) return;
 
-      // If externally cleared to empty string
       if (!value) {
         if (webEditorRef.current.innerHTML !== "") {
           webEditorRef.current.innerHTML = "";
@@ -673,13 +947,11 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         return;
       }
 
-      // If user is actively typing in the editor, NEVER overwrite innerHTML to preserve caret position
       if (typeof document !== "undefined" && document.activeElement === webEditorRef.current) {
         currentHtmlRef.current = value;
         return;
       }
 
-      // External sync when not actively focused
       if (webEditorRef.current.innerHTML !== value) {
         currentHtmlRef.current = value;
         webEditorRef.current.innerHTML = value;
@@ -710,39 +982,55 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
     }
   }, [value, updateLength]);
 
+  const checkWebFormatStatus = useCallback(() => {
+    if (typeof document === "undefined" || !webEditorRef.current) return;
+    const editor = webEditorRef.current;
+    const sel = window.getSelection();
+    let bold = false;
+    let italic = false;
+    let underline = false;
+    let list = false;
+
+    if (sel && sel.anchorNode && (sel.anchorNode === editor || editor.contains(sel.anchorNode))) {
+      const target = sel.anchorNode;
+      bold = isNodeBoldWeb(target, editor);
+      italic = isNodeItalicWeb(target, editor);
+      underline = isNodeUnderlineWeb(target, editor);
+      list = isNodeListWeb(target, editor);
+    }
+
+    setFormatStatus({
+      bold,
+      italic,
+      underline,
+      list,
+    });
+  }, []);
+
   const executeCommand = useCallback(
     (command: string, arg?: string) => {
       if (isWeb) {
         if (typeof document === "undefined") return;
-        webEditorRef.current?.focus();
-        if (command === "heading") {
-          let isH = false;
-          if (typeof window !== "undefined") {
-            const sel = window.getSelection();
-            if (sel && sel.anchorNode) {
-              let el: any = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
-              while (el && el !== webEditorRef.current && el !== document.body) {
-                if (/^H[1-6]$/i.test(el.tagName)) {
-                  isH = true;
-                  break;
-                }
-                el = el.parentElement;
-              }
-            }
-          }
-          document.execCommand("formatBlock", false, isH ? "<p>" : "<h3>");
+        const editor = webEditorRef.current;
+        if (!editor) return;
+        editor.focus();
+
+        if (command === "bold" || command === "italic" || command === "underline") {
+          toggleInlineWeb(editor, command);
         } else if (command === "insertHTML") {
           document.execCommand("insertHTML", false, arg || "");
-        } else {
-          document.execCommand(command, false, arg || undefined);
+        } else if (command === "insertUnorderedList") {
+          document.execCommand("insertUnorderedList", false, undefined);
         }
-        if (webEditorRef.current) {
-          const html = webEditorRef.current.innerHTML || "";
-          const text = webEditorRef.current.innerText || "";
+
+        if (editor) {
+          const html = (editor.innerHTML || "").replace(/\u200B/g, "");
+          const text = (editor.innerText || editor.textContent || "").replace(/\u200B/g, "");
           currentHtmlRef.current = html;
           updateLength(text.trim().length);
           onChangeText(html);
         }
+        checkWebFormatStatus();
         return;
       }
 
@@ -755,15 +1043,28 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         true;
       `);
     },
-    [onChangeText, updateLength]
+    [checkWebFormatStatus, onChangeText, updateLength]
   );
 
-  const handleBold = useCallback(() => executeCommand("bold"), [executeCommand]);
-  const handleItalic = useCallback(() => executeCommand("italic"), [executeCommand]);
-  const handleUnderline = useCallback(() => executeCommand("underline"), [executeCommand]);
-  const handleHeading = useCallback(() => executeCommand("heading"), [executeCommand]);
-  const handleList = useCallback(() => executeCommand("insertUnorderedList"), [executeCommand]);
-  const handleTemplate = useCallback(() => executeCommand("insertHTML", TEMPLATE_HTML), [executeCommand]);
+  const handleBold = useCallback(() => {
+    executeCommand("bold");
+  }, [executeCommand]);
+
+  const handleItalic = useCallback(() => {
+    executeCommand("italic");
+  }, [executeCommand]);
+
+  const handleUnderline = useCallback(() => {
+    executeCommand("underline");
+  }, [executeCommand]);
+
+  const handleList = useCallback(() => {
+    executeCommand("insertUnorderedList");
+  }, [executeCommand]);
+
+  const handleTemplate = useCallback(() => {
+    executeCommand("insertHTML", TEMPLATE_HTML);
+  }, [executeCommand]);
 
   return (
     <View style={styles.container}>
@@ -789,12 +1090,16 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
             },
             onInput: (e: any) => {
               const target = e.currentTarget;
-              const html = target.innerHTML || "";
-              const text = target.innerText || target.textContent || "";
+              const html = (target.innerHTML || "").replace(/\u200B/g, "");
+              const text = (target.innerText || target.textContent || "").replace(/\u200B/g, "");
               currentHtmlRef.current = html;
               updateLength(text.trim().length);
               onChangeText(html);
+              checkWebFormatStatus();
             },
+            onKeyUp: checkWebFormatStatus,
+            onMouseUp: checkWebFormatStatus,
+            onSelect: checkWebFormatStatus,
           })
         ) : (
           <WebView
@@ -866,20 +1171,6 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         >
           <Text style={[styles.toolBtnUnderlineText, formatStatus.underline && styles.toolBtnActiveText]}>
             U
-          </Text>
-        </TouchableOpacity>
-
-        {/* Heading Button */}
-        <TouchableOpacity
-          style={[styles.toolBtn, formatStatus.heading && styles.toolBtnActive]}
-          onPress={handleHeading}
-          activeOpacity={0.7}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Apply heading format"
-        >
-          <Text style={[styles.toolBtnHeadingText, formatStatus.heading && styles.toolBtnActiveText]}>
-            H
           </Text>
         </TouchableOpacity>
 
@@ -998,12 +1289,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     textDecorationLine: "underline",
-    color: CAMPUS_HUB_COLORS.deepNavy,
-  },
-  toolBtnHeadingText: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
   toolBtnLabel: {
