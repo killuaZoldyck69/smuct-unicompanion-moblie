@@ -36,6 +36,10 @@ import {
   ComplaintFilter,
 } from "@/screens/complaints/components/complaint-hero-stats";
 import { ComplaintCard } from "@/screens/complaints/components/complaint-card";
+import {
+  ComplaintLoadingSkeleton,
+  ComplaintStatsLoadingSkeleton,
+} from "@/screens/complaints/components/complaint-loading-skeleton";
 import { ComplaintFilterModal } from "@/screens/complaints/components/complaint-filter-modal";
 import type { ComplaintItem } from "@/services/complaint-service";
 
@@ -363,11 +367,15 @@ export function AdminComplaintsScreen() {
       </View>
 
       {/* Hero Stats & Status Filter Tabs */}
-      <ComplaintHeroStats
-        stats={stats}
-        activeFilter={activeFilter}
-        onSelectFilter={setActiveFilter}
-      />
+      {isLoading ? (
+        <ComplaintStatsLoadingSkeleton />
+      ) : (
+        <ComplaintHeroStats
+          stats={stats}
+          activeFilter={activeFilter}
+          onSelectFilter={setActiveFilter}
+        />
+      )}
 
       {/* Search & Category Filter Row */}
       <View style={styles.filterSection}>
@@ -456,13 +464,7 @@ export function AdminComplaintsScreen() {
 
       {/* Main Complaints List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator
-            size="large"
-            color={CAMPUS_HUB_COLORS.complaintAccent}
-          />
-          <Text style={styles.loadingText}>Loading complaints...</Text>
-        </View>
+        <ComplaintLoadingSkeleton isAdmin />
       ) : isError ? (
         <View style={styles.errorContainer}>
           <View style={styles.errorIconCircle}>
@@ -876,18 +878,6 @@ const styles = StyleSheet.create({
   },
   listEmpty: {
     flexGrow: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontFamily,
-    fontSize: 13,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    fontWeight: "600",
   },
   errorContainer: {
     flex: 1,

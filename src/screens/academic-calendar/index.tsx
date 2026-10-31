@@ -31,6 +31,7 @@ import { TimelineEventCard } from "./components/timeline-event-card";
 import { CalendarDateStrip } from "./components/calendar-date-strip";
 import { CalendarFilterItem, CalendarFilterPills } from "./components/calendar-filter-pills";
 import {
+  CalendarHeaderLoadingSkeleton,
   CalendarLoadingState,
   CalendarErrorState,
   CalendarEmptyState,
@@ -380,7 +381,7 @@ export function AcademicCalendarScreen() {
     refetch: refetchAll,
   } = useAcademicCalendars();
 
-  const isLoading = isLoadingCurrent && isLoadingAll;
+  const isLoading = isLoadingCurrent || isLoadingAll;
   const isError = isErrorCurrent && isErrorAll;
 
   const activeCalendar =
@@ -545,23 +546,29 @@ export function AcademicCalendarScreen() {
       </View>
 
       <View style={styles.fixedTop}>
-        <CalendarDateStrip
-          events={allEvents}
-          selectedDate={selectedDate}
-          onSelectDate={handleSelectDate}
-        />
-        <CalendarFilterPills
-          filters={categoryFilterList}
-          selectedCategory={selectedCategory}
-          onSelectCategory={handleSelectCategory}
-        />
-        {semesterDuration && (
-          <SemesterBar
-            months={semesterDuration.months}
-            days={semesterDuration.days}
-            startDate={semesterDuration.startDate}
-            endDate={semesterDuration.endDate}
-          />
+        {isLoading ? (
+          <CalendarHeaderLoadingSkeleton />
+        ) : (
+          <>
+            <CalendarDateStrip
+              events={allEvents}
+              selectedDate={selectedDate}
+              onSelectDate={handleSelectDate}
+            />
+            <CalendarFilterPills
+              filters={categoryFilterList}
+              selectedCategory={selectedCategory}
+              onSelectCategory={handleSelectCategory}
+            />
+            {semesterDuration && (
+              <SemesterBar
+                months={semesterDuration.months}
+                days={semesterDuration.days}
+                startDate={semesterDuration.startDate}
+                endDate={semesterDuration.endDate}
+              />
+            )}
+          </>
         )}
       </View>
 

@@ -47,6 +47,10 @@ import { AcademicCalendarScreen } from "../academic-calendar";
 import { BENTO_COLORS } from "./constants";
 import { groupEventsChronologically } from "./utils/grouping";
 import { CalendarListCard } from "./components/CalendarListCard";
+import {
+  AdminCalendarDetailSkeleton,
+  AdminCalendarListSkeleton,
+} from "./components/AdminCalendarSkeleton";
 import { CalendarHeroBentoGrid } from "./components/CalendarHeroBentoGrid";
 import { ActionTilesRow } from "./components/ActionTilesRow";
 import { WeekBentoContainer } from "./components/WeekBentoContainer";
@@ -727,37 +731,39 @@ export function AdminCalendarScreen() {
           </View>
 
           {/* 3. FILTER TABS STRIP (ALL, Active, Draft, Archived with numbers) */}
-          <View style={styles.filterTabsContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterTabsScroll}
-            >
-              {statusTabs.map((tab) => {
-                const isSelected = selectedStatusTab === tab.key;
-                return (
-                  <TouchableOpacity
-                    key={tab.key}
-                    style={[
-                      styles.filterTabPill,
-                      isSelected && styles.filterTabPillActive,
-                    ]}
-                    onPress={() => setSelectedStatusTab(tab.key)}
-                    activeOpacity={0.75}
-                  >
-                    <Text
+          {!isLoadingCalendars && (
+            <View style={styles.filterTabsContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterTabsScroll}
+              >
+                {statusTabs.map((tab) => {
+                  const isSelected = selectedStatusTab === tab.key;
+                  return (
+                    <TouchableOpacity
+                      key={tab.key}
                       style={[
-                        styles.filterTabPillText,
-                        isSelected && styles.filterTabPillActiveText,
+                        styles.filterTabPill,
+                        isSelected && styles.filterTabPillActive,
                       ]}
+                      onPress={() => setSelectedStatusTab(tab.key)}
+                      activeOpacity={0.75}
                     >
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+                      <Text
+                        style={[
+                          styles.filterTabPillText,
+                          isSelected && styles.filterTabPillActiveText,
+                        ]}
+                      >
+                        {tab.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
         </View>
 
         {/* SCROLLABLE CALENDAR CARDS LIST */}
@@ -768,10 +774,7 @@ export function AdminCalendarScreen() {
         >
           {/* 4. CALENDAR CARDS LIST */}
           {isLoadingCalendars ? (
-            <View style={styles.centerBox}>
-              <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
-              <Text style={styles.loadingText}>Loading Calendars...</Text>
-            </View>
+            <AdminCalendarListSkeleton />
           ) : filteredCalendars.length === 0 ? (
             <View style={styles.emptyCard}>
               <Feather
@@ -1092,10 +1095,7 @@ export function AdminCalendarScreen() {
         showsVerticalScrollIndicator={false}
       >
         {isLoadingCalendarDetail ? (
-          <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
-            <Text style={styles.loadingText}>Loading Cohort Stream...</Text>
-          </View>
+          <AdminCalendarDetailSkeleton />
         ) : !selectedCalendar ? (
           <View style={styles.centerBox}>
             <Text style={styles.emptyTitle}>Academic Calendar Not Found</Text>

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +22,10 @@ import {
   ComplaintFilter,
 } from "./components/complaint-hero-stats";
 import { ComplaintCard } from "./components/complaint-card";
+import {
+  ComplaintLoadingSkeleton,
+  ComplaintStatsLoadingSkeleton,
+} from "./components/complaint-loading-skeleton";
 import { ComplaintComposeModal } from "./components/complaint-compose-modal";
 import { ComplaintDeleteModal } from "./components/complaint-delete-modal";
 
@@ -181,18 +184,19 @@ export function ComplaintsScreen() {
       </View>
 
       {/* Hero Stats Card / Filter Tabs */}
-      <ComplaintHeroStats
-        stats={stats}
-        activeFilter={activeFilter}
-        onSelectFilter={setActiveFilter}
-      />
+      {isLoading ? (
+        <ComplaintStatsLoadingSkeleton />
+      ) : (
+        <ComplaintHeroStats
+          stats={stats}
+          activeFilter={activeFilter}
+          onSelectFilter={setActiveFilter}
+        />
+      )}
 
       {/* Main List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={CAMPUS_HUB_COLORS.complaintAccent} />
-          <Text style={styles.loadingText}>Loading complaints...</Text>
-        </View>
+        <ComplaintLoadingSkeleton />
       ) : (
         <FlatList
           data={complaints}
@@ -310,18 +314,6 @@ const styles = StyleSheet.create({
   },
   listEmpty: {
     flexGrow: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontFamily,
-    fontSize: 13,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    fontWeight: "600",
   },
   emptyContainer: {
     flex: 1,
