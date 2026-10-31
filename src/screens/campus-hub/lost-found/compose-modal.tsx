@@ -26,6 +26,7 @@ import { toastConfig } from "@/components/ui/toast-config";
 import { useCreateLostFoundPost } from "@/features/campus-hub/useLostFound";
 import {
   uploadMultipleImages,
+  deleteFileFromCloudinaryApi,
   CLOUDINARY_FOLDERS,
 } from "@/services/cloudinary-service";
 import type {
@@ -91,6 +92,8 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [isUploading, setIsUploading] = useState(false);
+  // Maps localUri -> uploaded Cloudinary secureUrl to avoid re-uploading on retry
+  const [uploadedImageMap, setUploadedImageMap] = useState<Record<string, string>>({});
 
   const createMutation = useCreateLostFoundPost();
   const isSubmitting = isUploading || createMutation.isPending;
@@ -108,6 +111,16 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
     form.localImages.length > 0 ||
     form.verificationQuestion.trim().length > 0;
 
+  const cleanupUploadedImages = useCallback(() => {
+    const urls = Object.values(uploadedImageMap);
+    if (urls.length > 0) {
+      urls.forEach((url) => {
+        deleteFileFromCloudinaryApi(url, "image").catch(() => {});
+      });
+    }
+    setUploadedImageMap({});
+  }, [uploadedImageMap]);
+
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
     if (hasContent) {
@@ -120,6 +133,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
             text: "Discard",
             style: "destructive",
             onPress: () => {
+              cleanupUploadedImages();
               setForm(INITIAL_FORM);
               onClose();
             },
@@ -127,10 +141,11 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
         ],
       );
     } else {
+      cleanupUploadedImages();
       setForm(INITIAL_FORM);
       onClose();
     }
-  }, [hasContent, onClose]);
+  }, [hasContent, onClose, cleanupUploadedImages]);
 
   const canSubmit = form.title.trim().length > 0;
 
@@ -175,26 +190,39 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
         }
       }
 
-      setIsUploading(true);
-      try {
-        const results = await uploadMultipleImages(
-          form.localImages,
-          CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
-        );
-        imageUrls = results.map((r) => r.secureUrl);
-      } catch (err: any) {
+      // Upload newly added images while reusing previously uploaded ones
+      let currentMap = { ...uploadedImageMap };
+      const pendingUris = form.localImages.filter((uri) => !currentMap[uri]);
+
+      if (pendingUris.length > 0) {
+        setIsUploading(true);
+        try {
+          const results = await uploadMultipleImages(
+            pendingUris,
+            CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
+          );
+          results.forEach((r, idx) => {
+            currentMap[pendingUris[idx]] = r.secureUrl;
+          });
+          setUploadedImageMap(currentMap);
+        } catch (err: any) {
+          setIsUploading(false);
+          const errMsg =
+            err?.response?.data?.message ||
+            err?.message ||
+            "Check your connection or try again.";
+          return Toast.show({
+            type: "error",
+            text1: "Image Upload Failed",
+            text2: errMsg,
+          });
+        }
         setIsUploading(false);
-        const errMsg =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Check your connection or try again.";
-        return Toast.show({
-          type: "error",
-          text1: "Image Upload Failed",
-          text2: errMsg,
-        });
       }
-      setIsUploading(false);
+
+      imageUrls = form.localImages
+        .map((uri) => currentMap[uri])
+        .filter(Boolean);
     }
 
     const payload: CreateLostFoundInput = {
@@ -217,6 +245,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
     createMutation.mutate(payload, {
       onSuccess: () => {
         Keyboard.dismiss();
+        setUploadedImageMap({});
         setForm(INITIAL_FORM);
         onClose();
         setTimeout(() => {
@@ -239,7 +268,7 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
         });
       },
     });
-  }, [form, createMutation, onClose]);
+  }, [form, createMutation, onClose, uploadedImageMap]);
 
   return (
     <Modal
@@ -497,7 +526,20 @@ export const ComposeLostFoundModal = React.memo(function ComposeLostFoundModal({
             <View style={styles.formGroup}>
               <ImagePickerRow
                 images={form.localImages}
-                onImagesChange={(imgs) => update("localImages", imgs)}
+                onImagesChange={(imgs) => {
+                  const currentSet = new Set(imgs);
+                  Object.entries(uploadedImageMap).forEach(([localUri, remoteUrl]) => {
+                    if (!currentSet.has(localUri)) {
+                      deleteFileFromCloudinaryApi(remoteUrl, "image").catch(() => {});
+                      setUploadedImageMap((prev) => {
+                        const next = { ...prev };
+                        delete next[localUri];
+                        return next;
+                      });
+                    }
+                  });
+                  update("localImages", imgs);
+                }}
                 maxImages={2}
                 maxSizeBytes={5 * 1024 * 1024}
                 accent={ACCENT}

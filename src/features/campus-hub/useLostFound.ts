@@ -120,8 +120,19 @@ export const useDeleteLostFoundPost = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteLostFoundPost(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
+    onSuccess: (_data, id) => {
+      // 1. Immediately cancel and remove queries for the deleted post so TanStack Query doesn't refetch a deleted entity
+      queryClient.cancelQueries({ queryKey: lostFoundKeys.detail(id) });
+      queryClient.cancelQueries({ queryKey: lostFoundKeys.claims(id) });
+      queryClient.cancelQueries({ queryKey: lostFoundKeys.matches(id) });
+
+      queryClient.removeQueries({ queryKey: lostFoundKeys.detail(id) });
+      queryClient.removeQueries({ queryKey: lostFoundKeys.claims(id) });
+      queryClient.removeQueries({ queryKey: lostFoundKeys.matches(id) });
+
+      // 2. Invalidate only feed queries so the listing list updates cleanly
+      queryClient.invalidateQueries({ queryKey: ["lostFound", "feed"] });
+      queryClient.invalidateQueries({ queryKey: ["lostFound", "infiniteFeed"] });
     },
   });
 };

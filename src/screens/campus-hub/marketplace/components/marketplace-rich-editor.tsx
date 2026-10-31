@@ -1,5 +1,5 @@
 // src/screens/campus-hub/marketplace/components/marketplace-rich-editor.tsx
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -57,7 +57,11 @@ const WEB_STYLES = `
 }
 `;
 
-const STATIC_EDITOR_HTML = `
+function getEditorHtml(initialContent: string = "", placeholderText: string = ""): string {
+  const safeContent = JSON.stringify(initialContent || "").replace(/<\/script/gi, "<\\/script");
+  const safePlaceholder = JSON.stringify(placeholderText || "Describe condition, edition, accessories, campus meetup spot...").replace(/<\/script/gi, "<\\/script");
+
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -129,11 +133,20 @@ const STATIC_EDITOR_HTML = `
   </style>
 </head>
 <body>
-  <div id="editor" contenteditable="true" spellcheck="true" autocomplete="off" autocapitalize="sentences" data-placeholder="Describe condition, edition, accessories, campus meetup spot..."></div>
+  <div id="editor" contenteditable="true" spellcheck="true" autocomplete="off" autocapitalize="sentences"></div>
 
   <script>
+    var INITIAL_CONTENT = ${safeContent};
+    var INITIAL_PLACEHOLDER = ${safePlaceholder};
     var editor = document.getElementById('editor');
     var savedSelectionRange = null;
+
+    if (INITIAL_CONTENT) {
+      editor.innerHTML = INITIAL_CONTENT;
+    }
+    if (INITIAL_PLACEHOLDER) {
+      editor.setAttribute('data-placeholder', INITIAL_PLACEHOLDER);
+    }
 
     document.body.addEventListener('click', function(e) {
       if (e.target !== editor && !editor.contains(e.target)) {
@@ -159,7 +172,7 @@ const STATIC_EDITOR_HTML = `
     }
 
     function post(type, data) {
-      if (window.ReactNativeWebView) {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
         var payload = Object.assign({ type: type }, data || {});
         window.ReactNativeWebView.postMessage(JSON.stringify(payload));
       }
@@ -169,6 +182,16 @@ const STATIC_EDITOR_HTML = `
       if (editor.innerHTML !== (html || '')) {
         editor.innerHTML = html || '';
         checkFormatStatus();
+        try {
+          var range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          var sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } catch (e) {}
       }
     };
 
@@ -254,15 +277,24 @@ const STATIC_EDITOR_HTML = `
       checkFormatStatus();
     });
 
-    window.onload = function() {
-      post('ready');
-    };
+    function initBridge() {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        post('ready');
+      } else {
+        setTimeout(initBridge, 50);
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      initBridge();
+    } else {
+      window.addEventListener('load', initBridge);
+    }
   </script>
 </body>
 </html>
-`;
-
-const STATIC_WEBVIEW_SOURCE = { html: STATIC_EDITOR_HTML };
+  `;
+}
 
 // ---------------------------------------------------------------------------
 // Native Rich-Text Viewer for Listing Details
@@ -556,7 +588,13 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
   const webEditorRef = useRef<any>(null);
   const isReadyRef = useRef(false);
   const isTypingRef = useRef(false);
-  const currentHtmlRef = useRef(value);
+  const currentHtmlRef = useRef("");
+
+  // Initial HTML with initial value embedded directly so it renders immediately on mount
+  const webViewSource = useMemo(
+    () => ({ html: getEditorHtml(value, placeholder) }),
+    []
+  );
 
   const updateLength = useCallback(
     (len: number) => {
@@ -591,9 +629,9 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         const data = JSON.parse(event.nativeEvent.data);
         if (data.type === "ready") {
           isReadyRef.current = true;
-          const escapedPlaceholder = JSON.stringify(placeholder);
           const contentToInject = currentHtmlRef.current || value || "";
           currentHtmlRef.current = contentToInject;
+          const escapedPlaceholder = JSON.stringify(placeholder);
           const escapedContent = JSON.stringify(contentToInject);
           webViewRef.current?.injectJavaScript(`
             if (window.setPlaceholder) window.setPlaceholder(${escapedPlaceholder});
@@ -620,12 +658,31 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
     [placeholder, value, onChangeText, updateLength]
   );
 
-  // Sync external changes (e.g. form reset)
+  // Sync external changes (e.g. form reset or initial post value loading or Clear button)
   useEffect(() => {
     if (isWeb) {
-      if (webEditorRef.current && value !== currentHtmlRef.current) {
+      if (!webEditorRef.current) return;
+
+      // If externally cleared to empty string
+      if (!value) {
+        if (webEditorRef.current.innerHTML !== "") {
+          webEditorRef.current.innerHTML = "";
+          currentHtmlRef.current = "";
+          updateLength(0);
+        }
+        return;
+      }
+
+      // If user is actively typing in the editor, NEVER overwrite innerHTML to preserve caret position
+      if (typeof document !== "undefined" && document.activeElement === webEditorRef.current) {
         currentHtmlRef.current = value;
-        webEditorRef.current.innerHTML = value || "";
+        return;
+      }
+
+      // External sync when not actively focused
+      if (webEditorRef.current.innerHTML !== value) {
+        currentHtmlRef.current = value;
+        webEditorRef.current.innerHTML = value;
         updateLength(getPlainTextLength(value));
       }
       return;
@@ -635,14 +692,17 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
       isTypingRef.current = false;
       return;
     }
+
     if (value !== currentHtmlRef.current) {
-      currentHtmlRef.current = value;
+      currentHtmlRef.current = value || "";
       updateLength(getPlainTextLength(value));
       if (isReadyRef.current) {
-        const escaped = JSON.stringify(value);
+        const escaped = JSON.stringify(value || "");
         webViewRef.current?.injectJavaScript(`
-          if (window.setEditorContent) {
-            window.setEditorContent(${escaped});
+          if (!${escaped} || document.activeElement !== document.getElementById('editor')) {
+            if (window.setEditorContent) {
+              window.setEditorContent(${escaped});
+            }
           }
           true;
         `);
@@ -740,8 +800,20 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
           <WebView
             ref={webViewRef}
             originWhitelist={["*"]}
-            source={STATIC_WEBVIEW_SOURCE}
+            source={webViewSource}
             onMessage={handleMessage}
+            onLoadEnd={() => {
+              isReadyRef.current = true;
+              if (value) {
+                const escaped = JSON.stringify(value);
+                webViewRef.current?.injectJavaScript(`
+                  if (window.setEditorContent) {
+                    window.setEditorContent(${escaped});
+                  }
+                  true;
+                `);
+              }
+            }}
             style={styles.webView}
             nestedScrollEnabled={true}
             scrollEnabled={true}
@@ -753,7 +825,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
         )}
       </View>
 
-      {/* ── Connected Bottom Toolbar (No toggle buttons — instant live formatting) ── */}
+      {/* ── Connected Bottom Toolbar (Instant live formatting + Clear action) ── */}
       <View style={styles.toolbarContainer}>
         {/* Bold Button */}
         <TouchableOpacity

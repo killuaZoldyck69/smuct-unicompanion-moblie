@@ -101,8 +101,12 @@ export const useDeleteMarketplacePost = () => {
   return useMutation({
     mutationFn: (id: string) => deleteMarketplacePost(id),
     onSuccess: (_data, id) => {
-      qc.invalidateQueries({ queryKey: marketplaceKeys.all });
+      // 1. Immediately cancel and remove active queries for the deleted post
+      qc.cancelQueries({ queryKey: marketplaceKeys.post(id) });
       qc.removeQueries({ queryKey: marketplaceKeys.post(id) });
+
+      // 2. Invalidate only feed queries so the listing list updates cleanly
+      qc.invalidateQueries({ queryKey: ["marketplace", "feed"] });
     },
   });
 };

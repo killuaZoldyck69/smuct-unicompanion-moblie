@@ -25,6 +25,7 @@ import { toastConfig } from "@/components/ui/toast-config";
 import { useUpdateMarketplacePost } from "@/features/campus-hub/useMarketplace";
 import {
   uploadMultipleImages,
+  deleteFileFromCloudinaryApi,
   CLOUDINARY_FOLDERS,
 } from "@/services/cloudinary-service";
 import type {
@@ -92,29 +93,33 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
   );
 
   useEffect(() => {
-    setForm({
-      type: post.type,
-      title: post.title,
-      description: post.description,
-      price: post.price != null ? String(post.price) : "",
-      category: post.category,
-      condition: post.condition ?? "GOOD",
-      contactPhone: post.contactPhone
-        ? formatBangladeshiPhone(post.contactPhone)
-        : "+880",
-      images: post.images ?? [],
-    });
-    setDescriptionLength(
-      post.description
-        ? post.description
-            .replace(/<[^>]+>/g, "")
-            .replace(/&nbsp;/g, " ")
-            .trim().length
-        : 0,
-    );
-  }, [post]);
+    if (visible && post) {
+      setForm({
+        type: post.type,
+        title: post.title,
+        description: post.description || "",
+        price: post.price != null ? String(post.price) : "",
+        category: post.category,
+        condition: post.condition ?? "GOOD",
+        contactPhone: post.contactPhone
+          ? formatBangladeshiPhone(post.contactPhone)
+          : "+880",
+        images: post.images ?? [],
+      });
+      setDescriptionLength(
+        post.description
+          ? post.description
+              .replace(/<[^>]+>/g, "")
+              .replace(/&nbsp;/g, " ")
+              .trim().length
+          : 0,
+      );
+    }
+  }, [post, visible]);
 
   const [isUploading, setIsUploading] = useState(false);
+  // Track newly uploaded images to avoid re-uploading and to rollback on discard
+  const [uploadedNewImagesMap, setUploadedNewImagesMap] = useState<Record<string, string>>({});
   const updateMutation = useUpdateMarketplacePost();
   const isSubmitting = isUploading || updateMutation.isPending;
 
@@ -129,6 +134,19 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
     setForm((prev) => ({ ...prev, contactPhone: formatted }));
   }, []);
 
+  const handlePriceChange = useCallback((raw: string) => {
+    // Allow digits and at most one decimal point (up to 2 decimals)
+    let sanitized = raw.replace(/[^0-9.]/g, "");
+    const parts = sanitized.split(".");
+    if (parts.length > 2) {
+      sanitized = parts[0] + "." + parts.slice(1).join("");
+    }
+    if (parts.length === 2 && parts[1].length > 2) {
+      sanitized = parts[0] + "." + parts[1].slice(0, 2);
+    }
+    setForm((prev) => ({ ...prev, price: sanitized }));
+  }, []);
+
   const isPhoneValid = useMemo(
     () => isValidBangladeshiPhone(form.contactPhone),
     [form.contactPhone],
@@ -136,21 +154,32 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
 
   const isPriceValid = useMemo(() => {
     if (!form.price.trim()) return true;
-    const num = parseInt(form.price, 10);
+    const num = parseFloat(form.price);
     return !isNaN(num) && num >= 0 && num <= 10000000;
   }, [form.price]);
 
   const formattedPricePreview = useMemo(() => {
     if (!form.price.trim()) return "";
-    const num = parseInt(form.price, 10);
+    const num = parseFloat(form.price);
     if (isNaN(num)) return "";
-    return `৳ ${num.toLocaleString("en-US")}`;
+    return `৳ ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
   }, [form.price]);
+
+  const cleanupNewUploadedImages = useCallback(() => {
+    const urls = Object.values(uploadedNewImagesMap);
+    if (urls.length > 0) {
+      urls.forEach((url) => {
+        deleteFileFromCloudinaryApi(url, "image").catch(() => {});
+      });
+    }
+    setUploadedNewImagesMap({});
+  }, [uploadedNewImagesMap]);
 
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
+    cleanupNewUploadedImages();
     onClose();
-  }, [onClose]);
+  }, [onClose, cleanupNewUploadedImages]);
 
   const canSubmit =
     form.title.trim().length >= 2 &&
@@ -180,7 +209,7 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
 
     let priceNum = 0;
     if (form.price.trim()) {
-      priceNum = parseInt(form.price, 10);
+      priceNum = parseFloat(form.price);
       if (isNaN(priceNum) || priceNum < 0 || priceNum > 10000000) {
         return Toast.show({
           type: "error",
@@ -238,16 +267,21 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
       } catch {}
     }
 
-    let finalImages = [...existingRemote];
+    // Reuse previously uploaded images and upload only pending ones
+    let currentMap = { ...uploadedNewImagesMap };
+    const pendingUris = newlyAdded.filter((uri) => !currentMap[uri]);
 
-    if (newlyAdded.length > 0) {
+    if (pendingUris.length > 0) {
       setIsUploading(true);
       try {
         const results = await uploadMultipleImages(
-          newlyAdded,
+          pendingUris,
           CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE,
         );
-        finalImages = [...finalImages, ...results.map((r) => r.secureUrl)];
+        results.forEach((r, idx) => {
+          currentMap[pendingUris[idx]] = r.secureUrl;
+        });
+        setUploadedNewImagesMap(currentMap);
       } catch (err: any) {
         setIsUploading(false);
         const errMsg =
@@ -262,6 +296,12 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
       }
       setIsUploading(false);
     }
+
+    const uploadedFromNew = newlyAdded
+      .map((uri) => currentMap[uri])
+      .filter(Boolean);
+
+    const finalImages = [...existingRemote, ...uploadedFromNew];
 
     updateMutation.mutate(
       {
@@ -279,6 +319,7 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
       },
       {
         onSuccess: () => {
+          setUploadedNewImagesMap({});
           Toast.show({
             type: "success",
             text1: "Listing Updated!",
@@ -299,7 +340,7 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
         },
       },
     );
-  }, [form, post.id, updateMutation, isSubmitting, handleClose]);
+  }, [form, post.id, updateMutation, isSubmitting, handleClose, uploadedNewImagesMap]);
 
   const isSelling = form.type === "SELLING";
 
@@ -488,14 +529,12 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
                 <Text style={styles.takaSymbol}>৳</Text>
                 <TextInput
                   style={styles.priceInput}
-                  placeholder="0"
+                  placeholder="0.00"
                   placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                   value={form.price}
-                  onChangeText={(v) =>
-                    update("price", v.replace(/[^0-9]/g, ""))
-                  }
-                  keyboardType="numeric"
-                  maxLength={8}
+                  onChangeText={handlePriceChange}
+                  keyboardType="decimal-pad"
+                  maxLength={10}
                 />
               </View>
             </View>
@@ -506,18 +545,45 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
                 <Text style={styles.fieldLabel}>
                   DESCRIPTION <Text style={styles.requiredStar}>*</Text>
                 </Text>
-                <Text style={styles.charCountText}>
-                  {descriptionLength}/3000
-                </Text>
+                <View style={styles.charCountRow}>
+                  {Boolean(form.description && form.description.trim()) && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        update("description", "");
+                        setDescriptionLength(0);
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={styles.clearHeaderBtn}
+                      activeOpacity={0.7}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear description"
+                    >
+                      <Feather
+                        name="trash-2"
+                        size={11}
+                        color={CAMPUS_HUB_COLORS.dangerText}
+                        style={{ marginRight: 3 }}
+                      />
+                      <Text style={styles.clearHeaderBtnText}>Clear</Text>
+                    </TouchableOpacity>
+                  )}
+                  <Text style={styles.charCountText}>
+                    {descriptionLength}/3000
+                  </Text>
+                </View>
               </View>
-              <MarketplaceRichEditor
-                value={form.description}
-                onChangeText={(val) => update("description", val)}
-                onLengthChange={setDescriptionLength}
-                placeholder="Update condition details, accessories, meeting location..."
-                maxLength={3000}
-                minHeight={130}
-              />
+              {visible && (
+                <MarketplaceRichEditor
+                  key={`edit-editor-${post.id}-${visible}`}
+                  value={form.description}
+                  onChangeText={(val) => update("description", val)}
+                  onLengthChange={setDescriptionLength}
+                  placeholder="Update condition details, accessories, meeting location..."
+                  maxLength={3000}
+                  minHeight={130}
+                />
+              )}
             </View>
 
             {/* Contact Phone */}
@@ -568,7 +634,22 @@ export const EditMarketplaceModal = React.memo(function EditMarketplaceModal({
             <View style={styles.formGroup}>
               <ImagePickerRow
                 images={form.images}
-                onImagesChange={(imgs) => update("images", imgs.slice(0, 4))}
+                onImagesChange={(imgs) => {
+                  const sliced = imgs.slice(0, 4);
+                  const currentSet = new Set(sliced);
+                  // Clean up any newly uploaded images removed by the user before saving
+                  Object.entries(uploadedNewImagesMap).forEach(([localUri, remoteUrl]) => {
+                    if (!currentSet.has(localUri)) {
+                      deleteFileFromCloudinaryApi(remoteUrl, "image").catch(() => {});
+                      setUploadedNewImagesMap((prev) => {
+                        const next = { ...prev };
+                        delete next[localUri];
+                        return next;
+                      });
+                    }
+                  });
+                  update("images", sliced);
+                }}
                 maxImages={4}
                 accent={ACCENT}
                 label={`PHOTOS (OPTIONAL) • ${form.images.length}/4`}
@@ -797,6 +878,25 @@ const styles = StyleSheet.create({
   conditionChipTextActive: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
     fontWeight: "700",
+  },
+  charCountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  clearHeaderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fee2e2",
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  clearHeaderBtnText: {
+    fontSize: 11,
+    fontFamily,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.dangerText,
   },
   charCountText: {
     fontSize: 12,

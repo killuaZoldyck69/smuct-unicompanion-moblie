@@ -26,6 +26,7 @@ import { toastConfig } from "@/components/ui/toast-config";
 import { useCreateMarketplacePost } from "@/features/campus-hub/useMarketplace";
 import {
   uploadMultipleImages,
+  deleteFileFromCloudinaryApi,
   CLOUDINARY_FOLDERS,
 } from "@/services/cloudinary-service";
 import type {
@@ -96,6 +97,8 @@ export const ComposeMarketplaceModal = React.memo(
     });
     const [descriptionLength, setDescriptionLength] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
+    // Maps localUri -> uploaded Cloudinary secureUrl to avoid re-uploading on retry
+    const [uploadedImageMap, setUploadedImageMap] = useState<Record<string, string>>({});
 
     useEffect(() => {
       if (visible && currentUser?.phoneNumber) {
@@ -130,17 +133,30 @@ export const ComposeMarketplaceModal = React.memo(
       [form.contactPhone],
     );
 
+    const handlePriceChange = useCallback((raw: string) => {
+      // Allow only numbers and a single decimal point (float support)
+      let sanitized = raw.replace(/[^0-9.]/g, "");
+      const parts = sanitized.split(".");
+      if (parts.length > 2) {
+        sanitized = parts[0] + "." + parts.slice(1).join("");
+      }
+      if (parts.length === 2 && parts[1].length > 2) {
+        sanitized = parts[0] + "." + parts[1].slice(0, 2);
+      }
+      setForm((prev) => ({ ...prev, price: sanitized }));
+    }, []);
+
     const isPriceValid = useMemo(() => {
       if (!form.price.trim()) return true;
-      const num = parseInt(form.price, 10);
+      const num = parseFloat(form.price);
       return !isNaN(num) && num >= 0 && num <= 10000000;
     }, [form.price]);
 
     const formattedPricePreview = useMemo(() => {
       if (!form.price.trim()) return "";
-      const num = parseInt(form.price, 10);
+      const num = parseFloat(form.price);
       if (isNaN(num)) return "";
-      return `৳ ${num.toLocaleString("en-US")}`;
+      return `৳ ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
     }, [form.price]);
 
     const hasContent =
@@ -149,6 +165,16 @@ export const ComposeMarketplaceModal = React.memo(
       form.price.trim().length > 0 ||
       form.localImages.length > 0 ||
       (form.contactPhone !== "+880" && form.contactPhone.length > 4);
+
+    const cleanupUploadedImages = useCallback(() => {
+      const urls = Object.values(uploadedImageMap);
+      if (urls.length > 0) {
+        urls.forEach((url) => {
+          deleteFileFromCloudinaryApi(url, "image").catch(() => {});
+        });
+      }
+      setUploadedImageMap({});
+    }, [uploadedImageMap]);
 
     const handleClose = useCallback(() => {
       Keyboard.dismiss();
@@ -162,6 +188,7 @@ export const ComposeMarketplaceModal = React.memo(
               text: "Discard",
               style: "destructive",
               onPress: () => {
+                cleanupUploadedImages();
                 setForm({ ...INITIAL_FORM, contactPhone: initialPhone });
                 setDescriptionLength(0);
                 onClose();
@@ -170,11 +197,12 @@ export const ComposeMarketplaceModal = React.memo(
           ],
         );
       } else {
+        cleanupUploadedImages();
         setForm({ ...INITIAL_FORM, contactPhone: initialPhone });
         setDescriptionLength(0);
         onClose();
       }
-    }, [hasContent, initialPhone, onClose]);
+    }, [hasContent, initialPhone, onClose, cleanupUploadedImages]);
 
     const canSubmit =
       form.title.trim().length >= 2 &&
@@ -204,12 +232,12 @@ export const ComposeMarketplaceModal = React.memo(
 
       let priceNum = 0;
       if (form.price.trim()) {
-        priceNum = parseInt(form.price, 10);
-        if (isNaN(priceNum) || priceNum < 0) {
+        priceNum = parseFloat(form.price);
+        if (isNaN(priceNum) || priceNum < 0 || priceNum > 10000000) {
           return Toast.show({
             type: "error",
             text1: "Invalid Price",
-            text2: "Price must be a valid number in Bangladeshi Taka (৳).",
+            text2: "Price must be a valid number between 0 and 10,000,000 BDT (৳).",
           });
         }
       }
@@ -261,15 +289,21 @@ export const ComposeMarketplaceModal = React.memo(
         }
       }
 
-      let imageUrls: string[] = [];
-      if (form.localImages.length > 0) {
+      // Upload newly added images while reusing previously uploaded ones
+      let currentMap = { ...uploadedImageMap };
+      const pendingUris = form.localImages.filter((uri) => !currentMap[uri]);
+
+      if (pendingUris.length > 0) {
         setIsUploading(true);
         try {
           const results = await uploadMultipleImages(
-            form.localImages,
+            pendingUris,
             CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE,
           );
-          imageUrls = results.map((r) => r.secureUrl);
+          results.forEach((r, idx) => {
+            currentMap[pendingUris[idx]] = r.secureUrl;
+          });
+          setUploadedImageMap(currentMap);
         } catch (err: any) {
           setIsUploading(false);
           const errMsg =
@@ -285,6 +319,10 @@ export const ComposeMarketplaceModal = React.memo(
         setIsUploading(false);
       }
 
+      const imageUrls = form.localImages
+        .map((uri) => currentMap[uri])
+        .filter(Boolean);
+
       const payload: CreateMarketplaceInput = {
         type: form.type,
         title: form.title.trim(),
@@ -299,6 +337,7 @@ export const ComposeMarketplaceModal = React.memo(
       createMutation.mutate(payload, {
         onSuccess: () => {
           Keyboard.dismiss();
+          setUploadedImageMap({});
           setForm({ ...INITIAL_FORM, contactPhone: initialPhone });
           setDescriptionLength(0);
           onClose();
@@ -322,7 +361,7 @@ export const ComposeMarketplaceModal = React.memo(
           });
         },
       });
-    }, [form, createMutation, initialPhone, isSubmitting, onClose]);
+    }, [form, createMutation, initialPhone, isSubmitting, onClose, uploadedImageMap]);
 
     const isSelling = form.type === "SELLING";
 
@@ -517,14 +556,12 @@ export const ComposeMarketplaceModal = React.memo(
                   <Text style={styles.takaSymbol}>৳</Text>
                   <TextInput
                     style={styles.priceInput}
-                    placeholder="0"
+                    placeholder="0.00"
                     placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                     value={form.price}
-                    onChangeText={(v) =>
-                      update("price", v.replace(/[^0-9]/g, ""))
-                    }
-                    keyboardType="numeric"
-                    maxLength={8}
+                    onChangeText={handlePriceChange}
+                    keyboardType="decimal-pad"
+                    maxLength={10}
                   />
                 </View>
               </View>
@@ -535,18 +572,45 @@ export const ComposeMarketplaceModal = React.memo(
                   <Text style={styles.fieldLabel}>
                     DESCRIPTION <Text style={styles.requiredStar}>*</Text>
                   </Text>
-                  <Text style={styles.charCountText}>
-                    {descriptionLength}/3000
-                  </Text>
+                  <View style={styles.charCountRow}>
+                    {Boolean(form.description && form.description.trim()) && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          update("description", "");
+                          setDescriptionLength(0);
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={styles.clearHeaderBtn}
+                        activeOpacity={0.7}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel="Clear description"
+                      >
+                        <Feather
+                          name="trash-2"
+                          size={11}
+                          color={CAMPUS_HUB_COLORS.dangerText}
+                          style={{ marginRight: 3 }}
+                        />
+                        <Text style={styles.clearHeaderBtnText}>Clear</Text>
+                      </TouchableOpacity>
+                    )}
+                    <Text style={styles.charCountText}>
+                      {descriptionLength}/3000
+                    </Text>
+                  </View>
                 </View>
-                <MarketplaceRichEditor
-                  value={form.description}
-                  onChangeText={(val) => update("description", val)}
-                  onLengthChange={setDescriptionLength}
-                  placeholder="Mention item condition, edition, included accessories, or campus meetup point..."
-                  maxLength={3000}
-                  minHeight={130}
-                />
+                {visible && (
+                  <MarketplaceRichEditor
+                    key={`compose-editor-${visible}`}
+                    value={form.description}
+                    onChangeText={(val) => update("description", val)}
+                    onLengthChange={setDescriptionLength}
+                    placeholder="Mention item condition, edition, included accessories, or campus meetup point..."
+                    maxLength={3000}
+                    minHeight={200}
+                  />
+                )}
               </View>
 
               {/* Contact Phone (Mandatory 14 Chars) */}
@@ -597,9 +661,22 @@ export const ComposeMarketplaceModal = React.memo(
               <View style={styles.formGroup}>
                 <ImagePickerRow
                   images={form.localImages}
-                  onImagesChange={(imgs) =>
-                    update("localImages", imgs.slice(0, 4))
-                  }
+                  onImagesChange={(imgs) => {
+                    const sliced = imgs.slice(0, 4);
+                    // If an image was removed, clean up its uploaded remote counterpart
+                    const currentSet = new Set(sliced);
+                    Object.entries(uploadedImageMap).forEach(([localUri, remoteUrl]) => {
+                      if (!currentSet.has(localUri)) {
+                        deleteFileFromCloudinaryApi(remoteUrl, "image").catch(() => {});
+                        setUploadedImageMap((prev) => {
+                          const next = { ...prev };
+                          delete next[localUri];
+                          return next;
+                        });
+                      }
+                    });
+                    update("localImages", sliced);
+                  }}
                   maxImages={4}
                   accent={ACCENT}
                   label={`PHOTOS (OPTIONAL) • ${form.localImages.length}/4`}
@@ -844,6 +921,25 @@ const styles = StyleSheet.create({
   conditionChipTextActive: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
     fontWeight: "700",
+  },
+  charCountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  clearHeaderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fee2e2",
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  clearHeaderBtnText: {
+    fontSize: 11,
+    fontFamily,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.dangerText,
   },
   charCountText: {
     fontSize: 12,
