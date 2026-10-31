@@ -62,7 +62,9 @@ interface SavedDraftData {
 
 function extractCategoryFromBody(raw: string): NoticeCategoryKey | null {
   if (!raw) return null;
-  const match = raw.match(/<!--category:(ACADEMIC|HOLIDAY|TRANSPORT|GENERAL|ADMIN|EXAM|EMERGENCY)-->/i);
+  const match = raw.match(
+    /<!--category:(ACADEMIC|HOLIDAY|TRANSPORT|GENERAL|ADMIN|EXAM|EMERGENCY)-->/i,
+  );
   if (match) {
     const cat = match[1].toUpperCase();
     if (cat === "ADMIN" || cat === "GENERAL") return "GENERAL";
@@ -87,14 +89,19 @@ function convertToEditorHtml(raw: string): string {
   );
 
   // Check if it's already HTML (e.g. contains <p>, <div>, <br>, <strong>, <b>, <i>, <u>, <ul>, <li>)
-  const hasHtml = /<\/?(?:p|div|b|i|u|strong|em|ul|li|br)[^>]*>/i.test(formatted);
+  const hasHtml = /<\/?(?:p|div|b|i|u|strong|em|ul|li|br)[^>]*>/i.test(
+    formatted,
+  );
 
   if (!hasHtml) {
     // If it was stored as markdown/plain text:
     // Convert bold: **text** -> <strong>text</strong>
     formatted = formatted.replace(/\*\*([\s\S]+?)\*\*/g, "<strong>$1</strong>");
     // Convert italic: *text* -> <em>text</em>
-    formatted = formatted.replace(/(^|[^\*])\*([^\*]+?)\*([^\*]|$)/g, "$1<em>$2</em>$3");
+    formatted = formatted.replace(
+      /(^|[^\*])\*([^\*]+?)\*([^\*]|$)/g,
+      "$1<em>$2</em>$3",
+    );
     // Convert newlines to paragraphs
     formatted = formatted
       .split(/\n\s*\n/)
@@ -119,10 +126,14 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
 
   // Form states - initialized with noticeToEdit data on first render if editing
   const [title, setTitle] = useState(() => noticeToEdit?.title || "");
-  const [referenceNo, setReferenceNo] = useState(() => noticeToEdit?.referenceNo || "");
+  const [referenceNo, setReferenceNo] = useState(
+    () => noticeToEdit?.referenceNo || "",
+  );
   const [category, setCategory] = useState<NoticeCategoryKey | "">(() => {
     if (noticeToEdit?.category && noticeToEdit.category !== "ALL") {
-      return noticeToEdit.category === "ADMIN" ? "GENERAL" : noticeToEdit.category;
+      return noticeToEdit.category === "ADMIN"
+        ? "GENERAL"
+        : noticeToEdit.category;
     }
     if (noticeToEdit?.body) {
       const extracted = extractCategoryFromBody(noticeToEdit.body);
@@ -142,8 +153,12 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
     }
     return false;
   });
-  const [issuerName, setIssuerName] = useState(() => noticeToEdit?.issuerName || "");
-  const [issuerDesignation, setIssuerDesignation] = useState(() => noticeToEdit?.issuerDesignation || "");
+  const [issuerName, setIssuerName] = useState(
+    () => noticeToEdit?.issuerName || "",
+  );
+  const [issuerDesignation, setIssuerDesignation] = useState(
+    () => noticeToEdit?.issuerDesignation || "",
+  );
   const [copyTo, setCopyTo] = useState<string[]>(() =>
     noticeToEdit?.copyTo ? [...noticeToEdit.copyTo] : [],
   );
@@ -167,12 +182,17 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       const formattedBody = convertToEditorHtml(noticeToEdit.body || "");
       setTitle(noticeToEdit.title || "");
       setReferenceNo(noticeToEdit.referenceNo || "");
-      const initialCat = (noticeToEdit.category && noticeToEdit.category !== "ALL")
-        ? (noticeToEdit.category === "ADMIN" ? "GENERAL" : noticeToEdit.category)
-        : (extractCategoryFromBody(noticeToEdit.body || "") || "");
+      const initialCat =
+        noticeToEdit.category && noticeToEdit.category !== "ALL"
+          ? noticeToEdit.category === "ADMIN"
+            ? "GENERAL"
+            : noticeToEdit.category
+          : extractCategoryFromBody(noticeToEdit.body || "") || "";
       setCategory(initialCat);
       setBody(formattedBody);
-      setIsJustified(/text-align:\s*justify|align=["']justify/i.test(formattedBody));
+      setIsJustified(
+        /text-align:\s*justify|align=["']justify/i.test(formattedBody),
+      );
       setIssuerName(noticeToEdit.issuerName || "");
       setIssuerDesignation(noticeToEdit.issuerDesignation || "");
       setCopyTo(noticeToEdit.copyTo ? [...noticeToEdit.copyTo] : []);
@@ -198,7 +218,9 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
                 setTitle(parsed.title || "");
                 setReferenceNo(parsed.referenceNo || "");
                 if (parsed.category) {
-                  setCategory(parsed.category === "ADMIN" ? "GENERAL" : parsed.category);
+                  setCategory(
+                    parsed.category === "ADMIN" ? "GENERAL" : parsed.category,
+                  );
                 } else {
                   setCategory("");
                 }
@@ -356,7 +378,8 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       Toast.show({
         type: "error",
         text1: "Category Required",
-        text2: "Please select a category (Academic, Holiday, Transport, or General) for this notice.",
+        text2:
+          "Please select a category (Academic, Holiday, Transport, or General) for this notice.",
       });
       return;
     }
@@ -365,7 +388,8 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       Toast.show({
         type: "error",
         text1: "Reference Number Required",
-        text2: "Please enter the reference / memo number (e.g. SMUCT/REG/GEN/2026/042).",
+        text2:
+          "Please enter the reference / memo number (e.g. SMUCT/REG/GEN/2026/042).",
       });
       return;
     }
@@ -440,7 +464,8 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       Toast.show({
         type: "error",
         text1: "Category Required",
-        text2: "Please select a category (Academic, Holiday, Transport, or General) for this notice.",
+        text2:
+          "Please select a category (Academic, Holiday, Transport, or General) for this notice.",
       });
       return;
     }
@@ -481,7 +506,9 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
       return;
     }
 
-    const cleanBody = finalBody.replace(/<!--category:[^>]*-->\s*/gi, "").trim();
+    const cleanBody = finalBody
+      .replace(/<!--category:[^>]*-->\s*/gi, "")
+      .trim();
     const bodyWithCategory = `<!--category:${category}-->\n${cleanBody}`;
 
     try {
@@ -720,9 +747,6 @@ export const CreateNoticeModal = React.memo(function CreateNoticeModal({
                   <Text style={styles.label}>
                     Category <Text style={styles.required}>*</Text>
                   </Text>
-                  {!category && (
-                    <Text style={styles.categoryRequiredHint}>Mandatory</Text>
-                  )}
                 </View>
                 <View style={styles.categoryPickerRow}>
                   {NOTICE_CREATION_CATEGORIES.map((cat) => {
@@ -1635,11 +1659,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: NOTICE_COLORS.deepNavy,
-  },
-  categoryRequiredHint: {
-    fontFamily,
-    fontSize: 11.5,
-    fontWeight: "700",
-    color: "#ef4444",
   },
 });
