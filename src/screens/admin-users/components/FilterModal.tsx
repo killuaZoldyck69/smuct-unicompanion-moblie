@@ -324,16 +324,20 @@ const styles = StyleSheet.create({
   filterOptionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "center",
     gap: 8,
     marginTop: 8,
   },
   filterOptionBtn: {
     paddingHorizontal: 14,
+    minWidth: 132,
     paddingVertical: 10,
     borderRadius: 14,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    alignItems: "center",
+    justifyContent: "center",
   },
   filterOptionText: {
     fontSize: 13,
@@ -343,11 +347,13 @@ const styles = StyleSheet.create({
   filterGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "center",
     gap: 8,
   },
   filterGridItem: {
-    width: "22.8%",
-    aspectRatio: 1.6,
+    width: "31%",
+    minHeight: 48,
+    paddingHorizontal: 6,
     borderRadius: 12,
     backgroundColor: "#F8FAFC",
     alignItems: "center",
@@ -359,6 +365,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: THEME.textPrimary,
+    textAlign: "center",
   },
   filterModalActions: {
     flexDirection: "row",

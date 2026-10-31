@@ -6,10 +6,9 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { TeacherDirectoryItem } from "@/services/directory-service";
 import { THEME, AVATAR_PASTELS, fontFamily } from "../constants";
-import { getFullDepartmentDisplayName } from "@/utils/academic-formatters";
+import { getDepartmentShortName } from "@/data/programs";
 
 export interface TeacherCardProps {
   teacher: TeacherDirectoryItem;
@@ -83,68 +82,12 @@ export const TeacherCard = React.memo(function TeacherCard({
           {/* Department & ID Subtitle */}
           <Text style={styles.departmentText} numberOfLines={1}>
             {profile?.teacherId ? `${profile.teacherId} • ` : ""}
-            {getFullDepartmentDisplayName(profile?.department)}
+            {getDepartmentShortName(profile?.department)}
           </Text>
         </View>
 
-        {/* Right Chevron */}
-        <Feather
-          name="chevron-right"
-          size={18}
-          color={THEME.textMuted}
-          style={styles.chevron}
-        />
       </View>
 
-      {/* Meta Badges Row (Office Room, Day Off, Quick Contacts) */}
-      {(profile?.officeRoom || profile?.dayOff || teacher.phoneNumber || teacher.email) && (
-        <View style={styles.metaRow}>
-          {profile?.officeRoom ? (
-            <View style={styles.metaPill}>
-              <Feather
-                name="map-pin"
-                size={11}
-                color={THEME.textSecondary}
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.metaPillText}>{profile.officeRoom}</Text>
-            </View>
-          ) : null}
-
-          {profile?.dayOff ? (
-            <View style={styles.dayOffPill}>
-              <Feather
-                name="coffee"
-                size={11}
-                color="#DC2626"
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.dayOffPillText}>Off: {profile.dayOff}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.quickContactsRow}>
-            {teacher.phoneNumber ? (
-              <View style={styles.contactIconPill}>
-                <Feather
-                  name="phone"
-                  size={11}
-                  color={THEME.textSecondary}
-                />
-              </View>
-            ) : null}
-            {teacher.email ? (
-              <View style={styles.contactIconPill}>
-                <Feather
-                  name="mail"
-                  size={11}
-                  color={THEME.textSecondary}
-                />
-              </View>
-            ) : null}
-          </View>
-        </View>
-      )}
     </TouchableOpacity>
   );
 });
@@ -246,64 +189,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: THEME.textSecondary,
     fontWeight: "500",
-  },
-  chevron: {
-    marginLeft: 4,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 7,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-  },
-  metaPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  metaPillText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "600",
-    color: THEME.textSecondary,
-  },
-  dayOffPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FEE2E2",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: "#FECDD3",
-  },
-  dayOffPillText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#DC2626",
-  },
-  quickContactsRow: {
-    marginLeft: "auto",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  contactIconPill: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

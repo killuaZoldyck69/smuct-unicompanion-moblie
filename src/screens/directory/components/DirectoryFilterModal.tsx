@@ -9,8 +9,12 @@ import {
   Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { getDepartmentFullName } from "@/data/programs";
-import { THEME, DEPARTMENT_CHIPS, fontFamily } from "../constants";
+import {
+  DEPARTMENT_SHORT_NAMES,
+  getDepartmentFullName,
+  getDepartmentShortName,
+} from "@/data/programs";
+import { THEME, fontFamily } from "../constants";
 
 interface DirectoryFilterModalProps {
   visible: boolean;
@@ -20,7 +24,6 @@ interface DirectoryFilterModalProps {
   onResetAll: () => void;
   topInset: number;
   bottomInset: number;
-  activeDepartments?: string[];
 }
 
 export const DirectoryFilterModal = React.memo(
@@ -32,16 +35,17 @@ export const DirectoryFilterModal = React.memo(
     onResetAll,
     topInset,
     bottomInset,
-    activeDepartments = [],
   }: DirectoryFilterModalProps) => {
-    // Combine standard chips with any unique backend departments
+    // Keep every department listed in programs.ts, even if it has no current faculty.
     const departmentList = useMemo(() => {
-      const set = new Set<string>(DEPARTMENT_CHIPS);
-      activeDepartments.forEach((d) => {
-        if (d && d.trim()) set.add(d.trim().toUpperCase());
-      });
-      return Array.from(set);
-    }, [activeDepartments]);
+      return Object.entries(DEPARTMENT_SHORT_NAMES).map(([value, label]) => ({
+        value,
+        label,
+      }));
+    }, []);
+
+    const isAllSelected =
+      !selectedDepartment || selectedDepartment.toLowerCase() === "all";
 
     return (
       <Modal
@@ -123,28 +127,48 @@ export const DirectoryFilterModal = React.memo(
                   )}
                 </View>
 
+                <View style={styles.filterAllRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterAllItem,
+                      isAllSelected && styles.filterGridItemSelected,
+                    ]}
+                    onPress={() => onSelectDepartment(null)}
+                    activeOpacity={0.75}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="All Departments"
+                  >
+                    <Text
+                      style={[
+                        styles.filterGridText,
+                        isAllSelected && styles.filterGridTextSelected,
+                      ]}
+                    >
+                      All Departments
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
                 <View style={styles.filterGrid}>
                   {departmentList.map((dept) => {
+                    const selected = selectedDepartment?.trim().toLowerCase();
                     const isSelected =
-                      dept === "All"
-                        ? selectedDepartment === null ||
-                          selectedDepartment === "All"
-                        : selectedDepartment === dept;
+                      selected === dept.value.toLowerCase() ||
+                      selected === getDepartmentShortName(dept.value).toLowerCase();
 
                     return (
                       <TouchableOpacity
-                        key={dept}
+                        key={dept.value}
                         style={[
                           styles.filterGridItem,
                           isSelected && styles.filterGridItemSelected,
                         ]}
-                        onPress={() =>
-                          onSelectDepartment(dept === "All" ? null : dept)
-                        }
+                        onPress={() => onSelectDepartment(dept.value)}
                         activeOpacity={0.75}
                         accessible={true}
                         accessibilityRole="button"
-                        accessibilityLabel={`Department ${dept}`}
+                        accessibilityLabel={`Department ${dept.label}`}
                       >
                         <Text
                           style={[
@@ -152,7 +176,7 @@ export const DirectoryFilterModal = React.memo(
                             isSelected && styles.filterGridTextSelected,
                           ]}
                         >
-                          {dept}
+                          {dept.label}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -279,11 +303,28 @@ const styles = StyleSheet.create({
   filterGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "center",
     gap: 8,
   },
+  filterAllRow: {
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  filterAllItem: {
+    width: "48%",
+    minHeight: 48,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
   filterGridItem: {
-    width: "22.8%",
-    aspectRatio: 1.6,
+    width: "31%",
+    minHeight: 48,
+    paddingHorizontal: 6,
     borderRadius: 12,
     backgroundColor: "#F8FAFC",
     alignItems: "center",
@@ -300,6 +341,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: THEME.textPrimary,
+    textAlign: "center",
   },
   filterGridTextSelected: {
     color: "#FFFFFF",

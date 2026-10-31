@@ -16,6 +16,10 @@ import {
   useTeacherDepartments,
 } from "@/features/directory/useDirectory";
 import { TeacherDirectoryItem } from "@/services/directory-service";
+import {
+  getDepartmentFullName,
+  getDepartmentShortName,
+} from "@/data/programs";
 import { THEME, fontFamily } from "./constants";
 import { AmbientBackground } from "./components/AmbientBackground";
 import { DirectoryHeader } from "./components/DirectoryHeader";
@@ -72,6 +76,21 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
 
     // Query 1: Active distinct departments for filter chips
     const { data: departments = [] } = useTeacherDepartments();
+    const departmentFilter = useMemo(() => {
+      if (!selectedDepartment || selectedDepartment === "All") return undefined;
+
+      const selected = selectedDepartment.trim().toLowerCase();
+      const matchedDepartment = departments.find((department) => {
+        const normalizedDepartment = department.trim().toLowerCase();
+        return (
+          normalizedDepartment === selected ||
+          getDepartmentShortName(department).toLowerCase() === selected ||
+          normalizedDepartment === getDepartmentFullName(selectedDepartment).toLowerCase()
+        );
+      });
+
+      return matchedDepartment || getDepartmentFullName(selectedDepartment);
+    }, [departments, selectedDepartment]);
 
     // Query 2: Server-side infinite paginated teachers directory
     const {
@@ -85,10 +104,7 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
       isRefetching,
     } = useInfiniteTeachersDirectory({
       search: debouncedSearch,
-      department:
-        selectedDepartment && selectedDepartment !== "All"
-          ? selectedDepartment
-          : undefined,
+      department: departmentFilter,
       limit: 15,
     });
 
@@ -270,7 +286,6 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
           onResetAll={handleResetFilters}
           topInset={insets.top}
           bottomInset={insets.bottom}
-          activeDepartments={departments}
         />
 
         {/* Full-Screen Teacher Detail Modal matching Admin Teacher Profile */}
@@ -295,7 +310,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 40,
+    paddingBottom: 128,
   },
   listFooterLoading: {
     flexDirection: "row",

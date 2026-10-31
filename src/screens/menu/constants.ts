@@ -181,7 +181,7 @@ export const ALL_MENU_ITEMS: MenuItemConfig[] = [
     assetIcon: require("@/assets/icons/teacher.png"),
     fallbackIcon: "users",
     roles: ["STUDENT", "TEACHER"],
-    route: "/directory" as Href,
+    route: "/(tabs)/directory" as Href,
   },
 
   // -------------------------------------------------------------

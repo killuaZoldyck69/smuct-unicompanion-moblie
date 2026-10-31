@@ -1,19 +1,5 @@
-import React from "react";
-import { View, StyleSheet } from "react-native";
-import { FacultyDirectoryView } from "@/screens/directory";
-import { THEME } from "@/screens/directory/constants";
+import { Redirect } from "expo-router";
 
 export default function FacultyDirectoryScreen() {
-  return (
-    <View style={styles.container}>
-      <FacultyDirectoryView isModal={false} />
-    </View>
-  );
+  return <Redirect href="/(tabs)/directory" />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: THEME.bg,
-  },
-});
