@@ -1,13 +1,14 @@
 import React, { useState, useCallback } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import Svg, { Circle, Path } from "react-native-svg";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
   SPACING,
   fontFamily,
 } from "../../constants";
-import { SkillsIllustration } from "../illustrations/skills-illustration";
+
 
 interface TeacherExpertiseCardProps {
   expertiseFields: string[];
@@ -36,7 +37,20 @@ export const TeacherExpertiseCard = React.memo(function TeacherExpertiseCard({
   return (
     <View style={styles.card}>
       <View style={styles.watermarkContainer} pointerEvents="none">
-        <SkillsIllustration width={120} height={100} opacity={0.12} color={theme.primaryText} />
+        <View style={styles.watermarkGlow} />
+        <Svg width={112} height={88} viewBox="0 0 112 88">
+          <Path
+            d="M37 20 13 43l24 22M75 13 57 74M83 20l24 23-24 22"
+            fill="none"
+            stroke="#14b8a6"
+            strokeWidth={8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={0.1}
+          />
+          <Circle cx={99} cy={12} r={5} fill="#14b8a6" opacity={0.1} />
+          <Circle cx={105} cy={76} r={5} fill="#14b8a6" opacity={0.1} />
+        </Svg>
       </View>
 
       <View style={styles.sectionHeaderRow}>
@@ -104,9 +118,22 @@ const styles = StyleSheet.create({
   },
   watermarkContainer: {
     position: "absolute",
-    right: -20,
-    top: 20,
+    width: 116,
+    height: 92,
+    right: -2,
+    bottom: -3,
     zIndex: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  watermarkGlow: {
+    position: "absolute",
+    width: 100,
+    height: 88,
+    right: -12,
+    bottom: -10,
+    borderTopLeftRadius: 70,
+    backgroundColor: "#f0fdfa",
   },
   sectionHeaderRow: {
     flexDirection: "row",

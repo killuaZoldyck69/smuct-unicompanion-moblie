@@ -71,7 +71,7 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
 
   const handleSaveMutation = useCallback(
     (payload: UpdateTeacherProfileInput, onSuccess: () => void) => {
-      updateTeacherProfile(payload as any, { onSuccess });
+      updateTeacherProfile(payload, { onSuccess });
     },
     [updateTeacherProfile],
   );
@@ -164,13 +164,11 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
         <TeacherAcademicCard
           profile={profile}
           isEditing={isEditing}
-          designation={formData.designation}
           department={formData.department}
           officeRoom={formData.officeRoom}
           advisoryBatch={formData.advisoryBatch}
           dayOff={formData.dayOff}
           consultationSlots={formData.consultationSlots}
-          onChangeDesignation={(val) => updateField("designation", val)}
           onChangeDepartment={(val) => updateField("department", val)}
           onChangeOfficeRoom={(val) => updateField("officeRoom", val)}
           onChangeAdvisoryBatch={(val) => updateField("advisoryBatch", val)}
@@ -180,23 +178,7 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           onRemoveConsultationSlot={removeConsultationSlot}
         />
 
-        {/* 3. Professional Expertise Card */}
-        <TeacherExpertiseCard
-          expertiseFields={formData.expertiseFields}
-          isEditing={isEditing}
-          onAddExpertise={addExpertise}
-          onRemoveExpertise={removeExpertise}
-        />
-
-        {/* 4. Academic Qualifications Timeline Card */}
-        <TeacherQualificationsCard
-          academicQualifications={formData.academicQualifications}
-          isEditing={isEditing}
-          onAddQualification={addQualification}
-          onRemoveQualification={removeQualification}
-        />
-
-        {/* 5. Contact Information (Blood Group & Phone Number) */}
+        {/* 3. Contact Information */}
         <TeacherContactCard
           phoneNumber={formData.phoneNumber}
           bloodGroup={formData.bloodGroup}
@@ -204,7 +186,25 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           profilePhone={profile.phoneNumber || profile.phone}
           isEditing={isEditing}
           onOpenBloodModal={() => setBloodModalVisible(true)}
-          onChangePhone={(val) => updateField("phoneNumber", val)}
+          onChangePhone={(digits) =>
+            updateField("phoneNumber", digits ? `+880${digits}` : "")
+          }
+        />
+
+        {/* 4. Professional Expertise Card */}
+        <TeacherExpertiseCard
+          expertiseFields={formData.expertiseFields}
+          isEditing={isEditing}
+          onAddExpertise={addExpertise}
+          onRemoveExpertise={removeExpertise}
+        />
+
+        {/* 5. Academic Qualifications Timeline Card */}
+        <TeacherQualificationsCard
+          academicQualifications={formData.academicQualifications}
+          isEditing={isEditing}
+          onAddQualification={addQualification}
+          onRemoveQualification={removeQualification}
         />
 
         {/* 6. Portfolio & Social Profiles */}

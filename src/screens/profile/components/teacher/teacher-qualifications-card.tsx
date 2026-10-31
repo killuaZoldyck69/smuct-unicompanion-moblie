@@ -14,6 +14,7 @@ import {
   fontFamily,
 } from "../../constants";
 import { sortQualificationEntries } from "@/utils/qualification-order";
+import Svg, { Path } from "react-native-svg";
 
 interface TeacherQualificationsCardProps {
   academicQualifications: Record<string, string>;
@@ -51,6 +52,30 @@ export const TeacherQualificationsCard = React.memo(
 
     return (
       <View style={styles.card}>
+        <View style={styles.watermarkContainer} pointerEvents="none">
+          <View style={styles.watermarkGlow} />
+          <Svg width={94} height={108} viewBox="0 0 94 108">
+            <Path
+              d="M22 8h34l24 24v62a6 6 0 0 1-6 6H22a6 6 0 0 1-6-6V14a6 6 0 0 1 6-6Z"
+              fill="none"
+              stroke="#6366f1"
+              strokeWidth={8}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              opacity={0.09}
+            />
+            <Path
+              d="M56 10v22h22M32 58h34M32 73h34"
+              fill="none"
+              stroke="#6366f1"
+              strokeWidth={7}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.08}
+            />
+          </Svg>
+        </View>
+
         <View style={styles.sectionHeaderRow}>
           <View style={styles.headerLeft}>
             <View style={styles.sectionIconBadge}>
@@ -108,7 +133,16 @@ export const TeacherQualificationsCard = React.memo(
                   key={idx}
                   style={[styles.timelineItem, isLast && { marginBottom: 0 }]}
                 >
-                  <View style={styles.timelineDot} />
+                  <View
+                    style={[
+                      styles.timelineDot,
+                      idx === 0
+                        ? styles.timelineDotPrimary
+                        : idx === 1
+                          ? styles.timelineDotSecondary
+                          : styles.timelineDotMuted,
+                    ]}
+                  />
                   <View style={styles.fieldContent}>
                     <Text style={styles.degreeTitle}>{degree}</Text>
                     <Text style={styles.institutionSubtitle}>{inst}</Text>
@@ -151,6 +185,24 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     position: "relative",
     overflow: "hidden",
+  },
+  watermarkContainer: {
+    position: "absolute",
+    width: 98,
+    height: 110,
+    right: -2,
+    bottom: -7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  watermarkGlow: {
+    position: "absolute",
+    width: 96,
+    height: 96,
+    right: -12,
+    bottom: -12,
+    borderTopLeftRadius: 70,
+    backgroundColor: "#f5f3ff",
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -237,9 +289,17 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: "rgba(19, 27, 46, 0.2)",
     marginTop: 6,
     marginRight: 16,
+  },
+  timelineDotPrimary: {
+    backgroundColor: "#2563eb",
+  },
+  timelineDotSecondary: {
+    backgroundColor: "#6366f1",
+  },
+  timelineDotMuted: {
+    backgroundColor: "#cbd5e1",
   },
   fieldContent: {
     flex: 1,

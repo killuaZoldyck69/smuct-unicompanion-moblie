@@ -1,3 +1,4 @@
+import { Alert } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 import {
   TeacherProfileData,
@@ -6,9 +7,20 @@ import {
 } from "@/services/teacher-service";
 import { BLOOD_GROUP_TO_UI, BLOOD_GROUP_TO_DB } from "../constants";
 import { sortQualificationEntries } from "@/utils/qualification-order";
+import { SMUCT_PROGRAM_DEPARTMENTS } from "@/data/programs";
+
+const normalizeBangladeshPhone = (phone?: string | null): string => {
+  const digits = (phone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  const nationalNumber = digits.startsWith("880")
+    ? digits.slice(3)
+    : digits.startsWith("0")
+      ? digits.slice(1)
+      : digits;
+  return `+880${nationalNumber.slice(-10)}`;
+};
 
 export interface TeacherFormData {
-  designation: string;
   department: string;
   faculty: string;
   officeRoom: string;
@@ -29,7 +41,6 @@ export function useTeacherProfileForm(
 ) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<TeacherFormData>({
-    designation: "",
     department: "",
     faculty: "",
     officeRoom: "",
@@ -107,17 +118,19 @@ export function useTeacherProfileForm(
     }
 
     setFormData({
-      designation: profile.designation || "",
       department: profile.department || "",
       faculty: profile.faculty || "",
-      officeRoom: profile.roomNumber || (profile as any).officeRoom || (profile as any).roomNo || "",
+      officeRoom:
+        profile.officeRoom || profile.roomNumber || profile.roomNo || "",
       advisoryBatch:
         profile.advisoryBatch !== null && profile.advisoryBatch !== undefined
           ? String(profile.advisoryBatch)
           : "",
       dayOff: profile.dayOff || "",
       consultationSlots: slots,
-      phoneNumber: profile.phoneNumber || profile.phone || "",
+      phoneNumber: normalizeBangladeshPhone(
+        profile.phoneNumber || profile.phone,
+      ),
       bloodGroup: profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] || "" : "",
       expertiseFields: (profile as any).expertiseFields || profile.researchInterests || [],
       academicQualifications: parsedQuals,
@@ -216,13 +229,18 @@ export function useTeacherProfileForm(
     if (!profile) return;
     const payload: UpdateTeacherProfileInput = {};
 
-    const cleanDesignation = formData.designation.trim();
-    if (cleanDesignation !== (profile.designation || "")) {
-      payload.designation = cleanDesignation;
-    }
-
     const cleanDept = formData.department.trim();
     if (cleanDept !== (profile.department || "")) {
+      const isAllowedDepartment = SMUCT_PROGRAM_DEPARTMENTS.some(
+        (option) => option.name === cleanDept,
+      );
+      if (!isAllowedDepartment) {
+        Alert.alert(
+          "Invalid department",
+          "Choose a department from the university department list.",
+        );
+        return;
+      }
       payload.department = cleanDept;
     }
 
@@ -231,11 +249,11 @@ export function useTeacherProfileForm(
       payload.faculty = cleanFaculty;
     }
 
-    const cleanRoom = formData.officeRoom.trim();
-    const currentRoom = profile.roomNumber || (profile as any)?.officeRoom || "";
+    const cleanRoom = formData.officeRoom.trim().replace(/\D/g, "");
+    const currentRoom =
+      profile.officeRoom || profile.roomNumber || profile.roomNo || "";
     if (cleanRoom !== currentRoom) {
-      payload.roomNumber = cleanRoom;
-      payload.roomNo = cleanRoom;
+      payload.officeRoom = cleanRoom;
     }
 
     const cleanBatch = formData.advisoryBatch.trim();
@@ -247,16 +265,40 @@ export function useTeacherProfileForm(
 
     const cleanDayOff = formData.dayOff.trim();
     if (cleanDayOff !== (profile.dayOff || "")) {
+      const validDays = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ];
+      if (!validDays.includes(cleanDayOff)) {
+        Alert.alert("Invalid day off", "Choose one of the seven days.");
+        return;
+      }
       payload.dayOff = cleanDayOff;
     }
 
     // Consultation slots
     payload.consultationSlots = formData.consultationSlots;
 
-    const cleanPhone = formData.phoneNumber.trim();
-    if (cleanPhone !== (profile.phoneNumber || profile.phone || "")) {
+    const phoneDigits = formData.phoneNumber.replace(/\D/g, "").slice(-10);
+    const currentPhone = normalizeBangladeshPhone(
+      profile.phoneNumber || profile.phone,
+    );
+    const isPhoneChanged = formData.phoneNumber !== currentPhone;
+    if (isPhoneChanged && phoneDigits.length !== 10) {
+      Alert.alert(
+        "Invalid phone number",
+        "Enter all 10 digits after the +880 country code.",
+      );
+      return;
+    }
+    const cleanPhone = isPhoneChanged ? `+880${phoneDigits}` : currentPhone;
+    if (cleanPhone !== currentPhone) {
       payload.phoneNumber = cleanPhone;
-      payload.phone = cleanPhone;
     }
 
     if (formData.bloodGroup) {

@@ -18,6 +18,7 @@ export interface TeacherProfileData {
   designation: string;
   department: string;
   faculty?: string;
+  officeRoom?: string | null;
   roomNumber?: string | null;
   roomNo?: string | null;
   advisoryBatch?: number | null;
@@ -47,8 +48,7 @@ export interface UpdateTeacherProfileInput {
   phoneNumber?: string;
   phone?: string;
   bloodGroup?: string;
-  roomNumber?: string;
-  roomNo?: string;
+  officeRoom?: string | null;
   department?: string;
   designation?: string;
   faculty?: string;
@@ -101,4 +101,3 @@ export const updateTeacherProfileImage = async (imageUriOrUrl: string) => {
   return response.data?.user ?? response.data?.data;
 };
 export const updateTeacherProfileImageAPI = updateTeacherProfileImage;
-

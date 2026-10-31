@@ -8,8 +8,8 @@ import {
   updateTeacherProfileAPI,
   updateTeacherProfileImageAPI,
 } from "@/services/teacher-service";
+import type { UpdateTeacherProfileInput } from "@/services/teacher-service";
 import { PROFILE_CACHE_CONFIG } from "@/screens/profile/constants";
-import { UpdateTeacherProfileInput } from "./types";
 
 export const useTeacherProfile = () => {
   const queryClient = useQueryClient();
