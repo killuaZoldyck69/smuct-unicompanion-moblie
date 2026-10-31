@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { View, Text, TextInput, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { StudentProfileData } from "@/services/student-service";
 import {
   PROFILE_COLORS,
@@ -56,58 +56,40 @@ export const StudentAcademicCard = React.memo(function StudentAcademicCard({
           </View>
         </View>
 
-        <View style={styles.timelineContainer}>
-          <View style={styles.timelineTrack} />
-
-          <View style={styles.timelineItem}>
-            <View style={styles.timelineDot} />
-            <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>DEPARTMENT</Text>
-              <Text style={styles.fieldValuePrimary} numberOfLines={1}>
-                {profile.department || "Computer Science and Engineering"}
-              </Text>
-            </View>
+        <View style={styles.programPanel}>
+          <Text style={styles.programValue}>
+            {profile.program || "B.Sc. (Hons) in Computer Science and Engineering"}
+          </Text>
+          <View style={styles.departmentRow}>
+            <View style={styles.departmentDot} />
+            <Text style={styles.departmentValue}>
+              Department of {profile.department || "Computer Science and Engineering"}
+            </Text>
           </View>
+        </View>
 
-          <View style={styles.timelineItem}>
-            <View style={styles.timelineDot} />
-            <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>PROGRAM</Text>
-              <Text style={styles.fieldValuePrimary} numberOfLines={2}>
-                {profile.program || "B.Sc. (Hons) in Computer Science and Engineering"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.timelineItem, { marginBottom: 0 }]}>
-            <View style={styles.timelineDot} />
-            <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>CURRENT TERM / OFFER</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.termEditInput}
-                  value={currentTerm}
-                  onChangeText={onChangeTerm}
-                  placeholder="e.g. Fall 2026"
-                  placeholderTextColor={PROFILE_COLORS.mutedText}
-                  autoCapitalize="words"
-                  accessible={true}
-                  accessibilityLabel="Current Term Input"
-                />
-              ) : (
-                <Text style={styles.fieldValuePrimary}>
-                  {profile.currentTerm || "Fall 2026"}
-                </Text>
-              )}
-            </View>
-          </View>
+        <View style={styles.termRow}>
+          <Text style={styles.termLabel}>Current Term</Text>
+          {isEditing ? (
+            <TextInput
+              style={styles.termEditInput}
+              value={currentTerm}
+              onChangeText={onChangeTerm}
+              placeholder="e.g. Fall 2026"
+              placeholderTextColor={PROFILE_COLORS.mutedText}
+              autoCapitalize="words"
+              accessibilityLabel="Current Term Input"
+            />
+          ) : (
+            <Text style={styles.termValue}>{profile.currentTerm || "Fall 2026"}</Text>
+          )}
         </View>
       </View>
 
       <View style={styles.statTilesRow}>
         {/* Semester Tile */}
-        <View style={[styles.statTile, isEditing && styles.statTileEditing]}>
-          <Text style={styles.statTileLabel}>SEMESTER</Text>
+        <View style={[styles.statTile, styles.semesterTile, isEditing && styles.statTileEditing]}>
+          <Text style={[styles.statTileLabel, styles.semesterLabel]}>SEMESTER</Text>
           {isEditing ? (
             <TextInput
               style={styles.statEditInput}
@@ -131,19 +113,19 @@ export const StudentAcademicCard = React.memo(function StudentAcademicCard({
         </View>
 
         {/* Batch Tile (Read-Only) */}
-        <View style={styles.statTile}>
-          <Text style={styles.statTileLabel}>BATCH</Text>
+        <View style={[styles.statTile, styles.batchTile]}>
+          <Text style={[styles.statTileLabel, styles.batchLabel]}>BATCH</Text>
           <View style={styles.ordinalRow}>
-            <Text style={styles.statNumber}>{batchOrdinal.number}</Text>
+            <Text style={[styles.statNumber, styles.batchNumber]}>{batchOrdinal.number}</Text>
             {batchOrdinal.suffix ? (
-              <Text style={styles.statSuffix}>{batchOrdinal.suffix}</Text>
+              <Text style={[styles.statSuffix, styles.batchNumber]}>{batchOrdinal.suffix}</Text>
             ) : null}
           </View>
         </View>
 
         {/* Section Tile */}
-        <View style={[styles.statTile, isEditing && styles.statTileEditing]}>
-          <Text style={styles.statTileLabel}>SECTION</Text>
+        <View style={[styles.statTile, styles.sectionTile, isEditing && styles.statTileEditing]}>
+          <Text style={[styles.statTileLabel, styles.sectionLabel]}>SECTION</Text>
           {isEditing ? (
             <TextInput
               style={styles.statEditInput}
@@ -157,7 +139,7 @@ export const StudentAcademicCard = React.memo(function StudentAcademicCard({
               textAlign="center"
             />
           ) : (
-            <Text style={styles.statNumber}>{profile.section || "B"}</Text>
+            <Text style={[styles.statNumber, styles.sectionNumber]}>{profile.section || "B"}</Text>
           )}
         </View>
       </View>
@@ -181,7 +163,7 @@ const styles = StyleSheet.create({
   },
   topSection: {
     position: "relative",
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
     overflow: "hidden", // contains the watermark
     marginHorizontal: -SPACING.lg, // negate padding to let watermark bleed
     paddingHorizontal: SPACING.lg,
@@ -196,7 +178,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     zIndex: 1,
   },
   headerLeft: {
@@ -220,76 +202,99 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
-  timelineContainer: {
-    position: "relative",
-    paddingLeft: 10,
+  programPanel: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#edf2f7",
+    paddingHorizontal: 15,
+    paddingVertical: 14,
     zIndex: 1,
   },
-  timelineTrack: {
-    position: "absolute",
-    left: 12, // centers line under the dot
-    top: 6,
-    bottom: 12,
-    width: 1.5,
-    backgroundColor: "rgba(19, 27, 46, 0.08)",
-  },
-  timelineItem: {
-    flexDirection: "row",
-    marginBottom: 20,
-    position: "relative",
-  },
-  timelineDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: "rgba(19, 27, 46, 0.2)",
-    marginTop: 6,
-    marginRight: 16,
-    marginLeft: 0,
-  },
-  fieldContent: {
-    flex: 1,
-  },
-  fieldLabel: {
+  programValue: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "600",
-    color: PROFILE_COLORS.mutedText,
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  fieldValuePrimary: {
-    fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
+    lineHeight: 20,
     color: PROFILE_COLORS.deepNavy,
-    lineHeight: 19,
-    letterSpacing: -0.2,
+    marginBottom: 7,
+  },
+  departmentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  departmentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#94a3b8",
+  },
+  departmentValue: {
+    fontFamily,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "500",
+    color: PROFILE_COLORS.subtleText,
+    lineHeight: 17,
+  },
+  termRow: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e5edf6",
+    paddingHorizontal: 14,
+    marginTop: SPACING.md,
+    zIndex: 1,
+  },
+  termLabel: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "500",
+    color: PROFILE_COLORS.subtleText,
+  },
+  termValue: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#047857",
+    backgroundColor: "#ecfdf5",
+    borderColor: "#a7f3d0",
+    borderWidth: 1,
+    borderRadius: 999,
+    overflow: "hidden",
+    paddingHorizontal: 13,
+    paddingVertical: 5,
   },
   termEditInput: {
+    minWidth: 110,
     fontFamily,
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "600",
     color: PROFILE_COLORS.deepNavy,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "rgba(37, 99, 235, 0.15)",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginTop: 2,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    textAlign: "right",
   },
   statTilesRow: {
     flexDirection: "row",
-    gap: SPACING.xs,
+    gap: SPACING.md,
     paddingTop: SPACING.sm,
   },
   statTile: {
     flex: 1,
     flexDirection: "column",
     backgroundColor: "#ffffff",
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 15,
+    paddingVertical: 12,
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: "rgba(19, 27, 46, 0.05)",
@@ -301,6 +306,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#eff6ff",
     borderColor: "rgba(37, 99, 235, 0.2)",
   },
+  semesterTile: {
+    backgroundColor: "#eef2ff",
+    borderColor: "#dbe4ff",
+  },
+  batchTile: {
+    backgroundColor: "#ecfdf5",
+    borderColor: "#c5f3df",
+  },
+  sectionTile: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde9a6",
+  },
   statTileLabel: {
     fontFamily,
     fontSize: 10,
@@ -308,6 +325,9 @@ const styles = StyleSheet.create({
     color: PROFILE_COLORS.subtleText,
     letterSpacing: 0.5,
   },
+  semesterLabel: { color: "#6366f1" },
+  batchLabel: { color: "#059669" },
+  sectionLabel: { color: "#d97706" },
   ordinalRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -320,6 +340,8 @@ const styles = StyleSheet.create({
     color: SECTION_THEMES.ACADEMIC.primaryText,
     letterSpacing: -0.3,
   },
+  batchNumber: { color: "#047857" },
+  sectionNumber: { color: "#b45309" },
   statSuffix: {
     fontFamily,
     fontSize: 11,

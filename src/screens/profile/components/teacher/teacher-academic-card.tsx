@@ -198,6 +198,13 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
       </View>
 
       <View style={styles.departmentTile}>
+        <Text style={styles.fieldLabel}>DESIGNATION</Text>
+        <Text style={styles.departmentValue}>
+          {profile.designation || "Not provided"}
+        </Text>
+      </View>
+
+      <View style={[styles.departmentTile, styles.designationTile]}>
         <Text style={styles.fieldLabel}>DEPARTMENT</Text>
         {isEditing ? (
           <TouchableOpacity
@@ -217,13 +224,6 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
             {profile.department || "Not provided"}
           </Text>
         )}
-      </View>
-
-      <View style={[styles.departmentTile, styles.designationTile]}>
-        <Text style={styles.fieldLabel}>DESIGNATION</Text>
-        <Text style={styles.departmentValue}>
-          {profile.designation || "Not provided"}
-        </Text>
       </View>
 
       <View style={styles.detailTiles}>

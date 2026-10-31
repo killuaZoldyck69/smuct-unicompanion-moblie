@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Linking } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import Svg, { Rect, Circle, G } from "react-native-svg";
+import Svg, { Rect, Circle, G, Path } from "react-native-svg";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
@@ -10,15 +10,30 @@ import {
 } from "../../constants";
 
 interface ProfileSocialCardProps {
+  variant?: "student" | "teacher";
   isEditing: boolean;
   linkedInUrl: string;
   personalWebsiteUrl: string;
-  userName: string;
   onChangeLinkedIn: (url: string) => void;
   onChangeWebsite: (url: string) => void;
 }
 
-const BrowserWatermark = () => (
+const BrowserWatermark = ({ variant }: { variant: "student" | "teacher" }) =>
+  variant === "student" ? (
+    <Svg
+      width={140}
+      height={140}
+      viewBox="0 0 140 140"
+      style={styles.studentWatermark}
+      accessible={false}
+      aria-hidden={true}
+    >
+      <G opacity={0.06} fill="none" stroke="#4f46e5" strokeWidth={5}>
+        <Circle cx="84" cy="68" r="52" />
+        <Path d="m96 37-12 31 30-12-24-19Z" fill="#4f46e5" stroke="none" />
+      </G>
+    </Svg>
+  ) : (
   <Svg width={140} height={100} viewBox="0 0 140 100" style={styles.watermark}>
     <G opacity={0.08} fill={SECTION_THEMES.SOCIAL.primaryText}>
       {/* Browser Window */}
@@ -34,13 +49,13 @@ const BrowserWatermark = () => (
       <Rect x="70" y="64" width="30" height="4" rx="2" fill="#fff" />
     </G>
   </Svg>
-);
+  );
 
 export const ProfileSocialCard = React.memo(function ProfileSocialCard({
+  variant = "teacher",
   isEditing,
   linkedInUrl,
   personalWebsiteUrl,
-  userName,
   onChangeLinkedIn,
   onChangeWebsite,
 }: ProfileSocialCardProps) {
@@ -51,8 +66,8 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
   }
 
   return (
-    <View style={styles.card}>
-      <BrowserWatermark />
+    <View style={[styles.card, variant === "student" && styles.studentCard]}>
+      <BrowserWatermark variant={variant} />
 
       <View style={styles.sectionHeaderRow}>
         <View style={styles.headerLeft}>
@@ -64,7 +79,7 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
       </View>
 
       {(isEditing || !!linkedInUrl) && (
-        <View style={styles.linkRow}>
+        <View style={[styles.linkRow, variant === "student" && styles.studentLinkRow]}>
           <View style={styles.linkIconWrapper}>
             <Feather name="linkedin" size={18} color="#ffffff" />
           </View>
@@ -92,10 +107,22 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
                 accessible={true}
                 accessibilityRole="link"
               >
-                <Text style={styles.linkUrl} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.linkUrl,
+                    variant === "student" && styles.studentLinkUrl,
+                  ]}
+                  numberOfLines={1}
+                >
                   {linkedInUrl}
                 </Text>
-                <Feather name="arrow-up-right" size={12} color={theme.primaryText} />
+                {variant === "student" ? (
+                  <View style={styles.studentArrow}>
+                    <Feather name="arrow-up-right" size={15} color="#94a3b8" />
+                  </View>
+                ) : (
+                  <Feather name="arrow-up-right" size={12} color={theme.primaryText} />
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -103,7 +130,13 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
       )}
 
       {(isEditing || !!personalWebsiteUrl) && (
-        <View style={[styles.linkRow, { marginTop: 12 }]}>
+        <View
+          style={[
+            styles.linkRow,
+            variant === "student" && styles.studentLinkRow,
+            { marginTop: 12 },
+          ]}
+        >
           <View style={[styles.linkIconWrapper, { backgroundColor: "#0f172a" }]}>
             <Feather name="globe" size={18} color="#ffffff" />
           </View>
@@ -160,10 +193,21 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
+  studentCard: {
+    borderRadius: 28,
+    padding: SPACING.lg,
+    shadowOpacity: 0.035,
+  },
   watermark: {
     position: "absolute",
     right: -20,
     top: 10,
+    zIndex: 0,
+  },
+  studentWatermark: {
+    position: "absolute",
+    right: -24,
+    top: -34,
     zIndex: 0,
   },
   sectionHeaderRow: {
@@ -205,6 +249,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#dbeafe",
   },
+  studentLinkRow: {
+    backgroundColor: "#ffffff",
+    borderColor: "#dbeafe",
+    borderRadius: 16,
+    padding: 12,
+    shadowColor: "#1d4ed8",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 1,
+  },
   linkIconWrapper: {
     width: 36,
     height: 36,
@@ -237,6 +292,19 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: PROFILE_COLORS.subtleText,
     flex: 1,
+  },
+  studentLinkUrl: {
+    color: "#2563eb",
+  },
+  studentArrow: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 17,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e5edf6",
   },
   editInput: {
     flex: 1,

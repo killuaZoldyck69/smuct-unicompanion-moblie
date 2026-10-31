@@ -69,8 +69,39 @@ export const StudentSkillsCard = React.memo(function StudentSkillsCard({
       <View style={styles.chipContainer}>
         {skills.length > 0 ? (
           skills.map((skill, idx) => (
-            <View key={idx} style={styles.chip}>
-              <Text style={styles.chipText}>{skill}</Text>
+            <View
+              key={idx}
+              style={[
+                styles.chip,
+                idx % 3 === 0
+                  ? styles.blueChip
+                  : idx % 3 === 1
+                    ? styles.greenChip
+                    : styles.indigoChip,
+              ]}
+            >
+              <View
+                style={[
+                  styles.chipDot,
+                  idx % 3 === 0
+                    ? styles.blueDot
+                    : idx % 3 === 1
+                      ? styles.greenDot
+                      : styles.indigoDot,
+                ]}
+              />
+              <Text
+                style={[
+                  styles.chipText,
+                  idx % 3 === 0
+                    ? styles.blueChipText
+                    : idx % 3 === 1
+                      ? styles.greenChipText
+                      : styles.indigoChipText,
+                ]}
+              >
+                {skill}
+              </Text>
               {isEditing && (
                 <TouchableOpacity onPress={() => onRemoveSkill(skill)} style={{ marginLeft: 6 }}>
                   <Feather name="x" size={13} color={theme.primaryText} />
@@ -88,7 +119,7 @@ export const StudentSkillsCard = React.memo(function StudentSkillsCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: PROFILE_COLORS.white,
+    backgroundColor: "#fbfffd",
     borderRadius: PROFILE_COLORS.cardRadius,
     marginBottom: SPACING.cardGap,
     shadowColor: PROFILE_COLORS.deepNavy,
@@ -97,15 +128,15 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.02)",
+    borderColor: "#d1fae5",
     padding: SPACING.lg,
     position: "relative",
     overflow: "hidden",
   },
   watermarkContainer: {
     position: "absolute",
-    right: -20,
-    top: 20,
+    right: -14,
+    bottom: -30,
     zIndex: 0,
   },
   sectionHeaderRow: {
@@ -172,16 +203,44 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: SECTION_THEMES.SKILLS.badgeBg,
-    paddingHorizontal: 12,
+    gap: 7,
+    paddingHorizontal: 13,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
+  blueChip: {
+    backgroundColor: "#f0f9ff",
+    borderColor: "#dbeafe",
+  },
+  greenChip: {
+    backgroundColor: "#ecfdf5",
+    borderColor: "#c5f3df",
+  },
+  indigoChip: {
+    backgroundColor: "#eef2ff",
+    borderColor: "#dbe4ff",
+  },
+  chipDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  blueDot: { backgroundColor: "#22d3ee" },
+  greenDot: { backgroundColor: "#10b981" },
+  indigoDot: { backgroundColor: "#6366f1" },
+  blueChipText: { color: "#0369a1" },
+  greenChipText: { color: "#047857" },
+  indigoChipText: { color: "#3730a3" },
   chipText: {
     fontFamily,
     fontSize: 13,
-    fontWeight: "600",
-    color: SECTION_THEMES.SKILLS.primaryText,
+    fontWeight: "700",
   },
   emptyText: {
     fontFamily,

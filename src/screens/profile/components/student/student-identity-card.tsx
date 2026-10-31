@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import Svg, { Circle, G } from "react-native-svg";
+import Svg, { Circle, G, Path, Polygon } from "react-native-svg";
 import { StudentProfileData } from "@/services/student-service";
 import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
 
@@ -25,10 +25,23 @@ interface StudentIdentityCardProps {
 }
 
 const IdentityWatermark = () => (
-  <Svg width={120} height={120} viewBox="0 0 120 120" style={styles.watermark}>
-    <G opacity={0.06}>
-      <Circle cx="100" cy="10" r="40" fill="#2563EB" />
-      <Circle cx="120" cy="80" r="30" fill="#2563EB" />
+  <Svg width={170} height={160} viewBox="0 0 170 160" style={styles.watermark}>
+    <G opacity={0.08}>
+      <Circle cx="135" cy="28" r="72" fill="#2563EB" />
+      <Polygon
+        points="55,45 112,16 169,45 112,74"
+        fill="none"
+        stroke="#64748b"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M75 56v34c0 20 17 34 37 34s37-14 37-34V56"
+        fill="none"
+        stroke="#64748b"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
     </G>
   </Svg>
 );
@@ -130,7 +143,7 @@ const styles = StyleSheet.create({
   },
   watermark: {
     position: "absolute",
-    right: -20,
+    right: -28,
     top: -20,
     zIndex: 0,
   },
@@ -141,18 +154,22 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: "relative",
-    marginRight: 20,
+    marginRight: 16,
+    padding: 4,
+    borderRadius: 48,
+    borderWidth: 3,
+    borderColor: "#f1f5f9",
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 82,
+    height: 82,
+    borderRadius: 41,
     backgroundColor: "#f1f5f9",
   },
   avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 82,
+    height: 82,
+    borderRadius: 41,
     backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",

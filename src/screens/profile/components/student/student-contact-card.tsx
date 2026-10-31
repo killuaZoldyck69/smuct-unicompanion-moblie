@@ -1,6 +1,13 @@
 import React from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import Svg, { G, Path } from "react-native-svg";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
@@ -8,7 +15,7 @@ import {
   BLOOD_GROUP_TO_UI,
   fontFamily,
 } from "../../constants";
-import { DropMotif, WaveMotif } from "../illustrations/contact-motifs";
+import { WaveMotif } from "../illustrations/contact-motifs";
 
 interface StudentContactCardProps {
   phoneNumber: string;
@@ -29,29 +36,48 @@ export const StudentContactCard = React.memo(function StudentContactCard({
   onOpenBloodModal,
   onChangePhone,
 }: StudentContactCardProps) {
+  const phoneDigits = phoneNumber.replace(/\D/g, "").slice(-10);
   const displayBloodGroup = dbBloodGroup
     ? BLOOD_GROUP_TO_UI[dbBloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || dbBloodGroup
     : "N/A";
 
   const displayEditBloodGroup = bloodGroup
-    ? BLOOD_GROUP_TO_UI[bloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || bloodGroup
-    : "Select";
+      ? BLOOD_GROUP_TO_UI[bloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || bloodGroup
+      : "Select";
 
-  return (
+    return (
     <View style={styles.container}>
       {/* Blood Group Card */}
       <View style={styles.halfCard}>
         <View style={styles.watermarkContainer} pointerEvents="none">
-          <DropMotif width={60} height={60} opacity={0.08} color={SECTION_THEMES.BLOOD.primaryText} />
+          <Svg
+            width={116}
+            height={96}
+            viewBox="0 0 100 80"
+            accessible={false}
+            aria-hidden={true}
+          >
+            <G
+              fill="none"
+              stroke={SECTION_THEMES.BLOOD.primaryText}
+              strokeWidth={5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.09}
+            >
+              <Path d="M50 72C40 63 11 46 11 27 11 10 34 4 50 22 66 4 89 10 89 27c0 19-29 36-39 45Z" />
+              <Path d="M8 46h23l9-10 9 20 9-30 9 20h25" />
+            </G>
+          </Svg>
         </View>
         <View style={styles.headerRow}>
           <View style={[styles.iconBadge, { backgroundColor: SECTION_THEMES.BLOOD.badgeBg }]}>
             <Ionicons name="water" size={14} color={SECTION_THEMES.BLOOD.primaryText} />
           </View>
+          <Text style={[styles.cardTitle, { color: SECTION_THEMES.BLOOD.primaryText }]}>
+            BLOOD GROUP
+          </Text>
         </View>
-        <Text style={[styles.cardTitle, { color: SECTION_THEMES.BLOOD.primaryText }]}>
-          BLOOD GROUP
-        </Text>
         
         {isEditing ? (
           <TouchableOpacity
@@ -74,26 +100,43 @@ export const StudentContactCard = React.memo(function StudentContactCard({
       {/* Phone Card */}
       <View style={styles.halfCard}>
         <View style={styles.watermarkContainer} pointerEvents="none">
-          <WaveMotif width={60} height={60} opacity={0.08} color={SECTION_THEMES.PHONE.primaryText} />
+          <WaveMotif
+            width={118}
+            height={100}
+            opacity={0.09}
+            color={SECTION_THEMES.PHONE.primaryText}
+          />
         </View>
         <View style={styles.headerRow}>
           <View style={[styles.iconBadge, { backgroundColor: SECTION_THEMES.PHONE.badgeBg }]}>
             <Feather name="phone" size={14} color={SECTION_THEMES.PHONE.primaryText} />
           </View>
+          <Text style={[styles.cardTitle, { color: SECTION_THEMES.PHONE.primaryText }]}>
+            PHONE NUMBER
+          </Text>
         </View>
-        <Text style={[styles.cardTitle, { color: SECTION_THEMES.PHONE.primaryText }]}>
-          PHONE NUMBER
-        </Text>
         
         {isEditing ? (
-          <TextInput
-            style={styles.editInput}
-            value={phoneNumber}
-            onChangeText={onChangePhone}
-            placeholder="016..."
-            keyboardType="phone-pad"
-            placeholderTextColor={PROFILE_COLORS.mutedText}
-          />
+          <View style={styles.phoneInputRow}>
+            <Text style={styles.countryCode}>+880</Text>
+            <TextInput
+              style={styles.editInput}
+              value={phoneDigits}
+              onChangeText={(value) => {
+                let digits = value.replace(/\D/g, "");
+                if (digits.startsWith("880")) digits = digits.slice(3);
+                else if (digits.startsWith("0") && digits.length === 11) {
+                  digits = digits.slice(1);
+                }
+                onChangePhone(digits.slice(0, 10));
+              }}
+              placeholder="1643574457"
+              keyboardType="number-pad"
+              maxLength={10}
+              placeholderTextColor={PROFILE_COLORS.mutedText}
+              accessibilityLabel="Bangladesh phone number, 10 digits after +880"
+            />
+          </View>
         ) : (
           <Text style={[styles.cardValue, { color: PROFILE_COLORS.deepNavy }]}>
             {profilePhone || "Not set"}
@@ -112,9 +155,11 @@ const styles = StyleSheet.create({
   },
   halfCard: {
     flex: 1,
+    minHeight: 116,
+    justifyContent: "space-between",
     backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     shadowColor: PROFILE_COLORS.deepNavy,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
@@ -127,52 +172,60 @@ const styles = StyleSheet.create({
   },
   watermarkContainer: {
     position: "absolute",
-    right: -10,
-    bottom: -10,
+    right: -8,
+    bottom: -12,
     zIndex: 0,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
+    gap: 9,
     zIndex: 1,
   },
   iconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
   },
 
   cardTitle: {
     fontFamily,
-    fontSize: 11,
+    flex: 1,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.8,
-    marginBottom: 8,
     zIndex: 1,
   },
   cardValue: {
     fontFamily,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     letterSpacing: -0.4,
     zIndex: 1,
   },
-  editInput: {
+  phoneInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    minWidth: 0,
+    zIndex: 1,
+  },
+  countryCode: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#92400e",
+  },
+  editInput: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily,
+    fontSize: 12,
     fontWeight: "600",
     color: PROFILE_COLORS.deepNavy,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: PROFILE_COLORS.border,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    zIndex: 1,
+    paddingVertical: 4,
   },
   editBtn: {
     flexDirection: "row",

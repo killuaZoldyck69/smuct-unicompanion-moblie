@@ -181,15 +181,15 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
         />
 
         <ProfileSocialCard
+          variant="student"
           isEditing={isEditing}
           linkedInUrl={formData.linkedInUrl}
           personalWebsiteUrl={formData.personalWebsiteUrl}
-          userName={profile.name || sessionUser.name}
           onChangeLinkedIn={(url) => updateField("linkedInUrl", url)}
           onChangeWebsite={(url) => updateField("personalWebsiteUrl", url)}
         />
 
-        <ProfileLogoutButton />
+        <ProfileLogoutButton variant="student" />
       </ScrollView>
 
       <BloodGroupModal
@@ -208,6 +208,9 @@ const styles = StyleSheet.create({
     backgroundColor: PROFILE_COLORS.background,
   },
   scrollContent: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
     paddingHorizontal: SPACING.xl,
     paddingTop: SPACING.sm,
   },

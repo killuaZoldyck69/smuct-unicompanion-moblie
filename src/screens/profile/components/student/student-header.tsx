@@ -27,8 +27,7 @@ export const StudentHeader = React.memo(function StudentHeader({
         <Text style={styles.screenTitle}>My Profile</Text>
         {!isEditing && (
           <Text style={styles.subtitle} numberOfLines={2}>
-            Your academic identity, skills{"\n"}and connections — all in one
-            place.
+            Your academic identity, skills and connections — all in one place.
           </Text>
         )}
       </View>
@@ -83,6 +82,9 @@ export const StudentHeader = React.memo(function StudentHeader({
 
 const styles = StyleSheet.create({
   header: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontFamily,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "800",
     color: PROFILE_COLORS.deepNavy,
     letterSpacing: -0.6,
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "500",
     color: PROFILE_COLORS.subtleText,
     lineHeight: 18,

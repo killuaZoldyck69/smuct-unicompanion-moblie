@@ -212,7 +212,6 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           isEditing={isEditing}
           linkedInUrl={formData.linkedInUrl}
           personalWebsiteUrl={formData.personalWebsiteUrl}
-          userName={profile.name || sessionUser.name}
           onChangeLinkedIn={(url) => updateField("linkedInUrl", url)}
           onChangeWebsite={(url) => updateField("personalWebsiteUrl", url)}
         />

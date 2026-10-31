@@ -3,15 +3,17 @@ import { Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { PROFILE_COLORS, fontFamily } from "../../constants";
+import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
 import { performLogout } from "../../utils";
 import { LogoutModal } from "./logout-modal";
 
 interface ProfileLogoutButtonProps {
+  variant?: "student" | "teacher";
   onBeforeLogout?: () => void;
 }
 
 export const ProfileLogoutButton = React.memo(function ProfileLogoutButton({
+  variant = "teacher",
   onBeforeLogout,
 }: ProfileLogoutButtonProps = {}) {
   const router = useRouter();
@@ -35,7 +37,7 @@ export const ProfileLogoutButton = React.memo(function ProfileLogoutButton({
   return (
     <>
       <TouchableOpacity
-        style={styles.button}
+        style={[styles.button, variant === "student" && styles.studentButton]}
         onPress={() => setIsModalVisible(true)}
         activeOpacity={0.8}
         accessible={true}
@@ -48,7 +50,11 @@ export const ProfileLogoutButton = React.memo(function ProfileLogoutButton({
           color="#dc2626"
           style={{ marginRight: 8 }}
         />
-        <Text style={styles.text}>Log Out</Text>
+        <Text
+          style={[styles.text, variant === "student" && styles.studentText]}
+        >
+          Log Out
+        </Text>
       </TouchableOpacity>
 
       <LogoutModal
@@ -80,5 +86,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#dc2626",
+  },
+  studentButton: {
+    borderRadius: 18,
+    paddingVertical: 18,
+    backgroundColor: "#ffe4e6",
+    borderColor: "#fecdd3",
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.xl,
+  },
+  studentText: {
+    fontSize: 16,
+    letterSpacing: 0.3,
   },
 });

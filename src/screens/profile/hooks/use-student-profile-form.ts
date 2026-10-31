@@ -1,6 +1,18 @@
+import { Alert } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 import { StudentProfileData, UpdateStudentProfileInput } from "@/services/student-service";
 import { BLOOD_GROUP_TO_UI, BLOOD_GROUP_TO_DB } from "../constants";
+
+const normalizeBangladeshPhone = (phone?: string | null): string => {
+  const digits = (phone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  const nationalNumber = digits.startsWith("880")
+    ? digits.slice(3)
+    : digits.startsWith("0")
+      ? digits.slice(1)
+      : digits;
+  return nationalNumber.slice(-10);
+};
 
 export interface StudentFormData {
   phoneNumber: string;
@@ -32,7 +44,7 @@ export function useStudentProfileForm(
   const resetForm = useCallback(() => {
     if (!profile) return;
     setFormData({
-      phoneNumber: profile.phoneNumber || "",
+      phoneNumber: normalizeBangladeshPhone(profile.phoneNumber),
       bloodGroup: profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] || "" : "",
       currentSemester: profile.currentSemester ? String(profile.currentSemester) : "",
       section: profile.section || "",
@@ -81,9 +93,17 @@ export function useStudentProfileForm(
     if (!profile) return;
     const payload: UpdateStudentProfileInput = {};
 
-    const cleanPhone = formData.phoneNumber.trim();
-    if (cleanPhone !== (profile.phoneNumber || "")) {
-      payload.phoneNumber = cleanPhone;
+    const phoneDigits = formData.phoneNumber.replace(/\D/g, "").slice(-10);
+    const currentPhoneDigits = normalizeBangladeshPhone(profile.phoneNumber);
+    if (phoneDigits !== currentPhoneDigits) {
+      if (phoneDigits.length !== 10) {
+        Alert.alert(
+          "Invalid phone number",
+          "Enter all 10 digits after the +880 country code.",
+        );
+        return;
+      }
+      payload.phoneNumber = `+880${phoneDigits}`;
     }
 
     const cleanSection = formData.section.trim().toUpperCase().slice(0, 4);
