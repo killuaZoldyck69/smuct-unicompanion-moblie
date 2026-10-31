@@ -31,6 +31,7 @@ import { BloodConfirmModal } from "@/screens/blood/components/blood-confirm-moda
 import { ProfileRequirementModal } from "@/screens/blood/components/profile-requirement-modal";
 import { BloodAdmissionCard } from "@/screens/blood/components/blood-admission-card";
 import { HospitalDestinationCard } from "@/screens/blood/components/hospital-destination-card";
+import { BloodRequestDetailsSkeleton } from "@/screens/blood/components/blood-request-details-skeleton";
 import {
   formatBloodGroupSymbol,
   parseHospitalLocation,
@@ -267,11 +268,7 @@ export default function BloodThreadScreen() {
   }, [post]);
 
   if (isLoading || !post) {
-    return (
-      <SafeAreaView style={[styles.container, styles.centerContainer]}>
-        <ActivityIndicator size="large" color={BENTO_COLORS.crimson} />
-      </SafeAreaView>
-    );
+    return <BloodRequestDetailsSkeleton />;
   }
 
   const isAuthor = currentUser?.id === post.authorId || currentUser?.role === "ADMIN";
@@ -661,10 +658,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: BENTO_COLORS.background,
-  },
-  centerContainer: {
-    justifyContent: "center",
-    alignItems: "center",
   },
   header: {
     flexDirection: "row",

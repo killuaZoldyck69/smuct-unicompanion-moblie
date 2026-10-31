@@ -21,6 +21,7 @@ import { DirectoryHeader } from "./components/DirectoryHeader";
 import { DirectoryTabs } from "./components/DirectoryTabs";
 import { ActiveFiltersBar } from "./components/ActiveFiltersBar";
 import { UserCard } from "./components/UserCard";
+import { UserDirectorySkeleton } from "./components/UserDirectorySkeleton";
 import { FilterModal } from "./components/FilterModal";
 import { UserProfileModal } from "./components/profile-modal/UserProfileModal";
 
@@ -180,10 +181,7 @@ export function AdminUsersScreen() {
 
         {/* Main List / Loading / Empty States */}
         {isLoading && users.length === 0 ? (
-          <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color={primaryThemeColor} />
-            <Text style={styles.loadingText}>Loading directory...</Text>
-          </View>
+          <UserDirectorySkeleton />
         ) : users.length === 0 ? (
           <View style={styles.centerBox}>
             <View style={styles.emptyIconCircle}>
@@ -290,12 +288,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 30,
     marginTop: 40,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: THEME.textSecondary,
-    fontWeight: "500",
   },
   emptyIconCircle: {
     width: 72,

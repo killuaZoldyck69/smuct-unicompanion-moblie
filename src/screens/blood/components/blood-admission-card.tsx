@@ -24,29 +24,7 @@ export const BloodAdmissionCard: React.FC<BloodAdmissionCardProps> = ({
     post.urgency === "Critical" ||
     (!post.urgency && !post.isFulfilled);
 
-  const urgencyPillLabel = post.isFulfilled
-    ? "FULFILLED"
-    : isUrgent
-      ? "IMMEDIATE"
-      : post.urgency === "Medium"
-        ? "MODERATE"
-        : "STANDARD";
-
-  const urgencyLevelTitle = post.isFulfilled
-    ? "Fulfilled"
-    : isUrgent
-      ? "Critical / Immediate"
-      : post.urgency === "Medium"
-        ? "Moderate Priority"
-        : "Standard / Planned";
-
-  const urgencyLevelSub = post.isFulfilled
-    ? "Donation completed"
-    : isUrgent
-      ? "Within 3–4 hours"
-      : post.urgency === "Medium"
-        ? "Within 24 hours"
-        : "Flexible timing";
+  const urgencyLevelTitle = post.urgency?.trim() || "Not specified";
 
   return (
     <View
@@ -155,18 +133,17 @@ export const BloodAdmissionCard: React.FC<BloodAdmissionCardProps> = ({
             <Text style={styles.urgencyBang}>! </Text>
             <Text style={styles.urgencyHeaderText}>URGENCY LEVEL</Text>
           </View>
-          <Text style={styles.bentoPrimaryText} numberOfLines={1}>
+          <Text style={styles.bentoPrimaryText}>
             {urgencyLevelTitle}
           </Text>
-          <Text
-            style={[
-              styles.bentoSubText,
-              post.isFulfilled && styles.bentoSubTextFulfilled,
-            ]}
-            numberOfLines={1}
-          >
-            {urgencyLevelSub}
-          </Text>
+          {post.isFulfilled && (
+            <Text
+              style={[styles.bentoSubText, styles.bentoSubTextFulfilled]}
+              numberOfLines={1}
+            >
+              Donation completed
+            </Text>
+          )}
         </View>
 
         {/* Card 2: Target Hospital */}

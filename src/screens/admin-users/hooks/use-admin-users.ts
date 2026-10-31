@@ -32,7 +32,7 @@ export function useAdminUsers() {
   }, [isPending, isAuthenticated, role, router]);
 
   // Tab & Filter States
-  const [activeTab, setActiveTab] = useState<TabType>("STUDENT");
+  const [activeTab, setActiveTab] = useState<TabType>("TEACHER");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);

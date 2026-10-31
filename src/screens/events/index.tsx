@@ -15,7 +15,6 @@ import {
   RefreshControl,
   BackHandler,
   Platform,
-  ActivityIndicator,
   Image,
 } from "react-native";
 import {
@@ -42,7 +41,7 @@ import { EventDetailModal } from "./components/event-detail-modal";
 import { CreateEventModal } from "./components/create-event-modal";
 import { DeleteEventModal } from "./components/delete-event-modal";
 import {
-  EventLoading,
+  EventSkeleton,
   EventError,
   EventEmpty,
 } from "./components/event-states";
@@ -332,7 +331,7 @@ export function EventsScreen({
 
   const ListEmpty = useMemo(() => {
     if (isDataLoading) {
-      return <EventLoading />;
+      return <EventSkeleton />;
     }
     if (isError) {
       return <EventError onRetry={refetch} />;
@@ -357,12 +356,7 @@ export function EventsScreen({
 
   const ListFooter = useMemo(() => {
     if (isFetchingNextPage) {
-      return (
-        <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color={BENTO_COLORS.deepNavy} />
-          <Text style={styles.footerLoaderText}>Loading more events...</Text>
-        </View>
-      );
+      return <EventSkeleton count={1} />;
     }
     if (!hasNextPage && events.length > 0) {
       return (
@@ -695,19 +689,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 4,
-  },
-  footerLoader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 18,
-    gap: 8,
-  },
-  footerLoaderText: {
-    fontFamily,
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: BENTO_COLORS.subtleText,
   },
   endOfListContainer: {
     alignItems: "center",

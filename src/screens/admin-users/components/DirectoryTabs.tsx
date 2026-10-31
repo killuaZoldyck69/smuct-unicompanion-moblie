@@ -16,45 +16,6 @@ export const DirectoryTabs = React.memo(
 
     return (
       <View style={styles.tabsRow}>
-        {/* Students Tab */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          activeOpacity={0.7}
-          onPress={() => onTabChange("STUDENT")}
-          accessible={true}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: isStudentTab }}
-          accessibilityLabel="View students"
-        >
-          <View style={styles.tabInner}>
-            <Feather
-              name="user"
-              size={16}
-              color={isStudentTab ? THEME.studentPrimary : THEME.textSecondary}
-              style={{ marginRight: 6 }}
-            />
-            <Text
-              style={[
-                styles.tabLabel,
-                isStudentTab && {
-                  color: THEME.studentPrimary,
-                  fontWeight: "700",
-                },
-              ]}
-            >
-              Students
-            </Text>
-          </View>
-          {isStudentTab && (
-            <View
-              style={[
-                styles.activeTabUnderline,
-                { backgroundColor: THEME.studentPrimary },
-              ]}
-            />
-          )}
-        </TouchableOpacity>
-
         {/* Teachers Tab */}
         <TouchableOpacity
           style={styles.tabItem}
@@ -89,6 +50,45 @@ export const DirectoryTabs = React.memo(
               style={[
                 styles.activeTabUnderline,
                 { backgroundColor: THEME.teacherPrimary },
+              ]}
+            />
+          )}
+        </TouchableOpacity>
+
+        {/* Students Tab */}
+        <TouchableOpacity
+          style={styles.tabItem}
+          activeOpacity={0.7}
+          onPress={() => onTabChange("STUDENT")}
+          accessible={true}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: isStudentTab }}
+          accessibilityLabel="View students"
+        >
+          <View style={styles.tabInner}>
+            <Feather
+              name="user"
+              size={16}
+              color={isStudentTab ? THEME.studentPrimary : THEME.textSecondary}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.tabLabel,
+                isStudentTab && {
+                  color: THEME.studentPrimary,
+                  fontWeight: "700",
+                },
+              ]}
+            >
+              Students
+            </Text>
+          </View>
+          {isStudentTab && (
+            <View
+              style={[
+                styles.activeTabUnderline,
+                { backgroundColor: THEME.studentPrimary },
               ]}
             />
           )}

@@ -4,48 +4,40 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
 
-export const EventLoading = React.memo(function EventLoading() {
-  return (
-    <View style={styles.loadingBox}>
-      <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
-      <Text style={styles.loadingText}>Loading campus events...</Text>
-    </View>
-  );
-});
+interface EventSkeletonProps {
+  count?: number;
+}
 
-export const EventSkeleton = React.memo(function EventSkeleton() {
+export const EventSkeleton = React.memo(function EventSkeleton({
+  count = 3,
+}: EventSkeletonProps) {
   return (
     <View style={styles.skeletonContainer}>
-      <View style={styles.skeletonCard}>
-        <View style={styles.skeletonRow}>
-          <View style={styles.skeletonPill} />
-          <View style={[styles.skeletonPill, { width: 70 }]} />
+      {Array.from({ length: count }, (_, index) => (
+        <View key={index} style={styles.skeletonCard}>
+          <View style={styles.skeletonDateBlock}>
+            <View style={styles.skeletonMonth} />
+            <View style={styles.skeletonDateNumber} />
+            <View style={styles.skeletonWeekday} />
+          </View>
+          <View style={styles.skeletonContent}>
+            <View
+              style={[
+                styles.skeletonTitleBar,
+                index % 2 === 0 && styles.skeletonTitleBarShort,
+              ]}
+            />
+            <View style={styles.skeletonMetaRow}>
+              <View style={styles.skeletonMetaItem} />
+              <View style={styles.skeletonMetaItemShort} />
+            </View>
+          </View>
         </View>
-        <View style={styles.skeletonTitleBar} />
-        <View style={[styles.skeletonTitleBar, { width: "70%" }]} />
-        <View style={styles.skeletonPillsRow}>
-          <View style={styles.skeletonMiniPill} />
-          <View style={styles.skeletonMiniPill} />
-        </View>
-      </View>
-
-      <View style={[styles.skeletonCard, { marginTop: 14 }]}>
-        <View style={styles.skeletonRow}>
-          <View style={styles.skeletonPill} />
-          <View style={[styles.skeletonPill, { width: 70 }]} />
-        </View>
-        <View style={styles.skeletonTitleBar} />
-        <View style={[styles.skeletonTitleBar, { width: "60%" }]} />
-        <View style={styles.skeletonPillsRow}>
-          <View style={styles.skeletonMiniPill} />
-          <View style={styles.skeletonMiniPill} />
-        </View>
-      </View>
+      ))}
     </View>
   );
 });
@@ -215,63 +207,75 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   skeletonContainer: {
-    paddingVertical: 4,
+    paddingTop: 4,
   },
   skeletonCard: {
     backgroundColor: BENTO_COLORS.white,
-    borderRadius: BENTO_COLORS.cardRadius,
-    padding: 20,
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
-  },
-  skeletonRow: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 14,
+    alignItems: "flex-start",
   },
-  skeletonPill: {
-    width: 80,
-    height: 22,
+  skeletonDateBlock: {
+    width: 60,
+    height: 68,
+    borderRadius: 14,
     backgroundColor: "#f1f5f9",
-    borderRadius: 11,
-  },
-  skeletonTitleBar: {
-    height: 18,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  skeletonPillsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
-  },
-  skeletonMiniPill: {
-    width: 70,
-    height: 20,
-    backgroundColor: "#f1f5f9",
-    borderRadius: 10,
-  },
-  loadingBox: {
-    backgroundColor: BENTO_COLORS.white,
-    borderRadius: BENTO_COLORS.cardRadius,
-    paddingVertical: 52,
-    paddingHorizontal: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 6,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
-    ...BENTO_COLORS.shadow,
+    gap: 5,
   },
-  loadingText: {
-    fontFamily,
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: BENTO_COLORS.subtleText,
-    marginTop: 14,
-    letterSpacing: -0.2,
-    textAlign: "center",
+  skeletonMonth: {
+    width: 24,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#e2e8f0",
+  },
+  skeletonDateNumber: {
+    width: 20,
+    height: 18,
+    borderRadius: 5,
+    backgroundColor: "#e2e8f0",
+  },
+  skeletonWeekday: {
+    width: 30,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#e2e8f0",
+  },
+  skeletonContent: {
+    flex: 1,
+    marginLeft: 14,
+    paddingTop: 3,
+  },
+  skeletonTitleBar: {
+    width: "90%",
+    height: 16,
+    backgroundColor: "#e2e8f0",
+    borderRadius: 6,
+  },
+  skeletonTitleBarShort: {
+    width: "70%",
+  },
+  skeletonMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 12,
+  },
+  skeletonMetaItem: {
+    width: 72,
+    height: 9,
+    borderRadius: 4,
+    backgroundColor: "#f1f5f9",
+  },
+  skeletonMetaItemShort: {
+    width: 88,
+    height: 9,
+    borderRadius: 4,
+    backgroundColor: "#f1f5f9",
   },
 });

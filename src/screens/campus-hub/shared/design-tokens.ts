@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import { getDepartmentShortName } from "@/data/programs";
-import { parseOrdinalParts } from "@/utils/academic-formatters";
+import { parseOrdinalParts } from "@/utils/academic-ordinal";
 
 export const CAMPUS_HUB_COLORS = {
   background: "#f7f9fb",
