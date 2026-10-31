@@ -1,6 +1,6 @@
 // src/screens/notices/components/notice-card.tsx
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { NOTICE_COLORS, fontFamily } from "../constants";
 import { NormalizedNotice } from "../types";
@@ -22,16 +22,19 @@ export const NoticeCard = React.memo(function NoticeCard({
   onDelete,
 }: NoticeCardProps) {
   const theme = resolveNoticeVisualTheme(item.category);
+  const handlePress = React.useCallback(() => {
+    if (
+      Platform.OS === "web" &&
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement
+    ) {
+      document.activeElement.blur();
+    }
+    onPress(item);
+  }, [item, onPress]);
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.88}
-      onPress={() => onPress(item)}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={`Notice: ${item.title}. Category: ${theme.label}. Published: ${item.formattedDate}. Tap to read official document.`}
-    >
+    <View style={styles.card}>
       {/* 1. Left Color-Coded Vertical Accent Bar */}
       <View
         style={[
@@ -41,36 +44,52 @@ export const NoticeCard = React.memo(function NoticeCard({
       />
 
       <View style={styles.cardContent}>
-        {/* Row 1: Notice Title with NEW / IMPORTANT badge beside it */}
-        <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={3}>
-            {item.title}
-          </Text>
-          {item.isImportant ? (
-            <View style={styles.importantPill}>
-              <Text style={styles.importantPillText}>★ IMPORTANT</Text>
-            </View>
-          ) : item.isNew ? (
-            <View style={styles.newPill}>
-              <View style={styles.newDot} />
-              <Text style={styles.newPillText}>NEW</Text>
-            </View>
+        <TouchableOpacity
+          style={styles.mainPressable}
+          activeOpacity={0.88}
+          onPress={handlePress}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Notice: ${item.title}. Category: ${theme.label}. Published: ${item.formattedDate}. Tap to read official document.`}
+        >
+          {/* Row 1: Notice Title with NEW / IMPORTANT badge beside it */}
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={3}>
+              {item.title}
+            </Text>
+            {item.isImportant ? (
+              <View style={styles.importantPill}>
+                <Text style={styles.importantPillText}>★ IMPORTANT</Text>
+              </View>
+            ) : item.isNew ? (
+              <View style={styles.newPill}>
+                <View style={styles.newDot} />
+                <Text style={styles.newPillText}>NEW</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Row 2: Reference / Memo */}
+          {item.referenceNo ? (
+            <Text style={styles.referenceText} numberOfLines={1}>
+              Ref: {item.referenceNo}
+            </Text>
           ) : null}
-        </View>
 
-        {/* Row 2: Reference / Memo */}
-        {item.referenceNo ? (
-          <Text style={styles.referenceText} numberOfLines={1}>
-            Ref: {item.referenceNo}
-          </Text>
-        ) : null}
+          {/* Row 3: Subtle Divider */}
+          <View style={styles.divider} />
+        </TouchableOpacity>
 
-        {/* Row 3: Subtle Divider */}
-        <View style={styles.divider} />
-
-        {/* Row 4: Bottom Meta Row (Category Badge + Published Date + Chevron) */}
+        {/* Row 4: Bottom Meta Row (Category Badge + Published Date + Actions) */}
         <View style={styles.bottomRow}>
-          <View style={styles.bottomMetaLeft}>
+          <TouchableOpacity
+            style={styles.bottomMetaLeft}
+            activeOpacity={0.88}
+            onPress={handlePress}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Open notice: ${item.title}`}
+          >
             {/* Category Tag */}
             <View
               style={[
@@ -107,7 +126,7 @@ export const NoticeCard = React.memo(function NoticeCard({
               />
               <Text style={styles.dateText}>{item.formattedDate}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.rightActionCluster}>
             {isAdmin && (
@@ -137,15 +156,21 @@ export const NoticeCard = React.memo(function NoticeCard({
                 </TouchableOpacity>
               </View>
             )}
-            <Feather
-              name="chevron-right"
-              size={16}
-              color="#94a3b8"
-            />
+            <TouchableOpacity
+              onPress={handlePress}
+              style={styles.chevronBtn}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Open notice: ${item.title}`}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            >
+              <Feather name="chevron-right" size={16} color="#94a3b8" />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 });
 
@@ -172,6 +197,9 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     paddingTop: 15,
     paddingBottom: 14,
+  },
+  mainPressable: {
+    width: "100%",
   },
   titleRow: {
     flexDirection: "row",
@@ -280,6 +308,11 @@ const styles = StyleSheet.create({
   rightActionCluster: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  chevronBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 4,
   },
   adminActionRow: {
     flexDirection: "row",

@@ -1,12 +1,10 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
-  View,
   ScrollView,
   StyleSheet,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   RefreshControl,
   Keyboard,
 } from "react-native";
@@ -26,6 +24,7 @@ import { ProfileSocialCard } from "./shared/profile-social-card";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
 import { BloodGroupModal } from "./shared/blood-group-modal";
 import { ProfileErrorState } from "./shared/profile-states";
+import { ProfileLoadingSkeleton } from "./shared/profile-loading-skeleton";
 
 interface StudentProfileProps {
   sessionUser: {
@@ -88,11 +87,7 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
   } = useStudentProfileForm(profile, handleSaveMutation);
 
   if (isLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={PROFILE_COLORS.deepNavy} />
-      </View>
-    );
+    return <ProfileLoadingSkeleton role="STUDENT" />;
   }
 
   if (isError || !profile) {
@@ -210,12 +205,6 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: PROFILE_COLORS.background,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     backgroundColor: PROFILE_COLORS.background,
   },
   scrollContent: {
