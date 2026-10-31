@@ -114,14 +114,15 @@ export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
           isLast && styles.cardRowLast,
         ]}
       >
-        <TouchableOpacity
-          style={styles.rowMain}
-          activeOpacity={0.7}
-          onPress={handleCardPress}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={`${item.title}, ${subtitle}, ${formatDate(item.createdAt)}`}
-        >
+        <View style={styles.rowMain}>
+          <TouchableOpacity
+            style={styles.rowContent}
+            activeOpacity={0.7}
+            onPress={handleCardPress}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.title}, ${subtitle}, ${formatDate(item.createdAt)}`}
+          >
           {/* File Icon Badge */}
           <View
             style={[
@@ -132,7 +133,9 @@ export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
               },
             ]}
           >
-            {theme.iconFamily === "MaterialCommunityIcons" ? (
+            {hasMultipleResources || hasDescription ? (
+              <Feather name="folder" size={20} color="#475569" />
+            ) : theme.iconFamily === "MaterialCommunityIcons" ? (
               <MaterialCommunityIcons
                 name={theme.iconName as any}
                 size={23}
@@ -167,12 +170,16 @@ export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
             </View>
           </View>
 
-          {/* Date & Actions Column */}
-          <View style={styles.rightCol}>
+          {/* Date Column */}
+          <View style={styles.dateCol}>
             <Text style={styles.dateText}>
               {formatDate(item.createdAt)}
             </Text>
+          </View>
+          </TouchableOpacity>
 
+          {/* Actions Column */}
+          <View style={styles.rightCol}>
             <View style={styles.actionsRow}>
               {primaryAttachment ? (
                 <TouchableOpacity
@@ -234,7 +241,7 @@ export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
               )}
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* Expandable Details for items with multiple attachments/links or description */}
         {isExpanded && (
@@ -423,6 +430,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+  rowContent: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+  },
   badgeContainer: {
     width: 44,
     height: 44,
@@ -458,13 +471,18 @@ const styles = StyleSheet.create({
   rightCol: {
     alignItems: "flex-end",
     justifyContent: "center",
+    marginLeft: 8,
+  },
+  dateCol: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    paddingRight: 4,
   },
   dateText: {
     fontFamily,
     fontSize: 11.5,
     fontWeight: "600",
     color: "#64748b",
-    marginBottom: 3,
   },
   actionsRow: {
     flexDirection: "row",

@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { formatDateTime12h, formatCardDateTime } from "@/utils/date-formatter";
+import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
 import { openDocumentOrLink } from "./materials/file-actions";
 
 const BENTO_COLORS = {
@@ -299,7 +300,10 @@ const AnnouncementCard = ({
       </View>
 
       {/* 2. Announcement Content */}
-      <Text style={styles.contentBody}>{item.content}</Text>
+      <RichNoticeText
+        content={item.content}
+        style={styles.contentBody}
+      />
 
       {/* 3. Multi-file Attachments Preview */}
       {attachments.length > 0 && (
@@ -389,46 +393,43 @@ const AnnouncementCard = ({
 
       {/* 5. Footer Comments Collapsible Toggle */}
       <View style={styles.cardFooter}>
-        <TouchableOpacity
-          style={styles.commentToggleBtn}
-          onPress={() => setIsCommentsExpanded((prev) => !prev)}
-          activeOpacity={0.75}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={`${isCommentsExpanded ? "Hide" : "Show"} ${comments.length} comments`}
-        >
-          <View style={styles.commentPillLeft}>
-            <Feather
-              name="message-circle"
-              size={14}
-              color={BENTO_COLORS.deepNavy}
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.commentPillText}>
-              {totalCommentsCount} {totalCommentsCount === 1 ? "Comment" : "Comments"}
-            </Text>
-          </View>
-          <View style={styles.commentRightActions}>
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                handleOpenCommentInput();
-              }}
-              style={styles.commentActionIconBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Add a comment"
-            >
-              <Feather name="edit-3" size={15} color="#64748b" />
-            </TouchableOpacity>
+        <View style={styles.commentFooterActions}>
+          <TouchableOpacity
+            style={styles.commentToggleBtn}
+            onPress={() => setIsCommentsExpanded((prev) => !prev)}
+            activeOpacity={0.75}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`${isCommentsExpanded ? "Hide" : "Show"} ${totalCommentsCount} comments`}
+          >
+            <View style={styles.commentPillLeft}>
+              <Feather
+                name="message-circle"
+                size={14}
+                color={BENTO_COLORS.deepNavy}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.commentPillText}>
+                {totalCommentsCount} {totalCommentsCount === 1 ? "Comment" : "Comments"}
+              </Text>
+            </View>
             <Feather
               name={isCommentsExpanded ? "chevron-up" : "chevron-down"}
               size={16}
               color="#64748b"
             />
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleOpenCommentInput}
+            style={styles.commentActionIconBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Add a comment"
+          >
+            <Feather name="edit-3" size={15} color="#64748b" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 6. Collapsible Inline Comments Section */}
@@ -1133,7 +1134,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(19, 27, 46, 0.05)",
   },
+  commentFooterActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   commentToggleBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

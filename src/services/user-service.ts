@@ -1,0 +1,14 @@
+import api from "./api";
+
+export async function syncGoogleDriveConnectionStatus(
+  isConnected: boolean,
+): Promise<boolean> {
+  const response = await api.patch("/users/me/google-drive-status", {
+    isConnected,
+  });
+  const changed = response.data?.data?.changed;
+  if (typeof changed !== "boolean") {
+    throw new Error("The server returned an invalid Google Drive status response.");
+  }
+  return changed;
+}

@@ -6,14 +6,17 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
     if (!Array.isArray(members)) return [];
 
     const teachers: CourseHubMember[] = [];
-    const leadership: CourseHubMember[] = [];
+    const classRepresentatives: CourseHubMember[] = [];
+    const teachingAssistants: CourseHubMember[] = [];
     const students: CourseHubMember[] = [];
 
     members.forEach((m) => {
       if (m.role === "TEACHER") {
         teachers.push(m);
-      } else if (m.role === "CR" || m.role === "TA") {
-        leadership.push(m);
+      } else if (m.role === "CR") {
+        classRepresentatives.push(m);
+      } else if (m.role === "TA") {
+        teachingAssistants.push(m);
       } else {
         students.push(m);
       }
@@ -23,7 +26,11 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
       (a.user?.name || "").localeCompare(b.user?.name || ""),
     );
 
-    leadership.sort((a, b) =>
+    classRepresentatives.sort((a, b) =>
+      (a.user?.name || "").localeCompare(b.user?.name || ""),
+    );
+
+    teachingAssistants.sort((a, b) =>
       (a.user?.name || "").localeCompare(b.user?.name || ""),
     );
 
@@ -31,7 +38,7 @@ export function useMemberSorting(members: CourseHubMember[] | undefined) {
       (a.user?.name || "").localeCompare(b.user?.name || ""),
     );
 
-    return [...teachers, ...leadership, ...students];
+    return [...teachers, ...classRepresentatives, ...teachingAssistants, ...students];
   }, [members]);
 
   const counts = useMemo<MemberCounts>(() => {

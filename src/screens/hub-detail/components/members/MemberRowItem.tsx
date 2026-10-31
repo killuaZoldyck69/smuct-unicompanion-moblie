@@ -24,7 +24,9 @@ export const MemberRowItem = React.memo(function MemberRowItem({
       onPress={() => onPress(member)}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`${member.user?.name || "Member"}, ${member.role}`}
+      accessibilityLabel={`${member.user?.name || "Member"}, ${member.role}, Google Drive ${
+        member.user?.googleDriveConnected ? "connected" : "not connected"
+      }`}
     >
       <View style={styles.avatarWrapper}>
         {member.user?.image ? (
@@ -48,6 +50,23 @@ export const MemberRowItem = React.memo(function MemberRowItem({
             </Text>
           </View>
         )}
+        <View
+          pointerEvents="none"
+          style={[
+            styles.driveStatus,
+            member.user?.googleDriveConnected
+              ? styles.driveConnected
+              : styles.driveDisconnected,
+          ]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Feather
+            name={member.user?.googleDriveConnected ? "check" : "x"}
+            size={8}
+            color="#ffffff"
+          />
+        </View>
       </View>
 
       <View style={styles.infoCol}>
@@ -86,6 +105,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(15, 23, 42, 0.08)",
   },
   avatarWrapper: {
+    position: "relative",
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -100,6 +120,24 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 22,
     backgroundColor: "#f1f5f9",
+  },
+  driveStatus: {
+    position: "absolute",
+    right: -2,
+    bottom: -1,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  driveConnected: {
+    backgroundColor: "#2563eb",
+  },
+  driveDisconnected: {
+    backgroundColor: "#dc2626",
   },
   avatarFallback: {
     width: "100%",

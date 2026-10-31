@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
   Platform,
   BackHandler,
@@ -30,6 +29,7 @@ import MembersTab from "./tabs/MembersTab";
 import EditHubModal from "./components/edit-hub-modal";
 import HubOptionsModal from "./components/hub-options-modal";
 import EditClassLinkModal from "./components/edit-class-link-modal";
+import CourseHubSkeleton from "./components/course-hub-skeleton";
 
 import {
   useHubDetails,
@@ -337,14 +337,13 @@ export function HubDetail({ hubId }: HubDetailProps) {
 
   if (isLoadingHub) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={styles.container}>
         <StatusBar
           barStyle="dark-content"
           backgroundColor={headerBg}
           translucent={true}
         />
-        <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
-        <Text style={styles.loadingText}>Loading course workspace...</Text>
+        <CourseHubSkeleton />
       </View>
     );
   }
@@ -515,20 +514,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BENTO_COLORS.background,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: BENTO_COLORS.background,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontFamily,
-    fontSize: 14,
-    color: BENTO_COLORS.subtleText,
-    fontWeight: "500",
-  },
-
   // --- HEADER WRAPPER (ELEVATES SHADOW OVER TABS) ---
   headerWrapper: {
     zIndex: 20,

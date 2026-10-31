@@ -1,9 +1,7 @@
 import React, { useState, useCallback } from "react";
 import {
   View,
-  Text,
   StyleSheet,
-  ActivityIndicator,
   FlatList,
   RefreshControl,
 } from "react-native";
@@ -17,7 +15,8 @@ import { MemberRowItem } from "../components/members/MemberRowItem";
 import { MembersEmptyState } from "../components/members/MembersEmptyState";
 import { ManageMemberModal } from "../components/members/modal/ManageMemberModal";
 import { useUpdateMemberRole, useRemoveMember } from "@/features/hubs/useHubs";
-import { BENTO, fontFamily } from "../components/members/constants";
+import { BENTO } from "../components/members/constants";
+import CourseHubSkeleton from "../components/course-hub-skeleton";
 
 interface MembersTabProps {
   hubId: string;
@@ -124,10 +123,7 @@ export default function MembersTab({
   return (
     <View style={styles.container}>
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={BENTO.navy} />
-          <Text style={styles.loadingText}>Loading course members...</Text>
-        </View>
+        <CourseHubSkeleton variant="members" />
       ) : (
         <FlatList
           data={sortedMembers}
@@ -178,15 +174,5 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 6,
-  },
-  loadingContainer: {
-    paddingTop: 48,
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontFamily,
-    fontSize: 13,
-    color: BENTO.slate,
   },
 });

@@ -31,10 +31,7 @@ import {
   CourseworkSubmitBar,
 } from "./create-coursework";
 import Toast from "react-native-toast-message";
-import {
-  uploadMultipleFilesToCloudinary,
-  deleteFileFromCloudinaryApi,
-} from "@/services/cloudinary-service";
+import { useGoogleDrive } from "@/hooks/use-google-drive";
 
 interface Props {
   isVisible: boolean;
@@ -52,6 +49,7 @@ export default function EditCourseworkModal({
   assessment,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { ensureConnected, uploadFiles } = useGoogleDrive();
 
   const [form, setForm] = useState<CourseworkFormData>({
     title: "",
@@ -131,13 +129,8 @@ export default function EditCourseworkModal({
 
   const handleClose = useCallback(() => {
     if (isPending || isUploading) return;
-    attachments.forEach((item) => {
-      if (item.url && item.localUri && !assessment?.attachments?.some((a: any) => a.url === item.url)) {
-        deleteFileFromCloudinaryApi(item.url).catch(() => {});
-      }
-    });
     onClose();
-  }, [isPending, isUploading, attachments, assessment, onClose]);
+  }, [isPending, isUploading, onClose]);
 
   const handleSubmit = useCallback(async () => {
     if (!form.title.trim() || !form.totalMarks.trim() || isPending || isUploading) {
@@ -154,7 +147,9 @@ export default function EditCourseworkModal({
 
         let newUploaded: AttachmentItem[] = [];
         if (filesNeedingUpload.length > 0) {
-          const uploaded = await uploadMultipleFilesToCloudinary(
+          const connected = await ensureConnected();
+          if (!connected) return;
+          const uploaded = await uploadFiles(
             filesNeedingUpload.map((f) => ({
               uri: f.localUri!,
               name: f.name,
@@ -165,16 +160,21 @@ export default function EditCourseworkModal({
 
           setAttachments((prev) =>
             prev.map((item) => {
-              const match = uploaded.find((u) => u.name === item.name);
-              return match ? { ...item, url: match.secureUrl } : item;
+              const idx = filesNeedingUpload.findIndex(
+                (file) => file.id === item.id,
+              );
+              const match = idx >= 0 ? uploaded[idx] : undefined;
+              return match
+                ? { ...item, url: match.url, driveFileId: match.id }
+                : item;
             })
           );
 
-          newUploaded = uploaded.map((u) => ({
+          newUploaded = uploaded.map((u, idx) => ({
             name: u.name,
-            url: u.secureUrl,
+            url: u.url,
             size: u.size,
-            type: u.type,
+            type: filesNeedingUpload[idx]?.type || u.type,
           }));
         }
 
@@ -209,19 +209,15 @@ export default function EditCourseworkModal({
     } finally {
       setIsUploading(false);
     }
-  }, [form, deadline, attachments, links, isPending, isUploading, onSubmit]);
+  }, [form, deadline, attachments, links, isPending, isUploading, onSubmit, ensureConnected, uploadFiles]);
 
   const handleAddAttachments = useCallback((newItems: AttachmentItem[]) => {
     setAttachments((prev) => [...prev, ...newItems]);
   }, []);
 
   const handleRemoveAttachment = useCallback((idx: number) => {
-    const item = attachments[idx];
-    if (item?.url && !assessment?.attachments?.some((a: any) => a.url === item.url)) {
-      deleteFileFromCloudinaryApi(item.url).catch(() => {});
-    }
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
-  }, [attachments, assessment]);
+  }, []);
 
   const handleAddLink = useCallback((link: LinkItem) => {
     setLinks((prev) => [...prev, link]);

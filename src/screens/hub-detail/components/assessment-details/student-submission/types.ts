@@ -16,6 +16,7 @@ export interface StagedSubmissionAttachment {
   size?: number;
   type?: string;
   mimeType?: string;
+  driveFileId?: string;
 }
 
 export interface StudentSubmissionPayload {
@@ -26,4 +27,3 @@ export interface StudentSubmissionPayload {
   status: "SUBMITTED" | "HAND_SUBMISSION";
   isLate?: boolean;
 }
-

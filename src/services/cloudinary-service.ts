@@ -23,7 +23,6 @@ export const CLOUDINARY_FOLDERS = {
   PROFILES: "smuct-unicompanion/profiles",
   NOTICES: "smuct-unicompanion/notices",
   BLOOD: "smuct-unicompanion/blood",
-  HUBS: "smuct-unicompanion/hubs",
 } as const;
 
 export type CloudinaryFolder =
@@ -31,7 +30,6 @@ export type CloudinaryFolder =
   | typeof CLOUDINARY_FOLDERS.PROFILES
   | typeof CLOUDINARY_FOLDERS.NOTICES
   | typeof CLOUDINARY_FOLDERS.BLOOD
-  | typeof CLOUDINARY_FOLDERS.HUBS
   | typeof CLOUDINARY_FOLDERS.PROJECT_ROOT
   | (string & {});
 
@@ -167,7 +165,7 @@ export async function uploadFileToCloudinary(
   localUri: string,
   filename?: string,
   mimeType?: string,
-  folder: CloudinaryFolder = CLOUDINARY_FOLDERS.HUBS
+  folder: CloudinaryFolder = CLOUDINARY_FOLDERS.PROJECT_ROOT
 ): Promise<CloudinaryDocumentUploadResult> {
   if (!localUri || typeof localUri !== "string" || !localUri.trim()) {
     throw new Error("Invalid file URI provided.");
@@ -211,7 +209,7 @@ export async function uploadFileToCloudinary(
  */
 export async function uploadMultipleFilesToCloudinary(
   files: { uri: string; name?: string; mimeType?: string; size?: number }[],
-  folder: CloudinaryFolder = CLOUDINARY_FOLDERS.HUBS
+  folder: CloudinaryFolder = CLOUDINARY_FOLDERS.PROJECT_ROOT
 ): Promise<CloudinaryDocumentUploadResult[]> {
   if (!files || files.length === 0) return [];
 

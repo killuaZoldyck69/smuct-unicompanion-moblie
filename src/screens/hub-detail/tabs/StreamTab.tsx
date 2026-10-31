@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Platform,
 } from "react-native";
@@ -16,6 +15,7 @@ import Toast from "react-native-toast-message";
 import AnnouncementCard from "../components/announcement-card";
 import CreateAnnouncementModal from "../components/create-announcement-modal";
 import DeleteAnnouncementModal from "../components/delete-announcement-modal";
+import CourseHubSkeleton from "../components/course-hub-skeleton";
 import {
   useAnnouncements,
   useCreateAnnouncement,
@@ -225,9 +225,7 @@ export default function StreamTab({
     <View style={styles.container}>
       {/* Stream Feed */}
       {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#0f172a" />
-        </View>
+        <CourseHubSkeleton variant="stream" />
       ) : announcementList.length === 0 ? (
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconBox}>

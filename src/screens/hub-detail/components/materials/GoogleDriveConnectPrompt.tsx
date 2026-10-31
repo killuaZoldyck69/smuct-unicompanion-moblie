@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  Image,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
@@ -50,12 +49,9 @@ export const GoogleDriveConnectPrompt: React.FC<GoogleDriveConnectPromptProps> =
           <View style={styles.textWrap}>
             <View style={styles.statusRow}>
               <Text style={styles.connectedTitle}>Connected to Google Drive</Text>
-              <View style={styles.freeBadge}>
-                <Text style={styles.freeBadgeText}>15 GB Free</Text>
-              </View>
             </View>
             <Text style={styles.connectedSubText} numberOfLines={1}>
-              {userEmail || "Personal Google Account"} • Folder: SMUCT UniCompanion
+              {userEmail || "Personal Google Account"} • Anyone with the link can view shared files
             </Text>
           </View>
           <TouchableOpacity
@@ -78,9 +74,9 @@ export const GoogleDriveConnectPrompt: React.FC<GoogleDriveConnectPromptProps> =
             <Feather name="hard-drive" size={16} color="#2563eb" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.promptTitle}>Host on your Google Drive</Text>
+            <Text style={styles.promptTitle}>Connect Google Drive to upload</Text>
             <Text style={styles.promptSubTitle}>
-              Store student notes in your personal 15 GB Drive space. Your files will be securely shared with classmates.
+              Course Hub files are stored in your Drive. Anyone with the link can view files you share.
             </Text>
           </View>
         </View>

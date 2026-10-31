@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -23,6 +22,7 @@ import {
   ConfigureReviewModal,
   DeleteReviewModal,
 } from "../components/reviews";
+import CourseHubSkeleton from "../components/course-hub-skeleton";
 
 export default function ReviewTab({
   hubId,
@@ -149,9 +149,7 @@ export default function ReviewTab({
         )}
         ListEmptyComponent={
           isLoading ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="small" color="#0f172a" />
-            </View>
+            <CourseHubSkeleton variant="review" />
           ) : (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconBox}>

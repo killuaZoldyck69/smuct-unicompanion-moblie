@@ -9,6 +9,7 @@ export interface AttachmentItem {
   size?: number;
   type?: string;
   publicId?: string;
+  driveFileId?: string;
   mimeType?: string;
 }
 

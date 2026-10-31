@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Platform,
   StatusBar,
@@ -23,6 +22,7 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 import CreateCourseworkModal from "../components/create-coursework-modal";
+import CourseHubSkeleton from "../components/course-hub-skeleton";
 import EditCourseworkModal from "../components/edit-coursework-modal";
 import AssessmentDetailsModal from "../components/assessment-details-modal";
 
@@ -207,9 +207,7 @@ export default function ClassworkTab({
   return (
     <View style={styles.container}>
       {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#0f172a" />
-        </View>
+        <CourseHubSkeleton variant="classwork" />
       ) : displayedAssessments.length === 0 ? (
         <ClassworkEmptyState
           canManage={canManage}

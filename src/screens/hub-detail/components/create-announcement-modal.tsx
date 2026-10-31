@@ -17,10 +17,8 @@ import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import Toast from "react-native-toast-message";
 
-import {
-  uploadMultipleFilesToCloudinary,
-  deleteFileFromCloudinaryApi,
-} from "@/services/cloudinary-service";
+import { useGoogleDrive } from "@/hooks/use-google-drive";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 interface StagedAnnouncementAttachment {
   id: string;
@@ -30,6 +28,7 @@ interface StagedAnnouncementAttachment {
   size?: number;
   type?: string;
   mimeType?: string;
+  driveFileId?: string;
 }
 
 const fontFamily = Platform.select({
@@ -93,6 +92,32 @@ const CAMPUS_TAGS = [
   },
 ];
 
+const ANNOUNCEMENT_HTML_TAGS = new Set([
+  "b",
+  "strong",
+  "i",
+  "em",
+  "u",
+  "ul",
+  "ol",
+  "li",
+  "p",
+  "div",
+  "br",
+]);
+
+function sanitizeAnnouncementHtml(value: string): string {
+  return value
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (tag, name: string) => {
+      const normalizedName = name.toLowerCase();
+      if (!ANNOUNCEMENT_HTML_TAGS.has(normalizedName)) return "";
+      return tag.startsWith("</")
+        ? `</${normalizedName}>`
+        : `<${normalizedName}>`;
+    });
+}
+
 interface Attachment {
   name: string;
   url: string;
@@ -122,7 +147,10 @@ export default function CreateAnnouncementModal({
   initialData,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { ensureConnected, uploadFiles, deleteFiles } = useGoogleDrive();
   const [content, setContent] = useState("");
+  const [plainTextContent, setPlainTextContent] = useState("");
+  const [contentLength, setContentLength] = useState(0);
   const [isLinkDrawerOpen, setIsLinkDrawerOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkTitle, setLinkTitle] = useState("");
@@ -133,7 +161,17 @@ export default function CreateAnnouncementModal({
 
   useEffect(() => {
     if (initialData) {
-      setContent(initialData.content || "");
+      const initialContent = sanitizeAnnouncementHtml(
+        String(initialData.content || ""),
+      );
+      setContent(initialContent);
+      const initialPlainText = String(initialData.content || "")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .trim();
+      setPlainTextContent(initialPlainText);
+      setContentLength(initialPlainText.length);
       const u = initialData.attachedLinkUrl || "";
       const t = initialData.attachedLinkTitle || "";
       setLinkUrl(u);
@@ -154,6 +192,8 @@ export default function CreateAnnouncementModal({
       );
     } else {
       setContent("");
+      setPlainTextContent("");
+      setContentLength(0);
       setLinkUrl("");
       setLinkTitle("");
       setTempLinkUrl("");
@@ -163,11 +203,21 @@ export default function CreateAnnouncementModal({
     }
   }, [initialData, isVisible]);
 
+  const handleEditorChange = (html: string, plainText: string) => {
+    setContent(html);
+    setPlainTextContent(plainText);
+    setContentLength(plainText.trim().length);
+  };
+
   const handleApplyTag = (prefix: string) => {
-    if (!content.trim()) {
-      setContent(prefix);
-    } else if (!content.includes(prefix.trim())) {
-      setContent(`${prefix}${content}`);
+    const tag = prefix.trim();
+    if (!plainTextContent.trim()) {
+      handleEditorChange(`<p><strong>${tag}</strong></p>`, tag);
+    } else if (!plainTextContent.includes(tag)) {
+      handleEditorChange(
+        `<p><strong>${tag}</strong></p>${content}`,
+        `${tag}\n${plainTextContent}`,
+      );
     }
   };
 
@@ -198,7 +248,7 @@ export default function CreateAnnouncementModal({
     setIsLinkDrawerOpen(false);
   };
 
-  // Deferred upload: select files locally without uploading to Cloudinary
+  // Keep files local until the announcement is submitted.
   const handlePickFiles = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
@@ -242,24 +292,32 @@ export default function CreateAnnouncementModal({
 
   const handleRemoveAttachment = (idx: number) => {
     const item = attachments[idx];
-    if (item?.url && !initialData?.attachments?.some((a: any) => a.url === item.url)) {
-      deleteFileFromCloudinaryApi(item.url).catch(() => {});
+    if (item?.driveFileId) {
+      deleteFiles([item.driveFileId]).catch((err) => {
+        Toast.show({
+          type: "error",
+          text1: "Drive File Not Removed",
+          text2: err instanceof Error ? err.message : "Could not remove the file.",
+        });
+      });
     }
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleClose = () => {
     if (isPending || isUploadingFiles) return;
-    attachments.forEach((item) => {
-      if (item.url && item.localUri && !initialData?.attachments?.some((a: any) => a.url === item.url)) {
-        deleteFileFromCloudinaryApi(item.url).catch(() => {});
-      }
-    });
     onClose();
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() || isPending || isUploadingFiles) return;
+    if (
+      !plainTextContent.trim() ||
+      contentLength > 2000 ||
+      isPending ||
+      isUploadingFiles
+    ) {
+      return;
+    }
 
     setIsUploadingFiles(true);
     try {
@@ -271,7 +329,9 @@ export default function CreateAnnouncementModal({
 
         let newUploaded: Attachment[] = [];
         if (filesNeedingUpload.length > 0) {
-          const uploaded = await uploadMultipleFilesToCloudinary(
+          const connected = await ensureConnected();
+          if (!connected) return;
+          const uploaded = await uploadFiles(
             filesNeedingUpload.map((f) => ({
               uri: f.localUri!,
               name: f.name,
@@ -282,16 +342,19 @@ export default function CreateAnnouncementModal({
 
           setAttachments((prev) =>
             prev.map((item) => {
-              const match = uploaded.find((u) => u.name === item.name);
-              return match ? { ...item, url: match.secureUrl } : item;
+              const idx = filesNeedingUpload.findIndex((file) => file.id === item.id);
+              const match = idx >= 0 ? uploaded[idx] : undefined;
+              return match
+                ? { ...item, url: match.url, driveFileId: match.id }
+                : item;
             })
           );
 
-          newUploaded = uploaded.map((u) => ({
+          newUploaded = uploaded.map((u, idx) => ({
             name: u.name,
-            url: u.secureUrl,
+            url: u.url,
             size: u.size,
-            type: u.type,
+            type: filesNeedingUpload[idx]?.type || u.type,
           }));
         }
 
@@ -307,7 +370,7 @@ export default function CreateAnnouncementModal({
       }
 
       await onSubmit({
-        content: content.trim(),
+        content: sanitizeAnnouncementHtml(content).trim(),
         attachedLinkUrl: linkUrl.trim() || undefined,
         attachedLinkTitle: linkTitle.trim() || undefined,
         attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
@@ -323,7 +386,10 @@ export default function CreateAnnouncementModal({
     }
   };
 
-  const canSubmit = content.trim().length > 0 && !isUploadingFiles;
+  const canSubmit =
+    plainTextContent.trim().length > 0 &&
+    contentLength <= 2000 &&
+    !isUploadingFiles;
   const isEditing = !!initialData;
 
   const formatFileSize = (bytes?: number) => {
@@ -442,28 +508,26 @@ export default function CreateAnnouncementModal({
                 </View>
                 <View style={styles.charCountBadge}>
                   <Text style={styles.charCountText}>
-                    {content.length} / 2000
+                    {contentLength} / 2000
                   </Text>
                 </View>
               </View>
 
-              <TextInput
-                style={styles.textArea}
-                value={content}
-                onChangeText={setContent}
-                placeholder="Share an announcement with your class... (e.g. Tomorrow's lecture will begin at 10:30 AM in Room 1501)"
-                placeholderTextColor="#94a3b8"
-                multiline
-                textAlignVertical="top"
-                maxLength={2000}
-                accessible={true}
-                accessibilityLabel="Announcement message"
+              <RichTextEditor
+                initialValue={content}
+                onChange={handleEditorChange}
+                onLengthChange={setContentLength}
+                placeholder="Share an announcement with your class..."
+                minHeight={170}
+                accentColor={BENTO_THEME.deepNavy}
+                showJustify={false}
+                showHelperText={false}
               />
 
-              {content.length > 0 && (
+              {plainTextContent.length > 0 && (
                 <View style={styles.bentoCardFooter}>
                   <TouchableOpacity
-                    onPress={() => setContent("")}
+                    onPress={() => handleEditorChange("", "")}
                     style={styles.clearBtn}
                     activeOpacity={0.7}
                   >
@@ -902,14 +966,6 @@ const styles = StyleSheet.create({
     color: "#64748b",
   },
 
-  textArea: {
-    fontFamily,
-    fontSize: 15,
-    lineHeight: 23,
-    color: BENTO_THEME.deepNavy,
-    minHeight: 185,
-    padding: 0,
-  },
   bentoCardFooter: {
     flexDirection: "row",
     justifyContent: "flex-end",

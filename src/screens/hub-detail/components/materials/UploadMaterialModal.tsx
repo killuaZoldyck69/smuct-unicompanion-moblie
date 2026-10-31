@@ -18,10 +18,6 @@ import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import * as DocumentPicker from "expo-document-picker";
 
-import {
-  uploadMultipleFilesToCloudinary,
-  deleteFileFromCloudinaryApi,
-} from "@/services/cloudinary-service";
 import { useGoogleDrive } from "@/hooks/use-google-drive";
 import { GoogleDriveConnectPrompt } from "./GoogleDriveConnectPrompt";
 import {
@@ -46,6 +42,7 @@ interface StagedAttachment {
   type?: string;
   mimeType?: string;
   uploadedUrl?: string;
+  driveFileId?: string;
 }
 
 interface UploadMaterialModalProps {
@@ -116,16 +113,10 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
 
     const handleClose = useCallback(() => {
       if (isPending || isUploadingFiles) return;
-      // Clean up any files that were uploaded to Cloudinary if user cancels/closes modal
-      attachedFiles.forEach((f) => {
-        if (f.uploadedUrl) {
-          deleteFileFromCloudinaryApi(f.uploadedUrl).catch(() => {});
-        }
-      });
       onClose();
-    }, [isPending, isUploadingFiles, attachedFiles, onClose]);
+    }, [isPending, isUploadingFiles, onClose]);
 
-    // Deferred upload: select files locally without uploading to Cloudinary
+    // Keep files local until the material is submitted.
     const handlePickFiles = async () => {
       try {
         const res = await DocumentPicker.getDocumentAsync({
@@ -161,11 +152,17 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
       }
     };
 
-    // Remove file: if already uploaded to Cloudinary, clean it up immediately; otherwise just remove from state
+    // Remove files that have not yet been included in a published material.
     const handleRemoveFile = (idx: number) => {
       const file = attachedFiles[idx];
-      if (file?.uploadedUrl) {
-        deleteFileFromCloudinaryApi(file.uploadedUrl).catch(() => {});
+      if (file?.driveFileId) {
+        googleDrive.deleteFiles([file.driveFileId]).catch((err) => {
+          Toast.show({
+            type: "error",
+            text1: "Drive File Not Removed",
+            text2: err instanceof Error ? err.message : "Could not remove the file.",
+          });
+        });
       }
       setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
     };
@@ -216,116 +213,50 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
 
           let newUploadedResults: MaterialAttachment[] = [];
           if (filesNeedingUpload.length > 0) {
-            if (isStudentNote) {
-              // 1. Student Resources: Upload to student's Google Drive (0 Cloudinary quota used)
-              if (!googleDrive.isConnected && googleDrive.hasClientIdConfigured) {
-                setUploadProgressText("Connecting Google Drive...");
-                const connected = await googleDrive.connect();
-                if (!connected) {
-                  setIsUploadingFiles(false);
-                  setUploadProgressText(null);
-                  return;
-                }
-              }
+            const connected = await googleDrive.ensureConnected();
+            if (!connected) return;
+            setUploadProgressText(
+              `Uploading ${filesNeedingUpload.length} file${filesNeedingUpload.length > 1 ? "s" : ""} to Google Drive...`,
+            );
+            const uploadedDrive = await googleDrive.uploadFiles(
+              filesNeedingUpload.map((f) => ({
+                uri: f.localUri,
+                name: f.name,
+                mimeType: f.mimeType,
+                size: f.size,
+              })),
+              (progress) => setUploadProgressText(progress),
+            );
 
-              if (googleDrive.isConnected) {
-                setUploadProgressText(
-                  `Uploading ${filesNeedingUpload.length} file${filesNeedingUpload.length > 1 ? "s" : ""} to Google Drive...`
-                );
-                const uploadedDrive = await googleDrive.uploadFiles(
-                  filesNeedingUpload.map((f) => ({
-                    uri: f.localUri,
-                    name: f.name,
-                    mimeType: f.mimeType,
-                    size: f.size,
-                  })),
-                  (progress) => setUploadProgressText(progress)
-                );
+            const driveFilesById = new Map(
+              filesNeedingUpload.map((file, idx) => [
+                file.id,
+                uploadedDrive[idx],
+              ]),
+            );
+            setAttachedFiles((prev) =>
+              prev.map((item) => {
+                const uploaded = driveFilesById.get(item.id);
+                return uploaded
+                  ? {
+                      ...item,
+                      uploadedUrl: uploaded.url,
+                      driveFileId: uploaded.id,
+                    }
+                  : item;
+              }),
+            );
 
-                const driveIdMap = new Map(
-                  filesNeedingUpload.map((f, idx) => [f.id, uploadedDrive[idx]?.url])
-                );
-
-                setAttachedFiles((prev) =>
-                  prev.map((item) => {
-                    const url = driveIdMap.get(item.id);
-                    return url ? { ...item, uploadedUrl: url } : item;
-                  })
-                );
-
-                newUploadedResults = uploadedDrive.map((u, idx) => {
-                  const ext = filesNeedingUpload[idx]?.name.split(".").pop()?.toLowerCase();
-                  return {
-                    name: u.name,
-                    url: u.url,
-                    size: u.size,
-                    type: ext || u.type,
-                  };
-                });
-              } else {
-                // Fallback to Cloudinary if Google Client ID is not configured
-                setUploadProgressText(
-                  `Uploading ${filesNeedingUpload.length} attachment${filesNeedingUpload.length > 1 ? "s" : ""}...`
-                );
-                const uploaded = await uploadMultipleFilesToCloudinary(
-                  filesNeedingUpload.map((f) => ({
-                    uri: f.localUri,
-                    name: f.name,
-                    mimeType: f.mimeType,
-                    size: f.size,
-                  }))
-                );
-
-                const cloudIdMap = new Map(
-                  filesNeedingUpload.map((f, idx) => [f.id, uploaded[idx]?.secureUrl])
-                );
-
-                setAttachedFiles((prev) =>
-                  prev.map((item) => {
-                    const url = cloudIdMap.get(item.id);
-                    return url ? { ...item, uploadedUrl: url } : item;
-                  })
-                );
-
-                newUploadedResults = uploaded.map((u, idx) => ({
-                  name: u.name || filesNeedingUpload[idx]?.name || "file",
-                  url: u.secureUrl,
-                  size: u.size || filesNeedingUpload[idx]?.size,
-                  type: u.type || filesNeedingUpload[idx]?.type,
-                }));
-              }
-            } else {
-              // 2. Official Staff Materials: Cloudinary
-              setUploadProgressText(
-                `Uploading ${filesNeedingUpload.length} attachment${filesNeedingUpload.length > 1 ? "s" : ""}...`
-              );
-              const uploaded = await uploadMultipleFilesToCloudinary(
-                filesNeedingUpload.map((f) => ({
-                  uri: f.localUri,
-                  name: f.name,
-                  mimeType: f.mimeType,
-                  size: f.size,
-                }))
-              );
-
-              const cloudIdMap = new Map(
-                filesNeedingUpload.map((f, idx) => [f.id, uploaded[idx]?.secureUrl])
-              );
-
-              setAttachedFiles((prev) =>
-                prev.map((item) => {
-                  const url = cloudIdMap.get(item.id);
-                  return url ? { ...item, uploadedUrl: url } : item;
-                })
-              );
-
-              newUploadedResults = uploaded.map((u, idx) => ({
-                name: u.name || filesNeedingUpload[idx]?.name || "file",
-                url: u.secureUrl,
-                size: u.size || filesNeedingUpload[idx]?.size,
-                type: u.type || filesNeedingUpload[idx]?.type,
-              }));
-            }
+            newUploadedResults = uploadedDrive.map((uploaded, idx) => ({
+              name: uploaded.name,
+              url: uploaded.url,
+              size: uploaded.size,
+              type:
+                filesNeedingUpload[idx]?.name
+                  .split(".")
+                  .pop()
+                  ?.toLowerCase() || uploaded.type,
+            }));
           }
 
           finalAttachments = [
@@ -515,17 +446,14 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                   </View>
                 )}
 
-                {/* Google Drive BYOS Prompt when publishing as Student Shared Resource */}
-                {isStudentNote && (
-                  <GoogleDriveConnectPrompt
-                    isConnected={googleDrive.isConnected}
-                    userEmail={googleDrive.email}
-                    isConnecting={googleDrive.isConnecting}
-                    onConnect={googleDrive.connect}
-                    onDisconnect={googleDrive.disconnect}
-                    hasClientIdConfigured={googleDrive.hasClientIdConfigured}
-                  />
-                )}
+                <GoogleDriveConnectPrompt
+                  isConnected={googleDrive.isConnected}
+                  userEmail={googleDrive.email}
+                  isConnecting={googleDrive.isConnecting}
+                  onConnect={googleDrive.connect}
+                  onDisconnect={googleDrive.disconnect}
+                  hasClientIdConfigured={googleDrive.hasClientIdConfigured}
+                />
 
                 {/* Title Field */}
                 <View style={styles.fieldGroup}>

@@ -3,12 +3,12 @@ import {
   View,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
+import CourseHubSkeleton from "../components/course-hub-skeleton";
 
 import { useResources, useCreateResource, useDeleteResource } from "@/features/hubs/useHubs";
 import {
@@ -134,9 +134,7 @@ export default function MaterialsTab({
 
       {/* 2. Materials List with Section Header */}
       {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#0f172a" />
-        </View>
+        <CourseHubSkeleton variant="materials" />
       ) : (
         <FlatList
           data={displayedResources}

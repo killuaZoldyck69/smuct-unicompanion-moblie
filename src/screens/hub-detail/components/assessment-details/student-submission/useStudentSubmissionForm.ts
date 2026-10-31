@@ -12,10 +12,7 @@ import {
   MAX_FILE_SIZE_BYTES,
   MAX_FILE_COUNT,
 } from "../utils";
-import {
-  uploadMultipleFilesToCloudinary,
-  deleteFileFromCloudinaryApi,
-} from "@/services/cloudinary-service";
+import { useGoogleDrive } from "@/hooks/use-google-drive";
 import {
   SubmissionLink,
   SubmissionMethod,
@@ -77,6 +74,7 @@ export function useStudentSubmissionForm({
   isSubmitting,
   onSubmit,
 }: UseStudentSubmissionFormProps) {
+  const { ensureConnected, uploadFiles, deleteFiles } = useGoogleDrive();
   // Determine allowed submission methods from assessment configuration
   const isOfflineAssessment =
     assessment.submissionType === "HAND" ||
@@ -216,14 +214,18 @@ export function useStudentSubmissionForm({
     const target = files[idx];
     setFiles((prev) => prev.filter((_, i) => i !== idx));
 
-    if (target?.url) {
+    if (target?.driveFileId) {
       try {
-        await deleteFileFromCloudinaryApi(target.url);
+        await deleteFiles([target.driveFileId]);
       } catch (e) {
-        console.warn("Failed to delete removed submission file from Cloudinary:", e);
+        Toast.show({
+          type: "error",
+          text1: "Drive File Not Removed",
+          text2: e instanceof Error ? e.message : "Could not remove the file.",
+        });
       }
     }
-  }, [files]);
+  }, [files, deleteFiles]);
 
   const handleRemoveLink = useCallback((idx: number) => {
     setLinks((prev) => prev.filter((_, i) => i !== idx));
@@ -321,7 +323,9 @@ export function useStudentSubmissionForm({
       }
 
       if (pendingUploads.length > 0) {
-        const uploaded = await uploadMultipleFilesToCloudinary(
+        const connected = await ensureConnected();
+        if (!connected) return;
+        const uploaded = await uploadFiles(
           pendingUploads.map((item) => ({
             uri: item.localUri!,
             name: item.name,
@@ -330,14 +334,31 @@ export function useStudentSubmissionForm({
           }))
         );
 
-        for (const u of uploaded) {
+        for (const [index, u] of uploaded.entries()) {
           finalAttachments.push({
             name: u.name,
-            url: u.secureUrl,
+            url: u.url,
             size: u.size,
-            type: u.type,
+            type: pendingUploads[index]?.type || u.type,
           });
         }
+
+        setFiles((previous) =>
+          previous.map((file) => {
+            const index = pendingUploads.findIndex(
+              (pending) => pending.localUri === file.localUri,
+            );
+            const uploadedFile = index >= 0 ? uploaded[index] : undefined;
+            return uploadedFile
+              ? {
+                  ...file,
+                  url: uploadedFile.url,
+                  driveFileId: uploadedFile.id,
+                  localUri: undefined,
+                }
+              : file;
+          }),
+        );
       }
 
       onSubmit({
@@ -357,7 +378,7 @@ export function useStudentSubmissionForm({
     } finally {
       setIsUploadingFiles(false);
     }
-  }, [isClosed, isOverdue, submissionMethod, links, noteContent, files, onSubmit]);
+  }, [isClosed, isOverdue, submissionMethod, links, noteContent, files, onSubmit, ensureConnected, uploadFiles]);
 
   const isOnlineEmpty = useMemo(() => {
     return (

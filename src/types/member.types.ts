@@ -25,6 +25,7 @@ export interface MemberUserData {
   image?: string | null;
   phoneNumber?: string | null;
   role?: string;
+  googleDriveConnected?: boolean;
   studentProfile?: StudentProfileData | null;
   teacherProfile?: TeacherProfileData | null;
 }

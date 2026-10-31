@@ -5,6 +5,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { FileSystemUploadType } from "expo-file-system/legacy";
 
 export interface GoogleDriveTokens {
+  appUserId: string;
   accessToken: string;
   refreshToken?: string;
   expiresAt: number; // Unix timestamp in milliseconds
@@ -22,11 +23,38 @@ export interface GoogleDriveUploadedFile {
   webContentLink?: string;
 }
 
-const SECURE_STORE_KEY = "smuct_unicompanion_google_drive_tokens_v1";
+const SECURE_STORE_KEY_PREFIX = "smuct_unicompanion_google_drive_tokens_v2";
+const LEGACY_SECURE_STORE_KEY = "smuct_unicompanion_google_drive_tokens_v1";
 const FOLDER_NAME = "SMUCT UniCompanion - Course Hub";
+export const GOOGLE_DRIVE_TOKEN_EXPIRY_BUFFER_MS = 30_000;
 
-// Fallback in-memory storage for web or environments where SecureStore is unavailable
-let memoryTokens: GoogleDriveTokens | null = null;
+const memoryTokens = new Map<string, GoogleDriveTokens>();
+
+function getTokenStorageKey(appUserId: string): string {
+  return `${SECURE_STORE_KEY_PREFIX}_${encodeURIComponent(appUserId)}`;
+}
+
+function requireAppUserId(appUserId: string): string {
+  const normalized = appUserId.trim();
+  if (!normalized) {
+    throw new Error("Sign in to UniCompanion before connecting Google Drive.");
+  }
+  return normalized;
+}
+
+async function clearLegacyTokens(): Promise<void> {
+  try {
+    if (Platform.OS === "web") {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(LEGACY_SECURE_STORE_KEY);
+      }
+      return;
+    }
+    await SecureStore.deleteItemAsync(LEGACY_SECURE_STORE_KEY);
+  } catch (err) {
+    console.warn("[GoogleDrive] Failed to clear legacy connection:", err);
+  }
+}
 
 /**
  * Returns the configured Google OAuth Client ID.
@@ -39,60 +67,89 @@ export function getGoogleClientId(): string {
 /**
  * Retrieves stored Google Drive tokens securely.
  */
-export async function getStoredDriveTokens(): Promise<GoogleDriveTokens | null> {
+export async function getStoredDriveTokens(
+  appUserId: string,
+): Promise<GoogleDriveTokens | null> {
+  const userId = requireAppUserId(appUserId);
+  const storageKey = getTokenStorageKey(userId);
+  await clearLegacyTokens();
   try {
     if (Platform.OS === "web") {
-      const raw = localStorage.getItem(SECURE_STORE_KEY);
-      return raw ? JSON.parse(raw) : memoryTokens;
+      const raw =
+        typeof sessionStorage === "undefined"
+          ? null
+          : sessionStorage.getItem(storageKey);
+      const stored = raw ? (JSON.parse(raw) as GoogleDriveTokens) : null;
+      const cached = stored || memoryTokens.get(userId) || null;
+      return cached?.appUserId === userId ? cached : null;
     }
-    const raw = await SecureStore.getItemAsync(SECURE_STORE_KEY);
+    const raw = await SecureStore.getItemAsync(storageKey);
     if (!raw) return null;
-    return JSON.parse(raw) as GoogleDriveTokens;
+    const stored = JSON.parse(raw) as GoogleDriveTokens;
+    return stored.appUserId === userId ? stored : null;
   } catch (err) {
     console.warn("[GoogleDrive] Failed to read stored tokens:", err);
-    return memoryTokens;
+    throw new Error("Could not read the saved Google Drive connection.");
   }
 }
 
 /**
  * Persists Google Drive tokens securely.
  */
-export async function saveDriveTokens(tokens: GoogleDriveTokens): Promise<void> {
-  memoryTokens = tokens;
-  const raw = JSON.stringify(tokens);
+export async function saveDriveTokens(
+  appUserId: string,
+  tokens: GoogleDriveTokens,
+): Promise<void> {
+  const userId = requireAppUserId(appUserId);
+  const storageKey = getTokenStorageKey(userId);
+  const scopedTokens = { ...tokens, appUserId: userId };
+  memoryTokens.set(userId, scopedTokens);
+  const raw = JSON.stringify(scopedTokens);
   try {
     if (Platform.OS === "web") {
-      localStorage.setItem(SECURE_STORE_KEY, raw);
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem(storageKey, raw);
+      }
       return;
     }
-    await SecureStore.setItemAsync(SECURE_STORE_KEY, raw);
+    await SecureStore.setItemAsync(storageKey, raw);
   } catch (err) {
     console.warn("[GoogleDrive] Failed to save tokens to SecureStore:", err);
+    memoryTokens.delete(userId);
+    throw new Error("Could not securely save the Google Drive connection.");
   }
 }
 
 /**
  * Clears stored Google Drive tokens on disconnect.
  */
-export async function clearDriveTokens(): Promise<void> {
-  memoryTokens = null;
+export async function clearDriveTokens(appUserId: string): Promise<void> {
+  const userId = requireAppUserId(appUserId);
+  const storageKey = getTokenStorageKey(userId);
+  memoryTokens.delete(userId);
   try {
     if (Platform.OS === "web") {
-      localStorage.removeItem(SECURE_STORE_KEY);
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem(storageKey);
+      }
       return;
     }
-    await SecureStore.deleteItemAsync(SECURE_STORE_KEY);
+    await SecureStore.deleteItemAsync(storageKey);
   } catch (err) {
     console.warn("[GoogleDrive] Failed to clear stored tokens:", err);
+    throw new Error("Could not clear the saved Google Drive connection.");
   }
 }
 
 /**
  * Checks if the user has an active Google Drive connection.
  */
-export async function isGoogleDriveConnected(): Promise<boolean> {
-  const tokens = await getStoredDriveTokens();
-  return Boolean(tokens?.accessToken);
+export async function isGoogleDriveConnected(appUserId: string): Promise<boolean> {
+  const tokens = await getStoredDriveTokens(appUserId);
+  return Boolean(
+    tokens?.accessToken &&
+      tokens.expiresAt > Date.now() + GOOGLE_DRIVE_TOKEN_EXPIRY_BUFFER_MS,
+  );
 }
 
 /**
@@ -141,7 +198,10 @@ export function getRedirectUri(): string {
  * Initiates the Google OAuth 2.0 flow for Google Drive with scope `drive.file`.
  * Scope `drive.file` only grants permission to files created by this app (0 CASA costs).
  */
-export async function connectGoogleDrive(): Promise<GoogleDriveTokens> {
+export async function connectGoogleDrive(
+  appUserId: string,
+): Promise<GoogleDriveTokens> {
+  const userId = requireAppUserId(appUserId);
   const clientId = getGoogleClientId();
 
   if (!clientId) {
@@ -164,15 +224,22 @@ export async function connectGoogleDrive(): Promise<GoogleDriveTokens> {
   const scope = encodeURIComponent(
     "https://www.googleapis.com/auth/drive.file email profile openid"
   );
-  const nonce = Math.random().toString(36).substring(2, 15);
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.getRandomValues) {
+    throw new Error("Secure random generation is unavailable on this device.");
+  }
+  const stateBytes = cryptoApi.getRandomValues(new Uint8Array(32));
+  const state = Array.from(stateBytes, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
 
   const authUrl =
     `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${encodeURIComponent(clientId)}&` +
     `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-    `response_type=token%20id_token&` +
+    `response_type=token&` +
     `scope=${scope}&` +
-    `nonce=${encodeURIComponent(nonce)}&` +
+    `state=${encodeURIComponent(state)}&` +
     `prompt=consent&` +
     `include_granted_scopes=true`;
 
@@ -183,8 +250,15 @@ export async function connectGoogleDrive(): Promise<GoogleDriveTokens> {
   }
 
   // Parse hash parameters from redirect url
-  const hash = result.url.split("#")[1] || result.url.split("?")[1] || "";
-  const params = new URLSearchParams(hash);
+  const [urlWithoutHash, hash = ""] = result.url.split("#", 2);
+  const query = urlWithoutHash.split("?")[1] || "";
+  const params = new URLSearchParams(hash || query);
+
+  if (params.get("state") !== state) {
+    throw new Error(
+      "Google Drive authentication could not be verified. Please try again.",
+    );
+  }
 
   const accessToken = params.get("access_token");
   const expiresIn = params.get("expires_in");
@@ -201,6 +275,7 @@ export async function connectGoogleDrive(): Promise<GoogleDriveTokens> {
   const userInfo = await fetchGoogleUserInfo(accessToken);
 
   const tokens: GoogleDriveTokens = {
+    appUserId: userId,
     accessToken,
     expiresAt,
     email: userInfo.email,
@@ -208,22 +283,22 @@ export async function connectGoogleDrive(): Promise<GoogleDriveTokens> {
     avatarUrl: userInfo.picture,
   };
 
-  await saveDriveTokens(tokens);
+  await saveDriveTokens(userId, tokens);
   return tokens;
 }
 
 /**
  * Ensures the access token is currently valid, refreshing if needed.
  */
-export async function ensureValidAccessToken(): Promise<string> {
-  const tokens = await getStoredDriveTokens();
+export async function ensureValidAccessToken(appUserId: string): Promise<string> {
+  const userId = requireAppUserId(appUserId);
+  const tokens = await getStoredDriveTokens(userId);
   if (!tokens?.accessToken) {
     throw new Error("Google Drive is not connected. Please connect your Drive.");
   }
 
   // If token is valid for more than 5 minutes, return immediately
-  const bufferMs = 5 * 60 * 1000;
-  if (tokens.expiresAt > Date.now() + bufferMs) {
+  if (tokens.expiresAt > Date.now() + GOOGLE_DRIVE_TOKEN_EXPIRY_BUFFER_MS) {
     return tokens.accessToken;
   }
 
@@ -248,7 +323,7 @@ export async function ensureValidAccessToken(): Promise<string> {
           accessToken: data.access_token,
           expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
         };
-        await saveDriveTokens(newTokens);
+        await saveDriveTokens(userId, newTokens);
         return newTokens.accessToken;
       }
     } catch (err) {
@@ -256,8 +331,10 @@ export async function ensureValidAccessToken(): Promise<string> {
     }
   }
 
-  // Return existing token as last resort if refresh token unavailable
-  return tokens.accessToken;
+  await clearDriveTokens(userId);
+  throw new Error(
+    "Your Google Drive connection expired. Please reconnect and try again.",
+  );
 }
 
 /**
@@ -277,6 +354,11 @@ export async function getOrCreateUniCompanionFolder(
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
+    if (!searchRes.ok) {
+      throw new Error(
+        `Could not check your Google Drive folder (${searchRes.status}).`,
+      );
+    }
 
     if (searchRes.ok) {
       const data = await searchRes.json();
@@ -312,8 +394,7 @@ export async function getOrCreateUniCompanionFolder(
     console.warn("[GoogleDrive] Folder lookup/creation fallback:", err);
   }
 
-  // Fallback to Drive root if folder creation fails
-  return "root";
+  throw new Error("Could not create or locate your Google Drive folder.");
 }
 
 /**
@@ -324,7 +405,7 @@ export async function setFilePublicPermissions(
   accessToken: string
 ): Promise<{ webViewLink: string; webContentLink?: string }> {
   // Set permission to anyone with link as reader
-  await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+  const permissionRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -335,6 +416,11 @@ export async function setFilePublicPermissions(
       type: "anyone",
     }),
   });
+  if (!permissionRes.ok) {
+    throw new Error(
+      `Google Drive could not enable link access (${permissionRes.status}). Check your account's sharing settings.`,
+    );
+  }
 
   // Query publicly accessible links
   const fields = encodeURIComponent("id,name,mimeType,size,webViewLink,webContentLink");
@@ -346,10 +432,7 @@ export async function setFilePublicPermissions(
   );
 
   if (!fileRes.ok) {
-    return {
-      webViewLink: `https://drive.google.com/file/d/${fileId}/view`,
-      webContentLink: `https://drive.google.com/uc?id=${fileId}&export=download`,
-    };
+    throw new Error(`Google Drive could not verify the file link (${fileRes.status}).`);
   }
 
   const fileData = await fileRes.json();
@@ -367,19 +450,21 @@ export async function setFilePublicPermissions(
  * Uses zero server storage and zero Cloudinary quota.
  */
 export async function uploadFileToGoogleDrive({
+  appUserId,
   uri,
   name,
   mimeType,
   size,
   onProgress,
 }: {
+  appUserId: string;
   uri: string;
   name: string;
   mimeType?: string;
   size?: number;
   onProgress?: (text: string) => void;
 }): Promise<GoogleDriveUploadedFile> {
-  const accessToken = await ensureValidAccessToken();
+  const accessToken = await ensureValidAccessToken(appUserId);
 
   onProgress?.("Locating UniCompanion folder...");
   const folderId = await getOrCreateUniCompanionFolder(accessToken);
@@ -468,9 +553,22 @@ export async function uploadFileToGoogleDrive({
     }
   }
 
-  // 3. Make the uploaded file publicly readable
-  onProgress?.("Configuring public view permissions...");
-  const links = await setFilePublicPermissions(uploadedFileId, accessToken);
+  if (!uploadedFileId) {
+    throw new Error("Google Drive did not return the uploaded file ID.");
+  }
+
+  onProgress?.("Configuring link access...");
+  let links: { webViewLink: string; webContentLink?: string };
+  try {
+    links = await setFilePublicPermissions(uploadedFileId, accessToken);
+  } catch (err) {
+    try {
+      await deleteGoogleDriveFile(uploadedFileId, accessToken);
+    } catch (cleanupError) {
+      console.warn("[GoogleDrive] Failed to clean up an unshared upload:", cleanupError);
+    }
+    throw err;
+  }
 
   return {
     id: uploadedFileId,
@@ -480,4 +578,20 @@ export async function uploadFileToGoogleDrive({
     webViewLink: links.webViewLink,
     webContentLink: links.webContentLink,
   };
+}
+
+export async function deleteGoogleDriveFile(
+  fileId: string,
+  accessToken: string,
+): Promise<void> {
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Could not remove the Google Drive file (${response.status}).`);
+  }
 }
