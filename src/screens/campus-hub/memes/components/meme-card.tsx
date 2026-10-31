@@ -197,8 +197,10 @@ export const MemeCard = React.memo(function MemeCard({
             style={[
               styles.reactionPill,
               isLiked && styles.reactionPillLiked,
+              isReacting && styles.reactionPillDisabled,
             ]}
             onPress={handleLike}
+            disabled={isReacting}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={`Like meme. Current count: ${meme.likesCount}`}
@@ -224,8 +226,10 @@ export const MemeCard = React.memo(function MemeCard({
             style={[
               styles.reactionPill,
               isDisliked && styles.reactionPillDisliked,
+              isReacting && styles.reactionPillDisabled,
             ]}
             onPress={handleDislike}
+            disabled={isReacting}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={`Dislike meme. Current count: ${meme.dislikesCount}`}
@@ -454,6 +458,9 @@ const styles = StyleSheet.create({
   reactionPillDisliked: {
     backgroundColor: "#fff1f2",
     borderColor: "rgba(225, 29, 72, 0.3)",
+  },
+  reactionPillDisabled: {
+    opacity: 0.6,
   },
   reactionCount: {
     fontFamily,

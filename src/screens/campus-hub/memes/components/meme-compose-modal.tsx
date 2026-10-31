@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Modal,
   View,
@@ -12,11 +12,10 @@ import {
   Platform,
   ScrollView,
   Alert,
-  useWindowDimensions,
   Keyboard,
   StatusBar,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -37,42 +36,11 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
   onClose,
 }: MemeComposeModalProps) {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const createMemeMutation = useCreateMeme();
-
-  // Listen to keyboard show/hide events to dynamically adapt modal height
-  useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  // Compute responsive sheet height that NEVER exceeds the safe area below the status bar
-  const defaultHeight = Math.round(windowHeight * 0.86);
-  const maxAllowedWithKeyboard =
-    windowHeight - keyboardHeight - Math.max(insets.top, 24) - 12;
-  const sheetHeight =
-    keyboardHeight > 0
-      ? Math.max(280, Math.min(defaultHeight, maxAllowedWithKeyboard))
-      : Math.min(defaultHeight, windowHeight - Math.max(insets.top, 24) - 16);
 
   const handlePickImage = useCallback(async () => {
     try {
@@ -133,7 +101,7 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
       // 1. Upload to Cloudinary securely
       const uploadRes = await uploadImageToCloudinary(
         imageUri,
-        CLOUDINARY_FOLDERS.CAMPUS_HUB.MEMES
+        CLOUDINARY_FOLDERS.CAMPUS_HUB.MEMES,
       );
 
       // 2. Create Meme in backend
@@ -176,69 +144,59 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      presentationStyle="fullScreen"
       statusBarTranslucent={true}
       onRequestClose={handleModalClose}
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="transparent"
+        backgroundColor="#ffffff"
         translucent={true}
       />
-      <View style={styles.overlay}>
-        {/* Full-screen backdrop tap-to-dismiss */}
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={handleModalClose}
-          accessible={false}
-        />
+      <SafeAreaView
+        style={styles.fullScreenContainer}
+        edges={["top", "bottom"]}
+      >
+        {/* Top Header */}
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Post a Meme</Text>
+            <View style={styles.hubBadge}>
+              <Text style={styles.hubBadgeText}>CAMPUS HUB</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleModalClose}
+            disabled={isUploading}
+            style={styles.closeBtn}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Close compose modal"
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
+          </TouchableOpacity>
+        </View>
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardAvoid}
         >
-          <View style={[styles.sheet, { height: sheetHeight }]}>
-            {/* Top Drag Handle */}
-            <View style={styles.dragHandle} />
+          {/* Scrollable Form Content */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Image Picker Box */}
+            <View style={styles.formGroup}>
+              <Text style={styles.sectionLabel}>
+                MEME IMAGE <Text style={styles.requiredStar}>*</Text>
+              </Text>
 
-            {/* Header: Anchored permanently at top of sheet */}
-            <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.closeBtn}
-                onPress={handleModalClose}
-                disabled={isUploading}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Close compose modal"
-                activeOpacity={0.7}
-              >
-                <Feather
-                  name="x"
-                  size={20}
-                  color={CAMPUS_HUB_COLORS.deepNavy}
-                />
-              </TouchableOpacity>
-
-              <View style={styles.headerTitleGroup}>
-                <Text style={styles.modalTitle}>Post a Meme</Text>
-                <Text style={styles.modalSubtitle}>
-                  Share a laugh with campus peers
-                </Text>
-              </View>
-
-              <View style={{ width: 36 }} />
-            </View>
-
-            {/* Scrollable Form Content */}
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Image Picker Box */}
-              <Text style={styles.sectionLabel}>MEME IMAGE *</Text>
               {imageUri ? (
                 <View style={styles.previewBox}>
                   <Image
@@ -253,7 +211,7 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
                       disabled={isUploading}
                       activeOpacity={0.8}
                     >
-                      <Feather name="repeat" size={14} color="#ffffff" />
+                      <Feather name="refresh-cw" size={13} color="#ffffff" />
                       <Text style={styles.previewBtnText}>Change</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -262,7 +220,7 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
                       disabled={isUploading}
                       activeOpacity={0.8}
                     >
-                      <Feather name="trash-2" size={14} color="#ffffff" />
+                      <Feather name="trash-2" size={13} color="#ffffff" />
                       <Text style={styles.previewBtnText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
@@ -271,15 +229,16 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
                 <TouchableOpacity
                   style={styles.pickerBox}
                   onPress={handlePickImage}
-                  activeOpacity={0.7}
+                  disabled={isUploading}
+                  activeOpacity={0.8}
                   accessible={true}
                   accessibilityRole="button"
-                  accessibilityLabel="Select meme image from gallery"
+                  accessibilityLabel="Pick meme image"
                 >
                   <View style={styles.pickerIconCircle}>
                     <Feather
                       name="image"
-                      size={28}
+                      size={24}
                       color={CAMPUS_HUB_COLORS.memeAccent}
                     />
                   </View>
@@ -289,12 +248,15 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
                   </Text>
                 </TouchableOpacity>
               )}
+            </View>
 
-              {/* Caption Input */}
+            {/* Caption Input Box */}
+            <View style={styles.formGroup}>
               <View style={styles.captionHeaderRow}>
                 <Text style={styles.sectionLabel}>CAPTION (OPTIONAL)</Text>
                 <Text style={styles.charCount}>{caption.length}/280</Text>
               </View>
+
               <TextInput
                 style={styles.textInput}
                 placeholder="Add a funny punchline or context..."
@@ -302,137 +264,130 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
                 value={caption}
                 onChangeText={setCaption}
                 maxLength={280}
-                multiline
+                multiline={true}
                 numberOfLines={3}
                 textAlignVertical="top"
                 editable={!isUploading}
-              />
-
-              {/* University Guidelines hint with generous breathing room */}
-              <View style={styles.guidelinesBox}>
-                <Feather
-                  name="info"
-                  size={15}
-                  color={CAMPUS_HUB_COLORS.subtleText}
-                  style={{ marginTop: 2 }}
-                />
-                <Text style={styles.guidelinesText}>
-                  Keep memes respectful and university-friendly. Inappropriate
-                  content will be removed.
-                </Text>
-              </View>
-            </ScrollView>
-
-            {/* Bottom Docked Action Footer with Safe Area */}
-            <View
-              style={[
-                styles.modalFooter,
-                {
-                  paddingBottom:
-                    keyboardHeight > 0 ? 14 : Math.max(insets.bottom, 16),
-                },
-              ]}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.submitBtn,
-                  (!imageUri || isUploading) && styles.submitBtnDisabled,
-                ]}
-                onPress={handleSubmit}
-                disabled={!imageUri || isUploading}
                 accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Publish meme"
-                activeOpacity={0.8}
-              >
-                {isUploading ? (
-                  <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color="#ffffff" />
-                    <Text style={styles.submitBtnText}>Uploading Meme...</Text>
-                  </View>
-                ) : (
-                  <View style={styles.loadingRow}>
-                    <Feather name="send" size={16} color="#ffffff" />
-                    <Text style={styles.submitBtnText}>Publish Meme</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                accessibilityLabel="Meme caption input"
+              />
             </View>
+
+            {/* Community Guidelines Card */}
+            <View style={styles.guidelinesBox}>
+              <Feather
+                name="info"
+                size={14}
+                color={CAMPUS_HUB_COLORS.subtleText}
+                style={{ marginTop: 2 }}
+              />
+              <Text style={styles.guidelinesText}>
+                Keep memes respectful and university-friendly. Inappropriate
+                content will be removed.
+              </Text>
+            </View>
+          </ScrollView>
+
+          {/* Bottom Docked Action Footer */}
+          <View
+            style={[
+              styles.modalFooter,
+              { paddingBottom: Math.max(insets.bottom, 14) },
+            ]}
+          >
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                (!imageUri || isUploading) && styles.submitBtnDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={!imageUri || isUploading}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Publish meme"
+              activeOpacity={0.8}
+            >
+              {isUploading ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color="#ffffff" />
+                  <Text style={styles.submitBtnText}>Uploading Meme...</Text>
+                </View>
+              ) : (
+                <View style={styles.loadingRow}>
+                  <Feather name="send" size={16} color="#ffffff" />
+                  <Text style={styles.submitBtnText}>Publish Meme</Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 });
 
 const styles = StyleSheet.create({
-  overlay: {
+  fullScreenContainer: {
     flex: 1,
-    backgroundColor: "rgba(10, 15, 29, 0.65)",
-    justifyContent: "flex-end",
+    backgroundColor: "#ffffff",
   },
-  keyboardAvoid: {
-    width: "100%",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    overflow: "hidden",
-    ...CAMPUS_HUB_COLORS.heroShadow,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(0, 0, 0, 0.15)",
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  header: {
+  topHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 14,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderBottomColor: "rgba(19, 27, 46, 0.06)",
+    backgroundColor: "#ffffff",
   },
-  headerTitleGroup: {
+  headerLeft: {
+    flexDirection: "row",
     alignItems: "center",
   },
-  modalTitle: {
+  headerTitle: {
+    fontSize: 18,
     fontFamily,
-    fontSize: 17,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
-    letterSpacing: -0.3,
   },
-  modalSubtitle: {
+  hubBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: CAMPUS_HUB_COLORS.memeAccentLight,
+  },
+  hubBadgeText: {
+    fontSize: 9.5,
     fontFamily,
-    fontSize: 11.5,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    marginTop: 2,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.memeAccentText,
+    letterSpacing: 0.4,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#f1f5f9",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: "#ffffff",
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 36,
+    gap: 16,
+  },
+  formGroup: {
+    gap: 6,
   },
   sectionLabel: {
     fontFamily,
@@ -440,10 +395,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.subtleText,
     letterSpacing: 0.5,
-    marginBottom: 8,
+  },
+  requiredStar: {
+    color: CAMPUS_HUB_COLORS.dangerText,
+    fontWeight: "800",
   },
   pickerBox: {
-    height: 170,
+    height: 200,
     borderRadius: 18,
     borderWidth: 2,
     borderColor: "rgba(236, 72, 153, 0.25)",
@@ -451,7 +409,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fdf2f8",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
     gap: 6,
   },
   pickerIconCircle: {
@@ -476,11 +433,10 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
   },
   previewBox: {
-    height: 220,
+    height: 240,
     borderRadius: 18,
     backgroundColor: "#0f172a",
     overflow: "hidden",
-    marginBottom: 18,
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
@@ -523,7 +479,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
   },
   charCount: {
     fontFamily,
@@ -540,8 +495,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    minHeight: 100,
-    marginBottom: 16,
+    minHeight: 110,
   },
   guidelinesBox: {
     flexDirection: "row",
@@ -551,7 +505,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginTop: 4,
   },
   guidelinesText: {
     fontFamily,
@@ -561,23 +514,21 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   modalFooter: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
-    ...CAMPUS_HUB_COLORS.heroShadow,
+    borderTopColor: "rgba(19, 27, 46, 0.06)",
   },
   submitBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.memeAccent,
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 13,
     alignItems: "center",
     justifyContent: "center",
-    ...CAMPUS_HUB_COLORS.heroShadow,
   },
   submitBtnDisabled: {
-    opacity: 0.5,
+    backgroundColor: "#fbcfe8",
   },
   loadingRow: {
     flexDirection: "row",
@@ -586,7 +537,7 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "800",
     color: "#ffffff",
   },

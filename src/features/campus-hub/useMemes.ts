@@ -43,7 +43,6 @@ export const useInfiniteMemesFeed = (filter: MemeFilter = "latest") => {
     staleTime: 1000 * 60 * 3, // 3 minutes
     gcTime: 1000 * 60 * 15, // 15 minutes
     refetchOnWindowFocus: false,
-    placeholderData: keepPreviousData,
   });
 };
 
@@ -103,11 +102,15 @@ export const useReactToMeme = () => {
       queryClient.setQueriesData<InfiniteData<MemesFeedResponse>>(
         { queryKey: ["memes", "infiniteFeed"] },
         (old) => {
-          if (!old) return old;
+          if (!old?.pages) return old;
 
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
+          let found = false;
+          const nextPages = old.pages.map((page) => {
+            const hasTarget = page.memes.some((m) => m.id === memeId);
+            if (!hasTarget) return page;
+            found = true;
+
+            return {
               ...page,
               memes: page.memes.map((meme) => {
                 if (meme.id !== memeId) return meme;
@@ -146,7 +149,13 @@ export const useReactToMeme = () => {
                   dislikesCount: nextDislikes,
                 };
               }),
-            })),
+            };
+          });
+
+          if (!found) return old;
+          return {
+            ...old,
+            pages: nextPages,
           };
         }
       );
@@ -168,11 +177,15 @@ export const useReactToMeme = () => {
       queryClient.setQueriesData<InfiniteData<MemesFeedResponse>>(
         { queryKey: ["memes", "infiniteFeed"] },
         (old) => {
-          if (!old) return old;
+          if (!old?.pages) return old;
 
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
+          let found = false;
+          const nextPages = old.pages.map((page) => {
+            const hasTarget = page.memes.some((m) => m.id === data.memeId);
+            if (!hasTarget) return page;
+            found = true;
+
+            return {
               ...page,
               memes: page.memes.map((meme) => {
                 if (meme.id !== data.memeId) return meme;
@@ -183,7 +196,13 @@ export const useReactToMeme = () => {
                   dislikesCount: data.dislikesCount,
                 };
               }),
-            })),
+            };
+          });
+
+          if (!found) return old;
+          return {
+            ...old,
+            pages: nextPages,
           };
         }
       );

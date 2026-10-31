@@ -43,15 +43,15 @@ export function CampusHub({ initialSection }: CampusHubProps) {
   });
 
   useEffect(() => {
-    if (initialSection) {
+    if (initialSection && initialSection !== activeSection) {
       setCampusHubActiveSection(initialSection);
       setActiveSection(initialSection);
     }
-  }, [initialSection]);
+  }, [initialSection, activeSection]);
 
   useEffect(() => {
     return subscribeCampusHubSection((newSec) => {
-      setActiveSection(newSec);
+      setActiveSection((prev) => (prev !== newSec ? newSec : prev));
     });
   }, []);
 

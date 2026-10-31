@@ -86,7 +86,11 @@ export const MemesSection = React.memo(function MemesSection({
     isFetchingNextPage,
   } = useInfiniteMemesFeed(activeFilter);
 
-  const reactMutation = useReactToMeme();
+  const {
+    mutate: reactToMemeMutate,
+    isPending: isReactPending,
+    variables: reactVariables,
+  } = useReactToMeme();
   const deleteMutation = useDeleteMeme();
 
   const allMemes = useMemo(() => {
@@ -96,9 +100,9 @@ export const MemesSection = React.memo(function MemesSection({
 
   const handleReact = useCallback(
     (memeId: string, type: "LIKE" | "DISLIKE") => {
-      reactMutation.mutate({ memeId, type });
+      reactToMemeMutate({ memeId, type });
     },
-    [reactMutation]
+    [reactToMemeMutate]
   );
 
   const handleOpenOptions = useCallback((meme: Meme) => {
@@ -116,6 +120,10 @@ export const MemesSection = React.memo(function MemesSection({
       setMemeToDelete(memeForOptions.id);
     }
   }, [memeForOptions]);
+
+  const handleDeleteDirect = useCallback((id: string) => {
+    setMemeToDelete(id);
+  }, []);
 
   const handleConfirmDelete = useCallback(() => {
     if (!memeToDelete) return;
@@ -170,12 +178,23 @@ export const MemesSection = React.memo(function MemesSection({
         userRole={user?.role ?? undefined}
         onReact={handleReact}
         onOptions={handleOpenOptions}
-        onDeleteDirect={(id) => setMemeToDelete(id)}
+        onDeleteDirect={handleDeleteDirect}
         onPreviewImage={handlePreviewImage}
         onViewProfile={handleViewProfile}
+        isReacting={isReactPending && reactVariables?.memeId === item.id}
       />
     ),
-    [user?.id, user?.role, handleReact, handleOpenOptions, handlePreviewImage, handleViewProfile]
+    [
+      user?.id,
+      user?.role,
+      handleReact,
+      handleOpenOptions,
+      handleDeleteDirect,
+      handlePreviewImage,
+      handleViewProfile,
+      isReactPending,
+      reactVariables,
+    ]
   );
 
   const renderListFooter = useCallback(() => {
