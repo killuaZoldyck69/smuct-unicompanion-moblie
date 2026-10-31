@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Image,
   StatusBar,
 } from "react-native";
@@ -21,6 +20,10 @@ import { useTodaysClassesData } from "@/hooks/use-todays-classes";
 import { shadows } from "@/theme/layout";
 import { WeatherWidget } from "./components/weather-widget";
 import { TodaysClassesSection } from "./components/todays-classes-section";
+import {
+  NoticeListSkeleton,
+  WeatherWidgetSkeleton,
+} from "./components/home-loading-skeletons";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -73,7 +76,8 @@ export function Home() {
   // --- Fetch Data using Feature Hooks ---
   const { data: myHubs, isLoading: isLoadingHubs } = useMyHubs();
   const { data: notices, isLoading: isLoadingNotices } = useNotices();
-  const { weather, hourlyForecast } = useWeatherForecast();
+  const { weather, hourlyForecast, isLoading: isLoadingWeather } =
+    useWeatherForecast();
   const {
     classes: todaysClasses,
     stats: todayStats,
@@ -143,7 +147,11 @@ export function Home() {
         </View>
 
         {/* --- 2. WEATHER WIDGET --- */}
-        <WeatherWidget weather={weather} hourlyForecast={hourlyForecast} />
+        {isLoadingWeather ? (
+          <WeatherWidgetSkeleton />
+        ) : (
+          <WeatherWidget weather={weather} hourlyForecast={hourlyForecast} />
+        )}
 
         {/* --- 3. QUICK ACTIONS --- */}
         <View style={styles.quickActionsContainer}>
@@ -198,7 +206,7 @@ export function Home() {
         </View>
 
         {isLoadingNotices ? (
-          <ActivityIndicator color="#131b2e" style={{ marginVertical: 20 }} />
+          <NoticeListSkeleton />
         ) : !notices || notices.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyCardText}>No recent notices.</Text>
