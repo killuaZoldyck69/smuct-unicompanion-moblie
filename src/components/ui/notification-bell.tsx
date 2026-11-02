@@ -1,5 +1,6 @@
 import React from "react";
 import { Feather } from "@expo/vector-icons";
+import LottieView from "lottie-react-native";
 import { useRouter } from "expo-router";
 import {
   StyleProp,
@@ -16,6 +17,7 @@ interface NotificationBellProps {
   iconColor?: string;
   iconSize?: number;
   accessibilityLabel?: string;
+  useCatAnimation?: boolean;
 }
 
 export const NotificationBell = React.memo(function NotificationBell({
@@ -23,6 +25,7 @@ export const NotificationBell = React.memo(function NotificationBell({
   iconColor = "#131b2e",
   iconSize = 20,
   accessibilityLabel = "Notifications",
+  useCatAnimation = false,
 }: NotificationBellProps) {
   const router = useRouter();
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
@@ -40,7 +43,18 @@ export const NotificationBell = React.memo(function NotificationBell({
           : accessibilityLabel
       }
     >
-      <Feather name="bell" size={iconSize} color={iconColor} />
+      {useCatAnimation ? (
+        <LottieView
+          source={require("@/assets/icons/cat.json")}
+          autoPlay
+          loop
+          pointerEvents="none"
+          resizeMode="contain"
+          style={styles.catAnimation}
+        />
+      ) : (
+        <Feather name="bell" size={iconSize} color={iconColor} />
+      )}
       {unreadCount > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>
@@ -57,6 +71,10 @@ const styles = StyleSheet.create({
     position: "relative",
     alignItems: "center",
     justifyContent: "center",
+  },
+  catAnimation: {
+    width: 40,
+    height: 40,
   },
   badge: {
     position: "absolute",

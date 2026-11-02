@@ -58,8 +58,13 @@ export const AdminHeroHeader = React.memo(function AdminHeroHeader({
 
       {/* Right: Actions Block (Bell + Avatar) */}
       <View style={styles.topRightActions}>
-        {/* Notification Bell */}
-        <NotificationBell style={styles.bellBtn} iconColor="#1E293B" iconSize={19} />
+        {/* Notifications */}
+        <NotificationBell
+          style={styles.bellBtn}
+          iconColor="#1E293B"
+          iconSize={19}
+          useCatAnimation
+        />
 
         {/* Avatar -> Profile */}
         <TouchableOpacity

@@ -134,8 +134,8 @@ export function Home() {
             </Text>
           </View>
 
-          {/* Right: Notification Bell */}
-          <NotificationBell style={styles.notifBtn} />
+          {/* Right: Notifications */}
+          <NotificationBell style={styles.notifBtn} useCatAnimation />
         </View>
 
         {/* --- 2. WEATHER WIDGET --- */}
