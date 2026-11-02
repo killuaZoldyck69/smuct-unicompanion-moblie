@@ -24,6 +24,8 @@ const TYPE_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   CLASS_NOTICE: "clock",
   ASSESSMENT: "book-open",
   GRADE: "award",
+  MATERIAL: "book-open",
+  REVIEW_OPEN: "star",
   BOOKING_STATUS: "calendar",
   COMPLAINT_STATUS: "message-square",
 };
