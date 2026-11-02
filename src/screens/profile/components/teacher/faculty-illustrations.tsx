@@ -37,7 +37,6 @@ export const CampusBuildingWatermark = React.memo(
         height={height}
         viewBox="0 0 140 120"
         style={style}
-        accessible={false}
         aria-hidden={true}
       >
         <G opacity={opacity}>
@@ -137,7 +136,6 @@ export const ConnectedKnowledgeWatermark = React.memo(
         height={height}
         viewBox="0 0 110 100"
         style={style}
-        accessible={false}
         aria-hidden={true}
       >
         <G opacity={opacity}>
@@ -230,7 +228,6 @@ export const DigitalPresenceWatermark = React.memo(
         height={height}
         viewBox="0 0 135 95"
         style={style}
-        accessible={false}
         aria-hidden={true}
       >
         <G opacity={opacity}>
@@ -327,7 +324,6 @@ export const AcademicHaloWatermark = React.memo(
         height={height}
         viewBox="0 0 110 110"
         style={style}
-        accessible={false}
         aria-hidden={true}
       >
         <G opacity={opacity}>
@@ -381,7 +377,6 @@ export const DropletWatermark = React.memo(
         height={height}
         viewBox="0 0 54 62"
         style={style}
-        accessible={false}
         aria-hidden={true}
       >
         <G opacity={opacity}>
@@ -421,7 +416,6 @@ export const CommunicationWaveWatermark = React.memo(
         height={height}
         viewBox="0 0 58 58"
         style={style}
-        accessible={false}
         aria-hidden={true}
       >
         <G opacity={opacity}>

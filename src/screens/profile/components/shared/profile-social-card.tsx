@@ -25,7 +25,6 @@ const BrowserWatermark = ({ variant }: { variant: "student" | "teacher" }) =>
       height={140}
       viewBox="0 0 140 140"
       style={styles.studentWatermark}
-      accessible={false}
       aria-hidden={true}
     >
       <G opacity={0.06} fill="none" stroke="#4f46e5" strokeWidth={5}>

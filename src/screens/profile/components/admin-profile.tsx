@@ -38,7 +38,6 @@ function AdminShieldWatermark() {
       height={150}
       viewBox="0 0 150 150"
       style={styles.heroWatermark}
-      accessible={false}
       aria-hidden={true}
     >
       <Circle cx="84" cy="72" r="72" fill="#ffffff" opacity={0.05} />

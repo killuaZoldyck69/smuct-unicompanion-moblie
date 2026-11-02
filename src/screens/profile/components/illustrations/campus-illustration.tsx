@@ -36,7 +36,6 @@ export const CampusIllustration = React.memo(function CampusIllustration({
       width={width}
       height={height}
       viewBox="0 0 120 110"
-      accessible={false}
       aria-hidden={true}
     >
       <G opacity={opacity}>

@@ -25,7 +25,6 @@ export const DropMotif = React.memo(function DropMotif({
       width={width}
       height={height}
       viewBox="0 0 48 56"
-      accessible={false}
       aria-hidden={true}
     >
       <G opacity={opacity}>
@@ -71,7 +70,6 @@ export const WaveMotif = React.memo(function WaveMotif({
       width={width}
       height={height}
       viewBox="0 0 52 52"
-      accessible={false}
       aria-hidden={true}
     >
       <G opacity={opacity}>

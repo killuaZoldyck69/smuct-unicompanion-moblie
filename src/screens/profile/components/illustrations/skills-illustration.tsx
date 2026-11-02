@@ -42,7 +42,6 @@ export const SkillsIllustration = React.memo(function SkillsIllustration({
       width={width}
       height={height}
       viewBox="0 0 90 90"
-      accessible={false}
       aria-hidden={true}
     >
       <G opacity={opacity}>

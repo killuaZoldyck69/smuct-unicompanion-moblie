@@ -54,7 +54,6 @@ export const StudentContactCard = React.memo(function StudentContactCard({
             width={116}
             height={96}
             viewBox="0 0 100 80"
-            accessible={false}
             aria-hidden={true}
           >
             <G
