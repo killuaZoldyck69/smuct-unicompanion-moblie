@@ -13,6 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { NotificationBell } from "@/components/ui/notification-bell";
 import { useMyHubs } from "@/features/hubs/useHubs";
 import { useNotices } from "@/features/notices/useNotices";
 import { useWeatherForecast } from "@/hooks/use-weather-forecast";
@@ -134,16 +135,7 @@ export function Home() {
           </View>
 
           {/* Right: Notification Bell */}
-          <TouchableOpacity
-            onPress={() => router.push("/(tabs)/notices")}
-            style={styles.notifBtn}
-            activeOpacity={0.7}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Notifications"
-          >
-            <Feather name="bell" size={20} color="#131b2e" />
-          </TouchableOpacity>
+          <NotificationBell style={styles.notifBtn} />
         </View>
 
         {/* --- 2. WEATHER WIDGET --- */}

@@ -2,14 +2,13 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
+import { NotificationBell } from "@/components/ui/notification-bell";
 
 interface CourseHubsHeaderProps {
-  onOpenNotifications: () => void;
   onOpenSettings: () => void;
 }
 
 export const CourseHubsHeader = React.memo(function CourseHubsHeader({
-  onOpenNotifications,
   onOpenSettings,
 }: CourseHubsHeaderProps) {
   return (
@@ -34,6 +33,11 @@ export const CourseHubsHeader = React.memo(function CourseHubsHeader({
         </View>
 
         <View style={styles.actionButtonsGroup}>
+          <NotificationBell
+            style={styles.iconButton}
+            iconSize={19}
+            accessibilityLabel="View notifications"
+          />
           <TouchableOpacity
             style={styles.iconButton}
             onPress={onOpenSettings}

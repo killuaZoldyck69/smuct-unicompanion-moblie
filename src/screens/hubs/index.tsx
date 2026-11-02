@@ -185,7 +185,6 @@ export function Hubs() {
 
       {/* 1. SCREEN HEADER */}
       <CourseHubsHeader
-        onOpenNotifications={() => router.push("/(tabs)/notices")}
         onOpenSettings={() => setIsSettingsModalVisible(true)}
       />
 

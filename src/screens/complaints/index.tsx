@@ -16,6 +16,7 @@ import {
 } from "@/features/complaints/useComplaints";
 import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
 import type { ComplaintItem } from "@/services/complaint-service";
+import { NotificationBell } from "@/components/ui/notification-bell";
 
 import {
   ComplaintHeroStats,
@@ -134,10 +135,6 @@ export function ComplaintsScreen() {
     setComplaintToDelete(null);
   }, []);
 
-  const handleNotificationsPress = useCallback(() => {
-    router.push("/notices" as any);
-  }, [router]);
-
   const renderItem = useCallback(
     ({ item }: { item: ComplaintItem }) => (
       <ComplaintCard
@@ -170,16 +167,11 @@ export function ComplaintsScreen() {
             <Feather name="plus" size={20} color="#ffffff" />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <NotificationBell
             style={styles.headerIconBtn}
-            onPress={handleNotificationsPress}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="View notices and notifications"
-            activeOpacity={0.7}
-          >
-            <Feather name="bell" size={19} color={CAMPUS_HUB_COLORS.deepNavy} />
-          </TouchableOpacity>
+            iconSize={19}
+            accessibilityLabel="View notifications"
+          />
         </View>
       </View>
 

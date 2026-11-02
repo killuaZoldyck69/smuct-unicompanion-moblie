@@ -1,12 +1,11 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
+import { NotificationBell } from "@/components/ui/notification-bell";
 
 interface AdminHeroHeaderProps {
   userName: string | null | undefined;
   userImage: string | null | undefined;
-  onPressBell?: () => void;
 }
 
 const getGreeting = () => {
@@ -29,7 +28,6 @@ const getTodayLabel = () => {
 export const AdminHeroHeader = React.memo(function AdminHeroHeader({
   userName,
   userImage,
-  onPressBell,
 }: AdminHeroHeaderProps) {
   const router = useRouter();
   const greeting = useMemo(() => getGreeting(), []);
@@ -44,14 +42,6 @@ export const AdminHeroHeader = React.memo(function AdminHeroHeader({
         .toUpperCase()
         .slice(0, 2)
     : "S";
-
-  const handleBellPress = () => {
-    if (onPressBell) {
-      onPressBell();
-    } else {
-      router.push("/(tabs)/notices");
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -69,17 +59,7 @@ export const AdminHeroHeader = React.memo(function AdminHeroHeader({
       {/* Right: Actions Block (Bell + Avatar) */}
       <View style={styles.topRightActions}>
         {/* Notification Bell */}
-        <TouchableOpacity
-          onPress={handleBellPress}
-          style={styles.bellBtn}
-          activeOpacity={0.75}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Notifications"
-        >
-          <Feather name="bell" size={19} color="#1E293B" />
-          <View style={styles.bellBadge} />
-        </TouchableOpacity>
+        <NotificationBell style={styles.bellBtn} iconColor="#1E293B" iconSize={19} />
 
         {/* Avatar -> Profile */}
         <TouchableOpacity
@@ -188,17 +168,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
     position: "relative",
-  },
-  bellBadge: {
-    position: "absolute",
-    top: 9,
-    right: 9,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#EF4444",
-    borderWidth: 1.5,
-    borderColor: "#FFFFFF",
   },
   avatarWrap: {
     position: "relative",

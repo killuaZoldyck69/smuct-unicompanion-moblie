@@ -107,10 +107,6 @@ export function Forum({
     [router],
   );
 
-  const handleNotificationsPress = useCallback(() => {
-    router.push("/(tabs)/notices");
-  }, [router]);
-
   const handleResetFilter = useCallback(() => {
     setActiveFilter("ALL");
   }, [setActiveFilter]);
@@ -243,7 +239,6 @@ export function Forum({
       {!embedded && (
         <ForumTopNav
           user={currentUser}
-          onPressNotifications={handleNotificationsPress}
           onPressCompose={handleOpenCompose}
         />
       )}

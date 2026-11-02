@@ -2,15 +2,14 @@ import React, { memo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_COLORS, fontFamily } from "../constants";
+import { NotificationBell } from "@/components/ui/notification-bell";
 
 interface ForumTopNavProps {
   user?: { name?: string | null; image?: string | null } | null;
-  onPressNotifications: () => void;
   onPressCompose?: () => void;
 }
 
 export const ForumTopNav = memo(function ForumTopNav({
-  onPressNotifications,
   onPressCompose,
 }: ForumTopNavProps) {
   return (
@@ -33,16 +32,11 @@ export const ForumTopNav = memo(function ForumTopNav({
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
+        <NotificationBell
           style={styles.headerIconButton}
-          onPress={onPressNotifications}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="View notices and notifications"
-          activeOpacity={0.7}
-        >
-          <Feather name="bell" size={18} color={BENTO_COLORS.deepNavy} />
-        </TouchableOpacity>
+          iconSize={18}
+          accessibilityLabel="View notifications"
+        />
       </View>
     </View>
   );

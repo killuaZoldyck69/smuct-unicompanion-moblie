@@ -100,21 +100,24 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
       statusBarTranslucent={true}
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View
-          style={[
-            styles.overlay,
-            {
-              paddingTop: Math.max(insets.top + 16, 24),
-              paddingBottom: Math.max(insets.bottom + 16, 24),
-            },
-          ]}
+      <View
+        style={[
+          styles.overlay,
+          {
+            paddingTop: Math.max(insets.top + 16, 24),
+            paddingBottom: Math.max(insets.bottom + 16, 24),
+          },
+        ]}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoid}
+          pointerEvents="box-none"
         >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.keyboardAvoid}
-          >
-            <View style={styles.sheetContainer}>
+          <View style={styles.sheetContainer}>
               {/* Header */}
               <View style={styles.headerRow}>
                 <Text style={styles.titleText}>Grade Submission</Text>
@@ -147,7 +150,6 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
                     setMarksStr(sanitized);
                   }}
                   keyboardType="numeric"
-                  autoFocus
                 />
                 <Text style={styles.marksSuffix}>/ {totalMarks} Marks</Text>
               </View>
@@ -194,10 +196,9 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
                   )}
                 </TouchableOpacity>
               </View>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </TouchableWithoutFeedback>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };

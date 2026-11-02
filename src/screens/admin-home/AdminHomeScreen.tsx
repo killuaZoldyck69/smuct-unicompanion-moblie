@@ -8,7 +8,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useAdminDashboard } from "./hooks/use-admin-dashboard";
@@ -22,7 +22,6 @@ import { ActivityFeed } from "./components/ActivityFeed";
 
 export function AdminHomeScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { user } = useCurrentUser();
   const { health, stats, isStatsLoading, isHealthFetching, isRefreshing, refetch } =
     useAdminDashboard();
@@ -70,7 +69,6 @@ export function AdminHomeScreen() {
         <AdminHeroHeader
           userName={user?.name}
           userImage={user?.image}
-          onPressBell={() => router.push("/(tabs)/notices")}
         />
 
         {/* 2. System Health Banner */}

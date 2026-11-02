@@ -249,6 +249,10 @@ export default function TabsLayout() {
       <Tabs.Screen name="alumni" options={{ href: null }} />
       <Tabs.Screen name="exams" options={{ href: null }} />
       <Tabs.Screen name="field-booking" options={{ href: null }} />
+      <Tabs.Screen
+        name="notifications"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
+      />
     </Tabs>
   );
 }
