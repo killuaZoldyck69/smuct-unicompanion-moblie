@@ -102,7 +102,6 @@ export function NotificationsScreen() {
     <SafeAreaView style={styles.screen} edges={["top", "bottom", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>YOUR CAMPUS UPDATES</Text>
           <Text style={styles.title}>Notifications</Text>
           <Text style={styles.subtitle}>
             {unreadCount > 0
@@ -128,9 +127,18 @@ export function NotificationsScreen() {
       </View>
 
       {notificationsQuery.isPending ? (
-        <View style={styles.state}>
-          <ActivityIndicator size="large" color="#4f46e5" />
-          <Text style={styles.stateText}>Loading notifications…</Text>
+        <View style={styles.skeletonList} accessibilityLabel="Loading notifications">
+          {[0, 1, 2].map((skeletonIndex) => (
+            <View key={skeletonIndex} style={styles.skeletonCard}>
+              <View style={styles.skeletonIcon} />
+              <View style={styles.skeletonCopy}>
+                <View style={styles.skeletonTitle} />
+                <View style={styles.skeletonLine} />
+                <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+                <View style={styles.skeletonTimestamp} />
+              </View>
+            </View>
+          ))}
         </View>
       ) : notificationsQuery.isError ? (
         <View style={styles.state}>
@@ -196,13 +204,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerCopy: { flex: 1 },
-  eyebrow: {
-    color: "#64748b",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-  },
-  title: { color: "#131b2e", fontSize: 27, fontWeight: "800", marginTop: 5 },
+  title: { color: "#131b2e", fontSize: 27, fontWeight: "800" },
   subtitle: { color: "#64748b", fontSize: 13, marginTop: 4 },
   readAllButton: {
     width: 42,
@@ -214,6 +216,24 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   listContent: { paddingHorizontal: 18, paddingBottom: 40, gap: 10 },
+  skeletonList: { paddingHorizontal: 18, gap: 10 },
+  skeletonCard: {
+    minHeight: 132,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e8edf5",
+  },
+  skeletonIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#edf1f7" },
+  skeletonCopy: { flex: 1, gap: 10, paddingTop: 4 },
+  skeletonTitle: { width: "76%", height: 15, borderRadius: 8, backgroundColor: "#e8edf5" },
+  skeletonLine: { width: "92%", height: 12, borderRadius: 6, backgroundColor: "#eef1f6" },
+  skeletonLineShort: { width: "62%" },
+  skeletonTimestamp: { width: 74, height: 10, borderRadius: 5, backgroundColor: "#eef1f6", marginTop: 2 },
   listFooter: { paddingVertical: 16 },
   emptyListContent: { flexGrow: 1, justifyContent: "center" },
   notificationCard: {

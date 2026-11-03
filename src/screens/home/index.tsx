@@ -77,8 +77,11 @@ export function Home() {
   // --- Fetch Data using Feature Hooks ---
   const { data: myHubs, isLoading: isLoadingHubs } = useMyHubs();
   const { data: notices, isLoading: isLoadingNotices } = useNotices();
-  const { weather, hourlyForecast, isLoading: isLoadingWeather } =
-    useWeatherForecast();
+  const {
+    weather,
+    hourlyForecast,
+    isLoading: isLoadingWeather,
+  } = useWeatherForecast();
   const {
     classes: todaysClasses,
     stats: todayStats,
@@ -287,19 +290,10 @@ const styles = StyleSheet.create({
   },
 
   notifBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#ffffff",
+    width: 60,
+    height: 60,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.08)",
-    shadowColor: "#131b2e",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 1,
   },
 
   avatarImage: { width: 46, height: 46, borderRadius: 23 },
@@ -361,8 +355,6 @@ const styles = StyleSheet.create({
     color: "#1e3a8a",
     fontWeight: "700",
   },
-
-
 
   // --- NOTICES ---
   noticeContainerCard: {

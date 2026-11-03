@@ -47,12 +47,14 @@ const getOrdinal = (num?: number | string) => {
 };
 
 const splitOrdinal = (
-  num?: number | string | null
+  num?: number | string | null,
 ): { number: string; suffix: string } => {
   if (num === undefined || num === null || num === "") {
     return { number: "", suffix: "" };
   }
-  const rawStr = String(num).replace(/^(?:batch|sem|semester)\s*/i, "").trim();
+  const rawStr = String(num)
+    .replace(/^(?:batch|sem|semester)\s*/i, "")
+    .trim();
   const match = rawStr.match(/^(\d+)(?:st|nd|rd|th)?/i);
   if (match) {
     const n = parseInt(match[1], 10);
@@ -119,7 +121,7 @@ export default function HubHeader({
   };
 
   const teacherMember = hubDetails?.members?.find(
-    (m: any) => m.role === "TEACHER"
+    (m: any) => m.role === "TEACHER",
   );
   const crMember = hubDetails?.members?.find((m: any) => m.role === "CR");
   const teacherName =
@@ -129,14 +131,17 @@ export default function HubHeader({
   const rawSection =
     hubDetails?.section ||
     crMember?.user?.studentProfile?.section ||
-    hubDetails?.members?.find((m: any) => m.user?.studentProfile?.section)?.user?.studentProfile?.section ||
+    hubDetails?.members?.find((m: any) => m.user?.studentProfile?.section)?.user
+      ?.studentProfile?.section ||
     "";
   const cleanSection = rawSection
-    ? String(rawSection).replace(/^sec(tion)?\s*/i, "").trim()
+    ? String(rawSection)
+        .replace(/^sec(tion)?\s*/i, "")
+        .trim()
     : "";
 
   const semesterOrdinal = splitOrdinal(
-    hubDetails?.semesterNumber || hubDetails?.termOffer || "1st Semester"
+    hubDetails?.semesterNumber || hubDetails?.termOffer || "1st Semester",
   );
 
   const departmentShortName = hubDetails?.department
@@ -314,7 +319,8 @@ export default function HubHeader({
               style={styles.inlineMetaIcon}
             />
             <Text style={styles.inlineMetaText}>
-              {hubDetails.credit} {Number(hubDetails.credit) === 1 ? "Credit" : "Credits"}
+              {hubDetails.credit}{" "}
+              {Number(hubDetails.credit) === 1 ? "Credit" : "Credits"}
             </Text>
           </View>
         ) : null}
@@ -424,9 +430,14 @@ export default function HubHeader({
             style={[
               styles.joinMeetingBtn,
               hubDetails?.isClassLive && { backgroundColor: "#16a34a" },
-              !hubDetails?.meetUrl && !canEditClassLink && { backgroundColor: "#94a3b8" },
+              !hubDetails?.meetUrl &&
+                !canEditClassLink && { backgroundColor: "#94a3b8" },
             ]}
-            onPress={hubDetails?.meetUrl ? handleJoinMeet : (onEditClassLink || onLiveClassPress)}
+            onPress={
+              hubDetails?.meetUrl
+                ? handleJoinMeet
+                : onEditClassLink || onLiveClassPress
+            }
             activeOpacity={0.85}
             disabled={!hubDetails?.meetUrl && !canEditClassLink}
           >
@@ -434,10 +445,10 @@ export default function HubHeader({
               {hubDetails?.isClassLive
                 ? "Join Live"
                 : hubDetails?.meetUrl
-                ? "Join Class"
-                : canEditClassLink
-                ? "Set Link"
-                : "No Link"}
+                  ? "Join Class"
+                  : canEditClassLink
+                    ? "Set Link"
+                    : "No Link"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -472,15 +483,8 @@ const styles = StyleSheet.create({
   iconCircleBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: "#ffffff",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
   },
   courseTitle: {
     flex: 1,

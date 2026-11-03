@@ -44,19 +44,20 @@ export const NotificationBell = React.memo(function NotificationBell({
       }
     >
       {useCatAnimation ? (
-        <LottieView
-          source={require("@/assets/icons/cat.json")}
-          autoPlay
-          loop
-          pointerEvents="none"
-          resizeMode="contain"
-          style={styles.catAnimation}
-        />
+        <View pointerEvents="none" style={styles.catAnimation}>
+          <LottieView
+            source={require("@/assets/icons/cat.json")}
+            autoPlay
+            loop
+            resizeMode="contain"
+            style={styles.catAnimation}
+          />
+        </View>
       ) : (
         <Feather name="bell" size={iconSize} color={iconColor} />
       )}
       {unreadCount > 0 && (
-        <View style={styles.badge}>
+        <View style={[styles.badge, useCatAnimation && styles.catBadge]}>
           <Text style={styles.badgeText}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </Text>
@@ -73,8 +74,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   catAnimation: {
-    width: 40,
-    height: 40,
+    width: 144,
+    height: 144,
   },
   badge: {
     position: "absolute",
@@ -83,12 +84,15 @@ const styles = StyleSheet.create({
     minWidth: 17,
     height: 17,
     paddingHorizontal: 4,
-    borderRadius: 9,
-    backgroundColor: "#ef4444",
-    borderWidth: 1.5,
-    borderColor: "#fff",
+    borderRadius: 100,
+    borderWidth: 0.5,
+    borderColor: "#808080",
     alignItems: "center",
     justifyContent: "center",
   },
-  badgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+  catBadge: {
+    top: 4,
+    right: 38,
+  },
+  badgeText: { color: "#000000", fontSize: 9, fontWeight: "800" },
 });
