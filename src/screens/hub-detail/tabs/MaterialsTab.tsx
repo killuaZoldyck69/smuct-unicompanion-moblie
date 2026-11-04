@@ -21,6 +21,7 @@ import {
   MaterialCard,
   MaterialsEmptyState,
   UploadMaterialModal,
+  DeleteMaterialModal,
 } from "../components/materials";
 
 interface MaterialsTabProps {
@@ -48,6 +49,7 @@ export default function MaterialsTab({
   // Filter state: strictly "Course Material" (OFFICIAL) vs "Student Resources" (STUDENT_NOTES)
   const [activeSection, setActiveSection] = useState<MaterialSectionTab>("OFFICIAL");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
+  const [materialToDelete, setMaterialToDelete] = useState<MaterialItem | null>(null);
 
   const resourceList: MaterialItem[] = useMemo(() => {
     return Array.isArray(resources) ? (resources as MaterialItem[]) : [];
@@ -70,12 +72,22 @@ export default function MaterialsTab({
       try {
         await createMutation.mutateAsync(payload as any);
         setIsUploadModalVisible(false);
-        Toast.show({ type: "success", text1: "Material Published Successfully!" });
+        const isStudentResource = payload.isStudentNote;
+        Toast.show({
+          type: "success",
+          text1: isStudentResource ? "Student Resource Shared" : "Course Material Published",
+          text2: `"${payload.title}" is now available in this hub.`,
+          visibilityTime: 3500,
+        });
       } catch (err: any) {
         Toast.show({
           type: "error",
           text1: "Publish Failed",
-          text2: err.response?.data?.message || err.message,
+          text2:
+            err.response?.data?.message ||
+            err.message ||
+            "Unable to publish material. Please check your network and try again.",
+          visibilityTime: 4000,
         });
         throw err;
       }
@@ -83,36 +95,37 @@ export default function MaterialsTab({
     [createMutation]
   );
 
-  const handleDeleteResource = useCallback(
-    (resourceId: string, itemTitle: string) => {
-      Alert.alert(
-        "Delete Material",
-        `Are you sure you want to remove "${itemTitle}"? This cannot be undone.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () => {
-              deleteMutation.mutate(resourceId, {
-                onSuccess: () => {
-                  Toast.show({ type: "success", text1: "Material Deleted" });
-                },
-                onError: (err: any) => {
-                  Toast.show({
-                    type: "error",
-                    text1: "Delete Failed",
-                    text2: err.response?.data?.message || err.message,
-                  });
-                },
-              });
-            },
-          },
-        ]
-      );
+  const handleDeletePress = useCallback(
+    (resourceId: string, itemTitle: string, item?: MaterialItem) => {
+      setMaterialToDelete(item || ({ id: resourceId, title: itemTitle } as MaterialItem));
     },
-    [deleteMutation]
+    []
   );
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!materialToDelete) return;
+    const targetTitle = materialToDelete.title;
+    try {
+      await deleteMutation.mutateAsync(materialToDelete.id);
+      setMaterialToDelete(null);
+      Toast.show({
+        type: "success",
+        text1: "Material Deleted",
+        text2: `"${targetTitle}" was permanently removed from this hub.`,
+        visibilityTime: 3500,
+      });
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Delete Failed",
+        text2:
+          err.response?.data?.message ||
+          err.message ||
+          "Could not remove this material. Please try again.",
+        visibilityTime: 4000,
+      });
+    }
+  }, [deleteMutation, materialToDelete]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: MaterialItem; index: number }) => (
@@ -120,12 +133,12 @@ export default function MaterialsTab({
         item={item}
         canManage={canManage}
         currentUserId={currentUserId}
-        onDelete={handleDeleteResource}
+        onDelete={handleDeletePress}
         isFirst={index === 0}
         isLast={index === displayedResources.length - 1}
       />
     ),
-    [canManage, currentUserId, handleDeleteResource, displayedResources.length]
+    [canManage, currentUserId, handleDeletePress, displayedResources.length]
   );
 
   return (
@@ -185,6 +198,15 @@ export default function MaterialsTab({
         canManage={canManage}
         initialTab={activeSection}
         courseTitle={courseTitle}
+      />
+
+      {/* 5. Delete Material Modal */}
+      <DeleteMaterialModal
+        isVisible={Boolean(materialToDelete)}
+        item={materialToDelete}
+        isDeleting={deleteMutation.isPending}
+        onClose={() => setMaterialToDelete(null)}
+        onConfirm={handleConfirmDelete}
       />
     </View>
   );

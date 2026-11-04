@@ -4,4 +4,5 @@ export * from "./MaterialsFilterTabs";
 export * from "./MaterialsHeaderAction";
 export * from "./MaterialsEmptyState";
 export * from "./UploadMaterialModal";
+export * from "./DeleteMaterialModal";
 export * from "./file-actions";

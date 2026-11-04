@@ -143,12 +143,15 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
         Toast.show({
           type: "success",
           text1: `${newItems.length} File${newItems.length > 1 ? "s" : ""} Attached`,
+          text2: "Added to your upload attachments.",
+          visibilityTime: 3000,
         });
       } catch (err: any) {
         Toast.show({
           type: "error",
-          text1: "Selection Failed",
-          text2: err.message || "Failed to pick file",
+          text1: "File Selection Incomplete",
+          text2: err.message || "Failed to select document or file.",
+          visibilityTime: 3500,
         });
       }
     };
@@ -160,8 +163,9 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
         googleDrive.deleteFiles([file.driveFileId]).catch((err) => {
           Toast.show({
             type: "error",
-            text1: "Drive File Not Removed",
-            text2: err instanceof Error ? err.message : "Could not remove the file.",
+            text1: "Drive Sync Notice",
+            text2: err instanceof Error ? err.message : "Temporary file could not be cleaned from storage.",
+            visibilityTime: 3500,
           });
         });
       }
@@ -170,20 +174,37 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
 
     const handleAddLink = () => {
       const trimmedUrl = tempLinkUrl.trim();
-      if (!trimmedUrl) return;
+      if (!trimmedUrl) {
+        Toast.show({
+          type: "error",
+          text1: "Link URL Required",
+          text2: "Please enter a valid website address or file link.",
+          visibilityTime: 3000,
+        });
+        return;
+      }
 
       const formattedUrl =
         trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")
           ? trimmedUrl
           : `https://${trimmedUrl}`;
 
+      const linkTitle = tempLinkTitle.trim() || formattedUrl;
+
       setLinks((prev) => [
         ...prev,
         {
           url: formattedUrl,
-          title: tempLinkTitle.trim() || formattedUrl,
+          title: linkTitle,
         },
       ]);
+
+      Toast.show({
+        type: "success",
+        text1: "Resource Link Added",
+        text2: `"${linkTitle}" has been attached.`,
+        visibilityTime: 2500,
+      });
 
       setTempLinkUrl("");
       setTempLinkTitle("");
@@ -198,8 +219,9 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
       if (!title.trim()) {
         Toast.show({
           type: "error",
-          text1: "Title Required",
-          text2: "Please enter a title for this material.",
+          text1: "Material Title Required",
+          text2: "Please enter a clear, descriptive title before publishing.",
+          visibilityTime: 3500,
         });
         return;
       }
@@ -312,7 +334,11 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
         Toast.show({
           type: "error",
           text1: "Upload Failed",
-          text2: err?.message || "Failed to upload or publish material",
+          text2:
+            err?.response?.data?.message ||
+            err?.message ||
+            "Unable to upload files or publish material. Please try again.",
+          visibilityTime: 4000,
         });
       } finally {
         setIsUploadingFiles(false);

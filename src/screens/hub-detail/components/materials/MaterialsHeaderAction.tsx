@@ -36,8 +36,10 @@ export const MaterialsHeaderAction: React.FC<MaterialsHeaderActionProps> = React
     const handleLockNotice = () => {
       Toast.show({
         type: "info",
-        text1: "Course Materials",
-        text2: "Only teachers and CRs can upload official course materials. Switch to Student Resources to share notes.",
+        text1: "Teacher & CR Access Only",
+        text2:
+          "Only course teachers and CRs can publish official Course Materials. Switch to 'Student Resources' to share notes with classmates.",
+        visibilityTime: 4000,
       });
     };
 

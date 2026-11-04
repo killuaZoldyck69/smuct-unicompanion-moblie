@@ -47,7 +47,7 @@ interface MaterialCardProps {
   item: MaterialItem;
   canManage: boolean;
   currentUserId?: string;
-  onDelete: (id: string, title: string) => void;
+  onDelete: (id: string, title: string, item?: MaterialItem) => void;
   isFirst?: boolean;
   isLast?: boolean;
 }
@@ -238,7 +238,7 @@ export const MaterialCard: React.FC<MaterialCardProps> = React.memo(
                 <TouchableOpacity
                   onPress={(e) => {
                     e.stopPropagation();
-                    onDelete(item.id, item.title);
+                    onDelete(item.id, item.title, item);
                   }}
                   style={styles.deleteBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

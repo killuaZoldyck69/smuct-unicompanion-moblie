@@ -142,8 +142,9 @@ export async function downloadAndSaveDocument(
   if (!safeUrl) {
     Toast.show({
       type: "error",
-      text1: "Invalid File Link",
-      text2: "The document link is missing or invalid.",
+      text1: "Invalid Document Link",
+      text2: "The requested file or resource link is missing or invalid.",
+      visibilityTime: 3500,
     });
     return false;
   }
@@ -198,8 +199,9 @@ export async function downloadAndSaveDocument(
         }
         Toast.show({
           type: "success",
-          text1: "File Ready",
-          text2: safeName,
+          text1: "Document Ready",
+          text2: `Opened cached copy of ${safeName}.`,
+          visibilityTime: 2500,
         });
         return true;
       }
@@ -209,9 +211,9 @@ export async function downloadAndSaveDocument(
 
     Toast.show({
       type: "info",
-      text1: "Downloading File...",
-      text2: safeName,
-      visibilityTime: 2500,
+      text1: "Downloading Document...",
+      text2: `${safeName} — saving to your device.`,
+      visibilityTime: 3000,
     });
 
     const downloadRes = await (FileSystem as any).downloadAsync(
@@ -232,7 +234,8 @@ export async function downloadAndSaveDocument(
       Toast.show({
         type: "success",
         text1: "Download Complete",
-        text2: "Saved to device. Choose where to save or open.",
+        text2: `"${safeName}" saved. Choose where to store or view.`,
+        visibilityTime: 3500,
       });
       return true;
     } else {
@@ -242,8 +245,9 @@ export async function downloadAndSaveDocument(
     console.warn("Document download error:", error);
     Toast.show({
       type: "error",
-      text1: "Download Failed",
-      text2: "Opening file in browser instead...",
+      text1: "Direct Download Failed",
+      text2: "Opening document preview in browser instead...",
+      visibilityTime: 3500,
     });
     // Fallback to opening in browser
     return openDocumentOrLink(safeUrl, safeName);
@@ -265,8 +269,9 @@ export async function openDocumentOrLink(
   if (!safeUrl) {
     Toast.show({
       type: "error",
-      text1: "Invalid Link",
-      text2: "The document link is missing or invalid.",
+      text1: "Invalid Resource Link",
+      text2: "The document or web link could not be opened.",
+      visibilityTime: 3500,
     });
     return false;
   }
