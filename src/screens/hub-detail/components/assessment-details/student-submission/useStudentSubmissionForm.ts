@@ -7,11 +7,6 @@ import {
   AssessmentSubmission,
   AssessmentAttachment,
 } from "../types";
-import {
-  ALLOWED_FILE_EXTENSIONS,
-  MAX_FILE_SIZE_BYTES,
-  MAX_FILE_COUNT,
-} from "../utils";
 import { useGoogleDrive } from "@/hooks/use-google-drive";
 import {
   SubmissionLink,
@@ -84,7 +79,7 @@ export function useStudentSubmissionForm({
   isSubmitting,
   onSubmit,
 }: UseStudentSubmissionFormProps) {
-  const { ensureConnected, uploadFiles, deleteFiles } = useGoogleDrive();
+  const { ensureConnected, uploadFiles } = useGoogleDrive();
   // Determine allowed submission methods from assessment configuration
   const isOfflineAssessment =
     assessment.submissionType === "HAND" ||
@@ -166,50 +161,17 @@ export function useStudentSubmissionForm({
 
       if (res.canceled || !res.assets || res.assets.length === 0) return;
 
-      // 1. Check total file count limit
-      if (files.length + res.assets.length > MAX_FILE_COUNT) {
-        Toast.show({
-          type: "error",
-          text1: "File Limit Reached",
-          text2: `You can upload up to ${MAX_FILE_COUNT} files total.`,
-        });
-        return;
-      }
-
-      // 2. Validate individual files (size + extension whitelist)
-      const validAssets: DocumentPicker.DocumentPickerAsset[] = [];
-      for (const asset of res.assets) {
-        if (asset.size && asset.size > MAX_FILE_SIZE_BYTES) {
-          Toast.show({
-            type: "error",
-            text1: "File Too Large",
-            text2: `"${asset.name}" exceeds the 10MB limit.`,
-          });
-          return;
-        }
-
+      // Accept any file kind and no file count/size limit (stored directly in student's Google Drive)
+      const newStaged: StagedSubmissionAttachment[] = res.assets.map((asset) => {
         const ext = asset.name.split(".").pop()?.toLowerCase();
-        if (!ext || !ALLOWED_FILE_EXTENSIONS.includes(ext)) {
-          Toast.show({
-            type: "error",
-            text1: "Unsupported File Format",
-            text2: `"${asset.name}" is not an allowed type.`,
-          });
-          return;
-        }
-
-        validAssets.push(asset);
-      }
-
-      if (validAssets.length === 0) return;
-
-      const newStaged: StagedSubmissionAttachment[] = validAssets.map((asset) => ({
-        name: asset.name,
-        localUri: asset.uri,
-        size: asset.size || undefined,
-        mimeType: asset.mimeType || undefined,
-        type: asset.name.split(".").pop()?.toLowerCase(),
-      }));
+        return {
+          name: asset.name,
+          localUri: asset.uri,
+          size: asset.size || undefined,
+          mimeType: asset.mimeType || undefined,
+          type: ext || "file",
+        };
+      });
 
       setFiles((prev) => [...prev, ...newStaged]);
       Toast.show({ type: "success", text1: "Files Attached Successfully!" });
@@ -220,20 +182,12 @@ export function useStudentSubmissionForm({
         text2: err.message || "Failed to select file",
       });
     }
-  }, [files.length]);
+  }, []);
 
   // Remove handlers
-  const handleRemoveFile = useCallback(async (idx: number) => {
-    const target = files[idx];
-    if (target?.driveFileId) {
-      try {
-        await deleteFiles([target.driveFileId]);
-      } catch (e) {
-        console.warn("[GoogleDrive] Remote file deletion skipped or failed:", e);
-      }
-    }
+  const handleRemoveFile = useCallback((idx: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
-  }, [files, deleteFiles]);
+  }, []);
 
   const handleRemoveLink = useCallback((idx: number) => {
     setLinks((prev) => prev.filter((_, i) => i !== idx));

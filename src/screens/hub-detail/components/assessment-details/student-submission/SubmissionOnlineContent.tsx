@@ -274,10 +274,10 @@ export const SubmissionOnlineContent: React.FC<SubmissionOnlineContentProps> = R
         {/* Helper Information */}
         <View style={styles.helperTextContainer}>
           <Text style={styles.helperText}>
-            You can upload up to 5 files (max 10MB each).
+            You can upload files of any type with no file count or size limit.
           </Text>
           <Text style={styles.helperText}>
-            Allowed types: pdf, doc, docx, zip, rar, jpg, png.
+            Files are stored directly in your connected Google Drive.
           </Text>
         </View>
       </View>

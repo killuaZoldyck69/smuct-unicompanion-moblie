@@ -243,10 +243,14 @@ export function useGoogleDrive() {
         throw new Error("Sign in to UniCompanion before managing Drive files.");
       }
       if (fileIds.length === 0) return;
-      const accessToken = await ensureValidAccessToken(appUserId);
-      await Promise.all(
-        fileIds.map((id) => deleteGoogleDriveFile(id, accessToken)),
-      );
+      try {
+        const accessToken = await ensureValidAccessToken(appUserId);
+        await Promise.all(
+          fileIds.map((id) => deleteGoogleDriveFile(id, accessToken)),
+        );
+      } catch (err) {
+        console.warn("[GoogleDrive] Failed to delete files:", err);
+      }
     },
     [appUserId],
   );
