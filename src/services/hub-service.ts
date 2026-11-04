@@ -330,7 +330,7 @@ export const gradeSubmissionAPI = gradeSubmission;
 
 export const bulkGrade = async (
   assessmentId: string,
-  grades: { studentId: string; marks: number }[],
+  grades: { studentId: string; marks: number; feedback?: string }[],
 ) => {
   const res = await api.post(
     `/hubs/assessments/${assessmentId}/bulk-grade`,

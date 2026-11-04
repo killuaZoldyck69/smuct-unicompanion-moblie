@@ -12,16 +12,17 @@ interface SubmissionsAnalyticsCardProps {
   submitted: number;
   pending: number;
   graded: number;
+  isOffline?: boolean;
   onViewAll?: () => void;
 }
 
 export const SubmissionsAnalyticsCard: React.FC<SubmissionsAnalyticsCardProps> = React.memo(
-  ({ total, submitted, pending, graded, onViewAll }) => {
+  ({ total, submitted, pending, graded, isOffline = false, onViewAll }) => {
     return (
       <View style={styles.container}>
         {/* Header Row */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Submissions Overview</Text>
+          <Text style={styles.sectionTitle}>{isOffline ? "In-Person Evaluation Overview" : "Submissions Overview"}</Text>
           {onViewAll && (
             <TouchableOpacity
               onPress={onViewAll}
@@ -34,19 +35,21 @@ export const SubmissionsAnalyticsCard: React.FC<SubmissionsAnalyticsCardProps> =
           )}
         </View>
 
-        {/* 4 Stats Cards in a Row: Total | Submitted | Pending | Graded */}
+        {/* Stats Cards: Total | (Submitted if online) | Pending | Graded */}
         <View style={styles.statsRow}>
           {/* 1. Total */}
           <View style={styles.statBox}>
             <Text style={styles.statNum}>{total}</Text>
-            <Text style={styles.statLabel}>Total</Text>
+            <Text style={styles.statLabel}>{isOffline ? "Enrolled" : "Total"}</Text>
           </View>
 
-          {/* 2. Submitted */}
-          <View style={styles.statBox}>
-            <Text style={styles.statNum}>{submitted}</Text>
-            <Text style={styles.statLabel}>Submitted</Text>
-          </View>
+          {/* 2. Submitted (Only for online) */}
+          {!isOffline && (
+            <View style={styles.statBox}>
+              <Text style={styles.statNum}>{submitted}</Text>
+              <Text style={styles.statLabel}>Submitted</Text>
+            </View>
+          )}
 
           {/* 3. Pending (Pink/Red tint) */}
           <View style={[styles.statBox, styles.statBoxPending]}>

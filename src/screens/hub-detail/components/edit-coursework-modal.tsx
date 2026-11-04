@@ -37,7 +37,7 @@ import { useGoogleDrive } from "@/hooks/use-google-drive";
 interface Props {
   isVisible: boolean;
   onClose: () => void;
-  onSubmit: (payload: any) => void;
+  onSubmit: (payload: any) => void | Promise<void>;
   isPending: boolean;
   assessment: any | null;
   courseTitle?: string;
@@ -223,7 +223,10 @@ export default function EditCourseworkModal({
       Toast.show({
         type: "error",
         text1: "Update Failed",
-        text2: err?.message || "Failed to upload attachments or update coursework.",
+        text2:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to upload attachments or update coursework.",
       });
     } finally {
       setIsUploading(false);
@@ -353,7 +356,9 @@ export default function EditCourseworkModal({
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
-      <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
+      {isVisible && (
+        <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
+      )}
     </Modal>
   );
 }

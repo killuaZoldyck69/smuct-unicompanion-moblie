@@ -163,7 +163,10 @@ export default function CreateCourseworkModal({
       Toast.show({
         type: "error",
         text1: "Publish Failed",
-        text2: err?.message || "Failed to upload attachments or create coursework.",
+        text2:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to upload attachments or create coursework.",
       });
     } finally {
       setIsUploading(false);
@@ -312,7 +315,9 @@ export default function CreateCourseworkModal({
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
-      <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
+      {isVisible && (
+        <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
+      )}
     </Modal>
   );
 }

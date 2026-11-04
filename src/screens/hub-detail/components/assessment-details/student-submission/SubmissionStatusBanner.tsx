@@ -16,9 +16,22 @@ interface SubmissionStatusBannerProps {
 export const SubmissionStatusBanner: React.FC<SubmissionStatusBannerProps> = React.memo(
   ({ assessment, mySub, isClosed, isLateActive }) => {
     const isGraded = mySub?.marks !== null && mySub?.marks !== undefined;
+    const isOffline = assessment.submissionType === "HAND" || assessment.submissionType === "OFFLINE";
 
     return (
       <>
+        {/* OFFLINE IN-PERSON COURSEWORK STATUS */}
+        {isOffline && !isGraded && (
+          <View style={styles.mySubmissionCard}>
+            <View style={styles.subStatusBadge}>
+              <Feather name="user-check" size={14} color="#0284c7" style={{ marginRight: 6 }} />
+              <Text style={[styles.subStatusBadgeText, { color: "#0369a1" }]}>
+                In-Person Coursework · Waiting for teacher to grade in class
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* SUBMISSION RECEIPT STATUS (IF PENDING GRADE) */}
         {mySub && mySub.status === "UNSUBMITTED" && (
           <View style={styles.mySubmissionCard}>

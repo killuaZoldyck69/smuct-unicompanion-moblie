@@ -42,7 +42,7 @@ export interface CreateCourseworkPayload {
 export interface CreateCourseworkModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSubmit: (payload: CreateCourseworkPayload) => void;
+  onSubmit: (payload: CreateCourseworkPayload) => void | Promise<void>;
   isPending: boolean;
   courseTitle?: string;
 }

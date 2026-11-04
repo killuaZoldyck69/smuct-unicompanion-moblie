@@ -10,9 +10,9 @@ export const SubmissionOfflineCard: React.FC = React.memo(() => {
       <View style={styles.offlineIconBox}>
         <Feather name="clipboard" size={20} color="#0f172a" />
       </View>
-      <Text style={styles.offlineTitle}>In-Class Physical Submission</Text>
+      <Text style={styles.offlineTitle}>In-Class Physical Coursework</Text>
       <Text style={styles.offlineDesc}>
-        Submit your hardcopy / paper work directly to the teacher during class. Tap Submit below to declare your physical submission.
+        This coursework is completed in person during class (e.g. physical test, presentation, or handwritten paper). No online submission is required. Your teacher will record your marks and feedback directly here.
       </Text>
     </View>
   );

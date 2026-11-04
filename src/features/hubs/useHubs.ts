@@ -288,7 +288,7 @@ export const useGradeSubmission = (assessmentId: string) => {
 export const useBulkGrade = (assessmentId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (grades: { studentId: string; marks: number }[]) =>
+    mutationFn: (grades: { studentId: string; marks: number; feedback?: string }[]) =>
       bulkGradeAPI(assessmentId, grades),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["submissions", assessmentId] });

@@ -26,6 +26,7 @@ import CreateCourseworkModal from "../components/create-coursework-modal";
 import CourseHubSkeleton from "../components/course-hub-skeleton";
 import EditCourseworkModal from "../components/edit-coursework-modal";
 import AssessmentDetailsModal from "../components/assessment-details-modal";
+import { CreateCourseworkPayload } from "../components/create-coursework";
 
 import {
   ClassworkTabProps,
@@ -107,80 +108,86 @@ export default function ClassworkTab({
 
   // Handlers
   const handleCreateSubmit = useCallback(
-    (payload: any) => {
-      createMutation.mutate(payload, {
-        onSuccess: () => {
-          setIsCreateModalVisible(false);
-          Toast.show({ type: "success", text1: "Coursework Published!" });
-        },
-        onError: (err: any) => {
-          Toast.show({
-            type: "error",
-            text1: "Creation Failed",
-            text2: err.response?.data?.message || err.message,
-          });
-        },
-      });
+    async (payload: CreateCourseworkPayload) => {
+      await createMutation.mutateAsync(payload as any);
+      setIsCreateModalVisible(false);
+      setTimeout(() => {
+        Toast.show({
+          type: "success",
+          text1: "Coursework Published!",
+          text2: "Your coursework has been published successfully.",
+        });
+      }, 350);
     },
     [createMutation]
   );
 
   const handleEditSubmit = useCallback(
-    (payload: any) => {
+    async (payload: any) => {
       if (!editingAssessment) return;
-      updateMutation.mutate(
-        { assessmentId: editingAssessment.id, payload },
-        {
-          onSuccess: () => {
-            setEditingAssessment(null);
-            Toast.show({ type: "success", text1: "Coursework Updated!" });
-          },
-          onError: (err: any) => {
-            Toast.show({
-              type: "error",
-              text1: "Update Failed",
-              text2: err.response?.data?.message || err.message,
-            });
-          },
-        }
-      );
+      await updateMutation.mutateAsync({
+        assessmentId: editingAssessment.id,
+        payload,
+      });
+      setEditingAssessment(null);
+      setTimeout(() => {
+        Toast.show({
+          type: "success",
+          text1: "Coursework Updated!",
+          text2: "Your changes have been saved successfully.",
+        });
+      }, 350);
     },
     [editingAssessment, updateMutation]
   );
 
   const handleDelete = useCallback(
-    (assessmentId: string) => {
-      deleteMutation.mutate(assessmentId, {
-        onSuccess: () => {
-          Toast.show({ type: "success", text1: "Coursework Deleted" });
-        },
-        onError: (err: any) => {
+    async (assessmentId: string) => {
+      try {
+        await deleteMutation.mutateAsync(assessmentId);
+        setTimeout(() => {
           Toast.show({
-            type: "error",
-            text1: "Delete Failed",
-            text2: err.response?.data?.message || err.message,
+            type: "success",
+            text1: "Coursework Deleted",
+            text2: "The coursework has been removed.",
           });
-        },
-      });
+        }, 350);
+      } catch (err: any) {
+        Toast.show({
+          type: "error",
+          text1: "Delete Failed",
+          text2:
+            err?.response?.data?.message ||
+            err?.message ||
+            "Failed to delete coursework.",
+        });
+      }
     },
     [deleteMutation]
   );
 
-  const handleConfirmDelete = useCallback(() => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!deletingAssessment) return;
-    deleteMutation.mutate(deletingAssessment.id, {
-      onSuccess: () => {
-        setDeletingAssessment(null);
-        Toast.show({ type: "success", text1: "Coursework Deleted" });
-      },
-      onError: (err: any) => {
+    try {
+      await deleteMutation.mutateAsync(deletingAssessment.id);
+      setDeletingAssessment(null);
+      setTimeout(() => {
         Toast.show({
-          type: "error",
-          text1: "Delete Failed",
-          text2: err.response?.data?.message || err.message,
+          type: "success",
+          text1: "Coursework Deleted",
+          text2: "The coursework has been removed.",
         });
-      },
-    });
+      }, 350);
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Delete Failed",
+        text2:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to delete coursework.",
+      });
+    }
   }, [deletingAssessment, deleteMutation]);
 
   const handleCardPress = useCallback((item: AssessmentData) => {
@@ -256,13 +263,15 @@ export default function ClassworkTab({
       )}
 
       {/* Create Coursework Modal */}
-      <CreateCourseworkModal
-        isVisible={isCreateModalVisible}
-        onClose={() => setIsCreateModalVisible(false)}
-        onSubmit={handleCreateSubmit}
-        isPending={createMutation.isPending}
-        courseTitle={courseTitle}
-      />
+      {isCreateModalVisible && (
+        <CreateCourseworkModal
+          isVisible={isCreateModalVisible}
+          onClose={() => setIsCreateModalVisible(false)}
+          onSubmit={handleCreateSubmit}
+          isPending={createMutation.isPending}
+          courseTitle={courseTitle}
+        />
+      )}
 
       {/* Edit Coursework Modal */}
       {editingAssessment && (

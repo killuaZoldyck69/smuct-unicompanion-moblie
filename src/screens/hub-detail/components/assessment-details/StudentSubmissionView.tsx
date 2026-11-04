@@ -40,6 +40,7 @@ interface StudentSubmissionViewProps {
 
 export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React.memo(
   ({ assessment, typeConfig, mySub, isSubmitting, isUnsubmitting = false, onSubmit, onUnsubmit, courseTitle }) => {
+    const isOfflineAssessment = assessment.submissionType === "HAND" || assessment.submissionType === "OFFLINE";
     const {
       allowOnline,
       allowOffline,
@@ -117,13 +118,15 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
           ) : (
             <>
               <View pointerEvents={mySub && (!isUnsubmitted || isClosed) ? "none" : "auto"}>
-              <SubmissionMethodRadio
-                method={submissionMethod}
-                disabled={isClosed}
-                allowOnline={allowOnline}
-                allowOffline={allowOffline}
-                onSelect={setSubmissionMethod}
-              />
+              {!isOfflineAssessment && (
+                <SubmissionMethodRadio
+                  method={submissionMethod}
+                  disabled={isClosed}
+                  allowOnline={allowOnline}
+                  allowOffline={allowOffline}
+                  onSelect={setSubmissionMethod}
+                />
+              )}
 
               {/* 5. ONLINE UPLOAD/LINKS/TEXT VS OFFLINE IN-CLASS CARD */}
               {submissionMethod === "ONLINE" ? (
@@ -158,18 +161,20 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
           <View style={{ height: 40 }} />
         </ScrollView>
 
-        {/* 6. FIXED BOTTOM SUBMIT BAR */}
-        <SubmissionBottomBar
-          isClosed={isClosed}
-          isLateActive={isLateActive}
-          isSubmitDisabled={isSubmitDisabled}
-          isSubmitting={isSubmitting}
-          hasPreviousSubmission={Boolean(mySub)}
-          canUnsubmit={canUnsubmit}
-          isUnsubmitting={isUnsubmitting}
-          onSubmit={handleFormSubmit}
-          onUnsubmit={onUnsubmit}
-        />
+        {/* 6. FIXED BOTTOM SUBMIT BAR (Only for online submissions) */}
+        {!isOfflineAssessment && (
+          <SubmissionBottomBar
+            isClosed={isClosed}
+            isLateActive={isLateActive}
+            isSubmitDisabled={isSubmitDisabled}
+            isSubmitting={isSubmitting}
+            hasPreviousSubmission={Boolean(mySub)}
+            canUnsubmit={canUnsubmit}
+            isUnsubmitting={isUnsubmitting}
+            onSubmit={handleFormSubmit}
+            onUnsubmit={onUnsubmit}
+          />
+        )}
       </View>
     );
   }

@@ -20,6 +20,7 @@ import {
   useSubmitAssessment,
   useUnsubmitAssessment,
   useGradeSubmission,
+  useBulkGrade,
 } from "@/features/hubs/useHubs";
 
 import {
@@ -86,6 +87,8 @@ function AssessmentDetailsContent({
   const submitMutation = useSubmitAssessment(hubId, assessment.id);
   const unsubmitMutation = useUnsubmitAssessment(hubId, assessment.id);
   const gradeMutation = useGradeSubmission(assessment.id);
+  const bulkGradeMutation = useBulkGrade(assessment.id);
+  const isOfflineAssessment = assessment.submissionType === "HAND" || assessment.submissionType === "OFFLINE";
 
   // Tab State: Teachers default to DETAILS; students and class representatives default to MY_SUBMISSION
   const [activeTab, setActiveTab] = useState<"DETAILS" | "MY_SUBMISSION">(
@@ -176,28 +179,59 @@ function AssessmentDetailsContent({
     (marks: number, feedback?: string) => {
       if (!gradingTarget) return;
 
-      gradeMutation.mutate(
-        {
-          submissionId: gradingTarget.submissionId,
-          marks,
-          feedback,
-        },
-        {
-          onSuccess: () => {
-            setGradingTarget(null);
-            Toast.show({ type: "success", text1: "Grade & Feedback Saved!" });
+      const isOfflineOrNew =
+        isOfflineAssessment ||
+        !gradingTarget.submissionId ||
+        gradingTarget.submissionId === gradingTarget.userId ||
+        gradingTarget.submissionId.startsWith("offline-");
+
+      if (isOfflineOrNew) {
+        bulkGradeMutation.mutate(
+          [
+            {
+              studentId: gradingTarget.userId,
+              marks,
+              feedback,
+            },
+          ],
+          {
+            onSuccess: () => {
+              setGradingTarget(null);
+              Toast.show({ type: "success", text1: "Grade & Feedback Saved!" });
+            },
+            onError: (err: any) => {
+              Toast.show({
+                type: "error",
+                text1: "Grading Failed",
+                text2: err.response?.data?.message || err.message,
+              });
+            },
+          }
+        );
+      } else {
+        gradeMutation.mutate(
+          {
+            submissionId: gradingTarget.submissionId,
+            marks,
+            feedback,
           },
-          onError: (err: any) => {
-            Toast.show({
-              type: "error",
-              text1: "Grading Failed",
-              text2: err.response?.data?.message || err.message,
-            });
-          },
-        }
-      );
+          {
+            onSuccess: () => {
+              setGradingTarget(null);
+              Toast.show({ type: "success", text1: "Grade & Feedback Saved!" });
+            },
+            onError: (err: any) => {
+              Toast.show({
+                type: "error",
+                text1: "Grading Failed",
+                text2: err.response?.data?.message || err.message,
+              });
+            },
+          }
+        );
+      }
     },
-    [gradingTarget, gradeMutation]
+    [gradingTarget, isOfflineAssessment, gradeMutation, bulkGradeMutation]
   );
 
   const handleStudentSubmit = useCallback(
@@ -339,9 +373,10 @@ function AssessmentDetailsContent({
 
               <SubmissionsAnalyticsCard
                 total={eligibleStudentCount}
-                submitted={totalSubmitted}
-                pending={pendingCount}
+                submitted={isOfflineAssessment ? gradedCount : totalSubmitted}
+                pending={isOfflineAssessment ? Math.max(0, eligibleStudentCount - gradedCount) : pendingCount}
                 graded={gradedCount}
+                isOffline={isOfflineAssessment}
               />
 
               {/* ALL SUBMISSIONS UNDER STATS */}
@@ -351,6 +386,7 @@ function AssessmentDetailsContent({
                   totalMarks={assessment.totalMarks}
                   isLoading={isLoadingSubmissions}
                   hubMembers={hubMembers}
+                  isOffline={isOfflineAssessment}
                   onOpenGrading={handleOpenGrading}
                 />
               </View>
@@ -364,7 +400,7 @@ function AssessmentDetailsContent({
               totalMarks={assessment.totalMarks}
               initialMarks={initialGradeMarks}
               initialFeedback={initialGradeFeedback}
-              isPending={gradeMutation.isPending}
+              isPending={gradeMutation.isPending || bulkGradeMutation.isPending}
               onClose={() => setGradingTarget(null)}
               onSave={handleSaveGrade}
             />
@@ -406,7 +442,9 @@ export default function AssessmentDetailsModal(props: AssessmentDetailsModalProp
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       {assessment ? <AssessmentDetailsContent {...props} assessment={assessment} /> : null}
-      <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
+      {isVisible && (
+        <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
+      )}
     </Modal>
   );
 }
