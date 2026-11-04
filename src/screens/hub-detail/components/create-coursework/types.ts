@@ -44,4 +44,5 @@ export interface CreateCourseworkModalProps {
   onClose: () => void;
   onSubmit: (payload: CreateCourseworkPayload) => void;
   isPending: boolean;
+  courseTitle?: string;
 }

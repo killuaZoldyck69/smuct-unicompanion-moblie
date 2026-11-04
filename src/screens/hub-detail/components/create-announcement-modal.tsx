@@ -137,6 +137,7 @@ interface Props {
   }) => void;
   isPending: boolean;
   initialData?: any;
+  courseTitle?: string;
 }
 
 export default function CreateAnnouncementModal({
@@ -145,6 +146,7 @@ export default function CreateAnnouncementModal({
   onSubmit,
   isPending,
   initialData,
+  courseTitle,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { ensureConnected, uploadFiles, deleteFiles } = useGoogleDrive();
@@ -331,13 +333,20 @@ export default function CreateAnnouncementModal({
         if (filesNeedingUpload.length > 0) {
           const connected = await ensureConnected();
           if (!connected) return;
+          const courseFolder = courseTitle || "Course Hub";
+          const folderPath = [
+            "SMUCT UniCompanion - Course Hub",
+            courseFolder,
+            "Stream",
+          ];
           const uploaded = await uploadFiles(
             filesNeedingUpload.map((f) => ({
               uri: f.localUri!,
               name: f.name,
               mimeType: f.mimeType,
               size: f.size,
-            }))
+            })),
+            { folderPath }
           );
 
           setAttachments((prev) =>

@@ -38,6 +38,7 @@ export default function CreateCourseworkModal({
   onClose,
   onSubmit,
   isPending,
+  courseTitle,
 }: CreateCourseworkModalProps) {
   const insets = useSafeAreaInsets();
   const { ensureConnected, uploadFiles } = useGoogleDrive();
@@ -85,13 +86,22 @@ export default function CreateCourseworkModal({
             });
             return;
           }
+          const courseFolder = courseTitle || "Course Hub";
+          const classworkFolder = form.title.trim() || "Untitled Classwork";
+          const folderPath = [
+            "SMUCT UniCompanion - Course Hub",
+            courseFolder,
+            "Classwork",
+            classworkFolder,
+          ];
           const uploaded = await uploadFiles(
             filesNeedingUpload.map((f) => ({
               uri: f.localUri!,
               name: f.name,
               mimeType: f.mimeType,
               size: f.size,
-            }))
+            })),
+            { folderPath }
           );
 
           setAttachments((prev) =>

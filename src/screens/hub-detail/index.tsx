@@ -410,6 +410,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
         {activeTab === "stream" && (
           <StreamTab
             hubId={hubId}
+            hubDetails={hubDetails}
             canManage={canManage}
             canPostAnnouncement={canPostAnnouncement}
             currentUserId={myUserId}
@@ -433,6 +434,7 @@ export function HubDetail({ hubId }: HubDetailProps) {
         {activeTab === "materials" && (
           <MaterialsTab
             hubId={hubId}
+            hubDetails={hubDetails}
             canManage={canManage}
             currentUserId={myUserId}
             readOnly={isAdmin}

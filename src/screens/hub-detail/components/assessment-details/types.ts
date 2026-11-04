@@ -96,4 +96,5 @@ export interface AssessmentDetailsModalProps {
   hubMembers?: any[];
   onEdit?: (item: AssessmentData) => void;
   onDelete?: (assessmentId: string) => void;
+  courseTitle?: string;
 }

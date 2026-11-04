@@ -7,6 +7,7 @@ import {
   Alert,
 } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatCourseFolderName } from "@/services/google-drive-service";
 import Toast from "react-native-toast-message";
 import CourseHubSkeleton from "../components/course-hub-skeleton";
 
@@ -27,6 +28,7 @@ interface MaterialsTabProps {
   canManage: boolean;
   currentUserId?: string;
   readOnly?: boolean;
+  hubDetails?: any;
 }
 
 export default function MaterialsTab({
@@ -34,8 +36,10 @@ export default function MaterialsTab({
   canManage,
   currentUserId,
   readOnly = false,
+  hubDetails,
 }: MaterialsTabProps) {
   const queryClient = useQueryClient();
+  const courseTitle = useMemo(() => formatCourseFolderName(hubDetails), [hubDetails]);
 
   const { data: resources, isLoading, isRefetching } = useResources(hubId);
   const createMutation = useCreateResource(hubId);
@@ -180,6 +184,7 @@ export default function MaterialsTab({
         isPending={createMutation.isPending}
         canManage={canManage}
         initialTab={activeSection}
+        courseTitle={courseTitle}
       />
     </View>
   );

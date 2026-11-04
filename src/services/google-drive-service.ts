@@ -338,63 +338,156 @@ export async function ensureValidAccessToken(appUserId: string): Promise<string>
 }
 
 /**
+ * Sanitizes a segment for use as a Google Drive folder name.
+ */
+export function sanitizeFolderName(name: string): string {
+  if (!name) return "Untitled";
+  const cleaned = name
+    .replace(/[/\\?*:"<>|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.slice(0, 100) || "Untitled";
+}
+
+/**
+ * Standardizes Course Hub title folder name:
+ * Example: "CSE211 - Data Structures" or "Data Structures"
+ */
+export function formatCourseFolderName(hubDetails?: {
+  courseCode?: string | null;
+  courseName?: string | null;
+} | null): string {
+  if (!hubDetails) return "Course Hub";
+  const code = hubDetails.courseCode?.trim();
+  const name = hubDetails.courseName?.trim();
+
+  if (code && name) {
+    if (name.toLowerCase().startsWith(code.toLowerCase())) {
+      return sanitizeFolderName(name);
+    }
+    return sanitizeFolderName(`${code} - ${name}`);
+  }
+  return sanitizeFolderName(name || code || "Course Hub");
+}
+
+const folderIdCache = new Map<string, string>();
+const inFlightFolderPromises = new Map<string, Promise<string>>();
+
+/**
+ * Finds or creates a single folder under an optional parent folder in Google Drive.
+ */
+export async function getOrCreateFolder(
+  accessToken: string,
+  folderName: string,
+  parentId?: string
+): Promise<string> {
+  const cleanName = sanitizeFolderName(folderName);
+  const cacheKey = `${parentId || "root"}:${cleanName}`;
+
+  if (folderIdCache.has(cacheKey)) {
+    return folderIdCache.get(cacheKey)!;
+  }
+
+  if (inFlightFolderPromises.has(cacheKey)) {
+    return inFlightFolderPromises.get(cacheKey)!;
+  }
+
+  const promise = (async () => {
+    try {
+      // 1. Search for existing folder
+      const escapedName = cleanName.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      const parentClause = parentId ? `'${parentId}' in parents` : `'root' in parents`;
+      const query = `name = '${escapedName}' and mimeType = 'application/vnd.google-apps.folder' and ${parentClause} and trashed = false`;
+
+      const searchRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      if (searchRes.ok) {
+        const data = await searchRes.json();
+        if (Array.isArray(data.files) && data.files.length > 0) {
+          const foundId = data.files[0].id;
+          folderIdCache.set(cacheKey, foundId);
+          return foundId;
+        }
+      } else {
+        const err = await searchRes.text();
+        console.warn("[GoogleDrive] Folder search notice:", searchRes.status, err);
+      }
+
+      // 2. Create folder if not found
+      const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: cleanName,
+          mimeType: "application/vnd.google-apps.folder",
+          parents: parentId ? [parentId] : undefined,
+        }),
+      });
+
+      if (createRes.ok) {
+        const folder = await createRes.json();
+        folderIdCache.set(cacheKey, folder.id);
+        return folder.id;
+      } else {
+        const err = await createRes.text();
+        console.warn("[GoogleDrive] Folder create error:", createRes.status, err);
+      }
+    } catch (err) {
+      console.warn("[GoogleDrive] Folder lookup/creation fallback:", err);
+    }
+
+    throw new Error(`Could not create or locate Google Drive folder "${cleanName}".`);
+  })();
+
+  inFlightFolderPromises.set(cacheKey, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlightFolderPromises.delete(cacheKey);
+  }
+}
+
+/**
  * Finds or creates the dedicated "SMUCT UniCompanion - Course Hub" folder in student's drive.
  */
 export async function getOrCreateUniCompanionFolder(
   accessToken: string
 ): Promise<string> {
-  try {
-    // 1. Search for existing folder
-    const query = encodeURIComponent(
-      `name = '${FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
-    );
-    const searchRes = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name)`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-    if (!searchRes.ok) {
-      throw new Error(
-        `Could not check your Google Drive folder (${searchRes.status}).`,
-      );
-    }
+  return getOrCreateFolder(accessToken, FOLDER_NAME);
+}
 
-    if (searchRes.ok) {
-      const data = await searchRes.json();
-      if (Array.isArray(data.files) && data.files.length > 0) {
-        return data.files[0].id;
-      }
-    } else {
-      const err = await searchRes.text();
-      console.warn("[GoogleDrive] Folder search error:", searchRes.status, err);
-    }
-
-    // 2. Create folder if not found
-    const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: FOLDER_NAME,
-        mimeType: "application/vnd.google-apps.folder",
-      }),
-    });
-
-    if (createRes.ok) {
-      const folder = await createRes.json();
-      return folder.id;
-    } else {
-      const err = await createRes.text();
-      console.warn("[GoogleDrive] Folder create error:", createRes.status, err);
-    }
-  } catch (err) {
-    console.warn("[GoogleDrive] Folder lookup/creation fallback:", err);
+/**
+ * Finds or creates a nested folder hierarchy in Google Drive.
+ * Example pathSegments: ["SMUCT UniCompanion - Course Hub", "CSE101 - Intro", "Classwork", "Assignment 1"]
+ */
+export async function getOrCreateFolderPath(
+  accessToken: string,
+  pathSegments: string[]
+): Promise<string> {
+  if (!pathSegments || pathSegments.length === 0) {
+    return getOrCreateUniCompanionFolder(accessToken);
   }
 
-  throw new Error("Could not create or locate your Google Drive folder.");
+  let currentParentId: string | undefined = undefined;
+  for (const segment of pathSegments) {
+    const cleanSegment = sanitizeFolderName(segment);
+    if (!cleanSegment) continue;
+    currentParentId = await getOrCreateFolder(
+      accessToken,
+      cleanSegment,
+      currentParentId
+    );
+  }
+
+  return currentParentId || getOrCreateUniCompanionFolder(accessToken);
 }
 
 /**
@@ -455,6 +548,7 @@ export async function uploadFileToGoogleDrive({
   name,
   mimeType,
   size,
+  folderPath,
   onProgress,
 }: {
   appUserId: string;
@@ -462,12 +556,15 @@ export async function uploadFileToGoogleDrive({
   name: string;
   mimeType?: string;
   size?: number;
+  folderPath?: string[];
   onProgress?: (text: string) => void;
 }): Promise<GoogleDriveUploadedFile> {
   const accessToken = await ensureValidAccessToken(appUserId);
 
-  onProgress?.("Locating UniCompanion folder...");
-  const folderId = await getOrCreateUniCompanionFolder(accessToken);
+  onProgress?.("Locating Course Hub folder in Google Drive...");
+  const resolvedPath =
+    folderPath && folderPath.length > 0 ? folderPath : [FOLDER_NAME];
+  const folderId = await getOrCreateFolderPath(accessToken, resolvedPath);
 
   const cleanMimeType = mimeType || "application/octet-stream";
   const cleanName = name || `document-${Date.now()}`;

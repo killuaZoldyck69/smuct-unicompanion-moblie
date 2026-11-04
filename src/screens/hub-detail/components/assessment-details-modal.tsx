@@ -53,6 +53,7 @@ interface AssessmentDetailsContentProps {
   hubMembers?: any[];
   onEdit?: (item: AssessmentData) => void;
   onDelete?: (assessmentId: string) => void;
+  courseTitle?: string;
 }
 
 function AssessmentDetailsContent({
@@ -66,6 +67,7 @@ function AssessmentDetailsContent({
   hubMembers = [],
   onEdit,
   onDelete,
+  courseTitle,
 }: AssessmentDetailsContentProps) {
   // Check if current user has the TEACHER role.
   // Class representatives are treated as students for coursework submission and cannot grade peer submissions.
@@ -382,6 +384,7 @@ function AssessmentDetailsContent({
               isUnsubmitting={unsubmitMutation.isPending}
               onSubmit={handleStudentSubmit}
               onUnsubmit={handleStudentUnsubmit}
+              courseTitle={courseTitle}
             />
           </View>
         )}

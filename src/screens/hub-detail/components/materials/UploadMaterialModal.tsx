@@ -52,10 +52,11 @@ interface UploadMaterialModalProps {
   isPending: boolean;
   canManage: boolean;
   initialTab: MaterialSectionTab;
+  courseTitle?: string;
 }
 
 export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.memo(
-  ({ isVisible, onClose, onSubmit, isPending, canManage, initialTab }) => {
+  ({ isVisible, onClose, onSubmit, isPending, canManage, initialTab, courseTitle }) => {
     const insets = useSafeAreaInsets();
     const googleDrive = useGoogleDrive();
     const [title, setTitle] = useState("");
@@ -218,6 +219,14 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
             setUploadProgressText(
               `Uploading ${filesNeedingUpload.length} file${filesNeedingUpload.length > 1 ? "s" : ""} to Google Drive...`,
             );
+            const courseFolder = courseTitle || "Course Hub";
+            const subFolder = isStudentNote ? "Student Resources" : "Course Materials";
+            const folderPath = [
+              "SMUCT UniCompanion - Course Hub",
+              courseFolder,
+              "Materials",
+              subFolder,
+            ];
             const uploadedDrive = await googleDrive.uploadFiles(
               filesNeedingUpload.map((f) => ({
                 uri: f.localUri,
@@ -225,7 +234,10 @@ export const UploadMaterialModal: React.FC<UploadMaterialModalProps> = React.mem
                 mimeType: f.mimeType,
                 size: f.size,
               })),
-              (progress) => setUploadProgressText(progress),
+              {
+                folderPath,
+                onProgressUpdate: (progress) => setUploadProgressText(progress),
+              }
             );
 
             const driveFilesById = new Map(

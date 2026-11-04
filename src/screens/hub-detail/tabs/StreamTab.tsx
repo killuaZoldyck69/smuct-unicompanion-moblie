@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { formatCourseFolderName } from "@/services/google-drive-service";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 
@@ -40,6 +41,7 @@ interface StreamTabProps {
   myRole?: string;
   isTeacher?: boolean;
   isCR?: boolean;
+  hubDetails?: any;
 }
 
 export default function StreamTab({
@@ -50,7 +52,9 @@ export default function StreamTab({
   myRole,
   isTeacher,
   isCR,
+  hubDetails,
 }: StreamTabProps) {
+  const courseTitle = formatCourseFolderName(hubDetails);
   const queryClient = useQueryClient();
 
   const effectiveIsTeacher = Boolean(
@@ -337,6 +341,7 @@ export default function StreamTab({
         }
         isPending={createMutation.isPending || updateMutation.isPending}
         initialData={editingItem}
+        courseTitle={courseTitle}
       />
 
       {/* Delete Confirmation Modal */}

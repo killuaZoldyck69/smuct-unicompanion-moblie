@@ -35,10 +35,11 @@ interface StudentSubmissionViewProps {
     status: "SUBMITTED" | "HAND_SUBMISSION";
     isLate?: boolean;
   }) => void;
+  courseTitle?: string;
 }
 
 export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React.memo(
-  ({ assessment, typeConfig, mySub, isSubmitting, isUnsubmitting = false, onSubmit, onUnsubmit }) => {
+  ({ assessment, typeConfig, mySub, isSubmitting, isUnsubmitting = false, onSubmit, onUnsubmit, courseTitle }) => {
     const {
       allowOnline,
       allowOffline,
@@ -74,6 +75,7 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
       mySub,
       isSubmitting,
       onSubmit,
+      courseTitle,
     });
     const isUnsubmitted = mySub?.status === "UNSUBMITTED";
     const isGraded = mySub?.marks !== null && mySub?.marks !== undefined;

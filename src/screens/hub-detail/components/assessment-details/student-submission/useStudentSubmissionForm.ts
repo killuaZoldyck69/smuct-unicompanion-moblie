@@ -22,6 +22,7 @@ interface UseStudentSubmissionFormProps {
   mySub?: AssessmentSubmission;
   isSubmitting: boolean;
   onSubmit: (payload: StudentSubmissionPayload) => void;
+  courseTitle?: string;
 }
 
 /**
@@ -78,6 +79,7 @@ export function useStudentSubmissionForm({
   mySub,
   isSubmitting,
   onSubmit,
+  courseTitle,
 }: UseStudentSubmissionFormProps) {
   const { ensureConnected, uploadFiles } = useGoogleDrive();
   // Determine allowed submission methods from assessment configuration
@@ -294,13 +296,22 @@ export function useStudentSubmissionForm({
           });
           return;
         }
+        const courseFolder = courseTitle || "Course Hub";
+        const classworkFolder = assessment.title || "Untitled Classwork";
+        const folderPath = [
+          "SMUCT UniCompanion - Course Hub",
+          courseFolder,
+          "Classwork",
+          classworkFolder,
+        ];
         const uploaded = await uploadFiles(
           pendingUploads.map((item) => ({
             uri: item.localUri!,
             name: item.name,
             mimeType: item.mimeType,
             size: item.size,
-          }))
+          })),
+          { folderPath }
         );
 
         for (const [index, u] of uploaded.entries()) {

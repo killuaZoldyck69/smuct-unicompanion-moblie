@@ -10,6 +10,7 @@ import {
   StatusBar,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { formatCourseFolderName } from "@/services/google-drive-service";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 
@@ -65,6 +66,8 @@ export default function ClassworkTab({
       )
     );
   }, [isTeacher, hubDetails, effectiveUserId]);
+
+  const courseTitle = useMemo(() => formatCourseFolderName(hubDetails), [hubDetails]);
 
   // Queries & Mutations
   const { data: assessments, isLoading, isRefetching } = useAssessments(hubId);
@@ -258,6 +261,7 @@ export default function ClassworkTab({
         onClose={() => setIsCreateModalVisible(false)}
         onSubmit={handleCreateSubmit}
         isPending={createMutation.isPending}
+        courseTitle={courseTitle}
       />
 
       {/* Edit Coursework Modal */}
@@ -268,6 +272,7 @@ export default function ClassworkTab({
           onSubmit={handleEditSubmit}
           isPending={updateMutation.isPending}
           assessment={editingAssessment}
+          courseTitle={courseTitle}
         />
       )}
 
@@ -278,6 +283,7 @@ export default function ClassworkTab({
           onClose={() => setSelectedAssessment(null)}
           assessment={currentSelectedAssessment}
           hubId={hubId}
+          courseTitle={courseTitle}
           canManage={canManage}
           canSubmit={canSubmit}
           isTeacher={isTeacherRole}

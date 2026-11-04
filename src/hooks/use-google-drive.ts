@@ -23,6 +23,11 @@ export interface StagedUploadFile {
   size?: number;
 }
 
+export interface UploadFilesOptions {
+  folderPath?: string[];
+  onProgressUpdate?: (text: string) => void;
+}
+
 export interface GoogleDriveAttachmentResult {
   id: string;
   name: string;
@@ -173,8 +178,20 @@ export function useGoogleDrive() {
   const uploadFiles = useCallback(
     async (
       files: StagedUploadFile[],
-      onProgressUpdate?: (text: string) => void
+      optionsOrProgress?: ((text: string) => void) | UploadFilesOptions,
+      legacyFolderPath?: string[]
     ): Promise<GoogleDriveAttachmentResult[]> => {
+      let onProgressUpdate: ((text: string) => void) | undefined;
+      let folderPath: string[] | undefined;
+
+      if (typeof optionsOrProgress === "function") {
+        onProgressUpdate = optionsOrProgress;
+        folderPath = legacyFolderPath;
+      } else if (optionsOrProgress) {
+        onProgressUpdate = optionsOrProgress.onProgressUpdate;
+        folderPath = optionsOrProgress.folderPath ?? legacyFolderPath;
+      }
+
       if (!files || files.length === 0) return [];
       if (!appUserId) {
         throw new Error("Sign in to UniCompanion before uploading Course Hub files.");
@@ -198,6 +215,7 @@ export function useGoogleDrive() {
             name: file.name,
             mimeType: file.mimeType,
             size: file.size,
+            folderPath,
             onProgress: (step) => {
               const fullStep = `${fileCounter}${step}`;
               setStatusMessage(fullStep);

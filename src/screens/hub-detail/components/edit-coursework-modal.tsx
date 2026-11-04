@@ -40,6 +40,7 @@ interface Props {
   onSubmit: (payload: any) => void;
   isPending: boolean;
   assessment: any | null;
+  courseTitle?: string;
 }
 
 export default function EditCourseworkModal({
@@ -48,6 +49,7 @@ export default function EditCourseworkModal({
   onSubmit,
   isPending,
   assessment,
+  courseTitle,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { ensureConnected, uploadFiles } = useGoogleDrive();
@@ -157,13 +159,22 @@ export default function EditCourseworkModal({
             });
             return;
           }
+          const courseFolder = courseTitle || "Course Hub";
+          const classworkFolder = form.title.trim() || assessment?.title || "Untitled Classwork";
+          const folderPath = [
+            "SMUCT UniCompanion - Course Hub",
+            courseFolder,
+            "Classwork",
+            classworkFolder,
+          ];
           const uploaded = await uploadFiles(
             filesNeedingUpload.map((f) => ({
               uri: f.localUri!,
               name: f.name,
               mimeType: f.mimeType,
               size: f.size,
-            }))
+            })),
+            { folderPath }
           );
 
           setAttachments((prev) =>
