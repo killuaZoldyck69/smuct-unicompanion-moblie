@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { AppNotification } from "@/services/notification-service";
@@ -40,12 +40,15 @@ const formatDate = (value: string) =>
 
 export function NotificationsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const notificationsQuery = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const pages = notificationsQuery.data?.pages ?? [];
   const items = pages.flatMap((page) => page.items);
   const unreadCount = pages[0]?.unreadCount ?? 0;
+
+  const listBottomPadding = insets.bottom > 0 ? insets.bottom + 120 : 130;
 
   const openNotification = useCallback(
     async (item: AppNotification) => {
@@ -99,7 +102,7 @@ export function NotificationsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top", "bottom", "left", "right"]}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Notifications</Text>
@@ -155,6 +158,7 @@ export function NotificationsScreen() {
           renderItem={renderItem}
           contentContainerStyle={[
             styles.listContent,
+            { paddingBottom: listBottomPadding },
             !items.length && styles.emptyListContent,
           ]}
           refreshControl={
@@ -215,7 +219,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginLeft: 12,
   },
-  listContent: { paddingHorizontal: 18, paddingBottom: 40, gap: 10 },
+  listContent: { paddingHorizontal: 18, paddingBottom: 130, gap: 10 },
   skeletonList: { paddingHorizontal: 18, gap: 10 },
   skeletonCard: {
     minHeight: 132,

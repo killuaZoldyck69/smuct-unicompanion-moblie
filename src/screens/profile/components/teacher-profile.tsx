@@ -23,6 +23,7 @@ import { TeacherExpertiseCard } from "./teacher/teacher-expertise-card";
 import { TeacherQualificationsCard } from "./teacher/teacher-qualifications-card";
 import { TeacherContactCard } from "./teacher/teacher-contact-card";
 import { ProfileSocialCard } from "./shared/profile-social-card";
+import { ProfileEditButton } from "./shared/profile-edit-button";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
 import { BloodGroupModal } from "./shared/blood-group-modal";
 import { ProfileErrorState } from "./shared/profile-states";
@@ -216,7 +217,17 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           onChangeWebsite={(url) => updateField("personalWebsiteUrl", url)}
         />
 
-        {/* 7. Restrained Log Out Button */}
+        {/* 7. Edit Profile Button */}
+        <ProfileEditButton
+          variant="teacher"
+          isEditing={isEditing}
+          isUpdating={isUpdating}
+          onEdit={() => setIsEditing(true)}
+          onCancel={handleCancel}
+          onSave={handleSave}
+        />
+
+        {/* 8. Restrained Log Out Button */}
         <View style={styles.logoutWrapper}>
           <ProfileLogoutButton />
         </View>

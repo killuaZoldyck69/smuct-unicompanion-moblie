@@ -21,6 +21,7 @@ import { StudentAcademicCard } from "./student/student-academic-card";
 import { StudentSkillsCard } from "./student/student-skills-card";
 import { StudentContactCard } from "./student/student-contact-card";
 import { ProfileSocialCard } from "./shared/profile-social-card";
+import { ProfileEditButton } from "./shared/profile-edit-button";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
 import { BloodGroupModal } from "./shared/blood-group-modal";
 import { ProfileErrorState } from "./shared/profile-states";
@@ -187,6 +188,15 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
           personalWebsiteUrl={formData.personalWebsiteUrl}
           onChangeLinkedIn={(url) => updateField("linkedInUrl", url)}
           onChangeWebsite={(url) => updateField("personalWebsiteUrl", url)}
+        />
+
+        <ProfileEditButton
+          variant="student"
+          isEditing={isEditing}
+          isUpdating={isUpdating}
+          onEdit={() => setIsEditing(true)}
+          onCancel={handleCancel}
+          onSave={handleSave}
         />
 
         <ProfileLogoutButton variant="student" />

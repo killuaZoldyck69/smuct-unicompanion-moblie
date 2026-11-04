@@ -7,7 +7,7 @@ interface StudentHeaderProps {
   insetsTop: number;
   isEditing: boolean;
   isUpdating: boolean;
-  onEdit: () => void;
+  onEdit?: () => void;
   onCancel: () => void;
   onSave: () => void;
 }
@@ -24,7 +24,9 @@ export const StudentHeader = React.memo(function StudentHeader({
     <View style={[styles.header, { paddingTop: insetsTop + 14 }]}>
       {/* Title + Subtitle */}
       <View style={styles.titleBlock}>
-        <Text style={styles.screenTitle}>My Profile</Text>
+        <Text style={styles.screenTitle}>
+          {isEditing ? "Edit Profile" : "My Profile"}
+        </Text>
         {!isEditing && (
           <Text style={styles.subtitle} numberOfLines={2}>
             Your academic identity, skills and connections — all in one place.
@@ -63,18 +65,7 @@ export const StudentHeader = React.memo(function StudentHeader({
               </Text>
             </TouchableOpacity>
           </>
-        ) : (
-          <TouchableOpacity
-            onPress={onEdit}
-            style={styles.circleBtn}
-            activeOpacity={0.75}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Edit profile"
-          >
-            <Feather name="edit-2" size={16} color={PROFILE_COLORS.deepNavy} />
-          </TouchableOpacity>
-        )}
+        ) : null}
       </View>
     </View>
   );
