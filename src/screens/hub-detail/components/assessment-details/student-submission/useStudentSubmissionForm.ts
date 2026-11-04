@@ -68,6 +68,16 @@ function sanitizeAndValidateUrl(inputUrl: string): { isValid: boolean; url: stri
   }
 }
 
+function getGoogleDriveFileId(url: string): string | undefined {
+  const pathMatch = url.match(/\/(?:file|document|spreadsheets|presentation)\/d\/([^/]+)/);
+  if (pathMatch?.[1]) return pathMatch[1];
+  try {
+    return new URL(url).searchParams.get("id") || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function useStudentSubmissionForm({
   assessment,
   mySub,
@@ -126,7 +136,10 @@ export function useStudentSubmissionForm({
       }
 
       if (Array.isArray(mySub.attachments) && mySub.attachments.length > 0) {
-        setFiles(mySub.attachments);
+        setFiles(mySub.attachments.map((attachment) => ({
+          ...attachment,
+          driveFileId: getGoogleDriveFileId(attachment.url),
+        })));
       }
 
       if (mySub.submittedUrl) {
@@ -212,19 +225,14 @@ export function useStudentSubmissionForm({
   // Remove handlers
   const handleRemoveFile = useCallback(async (idx: number) => {
     const target = files[idx];
-    setFiles((prev) => prev.filter((_, i) => i !== idx));
-
     if (target?.driveFileId) {
       try {
         await deleteFiles([target.driveFileId]);
       } catch (e) {
-        Toast.show({
-          type: "error",
-          text1: "Drive File Not Removed",
-          text2: e instanceof Error ? e.message : "Could not remove the file.",
-        });
+        console.warn("[GoogleDrive] Remote file deletion skipped or failed:", e);
       }
     }
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
   }, [files, deleteFiles]);
 
   const handleRemoveLink = useCallback((idx: number) => {
@@ -324,7 +332,14 @@ export function useStudentSubmissionForm({
 
       if (pendingUploads.length > 0) {
         const connected = await ensureConnected();
-        if (!connected) return;
+        if (!connected) {
+          Toast.show({
+            type: "error",
+            text1: "Google Drive Required",
+            text2: "Please connect Google Drive to upload your submission.",
+          });
+          return;
+        }
         const uploaded = await uploadFiles(
           pendingUploads.map((item) => ({
             uri: item.localUri!,

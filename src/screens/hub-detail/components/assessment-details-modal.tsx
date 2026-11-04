@@ -10,13 +10,15 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { toastConfig } from "@/components/ui/toast-config";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
 import {
   useAssessmentSubmissions,
   useSubmitAssessment,
+  useUnsubmitAssessment,
   useGradeSubmission,
 } from "@/features/hubs/useHubs";
 
@@ -80,6 +82,7 @@ function AssessmentDetailsContent({
   const { data: serverSubmissions, isLoading: isLoadingSubmissions } =
     useAssessmentSubmissions(isTeacherUser ? assessment.id : "");
   const submitMutation = useSubmitAssessment(hubId, assessment.id);
+  const unsubmitMutation = useUnsubmitAssessment(hubId, assessment.id);
   const gradeMutation = useGradeSubmission(assessment.id);
 
   // Tab State: Teachers default to DETAILS; students and class representatives default to MY_SUBMISSION
@@ -219,6 +222,17 @@ function AssessmentDetailsContent({
     },
     [submitMutation]
   );
+
+  const handleStudentUnsubmit = useCallback(() => {
+    unsubmitMutation.mutate(undefined, {
+      onSuccess: () => Toast.show({ type: "success", text1: "Coursework unsubmitted" }),
+      onError: (err: any) => Toast.show({
+        type: "error",
+        text1: "Could not unsubmit coursework",
+        text2: err.response?.data?.message || err.message,
+      }),
+    });
+  }, [unsubmitMutation]);
 
   return (
     <SafeAreaView style={styles.modalRoot} edges={["top", "bottom"]}>
@@ -365,7 +379,9 @@ function AssessmentDetailsContent({
               typeConfig={typeConfig}
               mySub={mySub}
               isSubmitting={submitMutation.isPending}
+              isUnsubmitting={unsubmitMutation.isPending}
               onSubmit={handleStudentSubmit}
+              onUnsubmit={handleStudentUnsubmit}
             />
           </View>
         )}
@@ -375,6 +391,7 @@ function AssessmentDetailsContent({
 
 export default function AssessmentDetailsModal(props: AssessmentDetailsModalProps) {
   const { isVisible, onClose, assessment } = props;
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal
@@ -386,6 +403,7 @@ export default function AssessmentDetailsModal(props: AssessmentDetailsModalProp
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       {assessment ? <AssessmentDetailsContent {...props} assessment={assessment} /> : null}
+      <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
     </Modal>
   );
 }

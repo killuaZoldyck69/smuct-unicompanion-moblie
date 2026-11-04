@@ -25,6 +25,8 @@ interface StudentSubmissionViewProps {
   typeConfig: AssessmentTypeConfig;
   mySub?: AssessmentSubmission;
   isSubmitting: boolean;
+  isUnsubmitting?: boolean;
+  onUnsubmit?: () => void;
   onSubmit: (payload: {
     submittedUrl?: string;
     content?: string;
@@ -36,7 +38,7 @@ interface StudentSubmissionViewProps {
 }
 
 export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React.memo(
-  ({ assessment, typeConfig, mySub, isSubmitting, onSubmit }) => {
+  ({ assessment, typeConfig, mySub, isSubmitting, isUnsubmitting = false, onSubmit, onUnsubmit }) => {
     const {
       allowOnline,
       allowOffline,
@@ -54,6 +56,7 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
       tempNoteText,
       setTempNoteText,
       isUploadingFiles,
+      isOverdue,
       isClosed,
       isLateActive,
       isSubmitDisabled,
@@ -72,6 +75,17 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
       isSubmitting,
       onSubmit,
     });
+    const isUnsubmitted = mySub?.status === "UNSUBMITTED";
+    const isGraded = mySub?.marks !== null && mySub?.marks !== undefined;
+    const canUnsubmit = Boolean(
+      mySub &&
+      !isUnsubmitted &&
+      !isGraded &&
+      (!isOverdue || assessment.allowLateSubmission) &&
+      assessment.submissionType !== "HAND" &&
+      assessment.submissionType !== "OFFLINE" &&
+      ["SUBMITTED", "LATE"].includes(mySub.status || ""),
+    );
 
     return (
       <View style={styles.container}>
@@ -100,6 +114,7 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
             <SubmissionClosedCard deadline={assessment.deadline} />
           ) : (
             <>
+              <View pointerEvents={mySub && (!isUnsubmitted || isClosed) ? "none" : "auto"}>
               <SubmissionMethodRadio
                 method={submissionMethod}
                 disabled={isClosed}
@@ -134,6 +149,7 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
               ) : (
                 <SubmissionOfflineCard />
               )}
+              </View>
             </>
           )}
 
@@ -147,7 +163,10 @@ export const StudentSubmissionView: React.FC<StudentSubmissionViewProps> = React
           isSubmitDisabled={isSubmitDisabled}
           isSubmitting={isSubmitting}
           hasPreviousSubmission={Boolean(mySub)}
+          canUnsubmit={canUnsubmit}
+          isUnsubmitting={isUnsubmitting}
           onSubmit={handleFormSubmit}
+          onUnsubmit={onUnsubmit}
         />
       </View>
     );

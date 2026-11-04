@@ -59,7 +59,7 @@ export function useGoogleDrive() {
       );
       try {
         const statusChanged =
-          await syncGoogleDriveConnectionStatus(isConnected);
+          await syncGoogleDriveConnectionStatus(isConnected, isConnected ? stored?.email : null);
         if (statusChanged) {
           await queryClient.invalidateQueries({ queryKey: ["hubDetails"] });
         }
@@ -107,7 +107,7 @@ export function useGoogleDrive() {
       let statusSynced = true;
       let statusSyncError = "";
       try {
-        const statusChanged = await syncGoogleDriveConnectionStatus(true);
+        const statusChanged = await syncGoogleDriveConnectionStatus(true, newTokens.email);
         if (statusChanged) {
           await queryClient.invalidateQueries({ queryKey: ["hubDetails"] });
         }
@@ -142,7 +142,7 @@ export function useGoogleDrive() {
     setTokens(null);
     let statusSynced = true;
     try {
-      const statusChanged = await syncGoogleDriveConnectionStatus(false);
+      const statusChanged = await syncGoogleDriveConnectionStatus(false, null);
       if (statusChanged) {
         await queryClient.invalidateQueries({ queryKey: ["hubDetails"] });
       }

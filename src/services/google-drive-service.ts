@@ -472,6 +472,16 @@ export async function uploadFileToGoogleDrive({
   const cleanMimeType = mimeType || "application/octet-stream";
   const cleanName = name || `document-${Date.now()}`;
 
+  let resolvedSize = size;
+  if (!resolvedSize && Platform.OS !== "web") {
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (fileInfo.exists && typeof (fileInfo as any).size === "number") {
+        resolvedSize = (fileInfo as any).size;
+      }
+    } catch {}
+  }
+
   onProgress?.("Uploading directly to your Google Drive...");
 
   // 1. Initialize Resumable Upload Session
@@ -483,7 +493,7 @@ export async function uploadFileToGoogleDrive({
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json; charset=UTF-8",
         "X-Upload-Content-Type": cleanMimeType,
-        ...(size ? { "X-Upload-Content-Length": String(size) } : {}),
+        ...(resolvedSize ? { "X-Upload-Content-Length": String(resolvedSize) } : {}),
       },
       body: JSON.stringify({
         name: cleanName,
@@ -525,7 +535,10 @@ export async function uploadFileToGoogleDrive({
     const fileBlob = await (await fetch(uri)).blob();
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": cleanMimeType },
+      headers: {
+        "Content-Type": cleanMimeType,
+        ...(resolvedSize ? { "Content-Range": `bytes 0-${resolvedSize - 1}/${resolvedSize}` } : {}),
+      },
       body: fileBlob,
     });
     if (!uploadRes.ok) {
@@ -535,10 +548,17 @@ export async function uploadFileToGoogleDrive({
     uploadedFileId = data.id;
   } else {
     // Native Mobile: Upload efficiently via FileSystem.uploadAsync
+    const uploadHeaders: Record<string, string> = {
+      "Content-Type": cleanMimeType,
+    };
+    if (resolvedSize && resolvedSize > 0) {
+      uploadHeaders["Content-Range"] = `bytes 0-${resolvedSize - 1}/${resolvedSize}`;
+    }
+
     const uploadRes = await FileSystem.uploadAsync(uploadUrl, uri, {
       httpMethod: "PUT",
       uploadType: FileSystemUploadType.BINARY_CONTENT,
-      headers: { "Content-Type": cleanMimeType },
+      headers: uploadHeaders,
     });
 
     if (uploadRes.status < 200 || uploadRes.status >= 300) {
@@ -558,16 +578,15 @@ export async function uploadFileToGoogleDrive({
   }
 
   onProgress?.("Configuring link access...");
-  let links: { webViewLink: string; webContentLink?: string };
+  let links: { webViewLink: string; webContentLink?: string } = {
+    webViewLink: `https://drive.google.com/file/d/${uploadedFileId}/view`,
+    webContentLink: `https://drive.google.com/uc?id=${uploadedFileId}&export=download`,
+  };
   try {
     links = await setFilePublicPermissions(uploadedFileId, accessToken);
-  } catch (err) {
-    try {
-      await deleteGoogleDriveFile(uploadedFileId, accessToken);
-    } catch (cleanupError) {
-      console.warn("[GoogleDrive] Failed to clean up an unshared upload:", cleanupError);
-    }
-    throw err;
+  } catch (err: any) {
+    console.warn("[GoogleDrive] Public link sharing restricted or failed:", err?.message || err);
+    // Keep uploaded file link intact even if domain policies forbid external public reader role
   }
 
   return {

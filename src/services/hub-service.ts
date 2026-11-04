@@ -309,6 +309,12 @@ export const submitAssessment = async (
 };
 export const submitAssessmentAPI = submitAssessment;
 
+export const unsubmitAssessment = async (hubId: string, assessmentId: string) => {
+  const res = await api.patch(`/hubs/${hubId}/assessments/${assessmentId}/unsubmit`);
+  return res.data?.data;
+};
+export const unsubmitAssessmentAPI = unsubmitAssessment;
+
 export const gradeSubmission = async (
   submissionId: string,
   marks: number,

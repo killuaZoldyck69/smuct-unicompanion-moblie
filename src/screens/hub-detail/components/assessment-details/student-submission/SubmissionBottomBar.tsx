@@ -11,7 +11,10 @@ interface SubmissionBottomBarProps {
   isSubmitDisabled: boolean;
   isSubmitting: boolean;
   hasPreviousSubmission: boolean;
+  canUnsubmit?: boolean;
+  isUnsubmitting?: boolean;
   onSubmit: () => void;
+  onUnsubmit?: () => void;
 }
 
 export const SubmissionBottomBar: React.FC<SubmissionBottomBarProps> = React.memo(
@@ -21,7 +24,10 @@ export const SubmissionBottomBar: React.FC<SubmissionBottomBarProps> = React.mem
     isSubmitDisabled,
     isSubmitting,
     hasPreviousSubmission,
+    canUnsubmit = false,
+    isUnsubmitting = false,
     onSubmit,
+    onUnsubmit,
   }) => {
     const insets = useSafeAreaInsets();
 
@@ -32,6 +38,22 @@ export const SubmissionBottomBar: React.FC<SubmissionBottomBarProps> = React.mem
           { paddingBottom: Math.max(insets.bottom + 12, 20) },
         ]}
       >
+        {canUnsubmit && onUnsubmit ? (
+          <TouchableOpacity
+            style={[styles.submitButton, { backgroundColor: "#b45309" }]}
+            onPress={onUnsubmit}
+            disabled={isUnsubmitting}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Unsubmit coursework"
+          >
+            {isUnsubmitting ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={styles.submitButtonText}>Unsubmit</Text>
+            )}
+          </TouchableOpacity>
+        ) : (
         <TouchableOpacity
           style={[
             styles.submitButton,
@@ -77,6 +99,7 @@ export const SubmissionBottomBar: React.FC<SubmissionBottomBarProps> = React.mem
             </Text>
           )}
         </TouchableOpacity>
+        )}
       </View>
     );
   }

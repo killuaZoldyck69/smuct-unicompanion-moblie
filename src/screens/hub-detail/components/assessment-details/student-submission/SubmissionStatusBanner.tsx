@@ -20,7 +20,15 @@ export const SubmissionStatusBanner: React.FC<SubmissionStatusBannerProps> = Rea
     return (
       <>
         {/* SUBMISSION RECEIPT STATUS (IF PENDING GRADE) */}
-        {mySub && !isGraded && (
+        {mySub && mySub.status === "UNSUBMITTED" && (
+          <View style={styles.mySubmissionCard}>
+            <View style={styles.subStatusBadge}>
+              <Feather name="edit-3" size={14} color="#b45309" style={{ marginRight: 6 }} />
+              <Text style={[styles.subStatusBadgeText, { color: "#b45309" }]}>Draft · Submit again before the deadline</Text>
+            </View>
+          </View>
+        )}
+        {mySub && mySub.status !== "UNSUBMITTED" && !isGraded && (
           <View style={styles.mySubmissionCard}>
             <View style={styles.subStatusBadge}>
               <Feather

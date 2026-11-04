@@ -30,6 +30,7 @@ import {
   CourseworkSubmitBar,
 } from "./create-coursework";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
 import { useGoogleDrive } from "@/hooks/use-google-drive";
 
 export default function CreateCourseworkModal({
@@ -76,7 +77,14 @@ export default function CreateCourseworkModal({
         let newUploaded: AttachmentItem[] = [];
         if (filesNeedingUpload.length > 0) {
           const connected = await ensureConnected();
-          if (!connected) return;
+          if (!connected) {
+            Toast.show({
+              type: "error",
+              text1: "Google Drive Required",
+              text2: "Please connect Google Drive to upload attachments.",
+            });
+            return;
+          }
           const uploaded = await uploadFiles(
             filesNeedingUpload.map((f) => ({
               uri: f.localUri!,
@@ -294,6 +302,7 @@ export default function CreateCourseworkModal({
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
     </Modal>
   );
 }

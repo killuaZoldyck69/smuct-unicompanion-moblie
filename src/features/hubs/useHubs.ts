@@ -22,6 +22,7 @@ import {
   deleteAssessmentAPI,
   getAssessmentSubmissionsAPI,
   submitAssessmentAPI,
+  unsubmitAssessmentAPI,
   gradeSubmissionAPI,
   bulkGradeAPI,
   getResourcesAPI,
@@ -249,6 +250,18 @@ export const useSubmitAssessment = (hubId: string, assessmentId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assessments", hubId] });
       queryClient.invalidateQueries({ queryKey: ["submissions", assessmentId] });
+    },
+  });
+};
+
+export const useUnsubmitAssessment = (hubId: string, assessmentId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => unsubmitAssessmentAPI(hubId, assessmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assessments", hubId] });
+      queryClient.invalidateQueries({ queryKey: ["submissions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["myHubs"] });
     },
   });
 };
