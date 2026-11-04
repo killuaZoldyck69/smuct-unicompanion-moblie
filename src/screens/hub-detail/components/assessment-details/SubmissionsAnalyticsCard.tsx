@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -14,25 +15,41 @@ interface SubmissionsAnalyticsCardProps {
   graded: number;
   isOffline?: boolean;
   onViewAll?: () => void;
+  onBulkGrade?: () => void;
 }
 
 export const SubmissionsAnalyticsCard: React.FC<SubmissionsAnalyticsCardProps> = React.memo(
-  ({ total, submitted, pending, graded, isOffline = false, onViewAll }) => {
+  ({ total, submitted, pending, graded, isOffline = false, onViewAll, onBulkGrade }) => {
     return (
       <View style={styles.container}>
         {/* Header Row */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>{isOffline ? "In-Person Evaluation Overview" : "Submissions Overview"}</Text>
-          {onViewAll && (
-            <TouchableOpacity
-              onPress={onViewAll}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="View all submissions"
-            >
-              <Text style={styles.sectionActionText}>View all</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.headerRightActions}>
+            {onBulkGrade && (
+              <TouchableOpacity
+                style={styles.headerBulkBtn}
+                onPress={onBulkGrade}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Open bulk grade from overview"
+              >
+                <Feather name="layers" size={12} color="#2563eb" style={{ marginRight: 4 }} />
+                <Text style={styles.headerBulkBtnText}>Bulk Grade</Text>
+              </TouchableOpacity>
+            )}
+            {onViewAll && (
+              <TouchableOpacity
+                onPress={onViewAll}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="View all submissions"
+              >
+                <Text style={styles.sectionActionText}>View all</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Stats Cards: Total | (Submitted if online) | Pending | Graded */}
@@ -88,6 +105,27 @@ const styles = StyleSheet.create({
   sectionActionText: {
     fontFamily,
     fontSize: 13,
+    fontWeight: "700",
+    color: "#2563eb",
+  },
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerBulkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    borderColor: "#bfdbfe",
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 7,
+  },
+  headerBulkBtnText: {
+    fontFamily,
+    fontSize: 12,
     fontWeight: "700",
     color: "#2563eb",
   },

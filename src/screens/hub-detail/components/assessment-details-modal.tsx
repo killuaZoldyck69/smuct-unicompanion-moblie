@@ -36,6 +36,7 @@ import { SubmissionsAnalyticsCard } from "./assessment-details/SubmissionsAnalyt
 import { TeacherSubmissionsList } from "./assessment-details/TeacherSubmissionsList";
 import { GradingModalSheet } from "./assessment-details/GradingModalSheet";
 import { StudentSubmissionView } from "./assessment-details/StudentSubmissionView";
+import { BulkGradingModal, BulkGradeEntry } from "./assessment-details/BulkGradingModal";
 
 const fontFamily = Platform.select({
   ios: "Plus Jakarta Sans",
@@ -99,6 +100,7 @@ function AssessmentDetailsContent({
   const [gradingTarget, setGradingTarget] = useState<GradingStudentTarget | null>(null);
   const [initialGradeMarks, setInitialGradeMarks] = useState<number | null>(null);
   const [initialGradeFeedback, setInitialGradeFeedback] = useState<string | null>(null);
+  const [isBulkGradingOpen, setIsBulkGradingOpen] = useState(false);
 
   // Memoized Submissions List
   const submissionsList: AssessmentSubmission[] = useMemo(() => {
@@ -232,6 +234,13 @@ function AssessmentDetailsContent({
       }
     },
     [gradingTarget, isOfflineAssessment, gradeMutation, bulkGradeMutation]
+  );
+
+  const handleSaveBulk = useCallback(
+    async (grades: BulkGradeEntry[]) => {
+      await bulkGradeMutation.mutateAsync(grades);
+    },
+    [bulkGradeMutation]
   );
 
   const handleStudentSubmit = useCallback(
@@ -377,6 +386,7 @@ function AssessmentDetailsContent({
                 pending={isOfflineAssessment ? Math.max(0, eligibleStudentCount - gradedCount) : pendingCount}
                 graded={gradedCount}
                 isOffline={isOfflineAssessment}
+                onBulkGrade={() => setIsBulkGradingOpen(true)}
               />
 
               {/* ALL SUBMISSIONS UNDER STATS */}
@@ -388,6 +398,7 @@ function AssessmentDetailsContent({
                   hubMembers={hubMembers}
                   isOffline={isOfflineAssessment}
                   onOpenGrading={handleOpenGrading}
+                  onOpenBulkGrading={() => setIsBulkGradingOpen(true)}
                 />
               </View>
 
@@ -404,6 +415,20 @@ function AssessmentDetailsContent({
               onClose={() => setGradingTarget(null)}
               onSave={handleSaveGrade}
             />
+
+            {/* DEDICATED BULK MARK INPUT MODAL */}
+            {isBulkGradingOpen && (
+              <BulkGradingModal
+                isVisible={isBulkGradingOpen}
+                onClose={() => setIsBulkGradingOpen(false)}
+                assessment={assessment}
+                submissions={submissionsList}
+                hubMembers={hubMembers}
+                isOffline={isOfflineAssessment}
+                isPending={bulkGradeMutation.isPending}
+                onSaveBulk={handleSaveBulk}
+              />
+            )}
           </View>
         )}
 

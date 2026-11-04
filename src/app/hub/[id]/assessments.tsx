@@ -97,16 +97,15 @@ export default function HubAssessmentsScreen() {
   const gradeWorkMutation = useMutation({
     mutationFn: async ({
       assessmentId,
-      studentId,
-      marks,
+      grades,
     }: {
       assessmentId: string;
-      studentId: string;
-      marks: number;
+      grades: { studentId: string; marks: number }[];
     }) =>
-      await api.post(`/hubs/${id}/assessments/${assessmentId}/bulk-grade`, [
-        { studentId, marks },
-      ]),
+      await api.post(
+        `/hubs/${id}/assessments/${assessmentId}/bulk-grade`,
+        grades,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubAssessments", id] });
       queryClient.invalidateQueries({ queryKey: ["assessments", id] });

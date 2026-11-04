@@ -29,6 +29,7 @@ interface TeacherSubmissionsListProps {
     currentMarks?: number | null,
     currentFeedback?: string | null
   ) => void;
+  onOpenBulkGrading?: () => void;
 }
 
 export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = React.memo(
@@ -39,6 +40,7 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
     hubMembers = [],
     isOffline = false,
     onOpenGrading,
+    onOpenBulkGrading,
   }) => {
     // Extract enrolled students (STUDENT and CR) from hubMembers
     const enrolledStudents = useMemo(() => {
@@ -139,11 +141,34 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
 
     return (
       <View style={styles.container}>
-        <Text style={styles.headingText}>
-          {isOffline
-            ? `Class Students (${studentRecords.length})`
-            : `Student Submissions (${studentRecords.length})`}
-        </Text>
+        <View style={styles.sectionHeaderRow}>
+          <View>
+            <Text style={styles.headingText}>
+              {isOffline
+                ? `Class Students (${studentRecords.length})`
+                : `Student Submissions (${studentRecords.length})`}
+            </Text>
+            {studentRecords.length > 0 && (
+              <Text style={styles.subheadingText}>
+                {studentRecords.filter((s) => s.isGraded).length} of {studentRecords.length} graded
+              </Text>
+            )}
+          </View>
+
+          {onOpenBulkGrading && studentRecords.length > 0 && (
+            <TouchableOpacity
+              style={styles.bulkGradeBtn}
+              onPress={onOpenBulkGrading}
+              activeOpacity={0.8}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Open bulk mark input"
+            >
+              <Feather name="layers" size={13} color="#ffffff" style={{ marginRight: 6 }} />
+              <Text style={styles.bulkGradeBtnText}>Bulk Grade</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {isOffline && (
           <View style={styles.offlineInfoBanner}>
@@ -336,12 +361,43 @@ const styles = StyleSheet.create({
   container: {
     paddingBottom: 20,
   },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
   headingText: {
     fontFamily,
     fontSize: 16,
     fontWeight: "800",
     color: "#0f172a",
-    marginBottom: 10,
+  },
+  subheadingText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+    marginTop: 1,
+  },
+  bulkGradeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0f172a",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 9,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  bulkGradeBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   offlineInfoBanner: {
     flexDirection: "row",

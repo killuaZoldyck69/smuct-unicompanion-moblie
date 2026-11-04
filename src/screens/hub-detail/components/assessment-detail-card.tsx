@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   Linking,
   Image,
+  Modal,
   Platform,
+  ScrollView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useCountdown } from "@/hooks/use-countdown";
@@ -74,6 +76,8 @@ export default function AssessmentCard({
   // Local State
   const [submissionUrl, setSubmissionUrl] = useState("");
   const [grades, setGrades] = useState<{ [key: string]: string }>({});
+  const [isBulkGradeScreenVisible, setIsBulkGradeScreenVisible] =
+    useState(false);
 
   // Formatting Helper
   const formatDateTime = (dateString?: string) => {
@@ -90,9 +94,15 @@ export default function AssessmentCard({
   // Secure Grading Input
   const handleGradeChange = (studentId: string, val: string) => {
     let numStr = val.replace(/[^0-9.]/g, "");
+    const decimalPointIndex = numStr.indexOf(".");
+    if (decimalPointIndex !== -1) {
+      numStr = `${numStr.slice(0, decimalPointIndex + 1)}${numStr
+        .slice(decimalPointIndex + 1)
+        .replace(/\./g, "")}`;
+    }
     if (numStr !== "") {
       const num = parseFloat(numStr);
-      if (num > item.totalMarks) {
+      if (Number.isFinite(num) && num > item.totalMarks) {
         numStr = String(item.totalMarks);
       }
     }
@@ -121,6 +131,36 @@ export default function AssessmentCard({
       const isNotSelf = m.user?.id !== myUserId;
       return isStudentRole && isNotSelf;
     }) || [];
+  const submissionsByStudent = new Map<string, any>(
+    (item.submissions || []).map((submission: any) => [
+      submission.studentId,
+      submission,
+    ]),
+  );
+
+  const pendingGrades = students.flatMap((member: any) => {
+    const studentId = member?.user?.id;
+    const enteredMarks = studentId ? grades[studentId]?.trim() : undefined;
+    if (!studentId || !enteredMarks) return [];
+
+    const marks = Number(enteredMarks);
+    if (!Number.isFinite(marks) || marks < 0 || marks > item.totalMarks) {
+      return [];
+    }
+
+    const currentMarks = submissionsByStudent.get(studentId)?.marks;
+    if (currentMarks === marks) return [];
+
+    return [{ studentId, marks }];
+  });
+
+  const handleSaveAllGrades = () => {
+    if (pendingGrades.length === 0 || gradeMutation.isPending) return;
+    gradeMutation.mutate(
+      { assessmentId: item.id, grades: pendingGrades },
+      { onSuccess: () => setIsBulkGradeScreenVisible(false) },
+    );
+  };
 
   // Determine badge styling based on type
   const typeStr = (item.type || "ASSIGNMENT").toUpperCase();
@@ -134,7 +174,8 @@ export default function AssessmentCard({
       : { bg: BENTO.blueSoft, border: BENTO.blueBorder, text: BENTO.blueText };
 
   return (
-    // ROOT IS A VIEW TO PREVENT NESTED BUTTON HYDRATION ERRORS
+    <>
+    {/* ROOT IS A VIEW TO PREVENT NESTED BUTTON HYDRATION ERRORS */}
     <View style={[styles.card, isExpanded && styles.cardExpanded]}>
       {/* CARD HEADER (COLLAPSIBLE TRIGGER) */}
       <TouchableOpacity
@@ -416,10 +457,50 @@ export default function AssessmentCard({
             <View style={styles.gradingSection}>
               <View style={styles.gradingSectionHeader}>
                 <Text style={styles.sectionLabel}>Student Submissions & Grading</Text>
-                <View style={styles.studentCountBadge}>
-                  <Text style={styles.studentCountText}>{students.length} Students</Text>
+                <View style={styles.gradingHeaderActions}>
+                  <View style={styles.studentCountBadge}>
+                    <Text style={styles.studentCountText}>{students.length} Students</Text>
+                  </View>
+                  {pendingGrades.length > 0 ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.saveAllGradesButton,
+                        gradeMutation.isPending && styles.saveGradeBtnDisabled,
+                      ]}
+                      disabled={gradeMutation.isPending}
+                      onPress={handleSaveAllGrades}
+                      activeOpacity={0.85}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Save marks for ${pendingGrades.length} students`}
+                    >
+                      {gradeMutation.isPending ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <Feather name="check" size={14} color="#ffffff" />
+                      )}
+                      <Text style={styles.saveAllGradesText}>
+                        Save marks ({pendingGrades.length})
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
+
+              {students.length > 0 ? (
+                <TouchableOpacity
+                  style={styles.openBulkGradeButton}
+                  onPress={() => setIsBulkGradeScreenVisible(true)}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open bulk mark entry screen"
+                >
+                  <Feather name="edit-3" size={16} color={BENTO.navy} />
+                  <Text style={styles.openBulkGradeButtonText}>
+                    Open bulk mark entry
+                  </Text>
+                  <Feather name="arrow-right" size={16} color={BENTO.navy} />
+                </TouchableOpacity>
+              ) : null}
 
               {students.length === 0 ? (
                 <View style={styles.noStudentsBox}>
@@ -432,11 +513,16 @@ export default function AssessmentCard({
                 const studentUser = member?.user;
                 if (!studentUser) return null;
 
-                const sub = item.submissions?.find(
-                  (s: any) => s.studentId === studentUser.id,
-                );
+                const sub = submissionsByStudent.get(studentUser.id);
                 const isGraded =
                   sub?.marks !== null && sub?.marks !== undefined;
+                const enteredGrade = grades[studentUser.id];
+                const parsedGrade = Number(enteredGrade);
+                const hasValidGrade =
+                  Boolean(enteredGrade?.trim()) &&
+                  Number.isFinite(parsedGrade) &&
+                  parsedGrade >= 0 &&
+                  parsedGrade <= item.totalMarks;
                 const studentIdStr =
                   studentUser.studentProfile?.studentId || "No ID";
 
@@ -527,18 +613,20 @@ export default function AssessmentCard({
                         <TouchableOpacity
                           style={[
                             styles.saveGradeBtn,
-                            (!grades[studentUser.id] ||
+                            (!hasValidGrade ||
                               gradeMutation.isPending) &&
                               styles.saveGradeBtnDisabled,
                           ]}
                           disabled={
-                            !grades[studentUser.id] || gradeMutation.isPending
+                            !hasValidGrade || gradeMutation.isPending
                           }
                           onPress={() =>
                             gradeMutation.mutate({
                               assessmentId: item.id,
-                              studentId: studentUser.id,
-                              marks: Number(grades[studentUser.id]),
+                              grades: [{
+                                studentId: studentUser.id,
+                                marks: Number(grades[studentUser.id]),
+                              }],
                             })
                           }
                           activeOpacity={0.85}
@@ -575,6 +663,108 @@ export default function AssessmentCard({
         </View>
       )}
     </View>
+    <Modal
+      visible={isBulkGradeScreenVisible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setIsBulkGradeScreenVisible(false)}
+    >
+      <View style={styles.bulkGradeScreen}>
+        <View style={styles.bulkGradeHeader}>
+          <View style={styles.bulkGradeHeading}>
+            <Text style={styles.bulkGradeTitle}>Bulk mark entry</Text>
+            <Text style={styles.bulkGradeSubtitle} numberOfLines={1}>
+              {item.title} · scores out of {item.totalMarks}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.closeBulkGradeButton}
+            onPress={() => setIsBulkGradeScreenVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close bulk mark entry"
+          >
+            <Feather name="x" size={20} color={BENTO.navy} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.bulkGradeHint}>
+          Enter marks for each student, then save all changed scores together.
+        </Text>
+
+        <ScrollView
+          style={styles.bulkGradeList}
+          contentContainerStyle={styles.bulkGradeListContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {students.map((member: any) => {
+            const studentUser = member?.user;
+            if (!studentUser) return null;
+            const submission = submissionsByStudent.get(studentUser.id);
+            const currentMarks = submission?.marks;
+
+            return (
+              <View key={member.id} style={styles.bulkGradeRow}>
+                <View style={styles.bulkGradeStudentInfo}>
+                  <Text style={styles.bulkGradeStudentName} numberOfLines={1}>
+                    {studentUser.name || "Student"}
+                  </Text>
+                  <Text style={styles.bulkGradeStudentMeta} numberOfLines={1}>
+                    {studentUser.studentProfile?.studentId || studentUser.email || ""}
+                    {currentMarks !== null && currentMarks !== undefined
+                      ? ` · Current: ${currentMarks}/${item.totalMarks}`
+                      : " · Not graded"}
+                  </Text>
+                </View>
+                <TextInput
+                  style={styles.bulkGradeInput}
+                  value={grades[studentUser.id] ?? ""}
+                  onChangeText={(value) =>
+                    handleGradeChange(studentUser.id, value)
+                  }
+                  placeholder={
+                    currentMarks !== null && currentMarks !== undefined
+                      ? String(currentMarks)
+                      : "—"
+                  }
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="decimal-pad"
+                  accessibilityLabel={`Marks for ${studentUser.name}`}
+                />
+                <Text style={styles.bulkGradeMaximum}>/{item.totalMarks}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+
+        <View style={styles.bulkGradeFooter}>
+          <Text style={styles.bulkGradeCount}>
+            {pendingGrades.length} changed {pendingGrades.length === 1 ? "score" : "scores"}
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.bulkGradeSaveButton,
+              (pendingGrades.length === 0 || gradeMutation.isPending) &&
+                styles.bulkGradeSaveButtonDisabled,
+            ]}
+            disabled={pendingGrades.length === 0 || gradeMutation.isPending}
+            onPress={handleSaveAllGrades}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`Save ${pendingGrades.length} changed marks`}
+          >
+            {gradeMutation.isPending ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Feather name="check" size={16} color="#ffffff" />
+            )}
+            <Text style={styles.bulkGradeSaveButtonText}>
+              Save all marks
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -875,6 +1065,183 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
+  },
+  gradingHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  saveAllGradesButton: {
+    minHeight: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: "#059669",
+  },
+  saveAllGradesText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  openBulkGradeButton: {
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BENTO.border,
+    backgroundColor: BENTO.canvas,
+  },
+  openBulkGradeButtonText: {
+    flex: 1,
+    marginLeft: 10,
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: BENTO.navy,
+  },
+  bulkGradeScreen: {
+    flex: 1,
+    paddingTop: Platform.OS === "ios" ? 20 : 12,
+    backgroundColor: BENTO.canvas,
+  },
+  bulkGradeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: BENTO.border,
+    backgroundColor: BENTO.card,
+  },
+  bulkGradeHeading: {
+    flex: 1,
+  },
+  bulkGradeTitle: {
+    fontFamily,
+    fontSize: 20,
+    fontWeight: "800",
+    color: BENTO.navy,
+  },
+  bulkGradeSubtitle: {
+    marginTop: 3,
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: BENTO.slate,
+  },
+  closeBulkGradeButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+    borderRadius: 20,
+    backgroundColor: BENTO.canvas,
+  },
+  bulkGradeHint: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    fontFamily,
+    fontSize: 13,
+    lineHeight: 18,
+    color: BENTO.slate,
+  },
+  bulkGradeList: {
+    flex: 1,
+  },
+  bulkGradeListContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  bulkGradeRow: {
+    minHeight: 76,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BENTO.subCardBorder,
+    backgroundColor: BENTO.card,
+  },
+  bulkGradeStudentInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  bulkGradeStudentName: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: BENTO.navy,
+  },
+  bulkGradeStudentMeta: {
+    marginTop: 3,
+    fontFamily,
+    fontSize: 11,
+    color: BENTO.slate,
+  },
+  bulkGradeInput: {
+    width: 64,
+    height: 42,
+    borderWidth: 1,
+    borderColor: BENTO.border,
+    borderRadius: 10,
+    backgroundColor: BENTO.canvas,
+    textAlign: "center",
+    fontFamily,
+    fontSize: 15,
+    fontWeight: "800",
+    color: BENTO.navy,
+  },
+  bulkGradeMaximum: {
+    width: 42,
+    marginLeft: 5,
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: BENTO.slate,
+  },
+  bulkGradeFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: Platform.OS === "ios" ? 28 : 18,
+    borderTopWidth: 1,
+    borderTopColor: BENTO.border,
+    backgroundColor: BENTO.card,
+  },
+  bulkGradeCount: {
+    marginBottom: 10,
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: BENTO.slate,
+  },
+  bulkGradeSaveButton: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    backgroundColor: "#059669",
+  },
+  bulkGradeSaveButtonDisabled: {
+    backgroundColor: "#94a3b8",
+    opacity: 0.6,
+  },
+  bulkGradeSaveButtonText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#ffffff",
   },
   studentCountBadge: {
     backgroundColor: BENTO.canvas,
