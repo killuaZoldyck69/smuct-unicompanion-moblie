@@ -95,13 +95,20 @@ export function HubDetail({ hubId }: HubDetailProps) {
     id?: string;
     tab?: string;
     colorIndex?: string;
+    assessmentId?: string;
+    fromNotification?: string;
   }>();
 
   // Deep-linkable tab state
   const initialTab = (
-    searchParams.tab && ["stream", "classwork", "materials", "review", "members"].includes(searchParams.tab)
-      ? searchParams.tab
-      : "stream"
+    searchParams.assessmentId
+      ? "classwork"
+      : searchParams.tab &&
+          ["stream", "classwork", "materials", "review", "members"].includes(
+            searchParams.tab,
+          )
+        ? searchParams.tab
+        : "stream"
   ) as HubTabId;
 
   const [activeTab, setActiveTab] = useState<HubTabId>(initialTab);
@@ -165,18 +172,22 @@ export function HubDetail({ hubId }: HubDetailProps) {
 
   // Keep state synced with URL parameter if it changes externally
   useEffect(() => {
-    if (
+    if (searchParams.assessmentId) {
+      if (activeTab !== "classwork") {
+        setActiveTab("classwork");
+      }
+    } else if (
       searchParams.tab &&
       ["stream", "classwork", "materials", "review", "members"].includes(searchParams.tab) &&
       searchParams.tab !== activeTab
     ) {
       setActiveTab(searchParams.tab as HubTabId);
     }
-  }, [searchParams.tab]);
+  }, [searchParams.tab, searchParams.assessmentId, activeTab]);
 
   const handleTabPress = (tabId: HubTabId) => {
     setActiveTab(tabId);
-    router.setParams({ tab: tabId });
+    router.setParams({ tab: tabId, assessmentId: "" });
   };
 
   const { user: currentUser, role: userGlobalRole } = useCurrentUser();
@@ -215,8 +226,14 @@ export function HubDetail({ hubId }: HubDetailProps) {
   const canManage = !isAdmin && canPostAnnouncement;
 
   const handleBack = useCallback(() => {
-    router.replace("/(tabs)/hubs");
-  }, [router]);
+    if (searchParams.fromNotification === "true" || searchParams.assessmentId) {
+      router.replace("/(tabs)/notifications");
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/hubs");
+    }
+  }, [router, searchParams.fromNotification, searchParams.assessmentId]);
 
   useEffect(() => {
     const onHardwareBack = () => {
@@ -428,6 +445,8 @@ export function HubDetail({ hubId }: HubDetailProps) {
             canSubmit={!isTeacher && !isAdmin}
             isTeacher={isTeacher}
             currentUserId={myUserId}
+            initialAssessmentId={searchParams.assessmentId}
+            fromNotification={Boolean(searchParams.fromNotification === "true" || searchParams.assessmentId)}
           />
         )}
 

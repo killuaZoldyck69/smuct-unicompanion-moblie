@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   StatusBar,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { formatCourseFolderName } from "@/services/google-drive-service";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
@@ -49,10 +50,14 @@ export default function ClassworkTab({
   canSubmit = true,
   isTeacher,
   currentUserId,
+  initialAssessmentId,
+  fromNotification,
 }: ClassworkTabProps) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user: authUser } = useCurrentUser();
   const effectiveUserId = currentUserId || authUser?.id;
+  const hasAutoOpenedRef = useRef<string | null>(null);
 
   const isTeacherRole = useMemo(() => {
     if (typeof isTeacher === "boolean") return isTeacher;
@@ -105,6 +110,29 @@ export default function ClassworkTab({
       return timeB - timeA;
     });
   }, [assessmentList]);
+
+  // Auto-open requested assessment if deep-linked via initialAssessmentId (only once)
+  useEffect(() => {
+    if (
+      initialAssessmentId &&
+      displayedAssessments.length > 0 &&
+      hasAutoOpenedRef.current !== initialAssessmentId
+    ) {
+      const match = displayedAssessments.find((a) => a.id === initialAssessmentId);
+      if (match) {
+        hasAutoOpenedRef.current = initialAssessmentId;
+        setSelectedAssessment(match);
+      }
+    }
+  }, [initialAssessmentId, displayedAssessments]);
+
+  // Handle closing details modal with proper navigation back when opened via notification
+  const handleCloseDetailsModal = useCallback(() => {
+    setSelectedAssessment(null);
+    if (initialAssessmentId || fromNotification) {
+      router.replace("/(tabs)/notifications");
+    }
+  }, [initialAssessmentId, fromNotification, router]);
 
   // Handlers
   const handleCreateSubmit = useCallback(
@@ -289,7 +317,7 @@ export default function ClassworkTab({
       {currentSelectedAssessment && (
         <AssessmentDetailsModal
           isVisible={!!currentSelectedAssessment}
-          onClose={() => setSelectedAssessment(null)}
+          onClose={handleCloseDetailsModal}
           assessment={currentSelectedAssessment}
           hubId={hubId}
           courseTitle={courseTitle}

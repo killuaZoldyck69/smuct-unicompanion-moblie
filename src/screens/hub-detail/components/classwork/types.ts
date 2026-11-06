@@ -7,6 +7,8 @@ export interface ClassworkTabProps {
   canSubmit?: boolean;
   isTeacher?: boolean;
   currentUserId?: string;
+  initialAssessmentId?: string;
+  fromNotification?: boolean;
 }
 
 export interface RemainingDaysInfo {

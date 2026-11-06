@@ -126,8 +126,8 @@ export const AssessmentCard: React.FC<AssessmentCardProps> = ({
 
   const handleCardPress = () => {
     router.push({
-      pathname: `/hub/${hubId}/assessments`,
-      params: { assessmentId: item.id },
+      pathname: `/hub/${hubId}`,
+      params: { tab: "classwork", assessmentId: item.id },
     });
   };
 
