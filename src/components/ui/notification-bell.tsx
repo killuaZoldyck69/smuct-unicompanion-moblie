@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Feather } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
 import { useRouter } from "expo-router";
 import {
+  Animated,
+  Easing,
+  Platform,
   StyleProp,
   StyleSheet,
   Text,
@@ -11,6 +14,14 @@ import {
   ViewStyle,
 } from "react-native";
 import { useUnreadNotificationCount } from "@/features/notifications/useNotifications";
+
+const CAT_FPS = 60;
+const CAT_TOTAL_FRAMES = 479;
+const CAT_LOOP_DURATION_MS = (CAT_TOTAL_FRAMES / CAT_FPS) * 1000;
+const CALLOUT_SHOW_START_FRAME = 85;
+const CALLOUT_SHOW_FULL_FRAME = 92;
+const CALLOUT_HIDE_START_FRAME = 354;
+const CALLOUT_HIDE_END_FRAME = 361;
 
 interface NotificationBellProps {
   style?: StyleProp<ViewStyle>;
@@ -29,6 +40,72 @@ export const NotificationBell = React.memo(function NotificationBell({
 }: NotificationBellProps) {
   const router = useRouter();
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
+  const frameAnim = useRef(new Animated.Value(0)).current;
+  const loopAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  const startBadgeCycle = useCallback(() => {
+    loopAnimRef.current?.stop();
+    frameAnim.setValue(0);
+
+    const loopAnim = Animated.loop(
+      Animated.timing(frameAnim, {
+        toValue: CAT_TOTAL_FRAMES,
+        duration: CAT_LOOP_DURATION_MS,
+        easing: Easing.linear,
+        useNativeDriver: Platform.OS !== "web",
+      }),
+    );
+
+    loopAnimRef.current = loopAnim;
+    loopAnim.start();
+  }, [frameAnim]);
+
+  useEffect(() => {
+    if (!useCatAnimation) {
+      loopAnimRef.current?.stop();
+      frameAnim.setValue(0);
+      return;
+    }
+
+    startBadgeCycle();
+
+    return () => {
+      loopAnimRef.current?.stop();
+    };
+  }, [useCatAnimation, startBadgeCycle, frameAnim]);
+
+  const catBadgeAnimatedStyle = useMemo(() => {
+    const opacity = frameAnim.interpolate({
+      inputRange: [
+        0,
+        CALLOUT_SHOW_START_FRAME,
+        CALLOUT_SHOW_FULL_FRAME,
+        CALLOUT_HIDE_START_FRAME,
+        CALLOUT_HIDE_END_FRAME,
+        CAT_TOTAL_FRAMES,
+      ],
+      outputRange: [0, 0, 1, 1, 0, 0],
+      extrapolate: "clamp",
+    });
+
+    const scale = frameAnim.interpolate({
+      inputRange: [
+        0,
+        CALLOUT_SHOW_START_FRAME,
+        CALLOUT_SHOW_FULL_FRAME,
+        CALLOUT_HIDE_START_FRAME,
+        CALLOUT_HIDE_END_FRAME,
+        CAT_TOTAL_FRAMES,
+      ],
+      outputRange: [0.6, 0.6, 1, 1, 0.6, 0.6],
+      extrapolate: "clamp",
+    });
+
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  }, [frameAnim]);
 
   return (
     <TouchableOpacity
@@ -51,17 +128,25 @@ export const NotificationBell = React.memo(function NotificationBell({
             loop
             resizeMode="contain"
             style={styles.catAnimation}
+            onAnimationLoaded={startBadgeCycle}
+            onAnimationLoop={startBadgeCycle}
           />
         </View>
       ) : (
         <Feather name="bell" size={iconSize} color={iconColor} />
       )}
       {unreadCount > 0 && (
-        <View style={[styles.badge, useCatAnimation && styles.catBadge]}>
+        <Animated.View
+          style={[
+            styles.badge,
+            useCatAnimation && styles.catBadge,
+            useCatAnimation && catBadgeAnimatedStyle,
+          ]}
+        >
           <Text style={styles.badgeText}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </Text>
-        </View>
+        </Animated.View>
       )}
     </TouchableOpacity>
   );
