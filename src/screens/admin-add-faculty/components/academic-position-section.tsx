@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
-import { FACULTY_COLORS } from "../constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../constants";
 import { AddFacultyFormData, SelectorType } from "../types";
 
 interface AcademicPositionSectionProps {
@@ -213,6 +213,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sectionTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "700",
     color: FACULTY_COLORS.textPrimary,
@@ -224,6 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
+    fontFamily,
     fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.academicBadgeText,
@@ -233,6 +235,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   fieldLabel: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
@@ -256,12 +259,14 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   selectorText: {
+    fontFamily,
     flex: 1,
     fontSize: 15,
     fontWeight: "500",
     color: FACULTY_COLORS.textPrimary,
   },
   placeholderText: {
+    fontFamily,
     color: FACULTY_COLORS.textMuted,
     fontWeight: "400",
   },
@@ -271,6 +276,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   disabledText: {
+    fontFamily,
     color: FACULTY_COLORS.textMuted,
   },
   helperRow: {
@@ -281,6 +287,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   helperText: {
+    fontFamily,
     fontSize: 12,
     color: FACULTY_COLORS.academicHelperText,
     fontWeight: "500",

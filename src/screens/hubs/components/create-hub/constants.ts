@@ -1,5 +1,5 @@
-import { Platform } from "react-native";
 import { CreateHubFormState, ScheduleBlock } from "./types";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export const BENTO_THEME = {
   canvas: "#f7f9fb",
@@ -60,12 +60,8 @@ export const BENTO_THEME = {
   },
 } as const;
 
-export const BENTO_FONT_FAMILY = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  default: "sans-serif",
-});
+export const BENTO_FONT_FAMILY = fontFamily;
+export { titleFontFamily };
 
 export const DAYS_OF_WEEK = [
   "Sunday",

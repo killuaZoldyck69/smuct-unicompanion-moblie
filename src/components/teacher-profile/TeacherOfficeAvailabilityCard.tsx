@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Linking } from "react-native"
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-toast-message";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export interface TeacherOfficeProfile {
   officeRoom?: string | null;
@@ -214,6 +215,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerTitle: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#166534",
@@ -232,18 +234,21 @@ const styles = StyleSheet.create({
     borderColor: "rgba(16, 185, 129, 0.15)",
   },
   subCardLabel: {
+    fontFamily,
     fontSize: 10.5,
     fontWeight: "700",
     color: "#94A3B8",
     letterSpacing: 0.5,
   },
   officeRoomValue: {
+    fontFamily: titleFontFamily,
     fontSize: 15,
     fontWeight: "800",
     color: "#0F172A",
     marginVertical: 4,
   },
   dayOffValue: {
+    fontFamily: titleFontFamily,
     fontSize: 15,
     fontWeight: "800",
     color: "#EF4444",
@@ -258,6 +263,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(16, 185, 129, 0.15)",
   },
   consultationTitle: {
+    fontFamily,
     fontSize: 10.5,
     fontWeight: "700",
     color: "#94A3B8",
@@ -277,6 +283,7 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   consultationDays: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#334155",
@@ -290,6 +297,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   timePillText: {
+    fontFamily,
     fontSize: 11.5,
     fontWeight: "700",
     color: "#15803D",
@@ -329,18 +337,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   phoneLabel: {
+    fontFamily,
     fontSize: 10,
     fontWeight: "700",
     color: "#94A3B8",
     letterSpacing: 0.5,
   },
   phoneValue: {
+    fontFamily: titleFontFamily,
     fontSize: 13.5,
     fontWeight: "800",
     color: "#0F172A",
     marginTop: 1,
   },
   phoneValuePlaceholder: {
+    fontFamily,
     fontSize: 12.5,
     fontWeight: "600",
     color: "#94A3B8",

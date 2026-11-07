@@ -13,6 +13,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { formatConsultationSlots } from "@/utils/consultation-formatter";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export interface Teacher {
   id: string;
@@ -50,12 +51,6 @@ const BENTO_COLORS = {
   subtleText: "#64748b",
   borderLight: "rgba(19, 27, 46, 0.08)",
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 export default function TeacherProfileModal({
   teacher,
@@ -437,7 +432,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    fontFamily,
+    fontFamily: titleFontFamily,
     textAlign: "center",
   },
   profileHeroPills: {

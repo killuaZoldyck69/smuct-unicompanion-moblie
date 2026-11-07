@@ -41,6 +41,7 @@ import {
   useToggleLiveClass,
 } from "@/features/hubs/useHubs";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 // ==================================================
 // 1. SOFT CAMPUS BENTO DESIGN SYSTEM CONSTANTS
@@ -62,12 +63,6 @@ const BENTO_COLORS = {
     elevation: 2,
   },
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 export type HubTabId = "stream" | "classwork" | "materials" | "review" | "members";
 

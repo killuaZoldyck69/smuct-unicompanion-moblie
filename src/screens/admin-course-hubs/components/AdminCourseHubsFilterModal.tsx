@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-  Platform,
   TouchableWithoutFeedback,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { SMUCT_PROGRAM_DEPARTMENTS } from "@/data/programs";
+import { fontFamily } from "@/theme/typography";
 
 interface AdminCourseHubsFilterModalProps {
   isVisible: boolean;
@@ -25,12 +25,6 @@ interface AdminCourseHubsFilterModalProps {
   totalArchived: number;
   onReset: () => void;
 }
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 export const AdminCourseHubsFilterModal: React.FC<
   AdminCourseHubsFilterModalProps

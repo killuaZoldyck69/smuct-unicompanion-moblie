@@ -14,11 +14,7 @@ const EDITOR_COLORS = {
   deepNavy: "#131b2e",
   subtleText: "#64748b",
 };
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily } from "@/theme/typography";
 
 export interface RichTextEditorProps {
   initialValue?: string;

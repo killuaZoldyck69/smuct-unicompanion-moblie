@@ -69,11 +69,8 @@ export const CAMPUS_HUB_COLORS = {
   surfaceMuted: "#f1f5f9",
 } as const;
 
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export function timeAgo(dateString: string): string {
   if (!dateString) return "";

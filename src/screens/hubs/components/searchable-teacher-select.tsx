@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useAvailableTeachersInfinite } from "@/features/hubs/useHubs";
 import TeacherProfileModal, { Teacher } from "./teacher-profile-modal";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export type { Teacher };
 
@@ -38,12 +39,6 @@ const BENTO_COLORS = {
   mintSoft: "#c3f0d2",
   mintDark: "#065f46",
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 export default function SearchableTeacherSelect({
   selectedId,

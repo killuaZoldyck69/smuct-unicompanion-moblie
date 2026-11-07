@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { THEME } from "../constants";
+import { THEME, fontFamily, titleFontFamily } from "../constants";
 
 interface DirectoryHeaderProps {
   searchQuery: string;
@@ -107,12 +107,14 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 28,
     fontWeight: "800",
     color: THEME.textPrimary,
     letterSpacing: -0.4,
   },
   headerSubtitle: {
+    fontFamily,
     fontSize: 14,
     color: THEME.textSecondary,
     marginTop: 4,
@@ -138,6 +140,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   searchInput: {
+    fontFamily,
     flex: 1,
     height: "100%",
     fontSize: 15,

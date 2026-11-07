@@ -25,11 +25,8 @@ export const BENTO_COLORS = {
   },
 } as const;
 
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export type DirectionFilter = "ALL" | "FROM_CAMPUS" | "TO_CAMPUS";
 

@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import HubConfirmView, { HubConfirmAction } from "./hub-confirm-view";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const BENTO = {
   canvas: "#f8fafc",
@@ -37,13 +38,6 @@ const BENTO = {
   roseBorder: "rgba(225, 29, 72, 0.16)",
   roseText: "#e11d48",
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  default: "sans-serif",
-});
 
 interface Props {
   isVisible: boolean;

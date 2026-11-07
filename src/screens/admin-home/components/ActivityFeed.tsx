@@ -8,6 +8,7 @@ import {
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { ActivityItem } from "../hooks/use-admin-dashboard";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface ActivityFeedProps {
   items: ActivityItem[];
@@ -128,6 +129,7 @@ const styles = StyleSheet.create({
     marginTop: 28,
   },
   sectionLabel: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#8E9BAE",
@@ -164,12 +166,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   emptyTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 15,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 6,
   },
   emptySubtitle: {
+    fontFamily,
     fontSize: 12.5,
     color: "#8E9BAE",
     textAlign: "center",
@@ -187,6 +191,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   loadingText: {
+    fontFamily,
     fontSize: 13,
     color: "#8E9BAE",
     fontWeight: "500",
@@ -214,17 +219,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 2,
   },
   rowSubtitle: {
+    fontFamily,
     fontSize: 11.5,
     color: "#94A3B8",
     fontWeight: "500",
   },
   timeLabel: {
+    fontFamily,
     fontSize: 11,
     color: "#94A3B8",
     fontWeight: "600",

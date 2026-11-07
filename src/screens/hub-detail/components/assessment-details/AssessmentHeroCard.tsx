@@ -5,12 +5,7 @@ import { AssessmentData, AssessmentTypeConfig } from "./types";
 import { formatDueDate, formatFileSize, openSafeUrl } from "./utils";
 import { formatDateTime12h } from "@/utils/date-formatter";
 import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface AssessmentHeroCardProps {
   assessment: AssessmentData;
@@ -362,7 +357,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   titleText: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: "#0f172a",

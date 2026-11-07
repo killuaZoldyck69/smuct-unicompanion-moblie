@@ -1,12 +1,7 @@
 import React from "react";
-import { Text, View, StyleSheet, Platform } from "react-native";
+import { Text, View, StyleSheet } from "react-native";
 import { CAMPUS_HUB_COLORS } from "../../shared/design-tokens";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily } from "@/theme/typography";
 
 const HTML_ENTITIES: Record<string, string> = {
   amp: "&",

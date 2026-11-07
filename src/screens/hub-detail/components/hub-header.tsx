@@ -18,12 +18,7 @@ import { HubCardTheme } from "@/features/hubs/hub-themes";
 import { resolveCourseTheme } from "@/screens/hubs/theme/course-theme-resolver";
 import { getDepartmentShortName } from "@/data/programs";
 import { HubHeaderBackdrop } from "./hub-header-backdrop";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface HubHeaderProps {
   hubDetails: any;
@@ -489,7 +484,7 @@ const styles = StyleSheet.create({
   courseTitle: {
     flex: 1,
     textAlign: "center",
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 20,
     lineHeight: 26,
     fontWeight: "800",

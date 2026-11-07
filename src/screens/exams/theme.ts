@@ -1,11 +1,8 @@
 // src/screens/exams/theme.ts
 import { Platform } from "react-native";
 
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export function getExamTheme(isDark: boolean) {
   return {

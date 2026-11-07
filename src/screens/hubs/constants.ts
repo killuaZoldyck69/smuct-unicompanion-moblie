@@ -1,11 +1,7 @@
 import { Platform } from "react-native";
 
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export const BENTO_COLORS = {
   // Base Surfaces

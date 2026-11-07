@@ -10,12 +10,7 @@ import { Feather } from "@expo/vector-icons";
 import type { FieldBookingSettings } from "@/services/field-service";
 import { BENTO } from "../constants";
 import { CampusFieldArt } from "./campus-field-art";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const deepNavy = "#131b2e";
 
@@ -153,7 +148,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   headerTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: deepNavy,

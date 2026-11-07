@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { getDepartmentShortName } from "@/data/programs";
 
-import { THEME, AVATAR_PASTELS } from "../constants";
+import { THEME, AVATAR_PASTELS, fontFamily, titleFontFamily } from "../constants";
 import { TabType, AdminUser } from "../types";
 
 export interface UserCardProps {
@@ -148,6 +148,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   avatarFallbackLetter: {
+    fontFamily: titleFontFamily,
     fontSize: 14,
     fontWeight: "800",
     color: "#334155",
@@ -163,6 +164,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   userName: {
+    fontFamily: titleFontFamily,
     fontSize: 15,
     fontWeight: "700",
     color: THEME.textPrimary,
@@ -175,6 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeTextCR: {
+    fontFamily,
     fontSize: 10,
     fontWeight: "800",
     color: THEME.crBadgeText,
@@ -188,6 +191,7 @@ const styles = StyleSheet.create({
     borderColor: "#FECDD3",
   },
   badgeTextRestricted: {
+    fontFamily,
     fontSize: 9.5,
     fontWeight: "800",
     color: "#E11D48",
@@ -202,12 +206,14 @@ const styles = StyleSheet.create({
     borderColor: "#FDE68A",
   },
   badgeTextAdminRole: {
+    fontFamily,
     fontSize: 9.5,
     fontWeight: "800",
     color: "#92400E",
     letterSpacing: 0.4,
   },
   userInfo: {
+    fontFamily,
     fontSize: 12,
     color: THEME.textSecondary,
     fontWeight: "500",

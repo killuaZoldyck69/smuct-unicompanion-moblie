@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export interface TeacherProfileHeroCardProps {
   name: string;
@@ -131,6 +132,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   detailUserName: {
+    fontFamily: titleFontFamily,
     fontSize: 22,
     fontWeight: "800",
     color: "#0F172A",
@@ -139,6 +141,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   detailUserEmail: {
+    fontFamily,
     fontSize: 14,
     color: "#64748B",
     marginTop: 4,
@@ -164,6 +167,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailDesignationPillText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: "#7C3AED",
@@ -177,6 +181,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   detailRestrictedPillText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#E11D48",
@@ -193,6 +198,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailAdminRolePillText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#B45309",

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { FACULTY_COLORS } from "../../constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../../constants";
 
 interface AddExpertiseModalProps {
   visible: boolean;
@@ -195,6 +195,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
+    fontFamily: titleFontFamily,
     fontSize: 17,
     fontWeight: "700",
     color: FACULTY_COLORS.textPrimary,
@@ -206,12 +207,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   label: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
     marginBottom: 6,
   },
   input: {
+    fontFamily,
     backgroundColor: FACULTY_COLORS.inputBg,
     borderWidth: 1.5,
     borderColor: FACULTY_COLORS.inputBorder,
@@ -225,6 +228,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   suggestionTitle: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: FACULTY_COLORS.textSecondary,
@@ -244,6 +248,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   chipText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "600",
     color: FACULTY_COLORS.profileIconColor,
@@ -259,6 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   cancelBtnText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "600",
     color: FACULTY_COLORS.textSecondary,
@@ -273,6 +279,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   saveBtnText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",

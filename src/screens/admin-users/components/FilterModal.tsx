@@ -11,7 +11,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { getDepartmentFullName } from "@/data/programs";
 
-import { THEME, DEPARTMENT_CHIPS } from "../constants";
+import { THEME, DEPARTMENT_CHIPS, fontFamily, titleFontFamily } from "../constants";
 import { RoleStatusTag } from "../types";
 
 interface FilterModalProps {
@@ -281,11 +281,13 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
   filterSheetTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 20,
     fontWeight: "800",
     color: THEME.textPrimary,
   },
   filterSheetSubtitle: {
+    fontFamily,
     fontSize: 13,
     color: THEME.textSecondary,
     marginTop: 2,
@@ -311,12 +313,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   filterSectionLabel: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: THEME.textMuted,
     letterSpacing: 0.8,
   },
   filterSelectedDeptHint: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     maxWidth: "60%",
@@ -340,6 +344,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   filterOptionText: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "600",
     color: THEME.textPrimary,
@@ -362,6 +367,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   filterGridText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: THEME.textPrimary,
@@ -384,6 +390,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   filterResetText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: THEME.textSecondary,
@@ -401,6 +408,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   filterApplyText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",

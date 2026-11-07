@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
-import { THEME } from "../../constants";
+import { THEME, fontFamily, titleFontFamily } from "../../constants";
 import {
   AdminUser,
   RoleAction,
@@ -231,6 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.bg,
   },
   detailModalHeaderTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 20,
     fontWeight: "800",
     color: THEME.textPrimary,

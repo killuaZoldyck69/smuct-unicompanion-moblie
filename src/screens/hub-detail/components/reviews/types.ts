@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+export { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export const BENTO = {
   canvas: "#f8fafc",
@@ -19,12 +19,6 @@ export const BENTO = {
     elevation: 2,
   },
 };
-
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 export const RATING_LABELS: Record<number, string> = {
   1: "Needs Improvement",

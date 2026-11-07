@@ -10,15 +10,9 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { getDepartmentShortName } from "@/data/programs";
 import { splitOrdinal } from "@/screens/hubs/constants";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export type HubConfirmAction = "archive" | "unarchive" | "delete" | "leave";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  default: "sans-serif",
-});
 
 const ACTION_CONFIG = {
   archive: {

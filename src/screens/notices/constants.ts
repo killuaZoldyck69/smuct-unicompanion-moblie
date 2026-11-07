@@ -143,8 +143,5 @@ export const NOTICE_CREATION_CATEGORIES: Array<{
   { key: "GENERAL", label: "General", theme: CATEGORY_THEMES.GENERAL },
 ];
 
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };

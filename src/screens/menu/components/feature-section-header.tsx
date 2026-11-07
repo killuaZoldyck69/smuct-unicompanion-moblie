@@ -1,11 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { View, Text, StyleSheet } from "react-native";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const SECTION_META: Record<
   string,

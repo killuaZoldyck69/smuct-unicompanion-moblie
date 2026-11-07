@@ -6,6 +6,7 @@ import Toast from "react-native-toast-message";
 
 import { AdminUser } from "../../types";
 import { formatBloodGroup, handleOpenUrl } from "../../utils";
+import { fontFamily, titleFontFamily } from "../../constants";
 
 interface ContactPersonalCardProps {
   user: AdminUser;
@@ -207,6 +208,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   detailSectionTitle: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#334155",
@@ -247,18 +249,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   phoneLabel: {
+    fontFamily,
     fontSize: 10,
     fontWeight: "700",
     color: "#94A3B8",
     letterSpacing: 0.5,
   },
   phoneValue: {
+    fontFamily: titleFontFamily,
     fontSize: 13.5,
     fontWeight: "800",
     color: "#0F172A",
     marginTop: 1,
   },
   phoneValuePlaceholder: {
+    fontFamily,
     fontSize: 12.5,
     fontWeight: "600",
     color: "#94A3B8",
@@ -294,6 +299,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   phoneActionBtnCallText: {
+    fontFamily,
     fontSize: 11.5,
     fontWeight: "700",
     color: "#FFFFFF",
@@ -328,11 +334,13 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   detailContactItemLabel: {
+    fontFamily,
     fontSize: 14,
     color: "#64748B",
     fontWeight: "500",
   },
   detailContactItemValue: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
@@ -374,6 +382,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   linkLabel: {
+    fontFamily,
     fontSize: 13.5,
     fontWeight: "700",
     color: "#0F172A",

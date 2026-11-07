@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { formatDateTime12h } from "@/utils/date-formatter";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const BENTO_COLORS = {
   deepNavy: "#131b2e",
@@ -25,12 +26,6 @@ const BENTO_COLORS = {
     elevation: 2,
   },
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 interface Props {
   item: any;

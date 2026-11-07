@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { FACULTY_COLORS } from "../constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../constants";
 import { AddFacultyFormData, SelectorType } from "../types";
 
 interface OfficeAvailabilitySectionProps {
@@ -230,6 +230,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sectionTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "700",
     color: FACULTY_COLORS.textPrimary,
@@ -246,6 +247,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
+    fontFamily,
     fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.officeBadgeText,
@@ -269,6 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   miniLabel: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: FACULTY_COLORS.textSecondary,
@@ -276,6 +279,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   boxInput: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
@@ -283,12 +287,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   boxValueText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
     marginTop: 2,
   },
   placeholderText: {
+    fontFamily,
     color: FACULTY_COLORS.textMuted,
     fontWeight: "400",
   },
@@ -316,11 +322,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addSlotBtnText: {
+    fontFamily,
     fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.officeIconColor,
   },
   emptySlotText: {
+    fontFamily,
     fontSize: 13,
     color: FACULTY_COLORS.textMuted,
     fontStyle: "italic",
@@ -347,6 +355,7 @@ const styles = StyleSheet.create({
     backgroundColor: FACULTY_COLORS.slotDot,
   },
   slotChipText: {
+    fontFamily,
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
@@ -379,6 +388,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   batchInput: {
+    fontFamily,
     flex: 1,
     fontSize: 14,
     fontWeight: "600",

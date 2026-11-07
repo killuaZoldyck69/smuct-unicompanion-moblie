@@ -37,12 +37,7 @@ import { TeacherSubmissionsList } from "./assessment-details/TeacherSubmissionsL
 import { GradingModalSheet } from "./assessment-details/GradingModalSheet";
 import { StudentSubmissionView } from "./assessment-details/StudentSubmissionView";
 import { BulkGradingModal, BulkGradeEntry } from "./assessment-details/BulkGradingModal";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface AssessmentDetailsContentProps {
   onClose: () => void;

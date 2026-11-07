@@ -10,6 +10,7 @@ import {
   universityPrograms,
   DEPARTMENT_SHORT_NAMES,
 } from "@/data/programs";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const CAMPUS_BG = require("@/assets/login-screen-bg.png");
 
@@ -80,6 +81,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   sectionLabel: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#8E9BAE",
@@ -120,6 +122,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   statLabel: {
+    fontFamily,
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "800",
@@ -141,6 +144,7 @@ const styles = StyleSheet.create({
     }),
   },
   statValue: {
+    fontFamily: titleFontFamily,
     color: "#FFFFFF",
     fontSize: 32,
     fontWeight: "800",

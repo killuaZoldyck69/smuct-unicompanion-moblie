@@ -15,6 +15,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useCountdown } from "@/hooks/use-countdown";
 import Toast from "react-native-toast-message";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const BENTO = {
   canvas: "#f7f9fb",
@@ -40,12 +41,6 @@ const BENTO = {
   subCard: "#f8fafc",
   subCardBorder: "rgba(19, 27, 46, 0.06)",
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 interface Props {
   item: any;

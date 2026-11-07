@@ -5,6 +5,7 @@ import {
   getFullDepartmentDisplayName,
   parseOrdinalParts,
 } from "@/utils/academic-formatters";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export interface TeacherAcademicProfile {
   teacherId?: string | null;
@@ -193,6 +194,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerTitle: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#854D0E",
@@ -203,6 +205,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   ordinalSuperscript: {
+    fontFamily,
     fontSize: 10,
     fontWeight: "800",
     color: "#0F172A",
@@ -229,21 +232,25 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   rowLabel: {
+    fontFamily,
     fontSize: 13,
     color: "#78350F",
     fontWeight: "500",
   },
   rowValue: {
+    fontFamily,
     fontSize: 13.5,
     fontWeight: "700",
     color: "#0F172A",
   },
   rowValueBold: {
+    fontFamily: titleFontFamily,
     fontSize: 14.5,
     fontWeight: "800",
     color: "#0F172A",
   },
   rowValueRight: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
@@ -260,6 +267,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   leadershipPillText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#92400E",

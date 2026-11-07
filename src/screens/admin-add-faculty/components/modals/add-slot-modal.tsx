@@ -15,7 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
-import { FACULTY_COLORS } from "../../constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../../constants";
 import { ConsultationSlot } from "../../types";
 import { formatTimeAmPm } from "../../utils";
 
@@ -356,6 +356,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
+    fontFamily: titleFontFamily,
     fontSize: 17,
     fontWeight: "700",
     color: FACULTY_COLORS.textPrimary,
@@ -367,12 +368,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   label: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
     marginBottom: 6,
   },
   input: {
+    fontFamily,
     backgroundColor: FACULTY_COLORS.inputBg,
     borderWidth: 1.5,
     borderColor: FACULTY_COLORS.inputBorder,
@@ -386,6 +389,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   subLabel: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: FACULTY_COLORS.textSecondary,
@@ -409,6 +413,7 @@ const styles = StyleSheet.create({
     borderColor: FACULTY_COLORS.officeIconColor,
   },
   dayChipText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: FACULTY_COLORS.textSecondary,
@@ -433,11 +438,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   timeLabel: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
   },
   autoTag: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "600",
     color: FACULTY_COLORS.officeIconColor,
@@ -454,6 +461,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   timePickerText: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
@@ -471,6 +479,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   cancelBtnText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "600",
     color: FACULTY_COLORS.textSecondary,
@@ -485,6 +494,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   saveBtnText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",

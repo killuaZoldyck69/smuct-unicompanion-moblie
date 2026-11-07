@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { FACULTY_COLORS } from "../constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../constants";
 import { AddFacultyFormData } from "../types";
 
 interface AccountDetailsSectionProps {
@@ -286,6 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sectionTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "700",
     color: FACULTY_COLORS.textPrimary,
@@ -297,6 +298,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
+    fontFamily,
     fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.accountBadgeText,
@@ -321,12 +323,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   autoFillBadgeText: {
+    fontFamily,
     fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.accountBadgeText,
     letterSpacing: 0.3,
   },
   fieldLabel: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "600",
     color: FACULTY_COLORS.textPrimary,
@@ -354,6 +358,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   input: {
+    fontFamily,
     flex: 1,
     fontSize: 15,
     color: FACULTY_COLORS.textPrimary,
@@ -372,6 +377,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   infoText: {
+    fontFamily,
     flex: 1,
     fontSize: 13,
     color: FACULTY_COLORS.textSecondary,

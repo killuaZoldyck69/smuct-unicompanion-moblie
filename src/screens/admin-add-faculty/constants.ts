@@ -1,3 +1,7 @@
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+
+export { fontFamily, titleFontFamily };
+
 export const FACULTY_COLORS = {
   background: "#F8F9FA",
   textPrimary: "#0F172A",

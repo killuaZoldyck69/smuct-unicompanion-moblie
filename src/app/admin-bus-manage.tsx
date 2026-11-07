@@ -48,11 +48,7 @@ const BENTO_COLORS = {
   },
 };
 
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export default function AdminBusManageScreen() {
   const router = useRouter();
@@ -321,7 +317,7 @@ const styles = StyleSheet.create({
     marginLeft: 14,
   },
   screenTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,

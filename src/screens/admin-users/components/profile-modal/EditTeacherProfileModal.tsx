@@ -30,6 +30,7 @@ import { sortQualifications } from "@/utils/qualification-order";
 import { SelectionModal } from "@/screens/admin-add-faculty/components/selection-modal";
 import { AddSlotModal } from "@/screens/admin-add-faculty/components/modals/add-slot-modal";
 import { universityPrograms, getDepartmentShortName } from "@/data/programs";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 // Helper to extract unique faculties from official university programs
 const UNIQUE_FACULTIES = Array.from(
@@ -1328,6 +1329,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   headerCancelText: {
+    fontFamily,
     fontSize: 15,
     fontWeight: "600",
     color: "#64748B",
@@ -1336,6 +1338,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 17,
     fontWeight: "800",
     color: "#0F172A",
@@ -1354,6 +1357,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   headerSaveText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
@@ -1384,6 +1388,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   bannerName: {
+    fontFamily: titleFontFamily,
     fontSize: 15,
     fontWeight: "800",
     color: "#0F172A",
@@ -1401,6 +1406,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeIdText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: "#475569",
@@ -1413,6 +1419,7 @@ const styles = StyleSheet.create({
     maxWidth: 180,
   },
   badgeEmailText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "500",
     color: "#64748B",
@@ -1444,6 +1451,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   cardTitle: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#334155",
@@ -1453,6 +1461,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   fieldLabel: {
+    fontFamily,
     fontSize: 12.5,
     fontWeight: "700",
     color: "#334155",
@@ -1465,11 +1474,13 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
   clearBadgeText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "600",
     color: "#EF4444",
   },
   input: {
+    fontFamily,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -1493,6 +1504,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   inputInner: {
+    fontFamily,
     flex: 1,
     paddingVertical: 10,
     fontSize: 14,
@@ -1513,6 +1525,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   chipText: {
+    fontFamily,
     fontSize: 12.5,
     fontWeight: "600",
     color: "#475569",
@@ -1522,6 +1535,7 @@ const styles = StyleSheet.create({
     borderColor: "#F43F5E",
   },
   chipBloodTextSelected: {
+    fontFamily,
     color: "#E11D48",
     fontWeight: "700",
   },
@@ -1530,6 +1544,7 @@ const styles = StyleSheet.create({
     borderColor: "#6366F1",
   },
   chipDesignationTextSelected: {
+    fontFamily,
     color: "#4338CA",
     fontWeight: "700",
   },
@@ -1538,6 +1553,7 @@ const styles = StyleSheet.create({
     borderColor: "#F59E0B",
   },
   chipRoleTextSelected: {
+    fontFamily,
     color: "#B45309",
     fontWeight: "700",
   },
@@ -1546,6 +1562,7 @@ const styles = StyleSheet.create({
     borderColor: "#10B981",
   },
   chipDayOffTextSelected: {
+    fontFamily,
     color: "#059669",
     fontWeight: "700",
   },
@@ -1562,6 +1579,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   chipTextSmall: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: "#475569",
@@ -1571,6 +1589,7 @@ const styles = StyleSheet.create({
     borderColor: "#1E222B",
   },
   chipDeptTextSelected: {
+    fontFamily,
     color: "#FFFFFF",
   },
   chipTiny: {
@@ -1586,11 +1605,13 @@ const styles = StyleSheet.create({
     borderColor: "#818CF8",
   },
   chipTinyText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "600",
     color: "#64748B",
   },
   chipTinyTextSelected: {
+    fontFamily,
     color: "#4338CA",
     fontWeight: "700",
   },
@@ -1607,6 +1628,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tagChipText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: "#6D28D9",
@@ -1627,6 +1649,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   tagAddBtnText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: "#FFFFFF",
@@ -1641,6 +1664,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#EEF2FF",
   },
   addQualHeaderBtnText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: "#6366F1",
@@ -1672,12 +1696,14 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   qualDegree: {
+    fontFamily: titleFontFamily,
     fontSize: 13.5,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 2,
   },
   qualInst: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "500",
     color: "#64748B",
@@ -1696,6 +1722,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   addQualTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 13,
     fontWeight: "800",
     color: "#0F172A",
@@ -1712,6 +1739,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addQualCancelText: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "600",
     color: "#64748B",
@@ -1723,6 +1751,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addQualSubmitText: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#FFFFFF",
@@ -1745,12 +1774,14 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   selectorText: {
+    fontFamily,
     flex: 1,
     fontSize: 14.5,
     fontWeight: "500",
     color: "#0F172A",
   },
   placeholderText: {
+    fontFamily,
     color: "#94A3B8",
     fontWeight: "400",
   },
@@ -1760,6 +1791,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   disabledText: {
+    fontFamily,
     color: "#94A3B8",
   },
   helperRow: {
@@ -1770,6 +1802,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   helperText: {
+    fontFamily,
     fontSize: 12,
     color: "#B45309",
     fontWeight: "500",
@@ -1794,6 +1827,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   consultationHeaderTitle: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#065F46",
@@ -1809,6 +1843,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addSlotBtnText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: "#059669",
@@ -1824,6 +1859,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   emptySlotText: {
+    fontFamily,
     fontSize: 12.5,
     color: "#059669",
     fontStyle: "italic",
@@ -1850,6 +1886,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
   },
   slotChipText: {
+    fontFamily,
     flex: 1,
     fontSize: 13,
     fontWeight: "600",

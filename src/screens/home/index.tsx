@@ -20,6 +20,7 @@ import { useNotices } from "@/features/notices/useNotices";
 import { useWeatherForecast } from "@/hooks/use-weather-forecast";
 import { useTodaysClassesData } from "@/hooks/use-todays-classes";
 import { shadows } from "@/theme/layout";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 import { WeatherWidget } from "./components/weather-widget";
 import { TodaysClassesSection } from "./components/todays-classes-section";
 import {
@@ -311,12 +312,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greetingText: {
+    fontFamily,
     fontSize: 13,
     color: "#76777d",
     fontWeight: "600",
     marginBottom: 1,
   },
   nameText: {
+    fontFamily: titleFontFamily,
     fontSize: 20,
     color: "#131b2e",
     fontWeight: "800",
@@ -340,6 +343,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   avatarFallbackText: {
+    fontFamily: titleFontFamily,
     fontSize: 20,
     color: "#ffffff",
     fontWeight: "800",
@@ -366,6 +370,7 @@ const styles = StyleSheet.create({
     height: 32,
   },
   actionText: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -380,11 +385,13 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   sectionTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     color: "#131b2e",
     fontWeight: "700",
   },
   seeAllText: {
+    fontFamily,
     fontSize: 14,
     color: "#1e3a8a",
     fontWeight: "700",
@@ -410,12 +417,14 @@ const styles = StyleSheet.create({
   },
   noticeTextCol: { flex: 1, paddingRight: 12 },
   noticeTitle: {
+    fontFamily,
     fontSize: 14,
     color: "#131b2e",
     fontWeight: "600",
     marginBottom: 3,
   },
   noticeDate: {
+    fontFamily,
     fontSize: 12,
     color: "#76777d",
     fontWeight: "400",
@@ -430,12 +439,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyCardText: {
+    fontFamily: titleFontFamily,
     fontSize: 16,
     color: "#131b2e",
     fontWeight: "800",
     marginBottom: 4,
   },
   emptyCardSub: {
+    fontFamily,
     fontSize: 14,
     color: "#76777d",
     fontWeight: "500",

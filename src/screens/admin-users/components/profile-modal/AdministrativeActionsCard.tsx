@@ -4,6 +4,7 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 
 import { AdminUser, RoleAction, UpdateAdminStudentProfilePayload } from "../../types";
 import { EditStudentProfileModal } from "./EditStudentProfileModal";
+import { fontFamily, titleFontFamily } from "../../constants";
 
 interface AdministrativeActionsCardProps {
   user: AdminUser;
@@ -204,6 +205,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   detailSectionTitle: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#334155",
@@ -224,6 +226,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   adminActionBtnNavyText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
@@ -239,6 +242,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   adminActionBtnRoseText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#E11D48",
@@ -254,6 +258,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   adminActionBtnEmeraldText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#059669",
@@ -292,11 +297,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   btnTextWhite: {
+    fontFamily: titleFontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
   },
   btnSubtextMuted: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "500",
     color: "#94A3B8",

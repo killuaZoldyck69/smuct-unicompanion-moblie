@@ -8,6 +8,7 @@ import {
   getProgramName,
   getFullDepartmentDisplayName,
 } from "../../utils";
+import { fontFamily, titleFontFamily } from "../../constants";
 
 interface StudentAcademicCardProps {
   profile?: StudentProfile | null;
@@ -157,6 +158,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   academicTitleAmber: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#92400E",
@@ -173,16 +175,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   academicLabelAmber: {
+    fontFamily,
     fontSize: 13,
     color: "#78350F",
     fontWeight: "500",
   },
   academicValueId: {
+    fontFamily: titleFontFamily,
     fontSize: 15,
     fontWeight: "800",
     color: "#0F172A",
   },
   academicValueAmberRight: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
@@ -205,6 +210,7 @@ const styles = StyleSheet.create({
     borderColor: "#FEF08A",
   },
   metricGridSubtitle: {
+    fontFamily,
     fontSize: 10,
     fontWeight: "700",
     color: "#94A3B8",
@@ -217,12 +223,14 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   metricGridValue: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: "#0F172A",
     lineHeight: 22,
   },
   metricGridSuperscript: {
+    fontFamily,
     fontSize: 10,
     fontWeight: "800",
     color: "#92400E",

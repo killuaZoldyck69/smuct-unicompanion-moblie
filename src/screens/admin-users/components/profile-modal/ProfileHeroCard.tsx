@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 
-import { THEME } from "../../constants";
+import { THEME, fontFamily, titleFontFamily } from "../../constants";
 import { AdminUser } from "../../types";
 
 interface ProfileHeroCardProps {
@@ -148,11 +148,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   detailAvatarLetter: {
+    fontFamily: titleFontFamily,
     fontSize: 32,
     fontWeight: "800",
     color: "#FFFFFF",
   },
   detailUserName: {
+    fontFamily: titleFontFamily,
     fontSize: 22,
     fontWeight: "800",
     color: THEME.textPrimary,
@@ -160,6 +162,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   detailUserEmail: {
+    fontFamily,
     fontSize: 14,
     color: THEME.textSecondary,
     marginTop: 4,
@@ -183,6 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   detailRolePillText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#475569",
@@ -199,6 +203,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailCrPillText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: "#854D0E",
@@ -221,6 +226,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailDesignationPillText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: "#7C3AED",
@@ -234,6 +240,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   detailRestrictedPillText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#E11D48",
@@ -250,6 +257,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailAdminRolePillText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#B45309",

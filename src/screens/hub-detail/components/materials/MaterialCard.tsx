@@ -19,12 +19,7 @@ import {
   openDocumentOrLink,
   downloadAndSaveDocument,
 } from "./file-actions";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const formatPublishedAt = (value: string): string => {
   const date = new Date(value);
@@ -464,7 +459,7 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 14.5,
     fontWeight: "700",
     color: "#0f172a",

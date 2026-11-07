@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const BENTO = {
   card: "#ffffff",
@@ -24,13 +25,6 @@ const BENTO = {
   redHover: "#b91c1c",
   canvas: "#f8fafc",
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  default: "sans-serif",
-});
 
 interface Props {
   isVisible: boolean;

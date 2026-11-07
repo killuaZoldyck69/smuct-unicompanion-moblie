@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
-import { THEME } from "../constants";
+import { THEME, fontFamily } from "../constants";
 import { TabType } from "../types";
 
 interface DirectoryTabsProps {
@@ -128,6 +128,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tabLabel: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "600",
     color: THEME.textSecondary,

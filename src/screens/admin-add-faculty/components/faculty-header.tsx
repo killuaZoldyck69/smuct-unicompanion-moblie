@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { FACULTY_COLORS } from "../constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../constants";
 
 export const FacultyHeader = React.memo(function FacultyHeader() {
   return (
@@ -32,12 +32,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
+    fontFamily: titleFontFamily,
     fontSize: 28,
     fontWeight: "800",
     color: FACULTY_COLORS.textPrimary,
     letterSpacing: -0.5,
   },
   subtitle: {
+    fontFamily,
     fontSize: 15,
     fontWeight: "400",
     color: FACULTY_COLORS.textSecondary,
@@ -71,11 +73,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bannerTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 16,
     fontWeight: "700",
     color: FACULTY_COLORS.textPrimary,
   },
   bannerSubtitle: {
+    fontFamily,
     fontSize: 13,
     color: FACULTY_COLORS.textSecondary,
     marginTop: 2,

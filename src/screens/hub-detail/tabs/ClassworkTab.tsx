@@ -36,12 +36,7 @@ import {
   ClassworkEmptyState,
   DeleteCourseworkModal,
 } from "../components/classwork";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export default function ClassworkTab({
   hubId,

@@ -16,7 +16,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { FACULTY_COLORS } from "./constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "./constants";
 import { useAddFacultyForm } from "./hooks/use-add-faculty-form";
 import { FacultyHeader } from "./components/faculty-header";
 import { AccountDetailsSection } from "./components/account-details-section";
@@ -274,6 +274,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
+    fontFamily,
     fontSize: 14,
     color: FACULTY_COLORS.textSecondary,
     fontWeight: "500",
@@ -297,6 +298,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   submitButtonText: {
+    fontFamily: titleFontFamily,
     fontSize: 16,
     fontWeight: "700",
     color: FACULTY_COLORS.submitBtnText,

@@ -9,6 +9,7 @@ import {
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { AdminDashboardStats } from "../hooks/use-admin-dashboard";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface StatsGridProps {
   stats: AdminDashboardStats | undefined;
@@ -178,6 +179,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   sectionLabel: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#8E9BAE",
@@ -224,6 +226,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   value: {
+    fontFamily: titleFontFamily,
     fontSize: 25,
     fontWeight: "800",
     color: "#0F172A",
@@ -231,6 +234,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   label: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: "#64748B",

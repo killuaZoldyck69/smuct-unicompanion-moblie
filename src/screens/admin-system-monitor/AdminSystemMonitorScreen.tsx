@@ -21,14 +21,9 @@ import axios from "axios";
 
 import { api } from "@/services/api";
 import { shadows } from "@/theme/layout";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 // ─── Font Configuration ───────────────────────────────────────────────────────
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
-
 const monoFont = Platform.select({
   ios: "Courier New",
   android: "monospace",
@@ -1125,7 +1120,7 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   headerTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 22,
     fontWeight: "800",
     color: "#131b2e",
@@ -1223,7 +1218,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   heroTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 19,
     fontWeight: "800",
     color: "#0f172a",

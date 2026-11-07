@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const QUICK_ACCESS_ICONS = {
   manageStudents: require("@/assets/icons/user-management.png"),
@@ -196,6 +197,7 @@ const styles = StyleSheet.create({
     marginTop: 28,
   },
   sectionLabel: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#8E9BAE",
@@ -234,12 +236,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 14.5,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 3,
   },
   cardSubtitle: {
+    fontFamily,
     fontSize: 11.5,
     color: "#64748B",
     lineHeight: 15,
@@ -272,12 +276,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   wideTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 14.5,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 2,
   },
   wideSubtitle: {
+    fontFamily,
     fontSize: 12,
     color: "#64748B",
     fontWeight: "500",

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const BENTO = {
   white: "#ffffff",
@@ -18,12 +19,6 @@ const BENTO = {
   pillRadius: 9999,
   cardRadius: 20,
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 interface LiveClassBannerProps {
   hubDetails: any;

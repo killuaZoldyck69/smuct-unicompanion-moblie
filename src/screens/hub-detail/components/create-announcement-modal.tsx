@@ -19,6 +19,7 @@ import Toast from "react-native-toast-message";
 
 import { useGoogleDrive } from "@/hooks/use-google-drive";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface StagedAnnouncementAttachment {
   id: string;
@@ -30,13 +31,6 @@ interface StagedAnnouncementAttachment {
   mimeType?: string;
   driveFileId?: string;
 }
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  default: "sans-serif",
-});
 
 const BENTO_THEME = {
   canvas: "#f7f9fb",

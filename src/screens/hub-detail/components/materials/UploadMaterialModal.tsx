@@ -27,12 +27,7 @@ import {
   MaterialSectionTab,
 } from "./types";
 import { formatFileSize, getFileIcon } from "./utils";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface StagedAttachment {
   id: string;

@@ -25,12 +25,7 @@ import {
   AssessmentLink,
 } from "./types";
 import { openSafeUrl } from "./utils";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export interface BulkGradeEntry {
   studentId: string;

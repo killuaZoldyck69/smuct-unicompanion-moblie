@@ -1,3 +1,5 @@
+export { fontFamily, titleFontFamily } from "@/theme/typography";
+
 // --- Theme Tokens matching uploaded mockup ---
 export const THEME = {
   bg: "#F8FAFC",

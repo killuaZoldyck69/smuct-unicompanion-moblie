@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const BENTO = {
   card: "#ffffff",
@@ -28,13 +29,6 @@ const BENTO = {
   mintSoft: "#f0fdf4",
   mintIcon: "#16a34a",
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  default: "sans-serif",
-});
 
 interface HubsSettingsModalProps {
   isVisible: boolean;

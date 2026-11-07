@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 import { AdminUser } from "../../types";
+import { fontFamily, titleFontFamily } from "../../constants";
 
 interface RestrictConfirmationModalProps {
   visible: boolean;
@@ -181,6 +182,7 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
   },
   titleText: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: "#0F172A",
@@ -200,17 +202,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   userNameText: {
+    fontFamily: titleFontFamily,
     fontSize: 13.5,
     fontWeight: "700",
     color: "#1E293B",
   },
   userEmailText: {
+    fontFamily,
     fontSize: 11.5,
     color: "#64748B",
     marginTop: 2,
     fontWeight: "500",
   },
   descriptionText: {
+    fontFamily,
     fontSize: 12.5,
     color: "#475569",
     lineHeight: 18,
@@ -233,6 +238,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cancelButtonText: {
+    fontFamily,
     fontSize: 13.5,
     fontWeight: "700",
     color: "#475569",
@@ -259,6 +265,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   confirmButtonText: {
+    fontFamily,
     fontSize: 13.5,
     fontWeight: "800",
     color: "#FFFFFF",

@@ -1,12 +1,5 @@
-import { Platform } from "react-native";
 import { AssessmentType } from "./types";
-
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  default: "sans-serif",
-});
+export { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export const BENTO = {
   canvas: "#f7f9fb",

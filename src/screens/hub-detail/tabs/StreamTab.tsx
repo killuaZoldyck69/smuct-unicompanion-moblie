@@ -26,12 +26,7 @@ import {
   useUpdateAnnouncementComment,
   useDeleteAnnouncementComment,
 } from "@/features/hubs/useHubs";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface StreamTabProps {
   hubId: string;
@@ -414,7 +409,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: "#0f172a",

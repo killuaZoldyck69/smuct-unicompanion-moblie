@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { FontAwesome5, Feather } from "@expo/vector-icons";
 import { handleOpenUrl } from "@/utils/academic-formatters";
 import { sortQualifications } from "@/utils/qualification-order";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export interface TeacherProfessionalProfile {
   expertiseFields?: string | string[] | null;
@@ -295,12 +296,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#6B21A8",
     letterSpacing: 0.8,
   },
   sectionSubtitle: {
+    fontFamily,
     fontSize: 10.5,
     fontWeight: "700",
     color: "#6B21A8",
@@ -321,6 +324,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   expertiseChipText: {
+    fontFamily,
     fontSize: 11.5,
     fontWeight: "700",
     color: "#7E22CE",
@@ -367,6 +371,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   streamlinedDegree: {
+    fontFamily: titleFontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#0F172A",
@@ -374,6 +379,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   streamlinedDetails: {
+    fontFamily,
     fontSize: 12,
     color: "#64748B",
     fontWeight: "500",
@@ -414,6 +420,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   linkLabel: {
+    fontFamily,
     fontSize: 13.5,
     fontWeight: "700",
     color: "#0F172A",
@@ -428,6 +435,7 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   emptyText: {
+    fontFamily,
     fontSize: 12,
     color: "#94A3B8",
     fontStyle: "italic",

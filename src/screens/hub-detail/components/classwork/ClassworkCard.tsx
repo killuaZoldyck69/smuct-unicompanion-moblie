@@ -18,12 +18,7 @@ import {
   getRemainingDaysInfo,
   formatDueDate,
 } from "./utils";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface ClassworkCardProps {
   item: AssessmentData;
@@ -610,7 +605,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   classworkTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 15.5,
     fontWeight: "800",
     color: "#0f172a",

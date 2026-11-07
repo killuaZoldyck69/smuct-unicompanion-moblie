@@ -1,10 +1,6 @@
-import { StyleSheet, Platform } from "react-native";
-
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { StyleSheet } from "react-native";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export const styles = StyleSheet.create({
   container: {

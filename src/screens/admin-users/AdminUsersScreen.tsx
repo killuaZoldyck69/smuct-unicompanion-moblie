@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 
-import { THEME } from "./constants";
+import { THEME, fontFamily, titleFontFamily } from "./constants";
 import { AdminUser } from "./types";
 import { useAdminUsers } from "./hooks/use-admin-users";
 import { AmbientBackground } from "./components/AmbientBackground";
@@ -299,12 +299,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: THEME.textPrimary,
     marginBottom: 6,
   },
   emptySubtitle: {
+    fontFamily,
     fontSize: 13,
     color: THEME.textSecondary,
     textAlign: "center",
@@ -317,6 +319,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   resetFiltersBtnText: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#FFFFFF",
@@ -334,6 +337,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   listFooterLoadingText: {
+    fontFamily,
     fontSize: 13,
     color: THEME.textSecondary,
     fontWeight: "500",
@@ -343,6 +347,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   listFooterEndText: {
+    fontFamily,
     fontSize: 12,
     color: THEME.textMuted,
     fontWeight: "600",

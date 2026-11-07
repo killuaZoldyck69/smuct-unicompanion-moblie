@@ -16,6 +16,8 @@ import {
   DESIGNATION_OPTIONS,
   TEACHER_ADMIN_ROLE_OPTIONS,
   TeacherAdminRoleOption,
+  fontFamily,
+  titleFontFamily,
 } from "../../constants";
 import { EditTeacherProfileModal } from "./EditTeacherProfileModal";
 
@@ -515,6 +517,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerTitle: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#0F172A",
@@ -547,6 +550,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   btnSubtextMuted: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "500",
     color: "#94A3B8",
@@ -596,6 +600,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   btnTextWhite: {
+    fontFamily: titleFontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
@@ -610,6 +615,7 @@ const styles = StyleSheet.create({
     maxWidth: 150,
   },
   currentBadgeNavyText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: "#CBD5E1",
@@ -629,6 +635,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(245, 158, 11, 0.4)",
   },
   currentBadgeIndigoText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: "#CBD5E1",
@@ -648,6 +655,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emeraldBtnText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#059669",
@@ -663,6 +671,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   roseBtnText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#E11D48",
@@ -705,6 +714,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
   modalTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: "#0F172A",
@@ -786,6 +796,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#6366F1",
   },
   optionLabel: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#1E293B",
@@ -794,6 +805,7 @@ const styles = StyleSheet.create({
     color: "#4338CA",
   },
   optionDesc: {
+    fontFamily,
     fontSize: 11.5,
     color: "#64748B",
     marginTop: 2,

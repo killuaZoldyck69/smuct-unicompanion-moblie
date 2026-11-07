@@ -3,12 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native
 import { Feather } from "@expo/vector-icons";
 import { AssessmentAttachment, AssessmentLink } from "./types";
 import { formatFileSize, openSafeUrl } from "./utils";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily } from "@/theme/typography";
 
 interface AssessmentResourcesSectionProps {
   attachments?: AssessmentAttachment[] | null;

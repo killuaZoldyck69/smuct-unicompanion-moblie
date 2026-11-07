@@ -16,6 +16,7 @@ import { Feather } from "@expo/vector-icons";
 import { formatDateTime12h, formatCardDateTime } from "@/utils/date-formatter";
 import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
 import { openDocumentOrLink } from "./materials/file-actions";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const BENTO_COLORS = {
   deepNavy: "#131b2e",
@@ -32,12 +33,6 @@ const BENTO_COLORS = {
     elevation: 2,
   },
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 interface Props {
   item: any;

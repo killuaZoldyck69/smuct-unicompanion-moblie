@@ -10,6 +10,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCountdown } from "@/hooks/use-countdown";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 // ==================================================
 // SOFT CAMPUS BENTO DESIGN TOKENS
@@ -30,12 +31,6 @@ const BENTO_COLORS = {
     elevation: 2,
   },
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 interface AssessmentCardProps {
   item: any;

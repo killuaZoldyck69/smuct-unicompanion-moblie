@@ -24,11 +24,7 @@ interface AdminCourseHubsHeaderProps {
   totalArchived: number;
 }
 
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export const AdminCourseHubsHeader: React.FC<AdminCourseHubsHeaderProps> = ({
   searchQuery,

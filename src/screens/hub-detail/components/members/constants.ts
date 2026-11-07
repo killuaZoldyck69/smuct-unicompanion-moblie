@@ -1,6 +1,7 @@
-import { Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { CourseHubMember, HubRole } from "@/types/member.types";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export const BENTO = {
   canvas: "#f7f9fb",
@@ -21,12 +22,6 @@ export const BENTO = {
   amberSoft: "#fffbeb",
   amberText: "#b45309",
 };
-
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 export const ROLE_CONFIG: Record<
   HubRole,

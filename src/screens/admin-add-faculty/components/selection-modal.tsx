@@ -12,9 +12,9 @@ import {
   Platform,
   Dimensions,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { FACULTY_COLORS } from "../constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../constants";
 
 interface SelectionModalProps {
   visible: boolean;
@@ -234,6 +234,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   title: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "700",
     color: FACULTY_COLORS.textPrimary,
@@ -261,6 +262,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   searchInput: {
+    fontFamily,
     flex: 1,
     fontSize: 14,
     color: FACULTY_COLORS.textPrimary,
@@ -282,12 +284,14 @@ const styles = StyleSheet.create({
     backgroundColor: FACULTY_COLORS.bannerBg,
   },
   optionText: {
+    fontFamily,
     fontSize: 15,
     color: FACULTY_COLORS.textPrimary,
     flex: 1,
     fontWeight: "500",
   },
   optionTextSelected: {
+    fontFamily,
     fontWeight: "700",
     color: FACULTY_COLORS.submitBtn,
   },
@@ -296,6 +300,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyText: {
+    fontFamily,
     fontSize: 14,
     color: FACULTY_COLORS.textMuted,
   },

@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
-import { THEME } from "../constants";
+import { THEME, fontFamily } from "../constants";
 import { RoleStatusTag } from "../types";
 
 interface ActiveFiltersBarProps {
@@ -121,6 +121,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   activeFilterText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: THEME.textPrimary,
@@ -134,6 +135,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   clearAllFiltersText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
   },

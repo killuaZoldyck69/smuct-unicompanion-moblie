@@ -1,12 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { ElimysHeroEducationSvg } from "@/assets/icons/elimys-hero-education";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const deepNavy = "#131b2e";
 
@@ -55,7 +50,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: deepNavy,

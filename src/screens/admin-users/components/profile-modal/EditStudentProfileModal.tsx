@@ -25,6 +25,7 @@ import {
 } from "../../constants";
 import { SelectionModal } from "@/screens/admin-add-faculty/components/selection-modal";
 import { universityPrograms } from "@/data/programs";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 // Helper to extract unique faculties from official university programs
 const UNIQUE_FACULTIES = Array.from(
@@ -932,6 +933,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   headerCancelText: {
+    fontFamily,
     fontSize: 15,
     fontWeight: "600",
     color: "#64748B",
@@ -940,6 +942,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 17,
     fontWeight: "800",
     color: "#0F172A",
@@ -958,6 +961,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   headerSaveText: {
+    fontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
@@ -988,6 +992,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   bannerName: {
+    fontFamily: titleFontFamily,
     fontSize: 15,
     fontWeight: "800",
     color: "#0F172A",
@@ -1005,6 +1010,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeIdText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: "#475569",
@@ -1017,6 +1023,7 @@ const styles = StyleSheet.create({
     maxWidth: 180,
   },
   badgeEmailText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "500",
     color: "#64748B",
@@ -1084,6 +1091,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   sectionTitle: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "700",
     color: "#475569",
@@ -1093,6 +1101,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   fieldLabel: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: "#334155",
@@ -1105,6 +1114,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   clearBadgeText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "600",
     color: "#EF4444",
@@ -1120,6 +1130,7 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
   },
   semesterBadgeNumber: {
+    fontFamily: titleFontFamily,
     fontSize: 12,
     fontWeight: "800",
     color: "#00875A",
@@ -1127,6 +1138,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   semesterBadgeSuperscript: {
+    fontFamily,
     fontSize: 8.5,
     fontWeight: "800",
     color: "#00875A",
@@ -1136,6 +1148,7 @@ const styles = StyleSheet.create({
     marginLeft: 0.5,
   },
   semesterBadgeWord: {
+    fontFamily,
     fontSize: 11.5,
     fontWeight: "700",
     color: "#00875A",
@@ -1144,6 +1157,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   input: {
+    fontFamily,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -1166,6 +1180,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   inputInner: {
+    fontFamily,
     flex: 1,
     paddingVertical: 9,
     fontSize: 13.5,
@@ -1183,11 +1198,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   selectorBtnText: {
+    fontFamily,
     fontSize: 13.5,
     fontWeight: "600",
     color: "#0F172A",
   },
   selectorBtnPlaceholder: {
+    fontFamily,
     fontWeight: "400",
     color: "#94A3B8",
   },
@@ -1213,11 +1230,13 @@ const styles = StyleSheet.create({
     borderColor: "#10B981",
   },
   chipText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: "#64748B",
   },
   chipTextSelectedEmerald: {
+    fontFamily,
     color: "#047857",
     fontWeight: "700",
   },
@@ -1244,6 +1263,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.8,
   },
   semesterPillText: {
+    fontFamily,
     fontSize: 13.5,
     fontWeight: "700",
     color: "#64748B",
@@ -1252,6 +1272,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   semesterPillTextActive: {
+    fontFamily,
     color: "#059669",
     fontWeight: "800",
   },
@@ -1266,12 +1287,14 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   switchTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 13.5,
     fontWeight: "700",
     color: "#92400E",
     marginBottom: 2,
   },
   switchDescription: {
+    fontFamily,
     fontSize: 11,
     color: "#B45309",
     lineHeight: 15,
@@ -1289,6 +1312,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   skillTagText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: "#6D28D9",
@@ -1297,6 +1321,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   emptySkillsText: {
+    fontFamily,
     fontSize: 12,
     color: "#94A3B8",
     fontStyle: "italic",
@@ -1317,6 +1342,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   addSkillBtnText: {
+    fontFamily,
     fontSize: 12.5,
     fontWeight: "700",
     color: "#FFFFFF",

@@ -14,12 +14,7 @@ import {
   FeatureVisualThemeResolver,
   FeatureVisualTheme,
 } from "../theme/feature-visual-theme-resolver";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface FeatureCardProps {
   item: MenuItemConfig;
@@ -996,7 +991,7 @@ const styles = StyleSheet.create({
   },
   iconImage: { width: 30, height: 30 },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 14,
     fontWeight: "700",
     color: "#131b2e",

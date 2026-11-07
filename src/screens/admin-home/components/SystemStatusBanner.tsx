@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { SystemHealth } from "../hooks/use-admin-dashboard";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface SystemStatusBannerProps {
   health: SystemHealth;
@@ -105,6 +106,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   statusText: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: -0.2,
@@ -125,6 +127,7 @@ const styles = StyleSheet.create({
     borderRadius: 99,
   },
   latencyText: {
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#059669",

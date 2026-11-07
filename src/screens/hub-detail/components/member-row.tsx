@@ -7,6 +7,7 @@ import {
   Image,
   Platform,
 } from "react-native";
+import { fontFamily } from "@/theme/typography";
 
 const BENTO_COLORS = {
   deepNavy: "#131b2e",
@@ -23,12 +24,6 @@ const BENTO_COLORS = {
     elevation: 2,
   },
 };
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
 
 interface Props {
   item: any;

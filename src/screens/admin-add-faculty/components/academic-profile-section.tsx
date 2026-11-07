@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { FACULTY_COLORS } from "../constants";
+import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../constants";
 import { AddFacultyFormData, Qualification } from "../types";
 
 interface AcademicProfileSectionProps {
@@ -238,6 +238,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sectionTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "700",
     color: FACULTY_COLORS.textPrimary,
@@ -254,6 +255,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
+    fontFamily,
     fontSize: 8,
     fontWeight: "700",
     color: FACULTY_COLORS.profileBadgeText,
@@ -266,6 +268,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   subSectionTitle: {
+    fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#374151",
@@ -288,6 +291,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tagText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "600",
     color: FACULTY_COLORS.tagText,
@@ -303,6 +307,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addTagButtonText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: FACULTY_COLORS.addTagText,
@@ -323,11 +328,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   addQualBtnText: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: FACULTY_COLORS.profileIconColor,
   },
   emptyText: {
+    fontFamily,
     fontSize: 13,
     color: FACULTY_COLORS.textMuted,
     fontStyle: "italic",
@@ -355,6 +362,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   qualBadgeText: {
+    fontFamily: titleFontFamily,
     fontSize: 13,
     fontWeight: "800",
     color: FACULTY_COLORS.qualBadgeText,
@@ -363,12 +371,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   qualDegreeTitle: {
+    fontFamily: titleFontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: "#1E1B4B",
     marginBottom: 2,
   },
   qualInstitution: {
+    fontFamily,
     fontSize: 12,
     color: FACULTY_COLORS.textSecondary,
   },
@@ -389,6 +399,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   linkInput: {
+    fontFamily,
     flex: 1,
     fontSize: 14,
     color: FACULTY_COLORS.textPrimary,

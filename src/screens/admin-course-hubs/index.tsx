@@ -21,11 +21,7 @@ import { CourseHubsSkeleton } from "@/screens/hubs/components/course-hubs-skelet
 import { AdminCourseHubsHeader } from "./components/AdminCourseHubsHeader";
 import { AdminCourseHubsFilterModal } from "./components/AdminCourseHubsFilterModal";
 
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export function AdminCourseHubsScreen() {
   const insets = useSafeAreaInsets();

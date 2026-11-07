@@ -14,12 +14,7 @@ import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import { Feather } from "@expo/vector-icons";
 import { AssessmentData } from "./types";
 import { getAssessmentTypeConfig } from "./utils";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface ClassworkOptionsSheetProps {
   item: AssessmentData | null;

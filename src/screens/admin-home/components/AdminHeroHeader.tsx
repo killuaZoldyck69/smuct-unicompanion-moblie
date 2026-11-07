@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { NotificationBell } from "@/components/ui/notification-bell";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface AdminHeroHeaderProps {
   userName: string | null | undefined;
@@ -110,6 +111,7 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   dateLabel: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: "#8E9BAE",
@@ -117,12 +119,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   greeting: {
+    fontFamily,
     fontSize: 16,
     fontWeight: "500",
     color: "#64748B",
     marginBottom: 2,
   },
   title: {
+    fontFamily: titleFontFamily,
     fontSize: 27,
     fontWeight: "800",
     color: "#0F172A",
@@ -147,6 +151,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#4F46E5",
   },
   roleLabel: {
+    fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: "#4338CA",
@@ -200,6 +205,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   avatarInitial: {
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: "#FFFFFF",

@@ -118,11 +118,8 @@ export const DAY_ABBREVIATIONS: Record<string, string> = {
   Saturday: "SAT",
 };
 
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export interface ClassRoutineItem {
   id: string;

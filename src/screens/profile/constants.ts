@@ -182,11 +182,8 @@ export const FACULTY_THEME = {
 } as const;
 
 // Unified font: Aligns with Bento theme / ExploreHeader
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-}) as string;
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export const PROFILE_CACHE_CONFIG = {
   staleTime: Infinity,

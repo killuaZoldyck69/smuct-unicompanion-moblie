@@ -1,13 +1,8 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { MaterialSectionTab } from "./types";
-
-const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 interface MaterialsEmptyStateProps {
   activeTab: MaterialSectionTab;
@@ -110,7 +105,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 16.5,
     fontWeight: "800",
     color: "#0f172a",

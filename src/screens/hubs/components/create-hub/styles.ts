@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { BENTO_THEME, BENTO_FONT_FAMILY } from "./constants";
+import { BENTO_THEME, BENTO_FONT_FAMILY, titleFontFamily } from "./constants";
 
 export const styles = StyleSheet.create({
   modalContainer: {
@@ -24,7 +24,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: BENTO_FONT_FAMILY,
+    fontFamily: titleFontFamily,
     fontSize: 22,
     fontWeight: "800",
     color: BENTO_THEME.navy,

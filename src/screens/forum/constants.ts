@@ -35,11 +35,8 @@ export const BENTO_COLORS = {
   },
 };
 
-export const fontFamily = Platform.select({
-  ios: "Plus Jakarta Sans",
-  android: "sans-serif",
-  default: "sans-serif",
-});
+import { fontFamily, titleFontFamily } from "@/theme/typography";
+export { fontFamily, titleFontFamily };
 
 export const MAX_TITLE_LENGTH = 150;
 export const MAX_DESCRIPTION_LENGTH = 3000;
