@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 
 import { toastConfig } from "@/components/ui/toast-config";
+import { useNotificationObserver } from "@/features/notifications/useNotificationObserver";
 
 // Complete any pending web auth sessions (for Google OAuth popups on web)
 WebBrowser.maybeCompleteAuthSession();
@@ -86,10 +87,16 @@ const queryClient = new QueryClient({
   },
 });
 
+function NotificationLifecycle() {
+  useNotificationObserver();
+  return null;
+}
+
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
+        <NotificationLifecycle />
         <StatusBar
           barStyle="dark-content"
           backgroundColor="transparent"

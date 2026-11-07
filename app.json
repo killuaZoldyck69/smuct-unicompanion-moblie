@@ -24,6 +24,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.killuazoldyck.smuctunicompanionmobile",
+      "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize"
     },
     "androidStatusBar": {
@@ -46,7 +47,14 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./src/assets/icons8-university-60.png",
+          "color": "#4f46e5"
+        }
+      ]
     ],
     "extra": {
       "router": {},

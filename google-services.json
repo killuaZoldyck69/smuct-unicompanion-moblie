@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "757663561053",
+    "project_id": "smuct-unicompanion",
+    "storage_bucket": "smuct-unicompanion.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:757663561053:android:342063104b3927d2d764b4",
+        "android_client_info": {
+          "package_name": "com.killuazoldyck.smuctunicompanionmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3VwtNPFyyXgFQw3iL2__6-yLwu6FR1ag"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

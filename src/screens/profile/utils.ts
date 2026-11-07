@@ -2,6 +2,7 @@ import { Linking, Platform, Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import Toast from "react-native-toast-message";
 import { authClient } from "@/services/auth-client";
+import { unregisterPushNotificationsAsync } from "@/services/push-token.service";
 
 /**
  * Splits a number into its numeric string and ordinal suffix (e.g. 9 -> { number: "9", suffix: "th" }).
@@ -131,6 +132,9 @@ export const performLogout = async (
   queryClient: { setQueryData: (key: any, data: any) => void; clear: () => void }
 ): Promise<void> => {
   try {
+    // Unregister push token for this device before session termination
+    await unregisterPushNotificationsAsync().catch(() => {});
+
     await authClient.signOut();
     if (Platform.OS !== "web") {
       await SecureStore.deleteItemAsync("better-auth.session_token");
