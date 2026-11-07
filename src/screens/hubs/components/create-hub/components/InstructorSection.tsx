@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BENTO_THEME } from "../constants";
 import SearchableTeacherSelect from "../../searchable-teacher-select";
@@ -24,6 +24,17 @@ export const InstructorSection = React.memo(function InstructorSection({
   currentUser,
   onSelectTeacher,
 }: InstructorSectionProps) {
+  const teacherImage =
+    currentUser?.teacherProfile?.image ||
+    currentUser?.teacherProfile?.user?.image ||
+    currentUser?.image ||
+    null;
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [teacherImage]);
+
   // If CR, they must search and assign a faculty member
   if (isCR) {
     return (
@@ -81,7 +92,8 @@ export const InstructorSection = React.memo(function InstructorSection({
 
   // If Teacher, they are the instructor
   if (isTeacher) {
-    const teacherName = currentUser?.name || "You";
+    const teacherName =
+      currentUser?.teacherProfile?.name || currentUser?.name || "You";
     const dept = currentUser?.teacherProfile?.department || "Faculty Member";
 
     return (
@@ -109,7 +121,17 @@ export const InstructorSection = React.memo(function InstructorSection({
 
         <View style={styles.teacherSelfCard}>
           <View style={styles.teacherSelfAvatar}>
-            <Feather name="user" size={18} color={BENTO_THEME.purpleIcon} />
+            {teacherImage && !imageError ? (
+              <Image
+                source={{ uri: teacherImage }}
+                style={styles.teacherSelfAvatarImage}
+                onError={() => setImageError(true)}
+                accessible={true}
+                accessibilityLabel={`${teacherName}'s profile picture`}
+              />
+            ) : (
+              <Feather name="user" size={18} color={BENTO_THEME.purpleIcon} />
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.teacherSelfName}>{teacherName}</Text>

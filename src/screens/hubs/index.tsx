@@ -96,15 +96,33 @@ export function Hubs() {
     ...PROFILE_CACHE_CONFIG,
   });
 
+  const { data: myHubs, isLoading: isLoadingHubs, isRefetching } = useMyHubs();
+
+  const fallbackTeacherImage = useMemo(() => {
+    if (!Array.isArray(myHubs) || !user?.id) return null;
+    for (const item of myHubs) {
+      const t = item.hub?.teacher;
+      if (t && (t.id === user.id || t.userId === user.id || t.name === user.name) && t.image) {
+        return t.image;
+      }
+    }
+    return null;
+  }, [myHubs, user?.id, user?.name]);
+
   const currentUser = user
     ? {
         ...user,
+        image:
+          teacherProfile?.image ||
+          teacherProfile?.user?.image ||
+          (studentProfile as any)?.image ||
+          user.image ||
+          fallbackTeacherImage ||
+          null,
         studentProfile: studentProfile || null,
         teacherProfile: teacherProfile || null,
       }
     : null;
-
-  const { data: myHubs, isLoading: isLoadingHubs, isRefetching } = useMyHubs();
 
   const isAdmin = user?.role === "ADMIN" || currentUser?.role === "ADMIN";
 

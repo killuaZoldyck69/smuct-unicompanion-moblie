@@ -1,6 +1,15 @@
-import React from "react";
-import { View, Text, TextInput } from "react-native";
+import React, { useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { SMUCT_PROGRAM_DEPARTMENTS } from "@/data/programs";
 import { BENTO_THEME } from "../constants";
 import {
   formatBatch,
@@ -47,6 +56,20 @@ export const CohortSection = React.memo(function CohortSection({
   onChangeSemester,
   onChangeTerm,
 }: CohortSectionProps) {
+  const [isDepartmentPickerOpen, setIsDepartmentPickerOpen] = useState(false);
+  const [departmentSearch, setDepartmentSearch] = useState("");
+
+  const filteredDepartments = useMemo(() => {
+    const query = departmentSearch.trim().toLowerCase();
+    if (!query) return SMUCT_PROGRAM_DEPARTMENTS;
+    return SMUCT_PROGRAM_DEPARTMENTS.filter(
+      (option) =>
+        option.name.toLowerCase().includes(query) ||
+        option.code.toLowerCase().includes(query) ||
+        option.faculty.toLowerCase().includes(query),
+    );
+  }, [departmentSearch]);
+
   // CR View: Clean auto-assigned cohort chips
   if (isCR) {
     const displayDept = department || userDepartment || "Department";
@@ -165,24 +188,39 @@ export const CohortSection = React.memo(function CohortSection({
         <Text style={[styles.inputLabel, { color: BENTO_THEME.mintLabel }]}>
           DEPARTMENT
         </Text>
-        <View style={[styles.inputBox, styles.mintInputBox]}>
+        <TouchableOpacity
+          style={[styles.inputBox, styles.mintInputBox]}
+          onPress={() => setIsDepartmentPickerOpen(true)}
+          activeOpacity={0.75}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={
+            department
+              ? `Selected department: ${department}`
+              : "Select Department"
+          }
+        >
           <Feather
             name="briefcase"
             size={15}
             color={BENTO_THEME.mintIcon}
             style={styles.inputLeadingIcon}
           />
-          <TextInput
-            style={styles.input}
-            value={department}
-            onChangeText={onChangeDepartment}
-            placeholder="e.g. Computer Science and Engineering"
-            placeholderTextColor={BENTO_THEME.slateLight}
-            autoCapitalize="words"
-            accessible={true}
-            accessibilityLabel="Department"
+          <Text
+            style={[
+              styles.pickerValueText,
+              !department && { color: BENTO_THEME.slateLight },
+            ]}
+            numberOfLines={1}
+          >
+            {department || "Select Department"}
+          </Text>
+          <Feather
+            name="chevron-down"
+            size={16}
+            color={BENTO_THEME.mintIcon}
           />
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Grid: Batch & Section */}
@@ -300,6 +338,152 @@ export const CohortSection = React.memo(function CohortSection({
           </View>
         </View>
       </View>
+
+      {/* Select Department Modal */}
+      <Modal
+        visible={isDepartmentPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setIsDepartmentPickerOpen(false);
+          setDepartmentSearch("");
+        }}
+      >
+        <View style={styles.deptModalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => {
+              setIsDepartmentPickerOpen(false);
+              setDepartmentSearch("");
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Close department picker"
+          />
+          <View style={styles.deptModalCard}>
+            <View style={styles.deptModalHeader}>
+              <Text style={styles.deptModalTitle}>Select Department</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsDepartmentPickerOpen(false);
+                  setDepartmentSearch("");
+                }}
+                style={styles.sheetCloseBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Close department picker"
+              >
+                <Feather name="x" size={16} color={BENTO_THEME.navy} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.deptSearchBox}>
+              <Feather
+                name="search"
+                size={15}
+                color={BENTO_THEME.mintIcon}
+              />
+              <TextInput
+                style={styles.deptSearchInput}
+                value={departmentSearch}
+                onChangeText={setDepartmentSearch}
+                placeholder="Search departments..."
+                placeholderTextColor={BENTO_THEME.slateLight}
+                autoCapitalize="none"
+                accessibilityLabel="Search departments"
+              />
+              {departmentSearch.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setDepartmentSearch("")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                >
+                  <Feather
+                    name="x-circle"
+                    size={15}
+                    color={BENTO_THEME.slateLight}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {filteredDepartments.length > 0 ? (
+                filteredDepartments.map((option) => {
+                  const selected =
+                    option.name.toLowerCase() === department.toLowerCase();
+                  return (
+                    <TouchableOpacity
+                      key={option.code}
+                      style={[
+                        styles.deptOptionRow,
+                        selected && styles.deptOptionRowSelected,
+                      ]}
+                      onPress={() => {
+                        onChangeDepartment(option.name);
+                        setDepartmentSearch("");
+                        setIsDepartmentPickerOpen(false);
+                      }}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                    >
+                      <View
+                        style={[
+                          styles.deptCodeBadge,
+                          selected && styles.deptCodeBadgeSelected,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.deptCodeText,
+                            selected && styles.deptCodeTextSelected,
+                          ]}
+                        >
+                          {option.code}
+                        </Text>
+                      </View>
+                      <View style={styles.deptTextWrap}>
+                        <Text
+                          style={[
+                            styles.deptNameText,
+                            selected && styles.deptNameTextSelected,
+                          ]}
+                        >
+                          {option.name}
+                        </Text>
+                        <Text style={styles.deptFacultyText}>
+                          {option.faculty}
+                        </Text>
+                      </View>
+                      {selected && (
+                        <Feather
+                          name="check"
+                          size={16}
+                          color={BENTO_THEME.mintIcon}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              ) : (
+                <View style={styles.deptEmptyState}>
+                  <Feather
+                    name="inbox"
+                    size={22}
+                    color={BENTO_THEME.slateLight}
+                  />
+                  <Text style={styles.deptEmptyText}>
+                    No departments match "{departmentSearch.trim()}"
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 });
