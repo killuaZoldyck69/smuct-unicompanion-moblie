@@ -143,7 +143,12 @@ export const NotificationBell = React.memo(function NotificationBell({
             useCatAnimation && catBadgeAnimatedStyle,
           ]}
         >
-          <Text style={styles.badgeText}>
+          <Text
+            style={[
+              styles.badgeText,
+              useCatAnimation && styles.catBadgeText,
+            ]}
+          >
             {unreadCount > 99 ? "99+" : unreadCount}
           </Text>
         </Animated.View>
@@ -170,14 +175,19 @@ const styles = StyleSheet.create({
     height: 17,
     paddingHorizontal: 4,
     borderRadius: 100,
-    borderWidth: 0.5,
-    borderColor: "#808080",
+    backgroundColor: "#ef4444",
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
   },
   catBadge: {
     top: 4,
     right: 38,
+    backgroundColor: "transparent",
+    borderWidth: 0.5,
+    borderColor: "#808080",
   },
-  badgeText: { color: "#000000", fontSize: 9, fontWeight: "800" },
+  badgeText: { color: "#ffffff", fontSize: 9, fontWeight: "800" },
+  catBadgeText: { color: "#000000" },
 });
