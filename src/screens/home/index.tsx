@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -154,7 +155,16 @@ export function Home() {
             <TouchableOpacity
               key={action.id}
               style={styles.actionBtn}
-              onPress={() => router.push(action.route as any)}
+              onPress={() => {
+                if (
+                  Platform.OS === "web" &&
+                  typeof document !== "undefined" &&
+                  document.activeElement instanceof HTMLElement
+                ) {
+                  document.activeElement.blur();
+                }
+                router.push(action.route as any);
+              }}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={action.title}

@@ -46,21 +46,12 @@ export const BloodPostCard = React.memo(function BloodPostCard({
   };
 
   return (
-    <TouchableOpacity
+    <View
       style={[
         styles.card,
         isUrgent && styles.cardUrgent,
         isFulfilled && styles.cardFulfilled,
       ]}
-      onPress={handleCardPress}
-      activeOpacity={0.88}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={`Blood request for ${bloodSymbol}, ${bagsNeeded} ${
-        bagsNeeded === 1 ? "bag" : "bags"
-      } needed, Patient: ${item.patientName}, ${
-        item.patientCondition ? `Condition: ${item.patientCondition}, ` : ""
-      }Location: ${item.location}. Tap to view details.`}
     >
       {/* Background Watermark Heart Outline */}
       <Feather
@@ -88,167 +79,177 @@ export const BloodPostCard = React.memo(function BloodPostCard({
         </View>
       )}
 
-      {/* 1. TOP METADATA ROW */}
-      <View style={styles.topRow}>
-        <View style={styles.topLeftGroup}>
-          {isUrgent ? (
-            <View style={styles.urgentBadge}>
-              <View style={styles.urgentDot} />
-              <Text style={styles.urgentBadgeText}>URGENT</Text>
-            </View>
-          ) : isFulfilled ? (
-            <View style={styles.fulfilledBadge}>
-              <Feather
-                name="check"
-                size={11}
-                color="#ffffff"
-                style={{ marginRight: 3 }}
-              />
-              <Text style={styles.fulfilledBadgeText}>FULFILLED</Text>
-            </View>
-          ) : null}
+      <TouchableOpacity
+        onPress={handleCardPress}
+        activeOpacity={0.88}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Blood request for ${bloodSymbol}, ${bagsNeeded} ${
+          bagsNeeded === 1 ? "bag" : "bags"
+        } needed, Patient: ${item.patientName}, ${
+          item.patientCondition ? `Condition: ${item.patientCondition}, ` : ""
+        }Location: ${item.location}. Tap to view details.`}
+      >
+        {/* 1. TOP METADATA ROW */}
+        <View style={styles.topRow}>
+          <View style={styles.topLeftGroup}>
+            {isUrgent ? (
+              <View style={styles.urgentBadge}>
+                <View style={styles.urgentDot} />
+                <Text style={styles.urgentBadgeText}>URGENT</Text>
+              </View>
+            ) : isFulfilled ? (
+              <View style={styles.fulfilledBadge}>
+                <Feather
+                  name="check"
+                  size={11}
+                  color="#ffffff"
+                  style={{ marginRight: 3 }}
+                />
+                <Text style={styles.fulfilledBadgeText}>FULFILLED</Text>
+              </View>
+            ) : null}
 
-          <View
-            style={[
-              styles.bagsBadge,
-              isFulfilled && styles.bagsBadgeFulfilled,
-            ]}
-          >
-            <Text
+            <View
               style={[
-                styles.bagsBadgeText,
-                isFulfilled && styles.bagsBadgeTextFulfilled,
+                styles.bagsBadge,
+                isFulfilled && styles.bagsBadgeFulfilled,
               ]}
             >
-              {bagsNeeded} {bagsNeeded === 1 ? "Bag Needed" : "Bags Needed"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* 2. PATIENT & BLOOD GROUP SECTION */}
-      <View style={styles.patientRow}>
-        {/* Prominent Blood Group Squircle */}
-        <View
-          style={[
-            styles.bloodSquircle,
-            isFulfilled && styles.bloodSquircleFulfilled,
-          ]}
-        >
-          <Feather name="droplet" size={15} color="#ffffff" />
-          <Text style={styles.bloodSquircleText}>{bloodSymbol}</Text>
-        </View>
-
-        {/* Patient Name, Condition, & Location */}
-        <View style={styles.patientDetailsCol}>
-          <View style={styles.patientTitleRow}>
-            <Text style={styles.patientName} numberOfLines={1}>
-              {item.patientName}
-            </Text>
-
-            {item.patientCondition || isUrgent ? (
-              <View
+              <Text
                 style={[
-                  styles.conditionPill,
-                  isFulfilled && styles.conditionPillFulfilled,
+                  styles.bagsBadgeText,
+                  isFulfilled && styles.bagsBadgeTextFulfilled,
                 ]}
               >
-                <Text
+                {bagsNeeded} {bagsNeeded === 1 ? "Bag Needed" : "Bags Needed"}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 2. PATIENT & BLOOD GROUP SECTION */}
+        <View style={styles.patientRow}>
+          {/* Prominent Blood Group Squircle */}
+          <View
+            style={[
+              styles.bloodSquircle,
+              isFulfilled && styles.bloodSquircleFulfilled,
+            ]}
+          >
+            <Feather name="droplet" size={15} color="#ffffff" />
+            <Text style={styles.bloodSquircleText}>{bloodSymbol}</Text>
+          </View>
+
+          {/* Patient Name, Condition, & Location */}
+          <View style={styles.patientDetailsCol}>
+            <View style={styles.patientTitleRow}>
+              <Text style={styles.patientName} numberOfLines={1}>
+                {item.patientName}
+              </Text>
+
+              {item.patientCondition || isUrgent ? (
+                <View
                   style={[
-                    styles.conditionPillText,
-                    isFulfilled && styles.conditionPillTextFulfilled,
+                    styles.conditionPill,
+                    isFulfilled && styles.conditionPillFulfilled,
                   ]}
-                  numberOfLines={1}
                 >
-                  {item.patientCondition
-                    ? isUrgent
-                      ? `${item.patientCondition} • Critical`
-                      : item.patientCondition
-                    : "Critical Case"}
+                  <Text
+                    style={[
+                      styles.conditionPillText,
+                      isFulfilled && styles.conditionPillTextFulfilled,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.patientCondition
+                      ? isUrgent
+                        ? `${item.patientCondition} • Critical`
+                        : item.patientCondition
+                      : "Critical Case"}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Hospital / Location */}
+            <View style={styles.locationRow}>
+              <Feather
+                name="map-pin"
+                size={13}
+                color={isFulfilled ? "#059669" : "#e11d48"}
+                style={styles.locationIcon}
+              />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {item.location}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 3. SUBTLE DIVIDER */}
+        <View
+          style={[styles.divider, isFulfilled && styles.dividerFulfilled]}
+        />
+
+        {/* 4. REQUESTER & VOLUNTEER PARTICIPATION */}
+        <View style={styles.requesterRow}>
+          <View style={styles.authorSection}>
+            {item.author?.image ? (
+              <Image
+                source={{ uri: item.author.image }}
+                style={styles.authorAvatar}
+                accessible={true}
+                accessibilityLabel={`${item.author.name || "Requester"}'s avatar`}
+              />
+            ) : (
+              <View style={styles.authorAvatarFallback}>
+                <Text style={styles.authorAvatarFallbackText}>
+                  {getAuthorInitials(item.author?.name)}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.authorMeta}>
+              <Text style={styles.authorNameText} numberOfLines={1}>
+                {item.author?.name || "Campus Member"}
+              </Text>
+              {authorSubtitle ? (
+                <Text style={styles.authorSubtitleText} numberOfLines={1}>
+                  {authorSubtitle}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          {/* Volunteer Count Pill & Posted Time */}
+          <View style={styles.volunteerCol}>
+            <View
+              style={[
+                styles.volunteerPill,
+                isFulfilled && styles.volunteerPillFulfilled,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.volunteerPillText,
+                  isFulfilled && styles.volunteerPillTextFulfilled,
+                ]}
+              >
+                {volunteerCount} {volunteerCount === 1 ? "Volunteer" : "Volunteers"}
+              </Text>
+            </View>
+            {item.createdAt ? (
+              <View style={styles.postedTimeRow}>
+                <Feather name="clock" size={10} color="#8a95a5" style={{ marginRight: 3 }} />
+                <Text style={styles.postedTimeText} numberOfLines={1}>
+                  {formatCardDateTime(item.createdAt)}
                 </Text>
               </View>
             ) : null}
           </View>
-
-          {/* Hospital / Location */}
-          <View style={styles.locationRow}>
-            <Feather
-              name="map-pin"
-              size={13}
-              color={isFulfilled ? "#059669" : "#e11d48"}
-              style={styles.locationIcon}
-            />
-            <Text style={styles.locationText} numberOfLines={1}>
-              {item.location}
-            </Text>
-          </View>
         </View>
-      </View>
-
-      {/* 3. SUBTLE DIVIDER */}
-      <View
-        style={[styles.divider, isFulfilled && styles.dividerFulfilled]}
-      />
-
-      {/* 4. REQUESTER & VOLUNTEER PARTICIPATION */}
-      <View style={styles.requesterRow}>
-        <View style={styles.authorSection}>
-          {item.author?.image ? (
-            <Image
-              source={{ uri: item.author.image }}
-              style={styles.authorAvatar}
-              accessible={true}
-              accessibilityLabel={`${item.author.name || "Requester"}'s avatar`}
-            />
-          ) : (
-            <View style={styles.authorAvatarFallback}>
-              <Text style={styles.authorAvatarFallbackText}>
-                {getAuthorInitials(item.author?.name)}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.authorMeta}>
-            <Text style={styles.authorNameText} numberOfLines={1}>
-              {item.author?.name || "Campus Member"}
-            </Text>
-            {authorSubtitle ? (
-              <Text style={styles.authorSubtitleText} numberOfLines={1}>
-                {authorSubtitle}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Volunteer Count Pill & Posted Time */}
-        <View style={styles.volunteerCol}>
-          <View
-            style={[
-              styles.volunteerPill,
-              isFulfilled && styles.volunteerPillFulfilled,
-            ]}
-          >
-            <Text
-              style={[
-                styles.volunteerPillText,
-                isFulfilled && styles.volunteerPillTextFulfilled,
-              ]}
-            >
-              {volunteerCount} {volunteerCount === 1 ? "Volunteer" : "Volunteers"}
-            </Text>
-          </View>
-          {item.createdAt ? (
-            <View style={styles.postedTimeRow}>
-              <Feather name="clock" size={10} color="#8a95a5" style={{ marginRight: 3 }} />
-              <Text style={styles.postedTimeText} numberOfLines={1}>
-                {formatCardDateTime(item.createdAt)}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
-
-
+      </TouchableOpacity>
 
       {/* 6. ADMIN / AUTHOR ACTIONS BAR */}
       {canManage && (
@@ -292,7 +293,7 @@ export const BloodPostCard = React.memo(function BloodPostCard({
           )}
         </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 });
 

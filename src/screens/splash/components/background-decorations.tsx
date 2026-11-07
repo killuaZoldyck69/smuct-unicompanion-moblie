@@ -14,7 +14,7 @@ import { SPLASH_COLORS } from "../constants";
 export const BackgroundDecorations = React.memo(
   function BackgroundDecorations() {
     return (
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: "none" }]}>
         <Svg
           width="100%"
           height="100%"

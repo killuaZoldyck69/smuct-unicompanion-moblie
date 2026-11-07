@@ -863,6 +863,17 @@ export const FeatureCard = React.memo(function FeatureCard({
     item.fallbackIcon,
   );
 
+  const handlePress = () => {
+    if (
+      Platform.OS === "web" &&
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement
+    ) {
+      document.activeElement.blur();
+    }
+    router.push(item.route);
+  };
+
   // ── Full-width horizontal layout ──
   if (fullWidth) {
     return (
@@ -872,7 +883,7 @@ export const FeatureCard = React.memo(function FeatureCard({
           styles.cardFullWidth,
           { backgroundColor: theme.iconBackground },
         ]}
-        onPress={() => router.push(item.route)}
+        onPress={handlePress}
         activeOpacity={0.75}
         accessible
         accessibilityRole="button"
@@ -900,7 +911,7 @@ export const FeatureCard = React.memo(function FeatureCard({
   return (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: theme.iconBackground }]}
-      onPress={() => router.push(item.route)}
+      onPress={handlePress}
       activeOpacity={0.75}
       accessible
       accessibilityRole="button"

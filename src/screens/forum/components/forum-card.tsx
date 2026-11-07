@@ -71,72 +71,115 @@ export const ForumCard = memo(function ForumCard({
   };
 
   return (
-    <TouchableOpacity
+    <View
       style={[
         styles.cardContainer,
         isResolved && styles.cardContainerResolved,
       ]}
-      onPress={() => onPress(item.id)}
-      activeOpacity={0.8}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={`Discussion: ${item.title}. Asked by ${authorName}, ${academicSubtitle}. Posted ${formattedTime} at ${timeOnly}. Status: ${
-        isResolved ? "Resolved" : "Needs help"
-      }. ${replyCount} ${replyCount === 1 ? "reply" : "replies"}.`}
     >
-      <View style={styles.headerRow}>
-        <View style={styles.authorRow}>
-          {item.author?.image ? (
-            <Image
-              source={{ uri: item.author.image }}
-              style={styles.authorAvatar}
-              accessible={true}
-              accessibilityLabel={`${authorName}'s avatar`}
-            />
-          ) : (
-            <View style={styles.authorAvatarFallback}>
-              <Text style={styles.authorAvatarText}>{authorInitial}</Text>
-            </View>
-          )}
-          <View style={styles.authorMeta}>
-            <Text style={styles.authorName} numberOfLines={1}>
-              {authorName}
-            </Text>
-            {academicInfo.isStudent && academicInfo.semesterNum ? (
-              <Text style={styles.authorSubtitle} numberOfLines={1}>
-                {academicInfo.semesterNum}
-                <Text style={styles.superscript}>
-                  {academicInfo.superSuffix}
-                </Text>
-                {` Semester • ${academicInfo.deptShort}`}
-              </Text>
+      <TouchableOpacity
+        onPress={() => onPress(item.id)}
+        activeOpacity={0.8}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Discussion: ${item.title}. Asked by ${authorName}, ${academicSubtitle}. Posted ${formattedTime} at ${timeOnly}. Status: ${
+          isResolved ? "Resolved" : "Needs help"
+        }. ${replyCount} ${replyCount === 1 ? "reply" : "replies"}.`}
+      >
+        <View style={[styles.headerRow, canManage && styles.headerRowWithMenu]}>
+          <View style={styles.authorRow}>
+            {item.author?.image ? (
+              <Image
+                source={{ uri: item.author.image }}
+                style={styles.authorAvatar}
+                accessible={true}
+                accessibilityLabel={`${authorName}'s avatar`}
+              />
             ) : (
-              <Text style={styles.authorSubtitle} numberOfLines={1}>
-                {academicSubtitle}
-              </Text>
+              <View style={styles.authorAvatarFallback}>
+                <Text style={styles.authorAvatarText}>{authorInitial}</Text>
+              </View>
             )}
+            <View style={styles.authorMeta}>
+              <Text style={styles.authorName} numberOfLines={1}>
+                {authorName}
+              </Text>
+              {academicInfo.isStudent && academicInfo.semesterNum ? (
+                <Text style={styles.authorSubtitle} numberOfLines={1}>
+                  {academicInfo.semesterNum}
+                  <Text style={styles.superscript}>
+                    {academicInfo.superSuffix}
+                  </Text>
+                  {` Semester • ${academicInfo.deptShort}`}
+                </Text>
+              ) : (
+                <Text style={styles.authorSubtitle} numberOfLines={1}>
+                  {academicSubtitle}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
 
-        {canManage && (
-          <View ref={buttonRef} collapsable={false}>
-            <TouchableOpacity
-              style={styles.moreBtn}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                handleOpenMenu();
-              }}
-              activeOpacity={0.65}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Discussion options"
-            >
-              <Feather name="more-vertical" size={18} color="#64748b" />
-            </TouchableOpacity>
+        <Text style={styles.titleText} numberOfLines={2}>
+          {item.title}
+        </Text>
+
+        {item.description ? (
+          <RichTextSnippet
+            text={item.description}
+            numberOfLines={2}
+            style={styles.descriptionText}
+          />
+        ) : null}
+
+        <View style={[styles.divider, isResolved && styles.dividerResolved]} />
+
+        <View style={styles.footerRow}>
+          <View style={[styles.replyPill, isResolved && styles.replyPillResolved]}>
+            <Feather
+              name="message-square"
+              size={12}
+              color={BENTO_COLORS.primaryBlue}
+              style={styles.replyIcon}
+            />
+            <Text style={styles.replyPillText}>
+              {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
+            </Text>
           </View>
-        )}
-      </View>
+
+          <View style={styles.activityBox}>
+            <Feather
+              name="clock"
+              size={11}
+              color={BENTO_COLORS.subtleText}
+              style={styles.clockIcon}
+            />
+            <Text style={styles.timeText}>
+              Posted {formattedTime} • {timeOnly}
+            </Text>
+          </View>
+          {postEdited && (
+            <Text style={styles.editedBadge}>✎ Edited</Text>
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {canManage && (
+        <View ref={buttonRef} collapsable={false} style={styles.moreBtnWrapper}>
+          <TouchableOpacity
+            style={styles.moreBtn}
+            onPress={handleOpenMenu}
+            activeOpacity={0.65}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Discussion options"
+          >
+            <Feather name="more-vertical" size={18} color="#64748b" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Popover Dropdown for Authors and Admins */}
       {canManage && (
@@ -147,17 +190,18 @@ export const ForumCard = memo(function ForumCard({
           onRequestClose={() => setMenuVisible(false)}
           statusBarTranslucent={true}
         >
-          <TouchableOpacity
-            style={styles.menuBackdrop}
-            activeOpacity={1}
-            onPress={() => setMenuVisible(false)}
-          >
+          <View style={styles.menuBackdrop}>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setMenuVisible(false)}
+              accessible={false}
+            />
             <View
               style={[
                 styles.whatsappDropdown,
                 { top: menuPosition.top, right: menuPosition.right },
               ]}
-              onStartShouldSetResponder={() => true}
             >
               {!isResolved ? (
                 <>
@@ -205,58 +249,16 @@ export const ForumCard = memo(function ForumCard({
                 </Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         </Modal>
       )}
-
-      <Text style={styles.titleText} numberOfLines={2}>
-        {item.title}
-      </Text>
-
-      {item.description ? (
-        <RichTextSnippet
-          text={item.description}
-          numberOfLines={2}
-          style={styles.descriptionText}
-        />
-      ) : null}
-
-      <View style={[styles.divider, isResolved && styles.dividerResolved]} />
-
-      <View style={styles.footerRow}>
-        <View style={[styles.replyPill, isResolved && styles.replyPillResolved]}>
-          <Feather
-            name="message-square"
-            size={12}
-            color={BENTO_COLORS.primaryBlue}
-            style={styles.replyIcon}
-          />
-          <Text style={styles.replyPillText}>
-            {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
-          </Text>
-        </View>
-
-        <View style={styles.activityBox}>
-          <Feather
-            name="clock"
-            size={11}
-            color={BENTO_COLORS.subtleText}
-            style={styles.clockIcon}
-          />
-          <Text style={styles.timeText}>
-            Posted {formattedTime} • {timeOnly}
-          </Text>
-        </View>
-        {postEdited && (
-          <Text style={styles.editedBadge}>✎ Edited</Text>
-        )}
-      </View>
-    </TouchableOpacity>
+    </View>
   );
 });
 
 const styles = StyleSheet.create({
   cardContainer: {
+    position: "relative",
     backgroundColor: BENTO_COLORS.white,
     borderRadius: BENTO_COLORS.cardRadius,
     padding: 16,
@@ -272,6 +274,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
+  },
+  headerRowWithMenu: {
+    paddingRight: 36,
+  },
+  moreBtnWrapper: {
+    position: "absolute",
+    top: 18,
+    right: 16,
+    zIndex: 2,
   },
   authorRow: {
     flexDirection: "row",
