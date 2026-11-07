@@ -1,10 +1,10 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
+  Animated,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Image,
   Platform,
 } from "react-native";
@@ -31,6 +31,76 @@ interface TeacherSubmissionsListProps {
   ) => void;
   onOpenBulkGrading?: () => void;
 }
+
+const SubmissionsSkeleton = React.memo(function SubmissionsSkeleton({
+  isOffline,
+}: {
+  isOffline?: boolean;
+}) {
+  const pulseAnim = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 750,
+          useNativeDriver: Platform.OS !== "web",
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.6,
+          duration: 750,
+          useNativeDriver: Platform.OS !== "web",
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
+
+  return (
+    <View
+      accessible={true}
+      accessibilityLabel={
+        isOffline ? "Loading enrolled students" : "Loading submissions"
+      }
+    >
+      {[0, 1, 2].map((index) => (
+        <Animated.View
+          key={`sub-skeleton-${index}`}
+          style={[styles.subCard, { opacity: pulseAnim }]}
+        >
+          <View style={styles.subCardHeaderRow}>
+            <View style={styles.skeletonAvatar} />
+            <View style={styles.studentInfoCol}>
+              <View
+                style={[
+                  styles.skeletonNameLine,
+                  index === 1 && { width: "48%" },
+                  index === 2 && { width: "66%" },
+                ]}
+              />
+              <View style={styles.skeletonIdBadge} />
+              <View
+                style={[
+                  styles.skeletonMetaLine,
+                  index === 1 && { width: "60%" },
+                ]}
+              />
+            </View>
+            <View style={styles.gradeCol}>
+              <View style={styles.skeletonGradePill} />
+            </View>
+          </View>
+
+          {!isOffline && <View style={styles.skeletonAttachmentBar} />}
+
+          <View style={styles.skeletonActionBtn} />
+        </Animated.View>
+      ))}
+    </View>
+  );
+});
 
 export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = React.memo(
   ({
@@ -180,12 +250,7 @@ export const TeacherSubmissionsList: React.FC<TeacherSubmissionsListProps> = Rea
         )}
 
         {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0f172a" />
-            <Text style={styles.loadingText}>
-              {isOffline ? "Loading enrolled students..." : "Loading submissions..."}
-            </Text>
-          </View>
+          <SubmissionsSkeleton isOffline={isOffline} />
         ) : studentRecords.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Feather name={isOffline ? "users" : "inbox"} size={40} color="#94a3b8" />
@@ -418,15 +483,52 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 17,
   },
-  loadingContainer: {
-    paddingVertical: 40,
-    alignItems: "center",
+  skeletonAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#e2e8f0",
+    marginRight: 10,
   },
-  loadingText: {
-    fontFamily,
-    fontSize: 13,
-    color: "#64748b",
+  skeletonNameLine: {
+    width: "58%",
+    height: 14,
+    borderRadius: 5,
+    backgroundColor: "#e2e8f0",
+  },
+  skeletonIdBadge: {
+    width: 88,
+    height: 16,
+    borderRadius: 4,
+    backgroundColor: "#f1f5f9",
+    marginTop: 5,
+    marginBottom: 5,
+  },
+  skeletonMetaLine: {
+    width: "72%",
+    height: 11,
+    borderRadius: 4,
+    backgroundColor: "#f1f5f9",
+  },
+  skeletonGradePill: {
+    width: 78,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: "#e2e8f0",
+  },
+  skeletonAttachmentBar: {
+    width: "100%",
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
     marginTop: 10,
+  },
+  skeletonActionBtn: {
+    width: "100%",
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#e2e8f0",
+    marginTop: 12,
   },
   emptyContainer: {
     paddingVertical: 48,
