@@ -201,7 +201,19 @@ export function Home() {
         <View style={[styles.sectionHeaderRow, { marginTop: 32 }]}>
           <Text style={styles.sectionTitle}>Recent Notices</Text>
           <TouchableOpacity
-            onPress={() => router.push("/(tabs)/notices")}
+            onPress={() => {
+              if (
+                Platform.OS === "web" &&
+                typeof document !== "undefined" &&
+                document.activeElement instanceof HTMLElement
+              ) {
+                document.activeElement.blur();
+              }
+              router.push({
+                pathname: "/(tabs)/notices",
+                params: { noticeId: "" },
+              });
+            }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="View all notices"
@@ -234,7 +246,19 @@ export function Home() {
                     index !== Math.min(notices.length, 3) - 1 &&
                       styles.noticeDivider,
                   ]}
-                  onPress={() => router.push("/(tabs)/notices")}
+                  onPress={() => {
+                    if (
+                      Platform.OS === "web" &&
+                      typeof document !== "undefined" &&
+                      document.activeElement instanceof HTMLElement
+                    ) {
+                      document.activeElement.blur();
+                    }
+                    router.push({
+                      pathname: "/(tabs)/notices",
+                      params: { noticeId: notice.id },
+                    });
+                  }}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel={`Notice: ${notice.title}`}

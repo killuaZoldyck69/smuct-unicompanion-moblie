@@ -17,6 +17,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useNotices, useDeleteNotice } from "@/features/notices/useNotices";
+import { getNoticeByIdAPI } from "@/services/notice-service";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { NOTICE_COLORS, fontFamily } from "./constants";
 import { NoticeCategoryKey, NormalizedNotice } from "./types";
@@ -156,16 +157,24 @@ export function NoticeboardScreen({
     }
   }, [refetch]);
 
+  const lastOpenedNoticeIdRef = useRef<string | null>(null);
+
+  const handleCloseDetail = useCallback(() => {
+    setSelectedNotice(null);
+    lastOpenedNoticeIdRef.current = null;
+    router.setParams({ noticeId: "" });
+  }, [router]);
+
   const handleOpenCreate = useCallback(() => {
     setEditingNotice(null);
     setIsCreateOpen(true);
   }, []);
 
   const handleEditNotice = useCallback((item: NormalizedNotice) => {
-    setSelectedNotice(null);
+    handleCloseDetail();
     setEditingNotice(item);
     setIsCreateOpen(true);
-  }, []);
+  }, [handleCloseDetail]);
 
   const handleDeleteNotice = useCallback((item: NormalizedNotice) => {
     setNoticeToDelete(item);
@@ -183,7 +192,7 @@ export function NoticeboardScreen({
       });
       setNoticeToDelete(null);
       if (selectedNotice?.id === noticeToDelete.id) {
-        setSelectedNotice(null);
+        handleCloseDetail();
       }
     } catch {
       Toast.show({
@@ -194,7 +203,7 @@ export function NoticeboardScreen({
     } finally {
       setIsDeleting(false);
     }
-  }, [noticeToDelete, deleteNoticeMutation, selectedNotice?.id]);
+  }, [noticeToDelete, deleteNoticeMutation, selectedNotice?.id, handleCloseDetail]);
 
   const handleBack = useCallback(() => {
     if (isCreateOpen) {
@@ -207,7 +216,7 @@ export function NoticeboardScreen({
       return;
     }
     if (selectedNotice) {
-      setSelectedNotice(null);
+      handleCloseDetail();
       return;
     }
     if (isFilterModalOpen) {
@@ -231,6 +240,7 @@ export function NoticeboardScreen({
     isCreateOpen,
     noticeToDelete,
     selectedNotice,
+    handleCloseDetail,
     isFilterModalOpen,
     searchQuery,
     selectedCategory,
@@ -271,20 +281,38 @@ export function NoticeboardScreen({
   }, [rawNotices]);
 
   // Deep-link direct notice selection
-  const hasAutoSelectedRef = useRef(false);
   useEffect(() => {
+    const targetNoticeId = searchParams.noticeId?.trim();
     if (
-      searchParams.noticeId &&
-      !hasAutoSelectedRef.current &&
-      normalizedNotices.length > 0
+      targetNoticeId &&
+      targetNoticeId !== lastOpenedNoticeIdRef.current
     ) {
-      const match = normalizedNotices.find((n) => n.id === searchParams.noticeId);
-      if (match) {
-        setSelectedNotice(match);
-        hasAutoSelectedRef.current = true;
+      if (normalizedNotices.length > 0) {
+        const match = normalizedNotices.find((n) => n.id === targetNoticeId);
+        if (match) {
+          setSelectedNotice(match);
+          lastOpenedNoticeIdRef.current = targetNoticeId;
+          return;
+        }
       }
+
+      // If notices are already loaded and targetNoticeId is not found in the list, fetch by ID directly
+      if (!isLoading) {
+        getNoticeByIdAPI(targetNoticeId)
+          .then((res) => {
+            if (res) {
+              setSelectedNotice(normalizeNotice(res));
+              lastOpenedNoticeIdRef.current = targetNoticeId;
+            }
+          })
+          .catch(() => {
+            // Notice ID not found or could not be loaded
+          });
+      }
+    } else if (!targetNoticeId) {
+      lastOpenedNoticeIdRef.current = null;
     }
-  }, [searchParams.noticeId, normalizedNotices]);
+  }, [searchParams.noticeId, normalizedNotices, isLoading]);
 
   // 2. Compute dynamic category counts and filter options
   const { categoryCounts, availableCategories } = useMemo(() => {
@@ -354,7 +382,10 @@ export function NoticeboardScreen({
     ({ item }) => (
       <NoticeCard
         item={item}
-        onPress={setSelectedNotice}
+        onPress={(notice) => {
+          setSelectedNotice(notice);
+          lastOpenedNoticeIdRef.current = notice.id;
+        }}
         isAdmin={isAdmin}
         onEdit={handleEditNotice}
         onDelete={handleDeleteNotice}
@@ -508,7 +539,7 @@ export function NoticeboardScreen({
       {/* ── Official Notice Detail Canvas ── */}
       <NoticeDetailView
         notice={selectedNotice}
-        onClose={() => setSelectedNotice(null)}
+        onClose={handleCloseDetail}
         isAdmin={isAdmin}
         onEdit={handleEditNotice}
         onDelete={handleDeleteNotice}

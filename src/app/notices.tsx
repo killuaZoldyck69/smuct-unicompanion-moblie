@@ -1,6 +1,7 @@
 import React from "react";
-import { Redirect } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 
 export default function NoticesLegacyRedirectScreen() {
-  return <Redirect href="/(tabs)/notices" />;
+  const params = useLocalSearchParams();
+  return <Redirect href={{ pathname: "/(tabs)/notices", params }} />;
 }
