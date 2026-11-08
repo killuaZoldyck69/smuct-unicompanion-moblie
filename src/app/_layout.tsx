@@ -1,11 +1,15 @@
+import "@/theme/typography";
+import { useEffect } from "react";
 import { Slot } from "expo-router";
-import { Platform, StatusBar, Text, TextInput } from "react-native";
+import { Platform, StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
+import { useFonts } from "expo-font";
 import {
-  useFonts,
+  BricolageGrotesque_400Regular,
+  BricolageGrotesque_500Medium,
   BricolageGrotesque_600SemiBold,
   BricolageGrotesque_700Bold,
   BricolageGrotesque_800ExtraBold,
@@ -15,6 +19,7 @@ import {
   Onest_500Medium,
   Onest_600SemiBold,
   Onest_700Bold,
+  Onest_800ExtraBold,
 } from "@expo-google-fonts/onest";
 
 import { toastConfig } from "@/components/ui/toast-config";
@@ -24,23 +29,7 @@ import { useNotificationObserver } from "@/features/notifications/useNotificatio
 WebBrowser.maybeCompleteAuthSession();
 
 // ============================================================================
-// 1. SYSTEM FONT SCALING LOCK (FOR ANDROID & ALL DEVICES)
-// ============================================================================
-// Ensures exact, predictable typography sizes across all Android devices,
-// preventing user OS-level display/font size sliders from distorting layouts.
-type CustomTextComponent = React.ComponentType<any> & {
-  defaultProps?: { allowFontScaling?: boolean; maxFontSizeMultiplier?: number };
-};
-const CustomText = Text as unknown as CustomTextComponent;
-if (CustomText.defaultProps == null) CustomText.defaultProps = {};
-CustomText.defaultProps.allowFontScaling = false;
-
-const CustomTextInput = TextInput as unknown as CustomTextComponent;
-if (CustomTextInput.defaultProps == null) CustomTextInput.defaultProps = {};
-CustomTextInput.defaultProps.allowFontScaling = false;
-
-// ============================================================================
-// 2. WEB ACCESSIBILITY & GOOGLE FONTS INJECTION
+// WEB ACCESSIBILITY & GOOGLE FONTS INJECTION
 // ============================================================================
 if (Platform.OS === "web" && typeof document !== "undefined") {
   // Inject Google Fonts web stylesheet for instant CDN rendering of Bricolage Grotesque & Onest
@@ -49,7 +38,7 @@ if (Platform.OS === "web" && typeof document !== "undefined") {
     link.id = "smuct-google-fonts";
     link.rel = "stylesheet";
     link.href =
-      "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700;800&family=Onest:wght@400;500;600;700&display=swap";
+      "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=Onest:wght@400;500;600;700;800&display=swap";
     document.head.appendChild(link);
 
     const style = document.createElement("style");
@@ -142,6 +131,8 @@ function NotificationLifecycle() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
+    BricolageGrotesque_400Regular,
+    BricolageGrotesque_500Medium,
     BricolageGrotesque_600SemiBold,
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
@@ -149,6 +140,9 @@ export default function RootLayout() {
     Onest_500Medium,
     Onest_600SemiBold,
     Onest_700Bold,
+    Onest_800ExtraBold,
+    "BricolageGrotesque-Regular": BricolageGrotesque_400Regular,
+    "BricolageGrotesque-Medium": BricolageGrotesque_500Medium,
     "BricolageGrotesque-SemiBold": BricolageGrotesque_600SemiBold,
     "BricolageGrotesque-Bold": BricolageGrotesque_700Bold,
     "BricolageGrotesque-ExtraBold": BricolageGrotesque_800ExtraBold,
@@ -156,9 +150,17 @@ export default function RootLayout() {
     "Onest-Medium": Onest_500Medium,
     "Onest-SemiBold": Onest_600SemiBold,
     "Onest-Bold": Onest_700Bold,
+    "Onest-ExtraBold": Onest_800ExtraBold,
     "Bricolage Grotesque": BricolageGrotesque_700Bold,
+    BricolageGrotesque: BricolageGrotesque_700Bold,
     Onest: Onest_400Regular,
   });
+
+  useEffect(() => {
+    if (fontError) {
+      console.error("[RootLayout] Font loading error:", fontError);
+    }
+  }, [fontError]);
 
   if (!fontsLoaded && !fontError) {
     return null;
