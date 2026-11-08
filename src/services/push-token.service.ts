@@ -1,20 +1,8 @@
-import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
-import Constants, { ExecutionEnvironment } from "expo-constants";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 import api from "./api";
-
-// Configure foreground presentation behavior safely
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    priority: Notifications.AndroidNotificationPriority.HIGH,
-  }),
-});
+import { getNotifications, isAndroidExpoGo } from "./notifications-runtime";
 
 /**
  * Initializes Android notification channels, requests OS permissions,
@@ -23,19 +11,21 @@ Notifications.setNotificationHandler({
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   try {
-    // 1. Guard against virtual devices / emulators
-    if (!Device.isDevice) {
-      console.info("[Push] Virtual device detected. Push notifications require a physical device.");
+    // 1. Guard against Android Expo Go (remote push removed in SDK 53+)
+    if (isAndroidExpoGo) {
+      console.info(
+        "[Push] Running in Expo Go on Android: remote push notifications are disabled in Expo Go. " +
+          "Use a Development Build (npx expo run:android) or Preview APK to test push notifications.",
+      );
       return null;
     }
 
-    // 2. Guard against standard Expo Go limitation on Android (FCM v1 requirement)
-    const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-    if (isExpoGo && Platform.OS === "android") {
-      console.warn(
-        "[Push] Expo Go on Android does not support FCM v1 remote push notifications. " +
-          "Please test using a Development Build (expo-dev-client) or Preview APK.",
-      );
+    const Notifications = getNotifications();
+    if (!Notifications) return null;
+
+    // 2. Guard against virtual devices / emulators
+    if (!Device.isDevice) {
+      console.info("[Push] Virtual device detected. Push notifications require a physical device.");
       return null;
     }
 
@@ -102,6 +92,11 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
  */
 export async function unregisterPushNotificationsAsync(token?: string): Promise<void> {
   try {
+    if (isAndroidExpoGo) return;
+
+    const Notifications = getNotifications();
+    if (!Notifications) return;
+
     let tokenToRevoke = token;
     if (!tokenToRevoke) {
       const projectId =

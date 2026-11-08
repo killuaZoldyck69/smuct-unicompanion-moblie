@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import * as Notifications from "expo-notifications";
 import { useRouter, useSegments } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { registerForPushNotificationsAsync } from "@/services/push-token.service";
+import { getNotifications, isAndroidExpoGo } from "@/services/notifications-runtime";
 
 /**
  * Global Notification Observer:
  * 1. Synchronizes Expo push token on user authentication.
  * 2. Invalidate queries when in-app foreground notification arrives.
  * 3. Handles cold-start & background notification click deep linking without router crashes.
+ * 4. Completely inert inside Android Expo Go to prevent SDK 53+ fatal warnings.
  */
 export function useNotificationObserver() {
   const router = useRouter();
@@ -35,6 +36,10 @@ export function useNotificationObserver() {
 
   // 3. Cold Start: Check if app was opened directly from a notification click
   useEffect(() => {
+    if (isAndroidExpoGo) return;
+    const Notifications = getNotifications();
+    if (!Notifications) return;
+
     let isSubscribed = true;
 
     Notifications.getLastNotificationResponseAsync()
@@ -54,6 +59,10 @@ export function useNotificationObserver() {
 
   // 4. Background / Foreground: Handle notification tap events
   useEffect(() => {
+    if (isAndroidExpoGo) return;
+    const Notifications = getNotifications();
+    if (!Notifications) return;
+
     const responseSubscription =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const targetRoute = response.notification.request.content.data?.route;
