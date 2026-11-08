@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
+import { PROFILE_COLORS, SPACING, fontFamily, titleFontFamily } from "../../constants";
 
 interface TeacherHeaderProps {
   insetsTop: number;
@@ -85,11 +85,12 @@ const styles = StyleSheet.create({
     marginRight: SPACING.md,
   },
   screenTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: PROFILE_COLORS.deepNavy,
-    letterSpacing: -0.6,
+    letterSpacing: -0.4,
+    lineHeight: 30,
     marginBottom: 4,
   },
   subtitle: {
@@ -98,6 +99,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: PROFILE_COLORS.subtleText,
     lineHeight: 18,
+    letterSpacing: -0.1,
   },
   controlsRow: {
     flexDirection: "row",

@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { THEME, fontFamily } from "../constants";
+import { THEME, fontFamily, titleFontFamily } from "../constants";
 
 interface DirectoryHeaderProps {
   searchQuery: string;
@@ -31,44 +32,22 @@ export const DirectoryHeader = React.memo(
     onOpenFilter,
     hasActiveFilters,
     totalCount,
-    onBack,
-    isModal = false,
   }: DirectoryHeaderProps) => {
     return (
       <View style={styles.header}>
-        {/* Top Header Row with Optional Back Action */}
-        <View style={styles.topRow}>
-          {onBack ? (
-            <TouchableOpacity
-              onPress={onBack}
-              style={styles.backBtn}
-              activeOpacity={0.75}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={isModal ? "Close directory" : "Go back"}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather
-                name={isModal ? "x" : "arrow-left"}
-                size={20}
-                color={THEME.textPrimary}
-              />
-            </TouchableOpacity>
-          ) : null}
-
-          <View style={styles.titleWrapper}>
-            <View style={styles.titleRow}>
-              <Text style={styles.headerTitle}>Faculty Directory</Text>
-              {typeof totalCount === "number" && totalCount > 0 ? (
-                <View style={styles.countBadge}>
-                  <Text style={styles.countBadgeText}>{totalCount}</Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={styles.headerSubtitle}>
-              Find and connect with professors at SMUCT
-            </Text>
+        {/* Top Titles Block without Back Button */}
+        <View style={styles.headerTitlesContainer}>
+          <View style={styles.titleRow}>
+            <Text style={styles.screenTitle}>Faculty Directory</Text>
+            {typeof totalCount === "number" && totalCount > 0 ? (
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{totalCount}</Text>
+              </View>
+            ) : null}
           </View>
+          <Text style={styles.screenSubtitle}>
+            Find and connect with professors at SMUCT
+          </Text>
         </View>
 
         {/* Integrated Search & Sliders Filter Bar */}
@@ -142,38 +121,40 @@ export const DirectoryHeader = React.memo(
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingBottom: 12,
   },
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  titleWrapper: {
-    flex: 1,
+  headerTitlesContainer: {
+    alignItems: "flex-start",
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  headerTitle: {
-    fontFamily,
-    fontSize: 26,
+  screenTitle: {
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 24,
     fontWeight: "800",
     color: THEME.textPrimary,
     letterSpacing: -0.4,
+    lineHeight: 30,
+  },
+  headerTitle: {
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 24,
+    fontWeight: "800",
+    color: THEME.textPrimary,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   countBadge: {
     backgroundColor: THEME.primaryBg,
@@ -184,17 +165,40 @@ const styles = StyleSheet.create({
     borderColor: "#DDD6FE",
   },
   countBadgeText: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_700Bold",
+      default: "Onest_700Bold",
+    }),
     fontSize: 11,
     fontWeight: "800",
     color: THEME.primary,
   },
-  headerSubtitle: {
-    fontFamily,
-    fontSize: 13.5,
+  screenSubtitle: {
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
     color: THEME.textSecondary,
-    marginTop: 3,
+    marginTop: 4,
     fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
+  },
+  headerSubtitle: {
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
+    color: THEME.textSecondary,
+    marginTop: 4,
+    fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   searchBarContainer: {
     flexDirection: "row",

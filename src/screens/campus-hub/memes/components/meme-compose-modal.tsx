@@ -347,9 +347,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    letterSpacing: -0.3,
   },
   hubBadge: {
     marginLeft: 8,

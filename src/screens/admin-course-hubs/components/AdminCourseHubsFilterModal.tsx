@@ -7,6 +7,7 @@ import {
   Modal,
   ScrollView,
   TouchableWithoutFeedback,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -316,17 +317,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontFamily,
-    fontSize: 18,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 20,
     fontWeight: "800",
     color: "#0f172a",
     letterSpacing: -0.3,
   },
   headerSubtitle: {
-    fontFamily,
-    fontSize: 12,
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
     color: "#64748b",
     marginTop: 2,
+    fontWeight: "500",
   },
   resetButton: {
     paddingHorizontal: 10,

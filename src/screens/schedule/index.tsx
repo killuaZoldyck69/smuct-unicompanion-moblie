@@ -17,7 +17,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { useMyHubs } from "@/features/hubs/useHubs";
-import { BENTO_COLORS, fontFamily } from "./constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "./constants";
 import {
   parseWeeklySchedule,
   formatTimeDisplay,
@@ -459,7 +459,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
   },
   headerTitlesContainer: {
@@ -478,19 +479,21 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   screenTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.6,
-    lineHeight: 34,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   screenSubtitle: {
     fontFamily,
     fontSize: 13,
     color: BENTO_COLORS.subtleText,
-    marginTop: 7,
+    marginTop: 4,
     fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   scrollContent: {
     paddingHorizontal: 20,

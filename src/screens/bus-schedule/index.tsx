@@ -14,7 +14,7 @@ import { useRouter } from "expo-router";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useBusSchedules } from "@/features/schedule/useSchedule";
-import { BENTO_COLORS, DirectionFilter, fontFamily } from "./constants";
+import { BENTO_COLORS, DirectionFilter, fontFamily, titleFontFamily } from "./constants";
 import { filterAndCountBusSchedules } from "./utils";
 import { BusRouteCard } from "./components/bus-route-card";
 import { BusHeroCard } from "./components/bus-hero-card";
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 14,
+    paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
   },
   headerIconButton: {
@@ -216,17 +216,21 @@ const styles = StyleSheet.create({
     marginLeft: 14,
   },
   screenTitle: {
-    fontFamily,
-    fontSize: 22,
+    fontFamily: titleFontFamily,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
     letterSpacing: -0.4,
+    lineHeight: 30,
   },
   screenSubtitle: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     color: BENTO_COLORS.subtleText,
-    marginTop: 1,
+    marginTop: 4,
+    fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   scrollContent: {
     paddingHorizontal: 20,

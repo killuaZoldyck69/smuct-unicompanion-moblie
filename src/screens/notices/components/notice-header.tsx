@@ -2,7 +2,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { NOTICE_COLORS, fontFamily } from "../constants";
+import { NOTICE_COLORS, fontFamily, titleFontFamily } from "../constants";
 
 const NOTICE_HEADER_BG = require("@/assets/header-bg-images/notice-screen-bg.png");
 
@@ -66,8 +66,8 @@ export const NoticeHeader = React.memo(function NoticeHeader({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingTop: 10,
+    paddingBottom: 12,
     backgroundColor: NOTICE_COLORS.background,
   },
   topRow: {
@@ -81,23 +81,23 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: NOTICE_COLORS.deepNavy,
-    letterSpacing: -0.6,
-    lineHeight: 34,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   badgeRow: {
     marginTop: 4,
   },
   badgeText: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "500",
     color: NOTICE_COLORS.subtleText,
-    letterSpacing: -0.2,
-    lineHeight: 17,
+    letterSpacing: -0.1,
+    lineHeight: 18,
     flexShrink: 1,
   },
   illustrationWrap: {

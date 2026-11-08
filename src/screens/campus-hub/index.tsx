@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -9,7 +9,7 @@ import { LostFoundSection } from "./lost-found";
 import { MarketplaceSection } from "./marketplace";
 import { MemesSection } from "./memes";
 import { SectionTabBar, type HubSection } from "./shared/section-tab-bar";
-import { CAMPUS_HUB_COLORS, fontFamily } from "./shared/design-tokens";
+import { CAMPUS_HUB_COLORS, fontFamily, titleFontFamily } from "./shared/design-tokens";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   getCampusHubActiveSection,
@@ -75,13 +75,18 @@ export function CampusHub({ initialSection }: CampusHubProps) {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topNavBar}>
-        <View style={styles.topNavLeft}>
-          <Text style={styles.navBrandTitle}>Campus Hub</Text>
-          {isAdmin && (
-            <View style={styles.adminBadge}>
-              <Text style={styles.adminBadgeText}>Admin</Text>
-            </View>
-          )}
+        <View style={styles.topNavLeftGroup}>
+          <View style={styles.titleRow}>
+            <Text style={styles.screenTitle}>Campus Hub</Text>
+            {isAdmin && (
+              <View style={styles.adminBadge}>
+                <Text style={styles.adminBadgeText}>Admin</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.screenSubtitle}>
+            Forum, marketplace, items & memes
+          </Text>
         </View>
 
         <View style={styles.topNavRight}>
@@ -153,11 +158,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingBottom: 12,
     backgroundColor: CAMPUS_HUB_COLORS.background,
   },
-  topNavLeft: {
+  topNavLeftGroup: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  titleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -172,7 +181,11 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   adminBadgeText: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_700Bold",
+      default: "Onest_700Bold",
+    }),
     fontSize: 11,
     fontWeight: "800",
     color: "#1d4ed8",
@@ -184,12 +197,55 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  navBrandTitle: {
-    fontFamily,
+  screenTitle: {
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
     fontSize: 24,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
+    lineHeight: 30,
+  },
+  navBrandTitle: {
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 24,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+    letterSpacing: -0.4,
+    lineHeight: 30,
+  },
+  screenSubtitle: {
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 4,
+    fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
+  },
+  navSubtitle: {
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 4,
+    fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   iconBtn: {
     width: 38,

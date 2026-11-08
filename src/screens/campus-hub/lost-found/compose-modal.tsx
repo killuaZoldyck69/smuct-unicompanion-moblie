@@ -606,7 +606,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
     fontSize: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,

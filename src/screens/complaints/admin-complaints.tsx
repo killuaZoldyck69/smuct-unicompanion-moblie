@@ -24,6 +24,7 @@ import { toastConfig } from "@/components/ui/toast-config";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  titleFontFamily,
 } from "@/screens/campus-hub/shared/design-tokens";
 import {
   useAllComplaintsAdmin,
@@ -759,7 +760,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
     paddingBottom: 12,
     backgroundColor: CAMPUS_HUB_COLORS.background,
   },
@@ -767,18 +768,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontFamily,
-    fontSize: 22,
-    fontWeight: "900",
+    fontFamily: titleFontFamily,
+    fontSize: 24,
+    fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: -0.4,
+    lineHeight: 30,
   },
   headerSubtitle: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     color: CAMPUS_HUB_COLORS.subtleText,
     fontWeight: "500",
-    marginTop: 2,
+    marginTop: 4,
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
 
   // Filter Section

@@ -30,6 +30,7 @@ import type { BloodPostItem } from "@/features/blood/types";
 import {
   BENTO_COLORS,
   fontFamily,
+  titleFontFamily,
   NewBloodPostForm,
 } from "./constants";
 import {
@@ -831,19 +832,21 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   screenTitle: {
-    fontFamily,
-    fontSize: 26,
+    fontFamily: titleFontFamily,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.6,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   screenSubtitle: {
     fontFamily,
     fontSize: 13,
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
-    marginTop: 3,
-    letterSpacing: -0.2,
+    marginTop: 4,
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   headerIllustrationWrap: {
     width: 54,

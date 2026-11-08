@@ -45,6 +45,7 @@ import {
 import { AcademicCalendarScreen } from "../academic-calendar";
 
 import { BENTO_COLORS } from "./constants";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 import { groupEventsChronologically } from "./utils/grouping";
 import { CalendarListCard } from "./components/CalendarListCard";
 import {
@@ -1552,21 +1553,26 @@ const styles = StyleSheet.create({
   },
   // Page Header
   pageHeader: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 12,
   },
   pageTitle: {
-    fontSize: 22,
+    fontFamily: titleFontFamily,
+    fontSize: 24,
     fontWeight: "800",
     color: "#0f172a",
     letterSpacing: -0.4,
+    lineHeight: 30,
     marginBottom: 4,
   },
   pageSubtitle: {
-    fontSize: 12.5,
+    fontFamily,
+    fontSize: 13,
     fontWeight: "500",
     color: "#64748b",
     lineHeight: 18,
+    letterSpacing: -0.1,
   },
 
   // Search & Action Row

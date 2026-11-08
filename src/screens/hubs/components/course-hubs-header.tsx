@@ -1,7 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../constants";
 import { NotificationBell } from "@/components/ui/notification-bell";
 
 interface CourseHubsHeaderProps {
@@ -57,8 +57,8 @@ export const CourseHubsHeader = React.memo(function CourseHubsHeader({
 const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingTop: 10,
+    paddingBottom: 12,
     position: "relative",
     overflow: "hidden",
   },
@@ -96,18 +96,54 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
     fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.6,
+    letterSpacing: -0.4,
+    lineHeight: 30,
+  },
+  screenTitle: {
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 24,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   subtitle: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
     fontSize: 13,
+    fontWeight: "500",
     color: BENTO_COLORS.textSecondary,
-    lineHeight: 20,
-    marginTop: 5,
+    lineHeight: 18,
+    marginTop: 4,
+    letterSpacing: -0.1,
+  },
+  screenSubtitle: {
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
+    fontWeight: "500",
+    color: BENTO_COLORS.textSecondary,
+    lineHeight: 18,
+    marginTop: 4,
+    letterSpacing: -0.1,
   },
   actionButtonsGroup: {
     flexDirection: "row",

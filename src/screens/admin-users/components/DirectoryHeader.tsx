@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { THEME, fontFamily, titleFontFamily } from "../constants";
@@ -103,22 +104,33 @@ export const DirectoryHeader = React.memo(
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingBottom: 12,
   },
   headerTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 28,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 24,
     fontWeight: "800",
     color: THEME.textPrimary,
     letterSpacing: -0.4,
+    lineHeight: 30,
   },
   headerSubtitle: {
-    fontFamily,
-    fontSize: 14,
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
     color: THEME.textSecondary,
     marginTop: 4,
     fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   searchBarContainer: {
     flexDirection: "row",

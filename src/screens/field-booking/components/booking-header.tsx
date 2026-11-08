@@ -134,8 +134,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: BENTO.canvas,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
   headerTopRow: {
     flexDirection: "row",
@@ -152,16 +152,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: deepNavy,
-    letterSpacing: -0.6,
-    lineHeight: 34,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   headerSubtitle: {
     fontFamily,
     fontSize: 13,
     fontWeight: "500",
     color: "#64748b",
-    marginTop: 7,
+    marginTop: 4,
     lineHeight: 18,
+    letterSpacing: -0.1,
   },
   artColumn: {
     width: 120,

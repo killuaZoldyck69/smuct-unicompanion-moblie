@@ -1,7 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { BENTO, fontFamily } from "../constants";
+import { View, Text, StyleSheet, Image, Platform } from "react-native";
+import { BENTO, fontFamily, titleFontFamily } from "../constants";
 
 interface AlumniHeaderProps {
   totalCount?: number;
@@ -19,13 +18,8 @@ export const AlumniHeader: React.FC<AlumniHeaderProps> = React.memo(
   ({
     totalCount = 0,
     filteredCount,
-    hasBackButton = false,
-    onBackPress,
-    isAdmin = false,
     title = "Alumni Network",
     subtitle,
-    onAddPress,
-    onCsvPress,
   }) => {
     const displayCount =
       typeof filteredCount === "number" ? filteredCount : totalCount;
@@ -37,14 +31,12 @@ export const AlumniHeader: React.FC<AlumniHeaderProps> = React.memo(
 
     return (
       <View style={styles.header}>
-        {/* Left: Titles without back button & without admin badge tag */}
+        {/* Left: Standard Header Titles */}
         <View style={styles.headerLeftCol}>
-          <View style={styles.headerTitleGroup}>
-            <Text style={styles.screenTitle}>{title}</Text>
-            <Text style={styles.screenSubtitle}>
-              {subtitle || defaultSubtitle}
-            </Text>
-          </View>
+          <Text style={styles.screenTitle}>{title}</Text>
+          <Text style={styles.screenSubtitle}>
+            {subtitle || defaultSubtitle}
+          </Text>
         </View>
 
         {/* Right: Header Illustration */}
@@ -68,41 +60,62 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 12,
     backgroundColor: BENTO.canvas,
   },
   headerLeftCol: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: BENTO.card,
-    borderWidth: 1,
-    borderColor: BENTO.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitleGroup: {
-    flex: 1,
+    alignItems: "flex-start",
   },
   screenTitle: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
     fontSize: 24,
     fontWeight: "800",
     color: BENTO.navy,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
+    lineHeight: 30,
+  },
+  headerTitle: {
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 24,
+    fontWeight: "800",
+    color: BENTO.navy,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   screenSubtitle: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
     fontSize: 13,
     color: BENTO.slate,
     marginTop: 4,
     fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
+  },
+  headerSubtitle: {
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
+    color: BENTO.slate,
+    marginTop: 4,
+    fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   headerIllustrationWrap: {
     width: 100,

@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 import { BENTO_THEME, BENTO_FONT_FAMILY, titleFontFamily } from "./constants";
 
 export const styles = StyleSheet.create({
@@ -24,7 +24,11 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: titleFontFamily,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
     fontSize: 22,
     fontWeight: "800",
     color: BENTO_THEME.navy,
@@ -51,7 +55,11 @@ export const styles = StyleSheet.create({
     paddingTop: 12,
   },
   pageSubtitle: {
-    fontFamily: BENTO_FONT_FAMILY,
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
     fontSize: 13,
     color: BENTO_THEME.slateMuted,
     lineHeight: 18,

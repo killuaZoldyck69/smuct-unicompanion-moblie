@@ -14,7 +14,7 @@ import {
   useMyComplaints,
   useMyComplaintStats,
 } from "@/features/complaints/useComplaints";
-import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
+import { CAMPUS_HUB_COLORS, fontFamily, titleFontFamily } from "@/screens/campus-hub/shared/design-tokens";
 import type { ComplaintItem } from "@/services/complaint-service";
 import { NotificationBell } from "@/components/ui/notification-bell";
 
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 14,
+    paddingBottom: 12,
     backgroundColor: CAMPUS_HUB_COLORS.background,
   },
   headerLeft: {
@@ -277,11 +277,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily,
-    fontSize: 22,
-    fontWeight: "900",
+    fontFamily: titleFontFamily,
+    fontSize: 24,
+    fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: -0.4,
+    lineHeight: 30,
   },
   headerActions: {
     flexDirection: "row",

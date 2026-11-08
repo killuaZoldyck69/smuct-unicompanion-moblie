@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { FACULTY_COLORS, fontFamily, titleFontFamily } from "../constants";
 
@@ -32,19 +32,30 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    fontFamily: titleFontFamily,
-    fontSize: 28,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 24,
     fontWeight: "800",
     color: FACULTY_COLORS.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   subtitle: {
-    fontFamily,
-    fontSize: 15,
-    fontWeight: "400",
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
+    fontWeight: "500",
     color: FACULTY_COLORS.textSecondary,
     marginTop: 4,
     marginBottom: 16,
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   banner: {
     flexDirection: "row",

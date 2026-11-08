@@ -230,11 +230,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
   },
   headerTitle: {
-    fontFamily,
-    fontSize: 17,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 18,
     fontWeight: "800",
     color: BENTO.navy,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   closeBtn: {
     width: 32,

@@ -175,7 +175,7 @@ export const AdminCourseHubsHeader: React.FC<AdminCourseHubsHeaderProps> = ({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingBottom: 12,
     position: "relative",
     overflow: "hidden",
@@ -221,18 +221,54 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   screenTitle: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
     fontSize: 24,
     fontWeight: "800",
     color: "#131b2e",
-    letterSpacing: -0.6,
+    letterSpacing: -0.4,
+    lineHeight: 30,
+  },
+  headerTitle: {
+    fontFamily: Platform.select({
+      web: "'Bricolage Grotesque', sans-serif",
+      android: "BricolageGrotesque_800ExtraBold",
+      default: "BricolageGrotesque_800ExtraBold",
+    }),
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#131b2e",
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   screenSubtitle: {
-    fontFamily,
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
     fontSize: 13,
     color: "#64748b",
     marginTop: 4,
+    fontWeight: "500",
     lineHeight: 18,
+    letterSpacing: -0.1,
+  },
+  headerSubtitle: {
+    fontFamily: Platform.select({
+      web: "'Onest', sans-serif",
+      android: "Onest_500Medium",
+      default: "Onest_500Medium",
+    }),
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 4,
+    fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   searchFilterRow: {
     flexDirection: "row",

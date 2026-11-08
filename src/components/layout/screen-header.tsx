@@ -9,7 +9,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
+import { screenHeaderTokens } from "../../theme/typography";
 import { spacing } from "../../theme/layout";
 
 export interface ScreenHeaderProps {
@@ -72,8 +72,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.marginMobile,
-    paddingVertical: spacing.stackSm,
+    ...screenHeaderTokens.container,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.outlineVariant,
@@ -91,14 +90,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    ...typography.titleLg,
+    ...screenHeaderTokens.title,
     color: colors.onSurface,
-    fontWeight: "700",
   },
   subtitle: {
-    ...typography.labelSm,
+    ...screenHeaderTokens.subtitle,
     color: colors.onSurfaceVariant,
-    marginTop: 2,
   },
   rightContainer: {
     flexDirection: "row",

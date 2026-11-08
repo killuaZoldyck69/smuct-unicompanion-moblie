@@ -1,7 +1,7 @@
 // src/screens/exams/components/exam-routine-header.tsx
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
-import { ExamTheme, fontFamily } from "../theme";
+import { ExamTheme, fontFamily, titleFontFamily } from "../theme";
 
 interface HeaderProps {
   theme: ExamTheme;
@@ -40,8 +40,8 @@ export const ExamRoutineHeader = React.memo(function ExamRoutineHeader({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
   topRow: {
     flexDirection: "row",
@@ -53,17 +53,19 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
-    letterSpacing: -0.6,
-    lineHeight: 34,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   subtitle: {
     fontFamily,
     fontSize: 13,
     fontWeight: "500",
-    marginTop: 7,
+    marginTop: 4,
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   illustrationWrap: {
     width: 116,

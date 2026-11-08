@@ -18,7 +18,7 @@ import {
   useAcademicCalendars,
   useCurrentAcademicCalendar,
 } from "@/features/schedule/useSchedule";
-import { BENTO_COLORS, fontFamily } from "./constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "./constants";
 import {
   resolveCalendarMeta,
   toISODateString,
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 10,
+    paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
   },
   backBtn: {
@@ -691,17 +691,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   navTitle: {
-    fontFamily,
-    fontSize: 20,
+    fontFamily: titleFontFamily,
+    fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   navSubtitle: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: "500",
     color: BENTO_COLORS.subtleText,
-    marginTop: 1,
+    marginTop: 4,
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   fixedTop: {
     backgroundColor: BENTO_COLORS.background,

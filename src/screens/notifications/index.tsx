@@ -17,6 +17,7 @@ import {
   useMarkNotificationRead,
   useNotifications,
 } from "@/features/notifications/useNotifications";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 const TYPE_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   NOTICE: "file-text",
@@ -200,16 +201,31 @@ export function NotificationsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f6f8fc" },
   header: {
-    paddingHorizontal: 22,
-    paddingTop: 16,
-    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   headerCopy: { flex: 1 },
-  title: { color: "#131b2e", fontSize: 27, fontWeight: "800" },
-  subtitle: { color: "#64748b", fontSize: 13, marginTop: 4 },
+  title: {
+    fontFamily: titleFontFamily,
+    color: "#131b2e",
+    fontSize: 24,
+    fontWeight: "800",
+    lineHeight: 30,
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    fontFamily,
+    color: "#64748b",
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
+    marginTop: 4,
+  },
   readAllButton: {
     width: 42,
     height: 42,

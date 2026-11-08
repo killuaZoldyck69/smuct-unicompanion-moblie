@@ -27,7 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 
 import { getMyHubs } from "@/services/hub-service";
-import { BENTO_COLORS, CourseEntry, fontFamily } from "./constants";
+import { BENTO_COLORS, CourseEntry, fontFamily, titleFontFamily } from "./constants";
 import { calculateCGPA } from "./utils";
 import { CGPAHeroCard } from "./components/cgpa-hero-card";
 import { CourseEntryCard } from "./components/course-entry-card";
@@ -389,7 +389,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
   },
   headerTitlesContainer: {
@@ -430,19 +431,21 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   screenTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.6,
-    lineHeight: 34,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   screenSubtitle: {
     fontFamily,
     fontSize: 13,
     color: BENTO_COLORS.subtleText,
-    marginTop: 7,
+    marginTop: 4,
     fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   scrollContent: {
     paddingHorizontal: 20,

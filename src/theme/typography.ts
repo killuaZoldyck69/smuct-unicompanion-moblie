@@ -66,6 +66,37 @@ export const titleFontFamily = FONT_FAMILIES.title;
 export const secondaryFontFamily = FONT_FAMILIES.body;
 export const fontFamily = FONT_FAMILIES.body;
 
+/**
+ * Standard Screen Header Tokens
+ *
+ * Guarantees unified title & subtitle typography and spacing across every screen:
+ * - Screen Title: Bricolage Grotesque (Bold/ExtraBold), 24px, 800 weight, 30 line height, -0.4 letter spacing
+ * - Screen Subtitle: Onest, 13px, 500 weight, 18 line height, -0.1 letter spacing, 4px marginTop
+ * - Screen Header Container: 20px horizontal padding, 10px top padding, 12px bottom padding
+ */
+export const screenHeaderTokens = {
+  container: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  title: {
+    fontFamily: titleFontFamily,
+    fontSize: 24,
+    fontWeight: "800" as const,
+    lineHeight: 30,
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "500" as const,
+    lineHeight: 18,
+    letterSpacing: -0.1,
+    marginTop: 4,
+  },
+} as const;
+
 const isAndroid = Platform.OS === "android";
 
 export const typography = {
@@ -204,9 +235,24 @@ function normalizeStyleRule(ruleKey: string, rule: any): any {
     existingFont === FONT_FAMILIES.bodyRegular ||
     existingFont === FONT_FAMILIES.bodyExtraBold;
 
+  const isScreenTitle =
+    keyLower === "screentitle" ||
+    (keyLower === "headertitle" &&
+      (rule.fontSize == null || rule.fontSize >= 18)) ||
+    keyLower === "navbrandtitle" ||
+    keyLower === "pagetitle";
+
+  const isScreenSubtitle =
+    keyLower === "screensubtitle" ||
+    keyLower === "headersubtitle" ||
+    keyLower === "navsubtitle" ||
+    keyLower === "pagesubtitle";
+
   const isTitleByKey =
     !isBodyExplicit &&
-    (keyLower.includes("title") ||
+    !keyLower.includes("subtitle") &&
+    (isScreenTitle ||
+      keyLower.includes("title") ||
       keyLower.includes("heading") ||
       keyLower.includes("headline") ||
       keyLower.includes("display") ||
@@ -220,7 +266,29 @@ function normalizeStyleRule(ruleKey: string, rule: any): any {
           weightStr === "bold")));
 
   const isTitle =
-    isTitleExplicit || (!isBodyExplicit && !existingFont && isTitleByKey);
+    !isScreenSubtitle &&
+    (isTitleExplicit ||
+      isScreenTitle ||
+      (!isBodyExplicit && !existingFont && isTitleByKey));
+
+  if (isScreenTitle && (rule.fontSize == null || rule.fontSize >= 18)) {
+    rule = {
+      ...rule,
+      fontSize: 24,
+      lineHeight: 30,
+      letterSpacing: -0.4,
+      fontWeight: rule.fontWeight || "800",
+    };
+  } else if (isScreenSubtitle) {
+    rule = {
+      ...rule,
+      fontSize: 13,
+      lineHeight: 18,
+      letterSpacing: -0.1,
+      fontWeight: "500",
+      ...(rule.marginTop !== undefined ? { marginTop: 4 } : {}),
+    };
+  }
 
   if (Platform.OS === "android") {
     const updated = { ...rule };

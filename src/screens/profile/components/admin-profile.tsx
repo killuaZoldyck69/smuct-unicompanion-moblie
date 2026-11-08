@@ -15,6 +15,7 @@ import {
   SECTION_THEMES,
   SPACING,
   fontFamily,
+  titleFontFamily,
 } from "../constants";
 import { formatPhoneNumber } from "../utils";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
@@ -261,11 +262,12 @@ const styles = StyleSheet.create({
     marginRight: SPACING.md,
   },
   pageTitle: {
-    fontFamily,
-    fontSize: 28,
+    fontFamily: titleFontFamily,
+    fontSize: 24,
     fontWeight: "800",
-    letterSpacing: -0.7,
+    letterSpacing: -0.4,
     color: PROFILE_COLORS.deepNavy,
+    lineHeight: 30,
     marginBottom: 4,
   },
   pageSubtitle: {
@@ -274,6 +276,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: "500",
     color: PROFILE_COLORS.subtleText,
+    letterSpacing: -0.1,
+    marginTop: 4,
   },
   headerIcon: {
     width: 42,

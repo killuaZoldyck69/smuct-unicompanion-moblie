@@ -36,8 +36,8 @@ export const ExploreHeader = React.memo(function ExploreHeader({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingTop: 10,
+    paddingBottom: 12,
     backgroundColor: "#f7f9fb",
   },
   topRow: {
@@ -54,13 +54,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: deepNavy,
-    letterSpacing: -0.6,
-    lineHeight: 34,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   badgeRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 7,
+    marginTop: 4,
     gap: 6,
   },
   greenDot: {
@@ -74,6 +74,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     color: "#64748b",
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
 
   // ── Illustration ──────────────────────────────────────────

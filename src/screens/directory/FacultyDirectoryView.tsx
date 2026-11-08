@@ -9,7 +9,7 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   useInfiniteTeachersDirectory,
@@ -37,8 +37,7 @@ export interface FacultyDirectoryViewProps {
 }
 
 export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.memo(
-  ({ onClose, isModal = false, initialDepartment = null }) => {
-    const router = useRouter();
+  ({ initialDepartment = null }) => {
     const insets = useSafeAreaInsets();
 
     // Search and filter state
@@ -118,14 +117,6 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
     const totalCount = data?.pages?.[0]?.meta?.total ?? allTeachers.length;
 
     // Callbacks
-    const handleBack = useCallback(() => {
-      if (onClose) {
-        onClose();
-      } else if (router.canGoBack()) {
-        router.back();
-      }
-    }, [onClose, router]);
-
     const handleSelectTeacher = useCallback((teacher: TeacherDirectoryItem) => {
       setSelectedTeacher(teacher);
       setIsDetailOpen(true);
@@ -211,7 +202,7 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
         <AmbientBackground topInset={insets.top} />
 
         <View style={[styles.mainWrapper, { paddingTop: insets.top }]}>
-          {/* Header Block with Back Action & Integrated Search + Filter Bar */}
+          {/* Header Block without Back Action & Integrated Search + Filter Bar */}
           <DirectoryHeader
             searchQuery={searchQuery}
             debouncedSearch={debouncedSearch}
@@ -222,8 +213,6 @@ export const FacultyDirectoryView: React.FC<FacultyDirectoryViewProps> = React.m
               selectedDepartment && selectedDepartment !== "All",
             )}
             totalCount={totalCount}
-            onBack={onClose || isModal || router.canGoBack() ? handleBack : undefined}
-            isModal={isModal}
           />
 
           {/* Active Filter Indicators Bar */}

@@ -33,7 +33,7 @@ import {
 } from "@/features/events/useEvents";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { CampusEventItem } from "@/services/event-service";
-import { BENTO_COLORS, EventTabType, fontFamily } from "./constants";
+import { BENTO_COLORS, EventTabType, fontFamily, titleFontFamily } from "./constants";
 import { EventCard } from "./components/event-card";
 import { EventTabFilters } from "./components/event-tab-filters";
 import { EventFilterModal } from "./components/event-filter-modal";
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   // ── Fixed Top Section (Header, Search, Tabs) ─────────────────
   fixedTopSection: {
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
     backgroundColor: BENTO_COLORS.background,
     zIndex: 10,
   },
@@ -671,19 +671,21 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   screenTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    letterSpacing: -0.6,
-    lineHeight: 34,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
   screenSubtitle: {
     fontFamily,
     fontSize: 13,
     color: BENTO_COLORS.subtleText,
-    marginTop: 7,
+    marginTop: 4,
     fontWeight: "500",
+    lineHeight: 18,
+    letterSpacing: -0.1,
     zIndex: 10,
   },
   listContent: {
