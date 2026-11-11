@@ -1,16 +1,18 @@
 // src/services/api.ts
 import axios from "axios";
+import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
+import { API_BASE_URL } from "./api-config";
 import { authClient } from "./auth-client";
+import { shouldHandleSessionInvalidation } from "./auth-session-policy";
+import { queryClient } from "./query-client";
+import { clearStoredAuthSession } from "./session-storage";
 
-if (!process.env.EXPO_PUBLIC_API_BASE_URL) {
-  throw new Error("EXPO_PUBLIC_API_BASE_URL is not set");
-}
+export { shouldHandleSessionInvalidation };
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-const API_URL = `${BASE_URL}/api`;
+const API_URL = `${API_BASE_URL}/api`;
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -143,6 +145,41 @@ api.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error),
+);
+
+let sessionResetPromise: Promise<void> | null = null;
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const status: number | undefined = error?.response?.status;
+    const url: string | undefined = error?.config?.url;
+    const data = error?.response?.data;
+
+    if (shouldHandleSessionInvalidation(status, url, data)) {
+      if (!sessionResetPromise) {
+        sessionResetPromise = (async () => {
+          try {
+            await clearStoredAuthSession();
+            queryClient.setQueryData(["currentUser"], null);
+            queryClient.removeQueries({
+              predicate: (q) =>
+                q.queryKey[0] !== "weather_compact" &&
+                q.queryKey[0] !== "currentUser",
+            });
+            router.replace("/(auth)/login");
+          } finally {
+            setTimeout(() => {
+              sessionResetPromise = null;
+            }, 1500);
+          }
+        })();
+      }
+      await sessionResetPromise;
+    }
+
+    return Promise.reject(error);
+  },
 );
 
 export default api;

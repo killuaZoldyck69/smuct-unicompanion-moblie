@@ -27,6 +27,7 @@ interface NotificationBellProps {
   style?: StyleProp<ViewStyle>;
   iconColor?: string;
   iconSize?: number;
+  catSize?: number;
   accessibilityLabel?: string;
   useCatAnimation?: boolean;
 }
@@ -35,6 +36,7 @@ export const NotificationBell = React.memo(function NotificationBell({
   style,
   iconColor = "#131b2e",
   iconSize = 20,
+  catSize = 144,
   accessibilityLabel = "Notifications",
   useCatAnimation = false,
 }: NotificationBellProps) {
@@ -121,13 +123,16 @@ export const NotificationBell = React.memo(function NotificationBell({
       }
     >
       {useCatAnimation ? (
-        <View pointerEvents="none" style={styles.catAnimation}>
+        <View
+          pointerEvents="none"
+          style={[styles.catAnimation, { width: catSize, height: catSize }]}
+        >
           <LottieView
             source={require("@/assets/icons/cat.json")}
             autoPlay
             loop
             resizeMode="contain"
-            style={styles.catAnimation}
+            style={{ width: catSize, height: catSize }}
             onAnimationLoaded={startBadgeCycle}
             onAnimationLoop={startBadgeCycle}
           />
@@ -140,6 +145,10 @@ export const NotificationBell = React.memo(function NotificationBell({
           style={[
             styles.badge,
             useCatAnimation && styles.catBadge,
+            useCatAnimation &&
+              catSize !== 144 && {
+                right: Math.round(38 * (catSize / 144)),
+              },
             useCatAnimation && catBadgeAnimatedStyle,
           ]}
         >

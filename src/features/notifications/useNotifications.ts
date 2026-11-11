@@ -26,8 +26,10 @@ export const useNotifications = () => {
     getNextPageParam: (lastPage) =>
       lastPage.pagination.hasMore ? lastPage.pagination.page + 1 : undefined,
     enabled: !!user?.id,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -37,8 +39,10 @@ export const useUnreadNotificationCount = () => {
     queryKey: notificationKeys.unread(user?.id),
     queryFn: getUnreadNotificationCount,
     enabled: !!user?.id,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 };
 

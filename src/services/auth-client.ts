@@ -3,13 +3,9 @@ import { createAuthClient } from "better-auth/react";
 import { emailOTPClient } from "better-auth/client/plugins";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { API_BASE_URL } from "./api-config";
 
-if (!process.env.EXPO_PUBLIC_API_BASE_URL) {
-  throw new Error("EXPO_PUBLIC_API_BASE_URL is not set");
-}
-
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-const AUTH_URL = `${BASE_URL}/api/auth`;
+const AUTH_URL = `${API_BASE_URL}/api/auth`;
 
 export interface EmailOtpClientMethods {
   sendVerificationOtp: (params: {

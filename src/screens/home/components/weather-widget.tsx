@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { getWeatherDetails, formatHour } from "@/hooks/use-weather-forecast";
 import { shadows } from "@/theme/layout";
+import { FONT_FAMILIES } from "@/theme/typography";
 
 interface WeatherWidgetProps {
   weather: any;
@@ -72,7 +73,6 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
               name={getWeatherDetails(hour.code).icon as any}
               size={18}
               color="#ffffff"
-              style={{ marginVertical: 6 }}
             />
             <Text style={styles.weatherSmallTemp}>
               {Math.round(hour.temp)}°
@@ -98,13 +98,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  weatherTopLeft: { flexDirection: "row", alignItems: "center" },
+  weatherTopLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   weatherHugeTemp: {
+    fontFamily: FONT_FAMILIES.titleExtraBold,
     fontSize: 42,
     fontWeight: "800",
     color: "#ffffff",
-    marginRight: 12,
     lineHeight: 48,
+    letterSpacing: -1,
+    fontVariant: ["tabular-nums"],
   },
   weatherIconBlock: {
     backgroundColor: "#ffffff",
@@ -114,18 +116,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  weatherTopRight: { alignItems: "flex-end", flex: 1 },
+  weatherTopRight: { alignItems: "flex-end", flex: 1, gap: 2 },
   weatherConditionText: {
-    fontSize: 14,
+    fontFamily: FONT_FAMILIES.bodyBold,
+    fontSize: 14.5,
+    lineHeight: 19,
     color: "#ffffff",
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   weatherSubText: {
-    fontSize: 11,
-    color: "#c6c6cd",
+    fontFamily: FONT_FAMILIES.bodyMedium,
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#cbd5e1",
     fontWeight: "500",
-    marginBottom: 1,
+    fontVariant: ["tabular-nums"],
   },
   weatherDivider: {
     height: 1,
@@ -133,15 +139,20 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   weatherScroll: { gap: 18, paddingRight: 12 },
-  weatherHourCol: { alignItems: "center", minWidth: 40 },
+  weatherHourCol: { alignItems: "center", minWidth: 44, gap: 6 },
   weatherSmallTime: {
-    fontSize: 11,
-    color: "#c6c6cd",
+    fontFamily: FONT_FAMILIES.bodySemiBold,
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: "#cbd5e1",
     fontWeight: "600",
   },
   weatherSmallTemp: {
+    fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 14,
+    lineHeight: 18,
     color: "#ffffff",
     fontWeight: "700",
+    fontVariant: ["tabular-nums"],
   },
 });

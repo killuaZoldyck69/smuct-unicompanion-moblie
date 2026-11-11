@@ -137,6 +137,12 @@ export const getMyHubs = async () => {
 };
 export const getMyHubsAPI = getMyHubs;
 
+export const getMyHubsSchedule = async () => {
+  const res = await api.get("/hubs/my", { params: { view: "schedule" } });
+  return res.data?.data || [];
+};
+export const getMyHubsScheduleAPI = getMyHubsSchedule;
+
 export const getHubDetails = async (hubId: string) => {
   const res = await api.get(`/hubs/${hubId}`);
   return res.data?.data;

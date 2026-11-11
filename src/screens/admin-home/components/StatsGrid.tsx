@@ -9,7 +9,7 @@ import {
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { AdminDashboardStats } from "../hooks/use-admin-dashboard";
-import { fontFamily, titleFontFamily } from "@/theme/typography";
+import { FONT_FAMILIES } from "@/theme/typography";
 
 interface StatsGridProps {
   stats: AdminDashboardStats | undefined;
@@ -138,7 +138,7 @@ export const StatsGrid = React.memo(function StatsGrid({
       </View>
 
       {/* Row 2: Restricted & Published Notices */}
-      <View style={styles.row}>
+      <View style={[styles.row, styles.rowLast]}>
         {/* 3. Restricted Users */}
         <StatCard
           iconNode={<Feather name="slash" size={17} color="#EF4444" />}
@@ -179,17 +179,21 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   sectionLabel: {
-    fontFamily,
-    fontSize: 11,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 11.5,
+    lineHeight: 15,
     fontWeight: "800",
-    color: "#8E9BAE",
-    letterSpacing: 0.8,
+    color: "#64748B",
+    letterSpacing: 0.85,
     marginBottom: 12,
   },
   row: {
     flexDirection: "row",
     gap: 12,
     marginBottom: 12,
+  },
+  rowLast: {
+    marginBottom: 0,
   },
   card: {
     flex: 1,
@@ -226,16 +230,19 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   value: {
-    fontFamily: titleFontFamily,
+    fontFamily: FONT_FAMILIES.titleExtraBold,
     fontSize: 25,
+    lineHeight: 30,
     fontWeight: "800",
     color: "#0F172A",
-    letterSpacing: -0.6,
-    marginBottom: 2,
+    letterSpacing: -0.5,
+    fontVariant: ["tabular-nums"],
+    marginBottom: 3,
   },
   label: {
-    fontFamily,
-    fontSize: 12,
+    fontFamily: FONT_FAMILIES.bodySemiBold,
+    fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "600",
     color: "#64748B",
   },

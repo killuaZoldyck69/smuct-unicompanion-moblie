@@ -10,7 +10,7 @@ import {
   universityPrograms,
   DEPARTMENT_SHORT_NAMES,
 } from "@/data/programs";
-import { fontFamily, titleFontFamily } from "@/theme/typography";
+import { FONT_FAMILIES } from "@/theme/typography";
 
 const CAMPUS_BG = require("@/assets/login-screen-bg.png");
 
@@ -78,15 +78,16 @@ export const AcademicStatsBanner = React.memo(function AcademicStatsBanner() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    marginTop: 20,
+    marginTop: 24,
   },
   sectionLabel: {
-    fontFamily,
-    fontSize: 11,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 11.5,
+    lineHeight: 15,
     fontWeight: "800",
-    color: "#8E9BAE",
-    letterSpacing: 0.8,
-    marginBottom: 10,
+    color: "#64748B",
+    letterSpacing: 0.85,
+    marginBottom: 12,
   },
   cardWrapper: {
     borderRadius: 20,
@@ -122,10 +123,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   statLabel: {
-    fontFamily,
+    fontFamily: FONT_FAMILIES.bodyBold,
     color: "#FFFFFF",
     fontSize: 11,
-    fontWeight: "800",
+    lineHeight: 14,
+    fontWeight: "700",
     letterSpacing: 0.5,
     textTransform: "uppercase",
     textAlign: "center",
@@ -144,12 +146,14 @@ const styles = StyleSheet.create({
     }),
   },
   statValue: {
-    fontFamily: titleFontFamily,
+    fontFamily: FONT_FAMILIES.titleExtraBold,
     color: "#FFFFFF",
-    fontSize: 32,
+    fontSize: 30,
+    lineHeight: 34,
     fontWeight: "800",
     textAlign: "center",
     letterSpacing: -0.5,
+    fontVariant: ["tabular-nums"],
     ...Platform.select({
       ios: {
         textShadowColor: "rgba(0, 0, 0, 0.7)",

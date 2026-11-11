@@ -4,8 +4,9 @@ import { Slot } from "expo-router";
 import { Platform, StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
+import { queryClient } from "@/services/query-client";
 import { useFonts } from "expo-font";
 import {
   BricolageGrotesque_400Regular,
@@ -112,17 +113,6 @@ if (Platform.OS === "web" && typeof document !== "undefined") {
     }
   }
 }
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 30,
-    },
-  },
-});
 
 function NotificationLifecycle() {
   useNotificationObserver();

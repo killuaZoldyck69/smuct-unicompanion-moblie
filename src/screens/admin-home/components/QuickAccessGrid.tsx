@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { fontFamily, titleFontFamily } from "@/theme/typography";
+import { FONT_FAMILIES } from "@/theme/typography";
 
 const QUICK_ACCESS_ICONS = {
   manageStudents: require("@/assets/icons/user-management.png"),
@@ -45,18 +45,18 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
             Manage Students
           </Text>
           <Text style={styles.cardSubtitle} numberOfLines={2}>
-            {"Student records &\ndirectory"}
+            Student records & directory
           </Text>
         </TouchableOpacity>
 
-        {/* 2. Add Registration */}
+        {/* 2. Add Faculty */}
         <TouchableOpacity
           style={styles.gridCard}
           onPress={() => router.push("/(tabs)/admin_add_teacher")}
           activeOpacity={0.75}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Add Registration: New faculty and students"
+          accessibilityLabel="Add Faculty: Register new faculty member"
         >
           <View style={styles.cardHeader}>
             <View style={[styles.iconWrap, { backgroundColor: "#ECFDF5" }]}>
@@ -69,10 +69,10 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
             <Feather name="arrow-right" size={18} color="#10B981" />
           </View>
           <Text style={styles.cardTitle} numberOfLines={1}>
-            Add Registration
+            Add Faculty
           </Text>
           <Text style={styles.cardSubtitle} numberOfLines={2}>
-            New faculty & students
+            Register new faculty member
           </Text>
         </TouchableOpacity>
       </View>
@@ -163,7 +163,7 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
 
       {/* Wide Row 2: System Monitor */}
       <TouchableOpacity
-        style={styles.wideCard}
+        style={[styles.wideCard, styles.wideCardLast]}
         onPress={() => router.push("/(tabs)/admin_system_monitor")}
         activeOpacity={0.75}
         accessible={true}
@@ -194,14 +194,15 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    marginTop: 28,
+    marginTop: 24,
   },
   sectionLabel: {
-    fontFamily,
-    fontSize: 11,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 11.5,
+    lineHeight: 15,
     fontWeight: "800",
-    color: "#8E9BAE",
-    letterSpacing: 0.8,
+    color: "#64748B",
+    letterSpacing: 0.85,
     marginBottom: 12,
   },
   row: {
@@ -236,17 +237,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 14.5,
+    fontFamily: FONT_FAMILIES.titleBold,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "700",
+    letterSpacing: -0.15,
     color: "#0F172A",
     marginBottom: 3,
   },
   cardSubtitle: {
-    fontFamily,
-    fontSize: 11.5,
+    fontFamily: FONT_FAMILIES.bodyMedium,
+    fontSize: 12,
     color: "#64748B",
-    lineHeight: 15,
+    lineHeight: 16,
     fontWeight: "500",
   },
   wideCard: {
@@ -265,6 +268,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 12,
   },
+  wideCardLast: {
+    marginBottom: 0,
+  },
   wideIconWrap: {
     width: 42,
     height: 42,
@@ -274,17 +280,20 @@ const styles = StyleSheet.create({
   },
   wideTextBlock: {
     flex: 1,
+    gap: 2,
   },
   wideTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 14.5,
+    fontFamily: FONT_FAMILIES.titleBold,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "700",
+    letterSpacing: -0.15,
     color: "#0F172A",
-    marginBottom: 2,
   },
   wideSubtitle: {
-    fontFamily,
+    fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 12,
+    lineHeight: 16,
     color: "#64748B",
     fontWeight: "500",
   },

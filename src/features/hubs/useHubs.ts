@@ -4,8 +4,10 @@ import {
   useQueryClient,
   useInfiniteQuery,
 } from "@tanstack/react-query";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   getMyHubsAPI,
+  getMyHubsScheduleAPI,
   getHubDetailsAPI,
   getAvailableTeachersAPI,
   getAvailableTeachersPaginatedAPI,
@@ -58,9 +60,20 @@ import {
 } from "./types";
 
 export const useMyHubs = () => {
+  const { isAuthenticated } = useCurrentUser();
   return useQuery({
     queryKey: ["myHubs"],
     queryFn: getMyHubsAPI,
+    enabled: isAuthenticated,
+  });
+};
+
+export const useMyHubsSchedule = () => {
+  const { isAuthenticated } = useCurrentUser();
+  return useQuery({
+    queryKey: ["myHubs", "schedule"],
+    queryFn: getMyHubsScheduleAPI,
+    enabled: isAuthenticated,
   });
 };
 

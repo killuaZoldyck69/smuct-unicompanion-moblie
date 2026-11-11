@@ -47,12 +47,20 @@ export const formatHour = (isoStr: string) => {
 };
 
 export const useWeatherForecast = () => {
-  const { data: weather, isLoading, error } = useQuery({
+  const {
+    data: weather,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["weather_compact"],
     queryFn: async () => {
       const res = await fetch(
         "https://api.open-meteo.com/v1/forecast?latitude=23.8103&longitude=90.4125&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code&timezone=auto",
       );
+      if (!res.ok) {
+        throw new Error(`Weather request failed with status ${res.status}`);
+      }
       return res.json();
     },
     staleTime: 1000 * 60 * 15,
@@ -86,5 +94,6 @@ export const useWeatherForecast = () => {
     hourlyForecast,
     isLoading,
     error,
+    refetch,
   };
 };

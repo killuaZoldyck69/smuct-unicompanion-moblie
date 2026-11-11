@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
 import { authClient } from "../services/auth-client";
+import {
+  clearStoredAuthSession,
+  getStoredSessionData,
+  setStoredSessionData,
+} from "../services/session-storage";
 import { UserRole, User } from "../types/auth";
 
 export interface CurrentUserResult {
@@ -17,61 +20,40 @@ export const useCurrentUser = (): CurrentUserResult => {
   const { data, isLoading, isPending, refetch } = useQuery({
     queryKey: ["currentUser"],
     queryFn: async () => {
-      // 1. First attempt Better Auth getSession()
       try {
         const sessionRes = await authClient.getSession();
-        if (sessionRes.data?.user) {
-          if (Platform.OS === "web") {
-            if (typeof localStorage !== "undefined") {
-              localStorage.setItem(
-                "better-auth_session_data",
-                JSON.stringify(sessionRes.data),
-              );
-            }
-          } else {
-            await SecureStore.setItemAsync(
-              "better-auth_session_data",
-              JSON.stringify(sessionRes.data),
-            );
+        const errStatus = (sessionRes as any)?.error?.status;
+
+        if (errStatus === 401 || errStatus === 403) {
+          await clearStoredAuthSession();
+          return null;
+        }
+
+        if (sessionRes?.data?.user) {
+          if ((sessionRes.data.user as any).isRestricted) {
+            await clearStoredAuthSession();
+            return null;
           }
+          await setStoredSessionData(sessionRes.data);
           return sessionRes.data;
         }
-      } catch (e) {
-        // Fallback to local storage if offline or fast recovery
+
+        // Only treat missing user as logged-out when there was no transport/server error
+        if (!sessionRes?.error) {
+          await clearStoredAuthSession();
+          return null;
+        }
+      } catch {
+        // Offline or network failure: fall back to cached session below
       }
 
-      // 2. Fallback to cached session data
-      if (Platform.OS === "web") {
-        try {
-          if (typeof localStorage !== "undefined") {
-            const cachedJson = localStorage.getItem("better-auth_session_data");
-            if (cachedJson) {
-              const parsed = JSON.parse(cachedJson);
-              if (parsed?.user) return parsed;
-            }
-          }
-        } catch {}
-      } else {
-        try {
-          const cachedJson = await SecureStore.getItemAsync(
-            "better-auth_session_data",
-          );
-          if (cachedJson) {
-            const parsed = JSON.parse(cachedJson);
-            if (parsed?.user) {
-              return parsed;
-            }
-          }
-        } catch {}
-      }
-
-      return null;
+      return await getStoredSessionData();
     },
-    staleTime: Infinity,
-    gcTime: 1000 * 60 * 60 * 24, // 24 hours
-    refetchOnMount: false,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: true,
   });
 
   const session = data?.session || data;
@@ -82,16 +64,13 @@ export const useCurrentUser = (): CurrentUserResult => {
       : "STUDENT";
 
   const user = data?.user ? ({ ...data.user, role } as User) : null;
-  const pending = isLoading || isPending;
 
   return {
     user,
     role,
     session,
-    isPending: pending,
+    isPending: isPending || isLoading,
     isAuthenticated: !!user,
     refetch,
   };
 };
-
-export default useCurrentUser;

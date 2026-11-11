@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   RefreshControl,
   Platform,
@@ -14,9 +13,8 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
-import { useMyHubs } from "@/features/hubs/useHubs";
+import { useMyHubsSchedule } from "@/features/hubs/useHubs";
 import { BENTO_COLORS, fontFamily, titleFontFamily } from "./constants";
 import {
   parseWeeklySchedule,
@@ -44,7 +42,6 @@ export {
 } from "./utils";
 
 export function ScheduleScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const todayWeekday = useMemo(() => {
@@ -68,7 +65,7 @@ export function ScheduleScreen() {
   const [isNoticeModalVisible, setIsNoticeModalVisible] =
     useState<boolean>(false);
 
-  const { data: myHubs, isLoading, isError, refetch } = useMyHubs();
+  const { data: myHubs, isLoading, isError, refetch } = useMyHubsSchedule();
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -100,14 +97,6 @@ export function ScheduleScreen() {
     if (selectedDayFilter === "ALL") return scheduleSections;
     return scheduleSections.filter((s) => s.title === selectedDayFilter);
   }, [scheduleSections, selectedDayFilter]);
-
-  const handleBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(tabs)/home");
-    }
-  }, [router]);
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={["top"]}>

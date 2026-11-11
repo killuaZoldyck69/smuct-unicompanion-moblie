@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { NotificationBell } from "@/components/ui/notification-bell";
-import { fontFamily, titleFontFamily } from "@/theme/typography";
+import { FONT_FAMILIES } from "@/theme/typography";
 
 interface AdminHeroHeaderProps {
   userName: string | null | undefined;
@@ -31,43 +31,33 @@ export const AdminHeroHeader = React.memo(function AdminHeroHeader({
   userImage,
 }: AdminHeroHeaderProps) {
   const router = useRouter();
-  const greeting = useMemo(() => getGreeting(), []);
-  const todayLabel = useMemo(() => getTodayLabel(), []);
+  const [avatarError, setAvatarError] = useState(false);
 
-  // Format initials, default to "S" as in System Administrator
-  const initials = userName
-    ? userName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "S";
+  useEffect(() => {
+    setAvatarError(false);
+  }, [userImage]);
+
+  const greeting = getGreeting();
+  const todayLabel = getTodayLabel();
+  const displayName = userName?.trim() || "System Administrator";
+
+  // Format initials, defaulting to "SA" for System Administrator
+  const initials = displayName
+    .split(/\s+/)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <View style={styles.container}>
-      {/* Left: Text Block */}
-      <View style={styles.textBlock}>
-        <Text style={styles.dateLabel}>{todayLabel}</Text>
-        <Text style={styles.greeting}>{greeting},</Text>
-        <Text style={styles.title}>System{"\n"}Administrator</Text>
-        <View style={styles.rolePill}>
-          <View style={styles.roleDot} />
-          <Text style={styles.roleLabel}>System Administrator</Text>
-        </View>
-      </View>
+      {/* Top Left: Date */}
+      <Text style={styles.dateLabel} numberOfLines={1}>
+        {todayLabel}
+      </Text>
 
-      {/* Right: Actions Block (Bell + Avatar) */}
-      <View style={styles.topRightActions}>
-        {/* Notifications */}
-        <NotificationBell
-          style={styles.bellBtn}
-          iconColor="#1E293B"
-          iconSize={19}
-          useCatAnimation
-        />
-
-        {/* Avatar -> Profile */}
+      {/* Main Row: Admin Avatar (left) — Greeting & Name (middle) — Cat Bell (far right) */}
+      <View style={styles.mainRow}>
         <TouchableOpacity
           onPress={() => router.push("/(tabs)/profile")}
           style={styles.avatarWrap}
@@ -76,22 +66,45 @@ export const AdminHeroHeader = React.memo(function AdminHeroHeader({
           accessibilityRole="button"
           accessibilityLabel="View admin profile"
         >
-          {userImage ? (
+          {userImage && !avatarError ? (
             <Image
               source={{ uri: userImage }}
               style={styles.avatarImage}
+              onError={() => setAvatarError(true)}
               accessible={true}
-              accessibilityLabel={`${userName ?? "Admin"}'s profile picture`}
+              accessibilityLabel={`${displayName}'s profile picture`}
             />
           ) : (
             <View style={styles.avatarFallback}>
-              <Text style={styles.avatarInitial}>{initials}</Text>
+              <Text style={styles.avatarInitial}>{initials || "SA"}</Text>
             </View>
           )}
-          <View style={styles.onlineBadge}>
-            <View style={styles.onlineDot} />
-          </View>
         </TouchableOpacity>
+
+        <View style={styles.textBlock}>
+          <Text style={styles.greeting}>{greeting},</Text>
+          <Text
+            style={styles.title}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+          >
+            {displayName}
+          </Text>
+        </View>
+
+        <NotificationBell
+          style={styles.bellBtn}
+          iconColor="#1E293B"
+          iconSize={19}
+          catSize={128}
+          useCatAnimation
+        />
+      </View>
+
+      {/* Bottom Left: Role Pill */}
+      <View style={styles.rolePill}>
+        <Text style={styles.roleLabel}>System Administrator</Text>
       </View>
     </View>
   );
@@ -99,103 +112,83 @@ export const AdminHeroHeader = React.memo(function AdminHeroHeader({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 12,
+    paddingBottom: 14,
+  },
+  mainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  bellBtn: {
+    width: 56,
+    height: 56,
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
   },
   textBlock: {
     flex: 1,
-    paddingRight: 12,
+    gap: 2,
   },
   dateLabel: {
-    fontFamily,
-    fontSize: 12,
+    fontFamily: FONT_FAMILIES.bodyBold,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "700",
-    color: "#8E9BAE",
-    letterSpacing: 0.8,
-    marginBottom: 4,
+    color: "#64748B",
+    letterSpacing: 0.85,
+    marginBottom: 8,
   },
   greeting: {
-    fontFamily,
+    fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#64748B",
-    marginTop: 4,
-    marginBottom: 4,
     lineHeight: 18,
-    letterSpacing: -0.1,
   },
   title: {
-    fontFamily: titleFontFamily,
-    fontSize: 24,
+    fontFamily: FONT_FAMILIES.titleExtraBold,
+    fontSize: 21,
     fontWeight: "800",
     color: "#0F172A",
-    letterSpacing: -0.4,
-    lineHeight: 30,
+    letterSpacing: -0.35,
+    lineHeight: 26,
   },
   rolePill: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
     backgroundColor: "#EEF2FF",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 99,
-    marginTop: 12,
-    gap: 7,
-  },
-  roleDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#4F46E5",
+    marginTop: 10,
   },
   roleLabel: {
-    fontFamily,
-    fontSize: 12,
+    fontFamily: FONT_FAMILIES.bodyBold,
+    fontSize: 11.5,
+    lineHeight: 15,
     fontWeight: "700",
     color: "#4338CA",
     letterSpacing: 0.2,
-  },
-  topRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 2,
-  },
-  bellBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-    position: "relative",
+    includeFontPadding: false,
   },
   avatarWrap: {
-    position: "relative",
+    flexShrink: 0,
   },
   avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     borderWidth: 2,
     borderColor: "#FFFFFF",
   },
   avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: "#0D131F",
     justifyContent: "center",
     alignItems: "center",
@@ -208,26 +201,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   avatarInitial: {
-    fontFamily: titleFontFamily,
+    fontFamily: FONT_FAMILIES.titleExtraBold,
     fontSize: 18,
+    lineHeight: 22,
     fontWeight: "800",
     color: "#FFFFFF",
-  },
-  onlineBadge: {
-    position: "absolute",
-    bottom: -1,
-    right: -1,
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  onlineDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: "#10B981",
   },
 });

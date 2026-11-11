@@ -8,7 +8,7 @@ import {
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { ActivityItem } from "../hooks/use-admin-dashboard";
-import { fontFamily, titleFontFamily } from "@/theme/typography";
+import { FONT_FAMILIES } from "@/theme/typography";
 
 interface ActivityFeedProps {
   items: ActivityItem[];
@@ -88,7 +88,7 @@ export const ActivityFeed = React.memo(function ActivityFeed({
             </View>
             <Text style={styles.emptyTitle}>No recent activity</Text>
             <Text style={styles.emptySubtitle}>
-              {"New events and audit logs will appear\nhere automatically."}
+              New events and audit logs will appear here automatically.
             </Text>
 
             {/* Bottom Decorative Wave */}
@@ -126,14 +126,15 @@ export const ActivityFeed = React.memo(function ActivityFeed({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    marginTop: 28,
+    marginTop: 24,
   },
   sectionLabel: {
-    fontFamily,
-    fontSize: 11,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 11.5,
+    lineHeight: 15,
     fontWeight: "800",
-    color: "#8E9BAE",
-    letterSpacing: 0.8,
+    color: "#64748B",
+    letterSpacing: 0.85,
     marginBottom: 12,
   },
   card: {
@@ -150,8 +151,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   emptyContainer: {
-    paddingTop: 36,
-    paddingBottom: 42,
+    paddingTop: 34,
+    paddingBottom: 40,
     paddingHorizontal: 24,
     alignItems: "center",
     position: "relative",
@@ -166,18 +167,22 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   emptyTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 15,
+    fontFamily: FONT_FAMILIES.titleBold,
+    fontSize: 15.5,
+    lineHeight: 21,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 6,
+    textAlign: "center",
   },
   emptySubtitle: {
-    fontFamily,
-    fontSize: 12.5,
-    color: "#8E9BAE",
+    fontFamily: FONT_FAMILIES.bodyMedium,
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "500",
     textAlign: "center",
     lineHeight: 18,
+    maxWidth: 260,
   },
   waveWrapper: {
     position: "absolute",
@@ -191,9 +196,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   loadingText: {
-    fontFamily,
+    fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 13,
-    color: "#8E9BAE",
+    lineHeight: 18,
+    color: "#64748B",
     fontWeight: "500",
   },
   row: {
@@ -217,25 +223,29 @@ const styles = StyleSheet.create({
   },
   textBlock: {
     flex: 1,
+    gap: 2,
   },
   rowTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 13,
+    fontFamily: FONT_FAMILIES.titleBold,
+    fontSize: 14,
+    lineHeight: 19,
     fontWeight: "700",
     color: "#0F172A",
-    marginBottom: 2,
   },
   rowSubtitle: {
-    fontFamily,
-    fontSize: 11.5,
-    color: "#94A3B8",
+    fontFamily: FONT_FAMILIES.bodyMedium,
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#64748B",
     fontWeight: "500",
   },
   timeLabel: {
-    fontFamily,
+    fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 11,
-    color: "#94A3B8",
+    lineHeight: 15,
+    color: "#64748B",
     fontWeight: "600",
+    fontVariant: ["tabular-nums"],
     flexShrink: 0,
   },
 });

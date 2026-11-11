@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -16,15 +16,19 @@ import {
   ClassRoutineItem,
   TodayStats,
   BENTO_COLORS,
-  fontFamily,
 } from "@/screens/schedule/constants";
 import {
   getDeterministicColorTheme,
   formatTimeDisplay,
-  isClassLiveNow,
 } from "@/screens/schedule/utils";
 import { LiveBeepDot } from "@/screens/schedule/components/live-beep-indicator";
+import { UserRole } from "@/types/auth";
 import { shadows } from "@/theme/layout";
+import { FONT_FAMILIES } from "@/theme/typography";
+import {
+  parseSemesterDisplay,
+  SemesterDisplayParts,
+} from "@/utils/academic-ordinal";
 
 interface TodaysClassesSectionProps {
   classes: ClassRoutineItem[];
@@ -32,25 +36,26 @@ interface TodaysClassesSectionProps {
   liveClass?: ClassRoutineItem;
   nextClass?: ClassRoutineItem;
   isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
+  userRole?: UserRole;
 }
 
-const formatSemester = (sem?: number | string | null): string | null => {
-  if (sem === undefined || sem === null || sem === "") return null;
-  const str = String(sem).trim();
-  if (!str) return null;
-  if (/^sem/i.test(str)) return str.toUpperCase();
-  const num = parseInt(str, 10);
-  if (!isNaN(num) && num > 0) {
-    const j = num % 10;
-    const k = num % 100;
-    let suffix = "th";
-    if (j === 1 && k !== 11) suffix = "st";
-    else if (j === 2 && k !== 12) suffix = "nd";
-    else if (j === 3 && k !== 13) suffix = "rd";
-    return `${num}${suffix} Sem`;
-  }
-  return `${str} Sem`;
-};
+const SemesterOrdinalText = ({
+  parts,
+  baseStyle,
+  supStyle,
+}: {
+  parts: SemesterDisplayParts;
+  baseStyle: any;
+  supStyle: any;
+}) => (
+  <View style={styles.semesterOrdinalRow}>
+    <Text style={baseStyle}>{parts.numberPart}</Text>
+    {!!parts.suffix && <Text style={supStyle}>{parts.suffix}</Text>}
+    <Text style={baseStyle}>{parts.trailingText}</Text>
+  </View>
+);
 
 const formatSection = (sec?: string | null): string | null => {
   if (!sec) return null;
@@ -61,19 +66,36 @@ const formatSection = (sec?: string | null): string | null => {
 export const TodaysClassesSection = React.memo(
   function TodaysClassesSection({
     classes,
-    stats,
     liveClass,
     nextClass,
     isLoading,
+    isError,
+    onRetry,
+    userRole,
   }: TodaysClassesSectionProps) {
     const router = useRouter();
 
     const handleOpenLink = (url?: string | null) => {
       if (!url) return;
-      const formattedUrl = url.startsWith("http") ? url : `https://${url}`;
-      Linking.openURL(formattedUrl).catch(() => {
-        Alert.alert("Unable to open link", url);
-      });
+      const trimmed = url.trim();
+      if (!trimmed) return;
+
+      const candidate = /^[a-z][a-z0-9+.-]*:/i.test(trimmed)
+        ? trimmed
+        : `https://${trimmed}`;
+
+      try {
+        const parsed = new URL(candidate);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+          Alert.alert("Invalid link", "Only HTTP and HTTPS class links are supported.");
+          return;
+        }
+        Linking.openURL(parsed.toString()).catch(() => {
+          Alert.alert("Unable to open link", trimmed);
+        });
+      } catch {
+        Alert.alert("Invalid link", "Could not open the class meeting URL.");
+      }
     };
 
     const countLabel =
@@ -94,7 +116,7 @@ export const TodaysClassesSection = React.memo(
               <View style={styles.countPill}>
                 <Text style={styles.countPillText}>{countLabel}</Text>
               </View>
-            ) : (
+            ) : !isLoading && !isError ? (
               <View style={styles.freeDayPill}>
                 <Feather
                   name="coffee"
@@ -104,7 +126,7 @@ export const TodaysClassesSection = React.memo(
                 />
                 <Text style={styles.freeDayPillText}>FREE DAY</Text>
               </View>
-            )}
+            ) : null}
           </View>
 
           <TouchableOpacity
@@ -116,12 +138,6 @@ export const TodaysClassesSection = React.memo(
             activeOpacity={0.7}
           >
             <Text style={styles.seeRoutineText}>See Routine</Text>
-            <Feather
-              name="chevron-right"
-              size={14}
-              color="#1e3a8a"
-              style={{ marginLeft: 2 }}
-            />
           </TouchableOpacity>
         </View>
 
@@ -130,6 +146,33 @@ export const TodaysClassesSection = React.memo(
           <View style={styles.skeletonContainer}>
             <View style={styles.skeletonCard} />
             <View style={styles.skeletonCard} />
+          </View>
+        ) : isError && classes.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <View style={[styles.emptyIconBox, { backgroundColor: "#fef2f2" }]}>
+              <Feather name="wifi-off" size={22} color="#dc2626" />
+            </View>
+            <Text style={styles.emptyCardTitle}>
+              Unable to load today&apos;s classes
+            </Text>
+            <Text style={styles.emptyCardSub}>
+              We couldn&apos;t refresh your schedule right now. Check your connection and try again.
+            </Text>
+            {onRetry && (
+              <TouchableOpacity
+                style={styles.emptyActionBtn}
+                onPress={onRetry}
+                activeOpacity={0.8}
+              >
+                <Feather
+                  name="refresh-cw"
+                  size={13}
+                  color="#1e3a8a"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.emptyActionBtnText}>Retry</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : classes.length === 0 ? (
           <View style={styles.emptyCard}>
@@ -140,8 +183,9 @@ export const TodaysClassesSection = React.memo(
               No classes scheduled for today
             </Text>
             <Text style={styles.emptyCardSub}>
-              You're completely free today! Take time to rest or review your
-              schedule.
+              {userRole === "TEACHER"
+                ? "You have no lectures scheduled today. View your weekly teaching routine."
+                : "You're completely free today! Take time to rest or review your schedule."}
             </Text>
             <TouchableOpacity
               style={styles.emptyActionBtn}
@@ -179,7 +223,7 @@ export const TodaysClassesSection = React.memo(
               const formattedStart = formatTimeDisplay(cls.startTime);
               const formattedEnd = formatTimeDisplay(cls.endTime);
               const formattedSec = formatSection(cls.section);
-              const formattedSem = formatSemester(cls.semester);
+              const semesterParts = parseSemesterDisplay(cls.semester);
 
               const displayRoom =
                 isRoomChange && notice?.newRoom ? notice.newRoom : cls.room;
@@ -303,28 +347,34 @@ export const TodaysClassesSection = React.memo(
                     <Text style={styles.courseTitleText} numberOfLines={2}>
                       {cls.courseName}
                     </Text>
-                    {(formattedSem || formattedSec) && (
+                    {(semesterParts || formattedSec) && (
                       <View style={styles.courseMetaInline}>
-                        {formattedSem && (
-                          <View style={styles.semesterBadge}>
+                        {semesterParts && (
+                          <View
+                            style={styles.semesterBadge}
+                            accessible={true}
+                            accessibilityLabel={`Semester: ${semesterParts.accessibilityLabel}`}
+                          >
                             <Feather
                               name="award"
-                              size={9.5}
+                              size={10}
                               color="#0284c7"
-                              style={{ marginRight: 2.5 }}
+                              style={{ marginRight: 3 }}
                             />
-                            <Text style={styles.semesterBadgeText}>
-                              {formattedSem}
-                            </Text>
+                            <SemesterOrdinalText
+                              parts={semesterParts}
+                              baseStyle={styles.semesterBadgeText}
+                              supStyle={styles.semesterBadgeSupText}
+                            />
                           </View>
                         )}
                         {formattedSec && (
                           <View style={styles.sectionBadge}>
                             <Feather
                               name="layers"
-                              size={9.5}
+                              size={10}
                               color="#6d28d9"
-                              style={{ marginRight: 2.5 }}
+                              style={{ marginRight: 3 }}
                             />
                             <Text style={styles.sectionBadgeText}>
                               {formattedSec}
@@ -433,14 +483,54 @@ export const TodaysClassesSection = React.memo(
 
                     <View style={styles.teacherPill}>
                       <Feather
-                        name="user"
+                        name={
+                          userRole === "TEACHER" || cls.userRole === "TEACHER"
+                            ? "users"
+                            : "user"
+                        }
                         size={11.5}
                         color="#475569"
                         style={{ marginRight: 4 }}
                       />
-                      <Text style={styles.teacherPillText} numberOfLines={1}>
-                        {cls.teacherName || "Instructor TBA"}
-                      </Text>
+                      {userRole === "TEACHER" || cls.userRole === "TEACHER" ? (
+                        semesterParts ? (
+                          <View
+                            style={styles.teacherCohortContent}
+                            accessible={true}
+                            accessibilityLabel={
+                              formattedSec
+                                ? `${semesterParts.accessibilityLabel}, ${formattedSec}`
+                                : semesterParts.accessibilityLabel
+                            }
+                          >
+                            <SemesterOrdinalText
+                              parts={semesterParts}
+                              baseStyle={styles.teacherPillText}
+                              supStyle={styles.teacherPillSupText}
+                            />
+                            {formattedSec ? (
+                              <Text
+                                style={[
+                                  styles.teacherPillText,
+                                  styles.teacherSecText,
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {" · "}
+                                {formattedSec}
+                              </Text>
+                            ) : null}
+                          </View>
+                        ) : (
+                          <Text style={styles.teacherPillText} numberOfLines={1}>
+                            {formattedSec || "Teaching Session"}
+                          </Text>
+                        )
+                      ) : (
+                        <Text style={styles.teacherPillText} numberOfLines={1}>
+                          {cls.teacherName || "Instructor TBA"}
+                        </Text>
+                      )}
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -455,7 +545,7 @@ export const TodaysClassesSection = React.memo(
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 28,
+    marginTop: 26,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -463,6 +553,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     marginBottom: 14,
+    gap: 8,
   },
   titleGroup: {
     flexDirection: "row",
@@ -472,11 +563,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionTitle: {
-    fontFamily,
-    fontSize: 20,
+    fontFamily: FONT_FAMILIES.titleBold,
+    fontSize: 19,
     color: "#131b2e",
-    fontWeight: "800",
-    letterSpacing: -0.2,
+    fontWeight: "700",
+    lineHeight: 24,
+    letterSpacing: -0.3,
   },
   liveIndicatorBadge: {
     flexDirection: "row",
@@ -485,28 +577,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#fecaca",
     paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   liveIndicatorText: {
-    fontFamily,
-    fontSize: 9.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10,
     fontWeight: "800",
+    lineHeight: 13,
     color: "#b91c1c",
-    letterSpacing: 0.4,
+    letterSpacing: 0.45,
+    includeFontPadding: false,
   },
   countPill: {
     backgroundColor: "#f1f5f9",
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   countPillText: {
-    fontFamily,
-    fontSize: 9.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10,
     fontWeight: "800",
+    lineHeight: 13,
     color: "#475569",
-    letterSpacing: 0.4,
+    letterSpacing: 0.45,
+    includeFontPadding: false,
   },
   freeDayPill: {
     flexDirection: "row",
@@ -514,16 +610,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#ecfdf5",
     borderWidth: 1,
     borderColor: "#d1fae5",
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   freeDayPillText: {
-    fontFamily,
-    fontSize: 9.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10,
     fontWeight: "800",
+    lineHeight: 13,
     color: "#059669",
-    letterSpacing: 0.4,
+    letterSpacing: 0.45,
+    includeFontPadding: false,
   },
   seeRoutineBtn: {
     flexDirection: "row",
@@ -532,8 +630,9 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
   },
   seeRoutineText: {
-    fontFamily,
+    fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 13.5,
+    lineHeight: 18,
     color: "#1e3a8a",
     fontWeight: "700",
   },
@@ -545,8 +644,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   skeletonCard: {
-    width: 270,
-    height: 160,
+    width: 280,
+    height: 164,
     backgroundColor: "#f1f5f9",
     borderRadius: 18,
   },
@@ -570,25 +669,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#ecfdf5",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#d1fae5",
   },
   emptyCardTitle: {
-    fontFamily,
+    fontFamily: FONT_FAMILIES.titleBold,
     fontSize: 15.5,
+    lineHeight: 21,
     color: "#131b2e",
-    fontWeight: "800",
-    marginBottom: 5,
+    fontWeight: "700",
+    marginBottom: 4,
     textAlign: "center",
   },
   emptyCardSub: {
-    fontFamily,
-    fontSize: 12.5,
+    fontFamily: FONT_FAMILIES.bodyMedium,
+    fontSize: 13,
     color: "#64748b",
     fontWeight: "500",
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 19,
     marginBottom: 14,
     maxWidth: 280,
   },
@@ -599,12 +699,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#bfdbfe",
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: 10,
   },
   emptyActionBtnText: {
-    fontFamily,
-    fontSize: 12.5,
+    fontFamily: FONT_FAMILIES.bodyBold,
+    fontSize: 13,
+    lineHeight: 17,
     color: "#1e3a8a",
     fontWeight: "700",
   },
@@ -619,8 +720,8 @@ const styles = StyleSheet.create({
     width: 280,
     backgroundColor: "#ffffff",
     borderRadius: 18,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.06)",
     borderLeftWidth: 4,
@@ -650,12 +751,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 7,
+    gap: 8,
+    marginBottom: 8,
   },
   cardBadgeGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
     flexWrap: "wrap",
     flex: 1,
   },
@@ -670,11 +772,13 @@ const styles = StyleSheet.create({
     borderColor: "#fecaca",
   },
   liveBadgeText: {
-    fontFamily,
-    fontSize: 9,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: "#b91c1c",
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   nextBadge: {
     backgroundColor: "#f0f9ff",
@@ -685,11 +789,13 @@ const styles = StyleSheet.create({
     borderColor: "#bae6fd",
   },
   nextBadgeText: {
-    fontFamily,
-    fontSize: 9,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: "#0369a1",
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   cancelledBadge: {
     backgroundColor: "#fef2f2",
@@ -700,11 +806,13 @@ const styles = StyleSheet.create({
     borderColor: "#fca5a5",
   },
   cancelledBadgeText: {
-    fontFamily,
-    fontSize: 9,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: "#dc2626",
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   codePill: {
     paddingHorizontal: 7,
@@ -712,10 +820,12 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   codeText: {
-    fontFamily,
-    fontSize: 10.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "800",
-    letterSpacing: 0.3,
+    letterSpacing: 0.35,
+    includeFontPadding: false,
   },
   durationChip: {
     flexDirection: "row",
@@ -728,36 +838,44 @@ const styles = StyleSheet.create({
     borderColor: "#f1f5f9",
   },
   durationText: {
-    fontFamily,
-    fontSize: 10,
+    fontFamily: FONT_FAMILIES.bodySemiBold,
+    fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "600",
     color: BENTO_COLORS.subtleText,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
 
   // Time Row
   timeRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 7,
   },
   timeMainText: {
-    fontFamily,
-    fontSize: 14.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
+    fontVariant: ["tabular-nums"],
   },
   timeSeparatorText: {
-    fontFamily,
-    fontSize: 12.5,
+    fontFamily: FONT_FAMILIES.bodySemiBold,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "600",
     color: "#94a3b8",
     marginHorizontal: 5,
   },
   timeSecondaryText: {
-    fontFamily,
+    fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 13.5,
+    lineHeight: 18,
     fontWeight: "600",
     color: "#475569",
+    fontVariant: ["tabular-nums"],
   },
   timeStrikethrough: {
     textDecorationLine: "line-through",
@@ -767,16 +885,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f3ff",
     borderWidth: 1,
     borderColor: "#ddd6fe",
-    paddingHorizontal: 5,
-    paddingVertical: 1.5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
     marginLeft: 6,
   },
   rescheduledBadgeText: {
-    fontFamily,
-    fontSize: 9.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: "#6d28d9",
+    includeFontPadding: false,
   },
 
   // Course Title & Inline Badges
@@ -784,23 +904,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    rowGap: 4,
-    columnGap: 5,
-    marginBottom: 8,
+    rowGap: 5,
+    columnGap: 6,
+    marginBottom: 10,
   },
   courseTitleText: {
-    fontFamily,
-    fontSize: 14.5,
+    fontFamily: FONT_FAMILIES.titleBold,
+    fontSize: 15.5,
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
-    lineHeight: 19,
+    lineHeight: 21,
+    letterSpacing: -0.2,
     flexShrink: 1,
   },
   courseMetaInline: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     flexShrink: 0,
+  },
+  semesterOrdinalRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   semesterBadge: {
     flexDirection: "row",
@@ -808,16 +933,28 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f9ff",
     borderWidth: 1,
     borderColor: "#bae6fd",
-    paddingHorizontal: 5.5,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   semesterBadgeText: {
-    fontFamily,
-    fontSize: 9.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "800",
     color: "#0284c7",
     letterSpacing: 0.2,
+    includeFontPadding: false,
+  },
+  semesterBadgeSupText: {
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 7.5,
+    lineHeight: 9,
+    fontWeight: "800",
+    color: "#0284c7",
+    marginLeft: 0.5,
+    marginRight: 2.5,
+    includeFontPadding: false,
   },
   sectionBadge: {
     flexDirection: "row",
@@ -825,16 +962,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f3ff",
     borderWidth: 1,
     borderColor: "#ddd6fe",
-    paddingHorizontal: 5.5,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   sectionBadgeText: {
-    fontFamily,
-    fontSize: 9.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "800",
     color: "#6d28d9",
-    letterSpacing: 0.2,
+    letterSpacing: 0.25,
+    includeFontPadding: false,
   },
 
   // Notice Banner
@@ -844,10 +983,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    borderRadius: 7,
-    paddingHorizontal: 7,
-    paddingVertical: 3.5,
-    marginBottom: 8,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    marginBottom: 10,
   },
   noticeBannerCancelled: {
     backgroundColor: "#fef2f2",
@@ -862,8 +1001,9 @@ const styles = StyleSheet.create({
     borderColor: "#bae6fd",
   },
   noticeBannerText: {
-    fontFamily,
-    fontSize: 10.5,
+    fontFamily: FONT_FAMILIES.bodyBold,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: "700",
     color: "#475569",
     flex: 1,
@@ -881,16 +1021,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#0284c7",
-    paddingHorizontal: 6,
-    paddingVertical: 2.5,
-    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
     marginLeft: 6,
   },
   meetBtnText: {
-    fontFamily,
-    fontSize: 9.5,
+    fontFamily: FONT_FAMILIES.bodyExtraBold,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: "#ffffff",
+    includeFontPadding: false,
   },
 
   // Card Footer Row
@@ -898,10 +1040,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 6,
+    gap: 8,
     borderTopWidth: 1,
     borderTopColor: "rgba(0, 0, 0, 0.05)",
-    paddingTop: 8,
+    paddingTop: 10,
   },
   roomPill: {
     flexDirection: "row",
@@ -909,21 +1051,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f9ff",
     borderWidth: 1,
     borderColor: "#e0f2fe",
-    paddingHorizontal: 6.5,
-    paddingVertical: 3.5,
-    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 7,
     flexShrink: 1,
-    maxWidth: "50%",
+    maxWidth: "48%",
   },
   roomPillChanged: {
     backgroundColor: "#fffbeb",
     borderColor: "#fde68a",
   },
   roomPillText: {
-    fontFamily,
-    fontSize: 10.5,
+    fontFamily: FONT_FAMILIES.bodyBold,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: "700",
     color: "#0284c7",
+    includeFontPadding: false,
   },
   roomPillTextChanged: {
     color: "#b45309",
@@ -934,16 +1078,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "#f1f5f9",
-    paddingHorizontal: 6.5,
-    paddingVertical: 3.5,
-    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 7,
     flexShrink: 1,
-    maxWidth: "50%",
+    maxWidth: "52%",
+  },
+  teacherCohortContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+    minWidth: 0,
   },
   teacherPillText: {
-    fontFamily,
-    fontSize: 10.5,
+    fontFamily: FONT_FAMILIES.bodyBold,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: "700",
     color: "#475569",
+    includeFontPadding: false,
+  },
+  teacherPillSupText: {
+    fontFamily: FONT_FAMILIES.bodyBold,
+    fontSize: 7.5,
+    lineHeight: 9,
+    fontWeight: "700",
+    color: "#475569",
+    marginLeft: 0.5,
+    marginRight: 2.5,
+    includeFontPadding: false,
+  },
+  teacherSecText: {
+    flexShrink: 1,
   },
 });

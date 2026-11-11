@@ -25,3 +25,40 @@ export const parseOrdinalParts = (
   }
   return { numberPart: str, suffix: "" };
 };
+
+export interface SemesterDisplayParts {
+  numberPart: string;
+  suffix: string;
+  trailingText: string;
+  accessibilityLabel: string;
+}
+
+/**
+ * Parses semester values (e.g., 9, "9th", "9th Sem", "SEM 9") into ordinal
+ * superscript parts plus a uniform "Sem" suffix.
+ */
+export const parseSemesterDisplay = (
+  sem?: number | string | null,
+): SemesterDisplayParts | null => {
+  if (sem === undefined || sem === null || sem === "") return null;
+  const raw = String(sem).trim();
+  if (!raw) return null;
+
+  const semPrefixMatch = raw.match(/^(?:sem(?:ester)?\.?)\s*#?\s*(.+)$/i);
+  const withoutPrefix = semPrefixMatch ? semPrefixMatch[1].trim() : raw;
+  const cleaned = withoutPrefix
+    .replace(/\s*(?:sem(?:ester)?\.?)$/i, "")
+    .trim();
+
+  if (!cleaned) return null;
+
+  const { numberPart, suffix } = parseOrdinalParts(cleaned);
+  if (!numberPart || numberPart === "—") return null;
+
+  return {
+    numberPart,
+    suffix,
+    trailingText: "Sem",
+    accessibilityLabel: `${numberPart}${suffix} Sem`,
+  };
+};
