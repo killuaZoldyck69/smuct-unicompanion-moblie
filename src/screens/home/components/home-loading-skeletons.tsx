@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import { colors } from "@/theme/colors";
 
 export const WeatherWidgetSkeleton = React.memo(
   function WeatherWidgetSkeleton() {
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 18,
-    backgroundColor: "#131b2e",
+    backgroundColor: colors.navyDeep,
   },
   weatherTopRow: {
     flexDirection: "row",
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
     width: 115,
     height: 50,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: colors.whiteAlpha12,
   },
   weatherDetails: {
     alignItems: "flex-end",
@@ -85,24 +86,24 @@ const styles = StyleSheet.create({
     width: 104,
     height: 14,
     borderRadius: 7,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: colors.whiteAlpha18,
     marginBottom: 2,
   },
   weatherLine: {
     width: 80,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.whiteAlpha10,
   },
   weatherLineShort: {
     width: 62,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.whiteAlpha10,
   },
   weatherDivider: {
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.whiteAlpha10,
     marginVertical: 14,
   },
   hourlyRow: {
@@ -117,29 +118,29 @@ const styles = StyleSheet.create({
     width: 26,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: colors.whiteAlpha12,
   },
   hourIconPlaceholder: {
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: colors.whiteAlpha18,
   },
   hourTempPlaceholder: {
     width: 22,
     height: 9,
     borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: colors.whiteAlpha12,
   },
   noticeCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     marginHorizontal: 20,
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
-    shadowColor: "#131b2e",
+    borderColor: colors.borderSubtle,
+    shadowColor: colors.navyDeep,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -155,13 +156,13 @@ const styles = StyleSheet.create({
   },
   noticeDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: "#f2f4f6",
+    borderBottomColor: colors.dividerSubtle,
   },
   noticeIconPlaceholder: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
   },
   noticeText: {
     flex: 1,
@@ -171,12 +172,12 @@ const styles = StyleSheet.create({
     width: "76%",
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
   },
   noticeDatePlaceholder: {
     width: "48%",
     height: 9,
     borderRadius: 5,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
   },
 });

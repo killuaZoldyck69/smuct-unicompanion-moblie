@@ -23,6 +23,7 @@ import { useWeatherForecast } from "@/hooks/use-weather-forecast";
 import { useTodaysClassesData } from "@/hooks/use-todays-classes";
 import { shadows } from "@/theme/layout";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 import { WeatherWidget } from "./components/weather-widget";
 import { TodaysClassesSection } from "./components/todays-classes-section";
 import {
@@ -42,8 +43,8 @@ const QUICK_ACTION_BUS = {
   title: "Bus Route",
   assetIcon: require("@/assets/icons/bus.png"),
   route: "/bus-schedule",
-  color: "#2563eb",
-  bg: "#eff6ff",
+  color: colors.semantic.blue.accent,
+  bg: colors.semantic.blue.tint,
 };
 
 const QUICK_ACTION_EXAMS = {
@@ -51,8 +52,8 @@ const QUICK_ACTION_EXAMS = {
   title: "Exams",
   assetIcon: require("@/assets/icons/exam-time.png"),
   route: "/(tabs)/exams",
-  color: "#7c3aed",
-  bg: "#f5f3ff",
+  color: colors.semantic.violet.accent,
+  bg: colors.semantic.violet.tint,
 };
 
 const QUICK_ACTION_HUBS = {
@@ -60,8 +61,8 @@ const QUICK_ACTION_HUBS = {
   title: "Course Hubs",
   assetIcon: require("@/assets/icons/lecture.png"),
   route: "/(tabs)/hubs",
-  color: "#7c3aed",
-  bg: "#f5f3ff",
+  color: colors.semantic.violet.accent,
+  bg: colors.semantic.violet.tint,
 };
 
 const QUICK_ACTION_BLOOD = {
@@ -69,8 +70,8 @@ const QUICK_ACTION_BLOOD = {
   title: "Blood Aid",
   assetIcon: require("@/assets/icons/blood-bag.png"),
   route: "/(tabs)/blood",
-  color: "#dc2626",
-  bg: "#fef2f2",
+  color: colors.semantic.red.accent,
+  bg: colors.semantic.red.tint,
 };
 
 const QUICK_ACTION_CALENDAR = {
@@ -78,9 +79,15 @@ const QUICK_ACTION_CALENDAR = {
   title: "Calendar",
   assetIcon: require("@/assets/icons/calendar.png"),
   route: "/academic_calendar",
-  color: "#059669",
-  bg: "#ecfdf5",
+  color: colors.semantic.emerald.accent,
+  bg: colors.semantic.emerald.tint,
 };
+
+const NOTICE_ICON_THEMES = [
+  { bg: colors.semantic.sky.soft, icon: colors.semantic.sky.accent },
+  { bg: colors.semantic.emerald.border, icon: colors.semantic.emerald.accent },
+  { bg: colors.semantic.rose.soft, icon: colors.semantic.rose.deep },
+] as const;
 
 export function Home() {
   const router = useRouter();
@@ -163,8 +170,8 @@ export function Home() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            colors={["#1e3a8a"]}
-            tintColor="#1e3a8a"
+            colors={[colors.semantic.blue.deep]}
+            tintColor={colors.semantic.blue.deep}
           />
         }
       >
@@ -212,7 +219,11 @@ export function Home() {
             accessible={true}
             accessibilityRole="alert"
           >
-            <Feather name="wifi-off" size={14} color="#92400e" />
+            <Feather
+              name="wifi-off"
+              size={14}
+              color={colors.semantic.amber.darkText}
+            />
             <Text style={styles.offlineBannerText}>
               You are offline. Showing cached campus data where available.
             </Text>
@@ -320,7 +331,11 @@ export function Home() {
               accessibilityRole="button"
               accessibilityLabel="Retry loading notices"
             >
-              <Feather name="refresh-cw" size={13} color="#1e3a8a" />
+              <Feather
+                name="refresh-cw"
+                size={13}
+                color={colors.semantic.blue.deep}
+              />
               <Text style={styles.retryBtnText}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -331,12 +346,8 @@ export function Home() {
         ) : (
           <View style={styles.noticeContainerCard}>
             {notices.slice(0, 3).map((notice: any, index: number) => {
-              const iconColors = [
-                { bg: "#e0f2fe", icon: "#0284c7" },
-                { bg: "#d1fae5", icon: "#059669" },
-                { bg: "#fce7f3", icon: "#be123c" },
-              ];
-              const colorTheme = iconColors[index % iconColors.length];
+              const colorTheme =
+                NOTICE_ICON_THEMES[index % NOTICE_ICON_THEMES.length];
 
               return (
                 <TouchableOpacity
@@ -395,7 +406,7 @@ export function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f7f9fb" },
+  container: { flex: 1, backgroundColor: colors.homeBackground },
   scrollContent: { paddingBottom: 120 },
 
   // Header
@@ -415,14 +426,14 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 13,
     lineHeight: 18,
-    color: "#64748b",
+    color: colors.slate500,
     fontWeight: "600",
   },
   nameText: {
     fontFamily: FONT_FAMILIES.titleExtraBold,
     fontSize: 21,
     lineHeight: 26,
-    color: "#131b2e",
+    color: colors.navyDeep,
     fontWeight: "800",
     letterSpacing: -0.35,
   },
@@ -443,9 +454,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 14,
-    backgroundColor: "#fffbeb",
+    backgroundColor: colors.semantic.amber.tint,
     borderWidth: 1,
-    borderColor: "#fde68a",
+    borderColor: colors.semantic.amber.border,
   },
   offlineBannerText: {
     flex: 1,
@@ -453,7 +464,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 17,
     fontWeight: "600",
-    color: "#92400e",
+    color: colors.semantic.amber.darkText,
   },
 
   avatarImage: { width: 46, height: 46, borderRadius: 23 },
@@ -461,7 +472,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "#131b2e",
+    backgroundColor: colors.navyDeep,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -469,7 +480,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.titleExtraBold,
     fontSize: 19,
     lineHeight: 24,
-    color: "#ffffff",
+    color: colors.white,
     fontWeight: "800",
   },
 
@@ -518,7 +529,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.titleBold,
     fontSize: 19,
     lineHeight: 24,
-    color: "#131b2e",
+    color: colors.navyDeep,
     fontWeight: "700",
     letterSpacing: -0.3,
   },
@@ -526,19 +537,19 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 13.5,
     lineHeight: 18,
-    color: "#1e3a8a",
+    color: colors.semantic.blue.deep,
     fontWeight: "700",
   },
 
   // --- NOTICES ---
   noticeContainerCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     marginHorizontal: 20,
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderColor: colors.borderSubtle,
     ...shadows.level1,
   },
   noticeRow: {
@@ -548,7 +559,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     gap: 14,
   },
-  noticeDivider: { borderBottomWidth: 1, borderBottomColor: "#f2f4f6" },
+  noticeDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.dividerSubtle,
+  },
   noticeIconBox: {
     width: 44,
     height: 44,
@@ -562,14 +576,14 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 14.5,
     lineHeight: 20,
-    color: "#131b2e",
+    color: colors.navyDeep,
     fontWeight: "600",
   },
   noticeDate: {
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 12,
     lineHeight: 16,
-    color: "#64748b",
+    color: colors.slate500,
     fontWeight: "500",
   },
 
@@ -578,18 +592,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     paddingVertical: 24,
     paddingHorizontal: 20,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderRadius: 20,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderColor: colors.borderSubtle,
     ...shadows.level1,
   },
   emptyCardText: {
     fontFamily: FONT_FAMILIES.titleBold,
     fontSize: 15.5,
     lineHeight: 21,
-    color: "#131b2e",
+    color: colors.navyDeep,
     fontWeight: "700",
     marginBottom: 4,
     textAlign: "center",
@@ -598,7 +612,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 13,
     lineHeight: 18,
-    color: "#64748b",
+    color: colors.slate500,
     fontWeight: "500",
     textAlign: "center",
     maxWidth: 280,
@@ -608,9 +622,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#eff6ff",
+    backgroundColor: colors.semantic.blue.tint,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: colors.semantic.blue.border,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
@@ -620,6 +634,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 17,
     fontWeight: "700",
-    color: "#1e3a8a",
+    color: colors.semantic.blue.deep,
   },
 });

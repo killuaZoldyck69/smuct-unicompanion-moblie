@@ -10,6 +10,7 @@ import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { AdminDashboardStats } from "../hooks/use-admin-dashboard";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 
 interface StatsGridProps {
   stats: AdminDashboardStats | undefined;
@@ -60,13 +61,17 @@ const StatCard = React.memo(function StatCard({
         <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
           {iconNode}
         </View>
-        <Feather name="chevron-right" size={16} color="#94A3B8" />
+        <Feather name="chevron-right" size={16} color={colors.slate400} />
       </View>
 
       {/* Bottom Content: Number + Label */}
       <View style={styles.bottomBlock}>
         {isLoading ? (
-          <ActivityIndicator size="small" color="#64748B" style={styles.loader} />
+          <ActivityIndicator
+            size="small"
+            color={colors.slate500}
+            style={styles.loader}
+          />
         ) : (
           <Text style={styles.value} numberOfLines={1}>
             {typeof value === "number" ? value.toLocaleString() : value}
@@ -94,19 +99,21 @@ export const StatsGrid = React.memo(function StatsGrid({
       <View style={styles.row}>
         {/* 1. Total Students */}
         <StatCard
-          iconNode={<Feather name="user" size={18} color="#10B981" />}
+          iconNode={
+            <Feather name="user" size={18} color={colors.semantic.emerald.solid} />
+          }
           watermarkNode={
             <MaterialCommunityIcons
               name="account-group-outline"
               size={76}
-              color="#10B981"
+              color={colors.semantic.emerald.solid}
             />
           }
           value={stats?.totalStudents ?? 0}
           label="Total Students"
-          cardBg="#F0FDF8"
-          borderColor="#D1FAE5"
-          iconBg="#DCFCE7"
+          cardBg={colors.semantic.emerald.softSurface}
+          borderColor={colors.semantic.emerald.border}
+          iconBg={colors.semantic.emerald.soft}
           isLoading={isLoading}
           onPress={() => router.push("/(tabs)/admin_users")}
         />
@@ -117,54 +124,70 @@ export const StatsGrid = React.memo(function StatsGrid({
             <MaterialCommunityIcons
               name="human-male-board"
               size={19}
-              color="#6366F1"
+              color={colors.semantic.indigo.soft}
             />
           }
           watermarkNode={
             <MaterialCommunityIcons
               name="human-male-board"
               size={76}
-              color="#6366F1"
+              color={colors.semantic.indigo.soft}
             />
           }
           value={stats?.totalTeachers ?? 0}
           label="Total Teachers"
-          cardBg="#F8FAFF"
-          borderColor="#E0E7FF"
-          iconBg="#EEF2FF"
+          cardBg={colors.semantic.indigo.softSurface}
+          borderColor={colors.semantic.indigo.border}
+          iconBg={colors.semantic.indigo.tint}
           isLoading={isLoading}
           onPress={() => router.push("/(tabs)/admin_users")}
         />
       </View>
 
-      {/* Row 2: Restricted & Published Notices */}
+      {/* Row 2: Restricted & Course Hubs */}
       <View style={[styles.row, styles.rowLast]}>
         {/* 3. Restricted Users */}
         <StatCard
-          iconNode={<Feather name="slash" size={17} color="#EF4444" />}
+          iconNode={
+            <Feather name="slash" size={17} color={colors.semantic.red.solid} />
+          }
           watermarkNode={
-            <Ionicons name="lock-closed-outline" size={74} color="#EF4444" />
+            <Ionicons
+              name="lock-closed-outline"
+              size={74}
+              color={colors.semantic.red.solid}
+            />
           }
           value={stats?.restrictedUsers ?? 0}
           label="Restricted Users"
-          cardBg="#FFF8F8"
-          borderColor="#FEE2E2"
-          iconBg="#FEE2E2"
+          cardBg={colors.semantic.red.softSurface}
+          borderColor={colors.semantic.red.softBorder}
+          iconBg={colors.semantic.red.softBorder}
           isLoading={isLoading}
           onPress={() => router.push("/(tabs)/admin_users")}
         />
 
         {/* 4. Total Course Hubs */}
         <StatCard
-          iconNode={<Feather name="book-open" size={18} color="#D97706" />}
+          iconNode={
+            <Feather
+              name="book-open"
+              size={18}
+              color={colors.semantic.amber.accent}
+            />
+          }
           watermarkNode={
-            <Ionicons name="book-outline" size={74} color="#D97706" />
+            <Ionicons
+              name="book-outline"
+              size={74}
+              color={colors.semantic.amber.accent}
+            />
           }
           value={stats?.totalCourseHubs ?? 0}
           label="Total Course Hubs"
-          cardBg="#FFFDF5"
-          borderColor="#FEF3C7"
-          iconBg="#FEF3C7"
+          cardBg={colors.semantic.amber.softSurface}
+          borderColor={colors.semantic.amber.soft}
+          iconBg={colors.semantic.amber.soft}
           isLoading={isLoading}
           onPress={() => router.push("/(tabs)/admin_course_hubs")}
         />
@@ -183,7 +206,7 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 15,
     fontWeight: "800",
-    color: "#64748B",
+    color: colors.slate500,
     letterSpacing: 0.85,
     marginBottom: 12,
   },
@@ -234,7 +257,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     lineHeight: 30,
     fontWeight: "800",
-    color: "#0F172A",
+    color: colors.navyInk,
     letterSpacing: -0.5,
     fontVariant: ["tabular-nums"],
     marginBottom: 3,
@@ -244,6 +267,6 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 17,
     fontWeight: "600",
-    color: "#64748B",
+    color: colors.slate500,
   },
 });

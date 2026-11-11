@@ -5,11 +5,59 @@ import { Feather } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { SystemHealth } from "../hooks/use-admin-dashboard";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 
 interface SystemStatusBannerProps {
   health: SystemHealth;
   isFetching: boolean;
 }
+
+type StatusKey = "checking" | "operational" | "degraded" | "unreachable";
+
+const STATUS_THEMES: Record<
+  StatusKey,
+  {
+    bg: string;
+    borderColor: string;
+    dotColor: string;
+    textColor: string;
+    waveformColor: string;
+    label: string;
+  }
+> = {
+  checking: {
+    bg: colors.slate50,
+    borderColor: colors.slate200,
+    dotColor: colors.slate400,
+    textColor: colors.slate500,
+    waveformColor: colors.semantic.red.solid,
+    label: "Checking server status...",
+  },
+  operational: {
+    bg: colors.semantic.emerald.softSurface,
+    borderColor: colors.semantic.emerald.border,
+    dotColor: colors.semantic.emerald.solid,
+    textColor: colors.navyInk,
+    waveformColor: colors.semantic.emerald.solid,
+    label: "All Systems Operational",
+  },
+  degraded: {
+    bg: colors.semantic.amber.tint,
+    borderColor: colors.semantic.amber.border,
+    dotColor: colors.semantic.amber.solid,
+    textColor: colors.semantic.amber.darkText,
+    waveformColor: colors.semantic.amber.solid,
+    label: "Database Unavailable",
+  },
+  unreachable: {
+    bg: colors.semantic.rose.tint,
+    borderColor: colors.semantic.rose.border,
+    dotColor: colors.semantic.red.solid,
+    textColor: colors.semantic.rose.darkText,
+    waveformColor: colors.semantic.red.solid,
+    label: "Server Unreachable",
+  },
+};
 
 export const SystemStatusBanner = React.memo(function SystemStatusBanner({
   health,
@@ -20,47 +68,16 @@ export const SystemStatusBanner = React.memo(function SystemStatusBanner({
   const isDegraded = !isChecking && health.isOnline && health.isDegraded;
   const isOperational = !isChecking && health.isOnline && !health.isDegraded;
 
-  const bg = isChecking
-    ? "#F8FAFC"
+  const statusKey: StatusKey = isChecking
+    ? "checking"
     : isOperational
-      ? "#F0FDF8"
+      ? "operational"
       : isDegraded
-        ? "#FFFBEB"
-        : "#FFF1F2";
-  const borderColor = isChecking
-    ? "#E2E8F0"
-    : isOperational
-      ? "#D1FAE5"
-      : isDegraded
-        ? "#FDE68A"
-        : "#FECDD3";
-  const dotColor = isChecking
-    ? "#94A3B8"
-    : isOperational
-      ? "#10B981"
-      : isDegraded
-        ? "#F59E0B"
-        : "#EF4444";
-  const textColor = isChecking
-    ? "#64748B"
-    : isOperational
-      ? "#0F172A"
-      : isDegraded
-        ? "#92400E"
-        : "#9F1239";
-  const statusText = isChecking
-    ? "Checking server status..."
-    : isOperational
-      ? "All Systems Operational"
-      : isDegraded
-        ? "Database Unavailable"
-        : "Server Unreachable";
+        ? "degraded"
+        : "unreachable";
 
-  const waveformColor = isOperational
-    ? "#10B981"
-    : isDegraded
-      ? "#F59E0B"
-      : "#EF4444";
+  const { bg, borderColor, dotColor, textColor, waveformColor, label: statusText } =
+    STATUS_THEMES[statusKey];
 
   return (
     <TouchableOpacity
@@ -98,18 +115,22 @@ export const SystemStatusBanner = React.memo(function SystemStatusBanner({
         <View
           style={[
             styles.latencyPill,
-            isDegraded && { backgroundColor: "#FEF3C7" },
+            isDegraded && styles.latencyPillDegraded,
           ]}
         >
           <Feather
             name="zap"
             size={11}
-            color={isDegraded ? "#B45309" : "#059669"}
+            color={
+              isDegraded
+                ? colors.semantic.amber.deep
+                : colors.semantic.emerald.accent
+            }
           />
           <Text
             style={[
               styles.latencyText,
-              isDegraded && { color: "#B45309" },
+              isDegraded && styles.latencyTextDegraded,
             ]}
           >
             {health.latencyMs} ms
@@ -166,25 +187,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#D1FAE5",
+    backgroundColor: colors.semantic.emerald.border,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 99,
+  },
+  latencyPillDegraded: {
+    backgroundColor: colors.semantic.amber.soft,
   },
   latencyText: {
     fontFamily: FONT_FAMILIES.bodyExtraBold,
     fontSize: 11,
     lineHeight: 14,
     fontWeight: "800",
-    color: "#059669",
+    color: colors.semantic.emerald.accent,
     fontVariant: ["tabular-nums"],
     includeFontPadding: false,
+  },
+  latencyTextDegraded: {
+    color: colors.semantic.amber.deep,
   },
   pingDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#94A3B8",
+    backgroundColor: colors.slate400,
     opacity: 0.5,
   },
 });

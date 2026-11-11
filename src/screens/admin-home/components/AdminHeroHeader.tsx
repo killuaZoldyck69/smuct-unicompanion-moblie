@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 
 interface AdminHeroHeaderProps {
   userName: string | null | undefined;
@@ -95,7 +96,7 @@ export const AdminHeroHeader = React.memo(function AdminHeroHeader({
 
         <NotificationBell
           style={styles.bellBtn}
-          iconColor="#1E293B"
+          iconColor={colors.slate800}
           iconSize={19}
           catSize={128}
           useCatAnimation
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 14,
     fontWeight: "700",
-    color: "#64748B",
+    color: colors.slate500,
     letterSpacing: 0.85,
     marginBottom: 8,
   },
@@ -145,14 +146,14 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 13,
     fontWeight: "600",
-    color: "#64748B",
+    color: colors.slate500,
     lineHeight: 18,
   },
   title: {
     fontFamily: FONT_FAMILIES.titleExtraBold,
     fontSize: 21,
     fontWeight: "800",
-    color: "#0F172A",
+    color: colors.navyInk,
     letterSpacing: -0.35,
     lineHeight: 26,
   },
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: "#EEF2FF",
+    backgroundColor: colors.semantic.indigo.tint,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 99,
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 15,
     fontWeight: "700",
-    color: "#4338CA",
+    color: colors.semantic.indigo.deep,
     letterSpacing: 0.2,
     includeFontPadding: false,
   },
@@ -183,18 +184,18 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 23,
     borderWidth: 2,
-    borderColor: "#FFFFFF",
+    borderColor: colors.white,
   },
   avatarFallback: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "#0D131F",
+    backgroundColor: colors.avatarDark,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#FFFFFF",
-    shadowColor: "#0F172A",
+    borderColor: colors.white,
+    shadowColor: colors.navyInk,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -205,6 +206,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 22,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: colors.white,
   },
 });

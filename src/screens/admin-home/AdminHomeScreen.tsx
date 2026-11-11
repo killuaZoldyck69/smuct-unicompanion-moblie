@@ -16,6 +16,7 @@ import { useFocusEffect } from "expo-router";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 import { useAdminDashboard } from "./hooks/use-admin-dashboard";
 import { AdminAmbientBackground } from "./components/AdminAmbientBackground";
 import { AdminHeroHeader } from "./components/AdminHeroHeader";
@@ -72,8 +73,8 @@ export function AdminHomeScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={refetch}
-            colors={["#4F46E5"]}
-            tintColor="#4F46E5"
+            colors={[colors.semantic.indigo.solid]}
+            tintColor={colors.semantic.indigo.solid}
             progressViewOffset={insets.top + 8}
           />
         }
@@ -96,12 +97,16 @@ export function AdminHomeScreen() {
             <Feather
               name={isOffline ? "wifi-off" : "alert-circle"}
               size={15}
-              color={isOffline ? "#92400E" : "#B91C1C"}
+              color={
+                isOffline
+                  ? colors.semantic.amber.darkText
+                  : colors.semantic.red.deep
+              }
             />
             <Text
               style={[
                 styles.alertText,
-                isStatsError && !isOffline && { color: "#991B1B" },
+                isStatsError && !isOffline && styles.alertTextError,
               ]}
             >
               {isOffline
@@ -145,7 +150,7 @@ export function AdminHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colors.adminBackground,
   },
   scrollView: {
     flex: 1,
@@ -163,13 +168,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 16,
-    backgroundColor: "#FFFBEB",
+    backgroundColor: colors.semantic.amber.tint,
     borderWidth: 1,
-    borderColor: "#FDE68A",
+    borderColor: colors.semantic.amber.border,
   },
   alertBannerError: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
+    backgroundColor: colors.semantic.red.tint,
+    borderColor: colors.semantic.red.border,
   },
   alertText: {
     flex: 1,
@@ -177,21 +182,24 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 17,
     fontWeight: "600",
-    color: "#92400E",
+    color: colors.semantic.amber.darkText,
+  },
+  alertTextError: {
+    color: colors.semantic.red.darkText,
   },
   retryPill: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.white,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.slate200,
   },
   retryPillText: {
     fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 12,
     lineHeight: 15,
     fontWeight: "700",
-    color: "#1E293B",
+    color: colors.slate800,
   },
 });

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 
 const QUICK_ACCESS_ICONS = {
   manageStudents: require("@/assets/icons/user-management.png"),
@@ -20,7 +21,7 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
     <View style={styles.container}>
       <Text style={styles.sectionLabel}>QUICK ACCESS</Text>
 
-      {/* Row 1: Manage Students & Add Registration */}
+      {/* Row 1: Manage Students & Add Faculty */}
       <View style={styles.row}>
         {/* 1. Manage Students */}
         <TouchableOpacity
@@ -32,14 +33,23 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
           accessibilityLabel="Manage Students: Student records and directory"
         >
           <View style={styles.cardHeader}>
-            <View style={[styles.iconWrap, { backgroundColor: "#EFF6FF" }]}>
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: colors.semantic.blue.tint },
+              ]}
+            >
               <Image
                 source={QUICK_ACCESS_ICONS.manageStudents}
                 style={styles.iconImage}
                 resizeMode="contain"
               />
             </View>
-            <Feather name="arrow-right" size={18} color="#3B82F6" />
+            <Feather
+              name="arrow-right"
+              size={18}
+              color={colors.semantic.blue.solid}
+            />
           </View>
           <Text style={styles.cardTitle} numberOfLines={1}>
             Manage Students
@@ -59,14 +69,23 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
           accessibilityLabel="Add Faculty: Register new faculty member"
         >
           <View style={styles.cardHeader}>
-            <View style={[styles.iconWrap, { backgroundColor: "#ECFDF5" }]}>
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: colors.semantic.emerald.tint },
+              ]}
+            >
               <Image
                 source={QUICK_ACCESS_ICONS.addRegistration}
                 style={styles.iconImage}
                 resizeMode="contain"
               />
             </View>
-            <Feather name="arrow-right" size={18} color="#10B981" />
+            <Feather
+              name="arrow-right"
+              size={18}
+              color={colors.semantic.emerald.solid}
+            />
           </View>
           <Text style={styles.cardTitle} numberOfLines={1}>
             Add Faculty
@@ -89,14 +108,23 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
           accessibilityLabel="Post Notice: Broadcast announcements"
         >
           <View style={styles.cardHeader}>
-            <View style={[styles.iconWrap, { backgroundColor: "#FFFBEB" }]}>
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: colors.semantic.amber.tint },
+              ]}
+            >
               <Image
                 source={QUICK_ACCESS_ICONS.postNotice}
                 style={styles.iconImage}
                 resizeMode="contain"
               />
             </View>
-            <Feather name="arrow-right" size={18} color="#F59E0B" />
+            <Feather
+              name="arrow-right"
+              size={18}
+              color={colors.semantic.amber.solid}
+            />
           </View>
           <Text style={styles.cardTitle} numberOfLines={1}>
             Post Notice
@@ -116,14 +144,23 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
           accessibilityLabel="Campus Hubs: Forum, items, marketplace and memes"
         >
           <View style={styles.cardHeader}>
-            <View style={[styles.iconWrap, { backgroundColor: "#FFF1F2" }]}>
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: colors.semantic.rose.tint },
+              ]}
+            >
               <Image
                 source={QUICK_ACCESS_ICONS.community}
                 style={styles.iconImage}
                 resizeMode="contain"
               />
             </View>
-            <Feather name="arrow-right" size={18} color="#E11D48" />
+            <Feather
+              name="arrow-right"
+              size={18}
+              color={colors.semantic.rose.solid}
+            />
           </View>
           <Text style={styles.cardTitle} numberOfLines={1}>
             Campus Hubs
@@ -143,7 +180,12 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
         accessibilityRole="button"
         accessibilityLabel="Academic Calendar: Manage academic events and terms"
       >
-        <View style={[styles.wideIconWrap, { backgroundColor: "#ECFDF5" }]}>
+        <View
+          style={[
+            styles.wideIconWrap,
+            { backgroundColor: colors.semantic.emerald.tint },
+          ]}
+        >
           <Image
             source={QUICK_ACCESS_ICONS.calendar}
             style={styles.wideIconImage}
@@ -158,7 +200,7 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
             Manage academic events & terms
           </Text>
         </View>
-        <Feather name="arrow-right" size={18} color="#94A3B8" />
+        <Feather name="arrow-right" size={18} color={colors.slate400} />
       </TouchableOpacity>
 
       {/* Wide Row 2: System Monitor */}
@@ -170,7 +212,12 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
         accessibilityRole="button"
         accessibilityLabel="System Monitor: Health, server logs and diagnostics"
       >
-        <View style={[styles.wideIconWrap, { backgroundColor: "#EEF2FF" }]}>
+        <View
+          style={[
+            styles.wideIconWrap,
+            { backgroundColor: colors.semantic.indigo.tint },
+          ]}
+        >
           <Image
             source={QUICK_ACCESS_ICONS.systemMonitor}
             style={styles.wideIconImage}
@@ -185,7 +232,7 @@ export const QuickAccessGrid = React.memo(function QuickAccessGrid() {
             Health, server logs & diagnostics
           </Text>
         </View>
-        <Feather name="arrow-right" size={18} color="#94A3B8" />
+        <Feather name="arrow-right" size={18} color={colors.slate400} />
       </TouchableOpacity>
     </View>
   );
@@ -201,7 +248,7 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 15,
     fontWeight: "800",
-    color: "#64748B",
+    color: colors.slate500,
     letterSpacing: 0.85,
     marginBottom: 12,
   },
@@ -212,12 +259,12 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.white,
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    shadowColor: "#0F172A",
+    borderColor: colors.slate100,
+    shadowColor: colors.navyInk,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -242,25 +289,25 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: "700",
     letterSpacing: -0.15,
-    color: "#0F172A",
+    color: colors.navyInk,
     marginBottom: 3,
   },
   cardSubtitle: {
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 12,
-    color: "#64748B",
+    color: colors.slate500,
     lineHeight: 16,
     fontWeight: "500",
   },
   wideCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.white,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    shadowColor: "#0F172A",
+    borderColor: colors.slate100,
+    shadowColor: colors.navyInk,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -288,13 +335,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: "700",
     letterSpacing: -0.15,
-    color: "#0F172A",
+    color: colors.navyInk,
   },
   wideSubtitle: {
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 12,
     lineHeight: 16,
-    color: "#64748B",
+    color: colors.slate500,
     fontWeight: "500",
   },
   iconImage: {

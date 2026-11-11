@@ -9,6 +9,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { ActivityItem } from "../hooks/use-admin-dashboard";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 
 interface ActivityFeedProps {
   items: ActivityItem[];
@@ -19,12 +20,36 @@ const ACTIVITY_CONFIG: Record<
   ActivityItem["type"],
   { icon: keyof typeof Feather.glyphMap; iconBg: string; iconColor: string }
 > = {
-  USER_JOINED: { icon: "user-check", iconBg: "#ECFDF5", iconColor: "#059669" },
-  USER_RESTRICTED: { icon: "slash", iconBg: "#FFF1F2", iconColor: "#E11D48" },
-  TEACHER_ADDED: { icon: "award", iconBg: "#EEF2FF", iconColor: "#4F46E5" },
-  NOTICE_POSTED: { icon: "bell", iconBg: "#FFF7ED", iconColor: "#EA580C" },
-  COMPLAINT_FILED: { icon: "alert-circle", iconBg: "#FFFBEB", iconColor: "#D97706" },
-  MAINTENANCE_RUN: { icon: "tool", iconBg: "#F8FAFC", iconColor: "#64748B" },
+  USER_JOINED: {
+    icon: "user-check",
+    iconBg: colors.semantic.emerald.tint,
+    iconColor: colors.semantic.emerald.accent,
+  },
+  USER_RESTRICTED: {
+    icon: "slash",
+    iconBg: colors.semantic.rose.tint,
+    iconColor: colors.semantic.rose.solid,
+  },
+  TEACHER_ADDED: {
+    icon: "award",
+    iconBg: colors.semantic.indigo.tint,
+    iconColor: colors.semantic.indigo.solid,
+  },
+  NOTICE_POSTED: {
+    icon: "bell",
+    iconBg: colors.semantic.orange.tint,
+    iconColor: colors.semantic.orange.accent,
+  },
+  COMPLAINT_FILED: {
+    icon: "alert-circle",
+    iconBg: colors.semantic.amber.tint,
+    iconColor: colors.semantic.amber.accent,
+  },
+  MAINTENANCE_RUN: {
+    icon: "tool",
+    iconBg: colors.slate50,
+    iconColor: colors.slate500,
+  },
 };
 
 function formatRelativeTime(timestamp: string): string {
@@ -78,13 +103,20 @@ export const ActivityFeed = React.memo(function ActivityFeed({
       <View style={styles.card}>
         {isLoading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color="#4F46E5" />
+            <ActivityIndicator
+              size="small"
+              color={colors.semantic.indigo.solid}
+            />
             <Text style={styles.loadingText}>Loading activity...</Text>
           </View>
         ) : items.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconBox}>
-              <Ionicons name="file-tray-outline" size={24} color="#8E9BAE" />
+              <Ionicons
+                name="file-tray-outline"
+                size={24}
+                color={colors.slateMutedIcon}
+              />
             </View>
             <Text style={styles.emptyTitle}>No recent activity</Text>
             <Text style={styles.emptySubtitle}>
@@ -101,7 +133,7 @@ export const ActivityFeed = React.memo(function ActivityFeed({
               >
                 <Path
                   d="M0,24 C70,24 110,6 180,16 C230,23 270,7 320,10"
-                  stroke="#E2E8F0"
+                  stroke={colors.slate200}
                   strokeWidth="1.5"
                   fill="none"
                   opacity={0.7}
@@ -133,17 +165,17 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 15,
     fontWeight: "800",
-    color: "#64748B",
+    color: colors.slate500,
     letterSpacing: 0.85,
     marginBottom: 12,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.white,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: colors.slate100,
     overflow: "hidden",
-    shadowColor: "#0F172A",
+    shadowColor: colors.navyInk,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -161,7 +193,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colors.slate100,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 14,
@@ -171,14 +203,14 @@ const styles = StyleSheet.create({
     fontSize: 15.5,
     lineHeight: 21,
     fontWeight: "700",
-    color: "#0F172A",
+    color: colors.navyInk,
     marginBottom: 6,
     textAlign: "center",
   },
   emptySubtitle: {
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 13,
-    color: "#64748B",
+    color: colors.slate500,
     fontWeight: "500",
     textAlign: "center",
     lineHeight: 18,
@@ -199,7 +231,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 13,
     lineHeight: 18,
-    color: "#64748B",
+    color: colors.slate500,
     fontWeight: "500",
   },
   row: {
@@ -211,7 +243,7 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: "#F8FAFC",
+    borderBottomColor: colors.slate50,
   },
   iconWrap: {
     width: 36,
@@ -230,20 +262,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 19,
     fontWeight: "700",
-    color: "#0F172A",
+    color: colors.navyInk,
   },
   rowSubtitle: {
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 12,
     lineHeight: 16,
-    color: "#64748B",
+    color: colors.slate500,
     fontWeight: "500",
   },
   timeLabel: {
     fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 11,
     lineHeight: 15,
-    color: "#64748B",
+    color: colors.slate500,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
     flexShrink: 0,

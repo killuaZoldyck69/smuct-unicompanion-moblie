@@ -1,5 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { colors } from "@/theme/colors";
 
 interface AdminAmbientBackgroundProps {
   topInset: number;
@@ -40,19 +41,19 @@ const styles = StyleSheet.create({
   blobTopLeft: {
     width: 200,
     height: 200,
-    backgroundColor: "#4F46E5",
+    backgroundColor: colors.semantic.indigo.solid,
     left: -60,
   },
   blobTopRight: {
     width: 160,
     height: 160,
-    backgroundColor: "#0EA5E9",
+    backgroundColor: colors.semantic.sky.solid,
     right: -40,
   },
   blobMid: {
     width: 260,
     height: 260,
-    backgroundColor: "#8B5CF6",
+    backgroundColor: colors.semantic.violet.solid,
     top: 340,
     left: -80,
     opacity: 0.04,

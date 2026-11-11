@@ -15,7 +15,6 @@ import { useRouter } from "expo-router";
 import {
   ClassRoutineItem,
   TodayStats,
-  BENTO_COLORS,
 } from "@/screens/schedule/constants";
 import {
   getDeterministicColorTheme,
@@ -23,6 +22,7 @@ import {
 } from "@/screens/schedule/utils";
 import { LiveBeepDot } from "@/screens/schedule/components/live-beep-indicator";
 import { UserRole } from "@/types/auth";
+import { colors } from "@/theme/colors";
 import { shadows } from "@/theme/layout";
 import { FONT_FAMILIES } from "@/theme/typography";
 import {
@@ -121,7 +121,7 @@ export const TodaysClassesSection = React.memo(
                 <Feather
                   name="coffee"
                   size={10}
-                  color="#059669"
+                  color={colors.semantic.emerald.accent}
                   style={{ marginRight: 3 }}
                 />
                 <Text style={styles.freeDayPillText}>FREE DAY</Text>
@@ -149,8 +149,12 @@ export const TodaysClassesSection = React.memo(
           </View>
         ) : isError && classes.length === 0 ? (
           <View style={styles.emptyCard}>
-            <View style={[styles.emptyIconBox, { backgroundColor: "#fef2f2" }]}>
-              <Feather name="wifi-off" size={22} color="#dc2626" />
+            <View style={[styles.emptyIconBox, styles.emptyErrorIconBox]}>
+              <Feather
+                name="wifi-off"
+                size={22}
+                color={colors.semantic.red.accent}
+              />
             </View>
             <Text style={styles.emptyCardTitle}>
               Unable to load today&apos;s classes
@@ -167,7 +171,7 @@ export const TodaysClassesSection = React.memo(
                 <Feather
                   name="refresh-cw"
                   size={13}
-                  color="#1e3a8a"
+                  color={colors.semantic.blue.deep}
                   style={{ marginRight: 6 }}
                 />
                 <Text style={styles.emptyActionBtnText}>Retry</Text>
@@ -177,7 +181,11 @@ export const TodaysClassesSection = React.memo(
         ) : classes.length === 0 ? (
           <View style={styles.emptyCard}>
             <View style={styles.emptyIconBox}>
-              <Feather name="coffee" size={24} color="#059669" />
+              <Feather
+                name="coffee"
+                size={24}
+                color={colors.semantic.emerald.accent}
+              />
             </View>
             <Text style={styles.emptyCardTitle}>
               No classes scheduled for today
@@ -195,7 +203,7 @@ export const TodaysClassesSection = React.memo(
               <Feather
                 name="calendar"
                 size={13}
-                color="#1e3a8a"
+                color={colors.semantic.blue.deep}
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.emptyActionBtnText}>View Full Routine</Text>
@@ -234,11 +242,11 @@ export const TodaysClassesSection = React.memo(
                 : "Room TBA";
 
               const accentColor = isCancelled
-                ? "#dc2626"
+                ? colors.semantic.red.accent
                 : isLive
-                  ? "#ef4444"
+                  ? colors.semantic.red.solid
                   : isNext
-                    ? "#0284c7"
+                    ? colors.semantic.sky.accent
                     : theme.accent;
 
               return (
@@ -299,7 +307,7 @@ export const TodaysClassesSection = React.memo(
                         <Feather
                           name="clock"
                           size={10.5}
-                          color={BENTO_COLORS.subtleText}
+                          color={colors.slate500}
                           style={{ marginRight: 3.5 }}
                         />
                         <Text style={styles.durationText}>{cls.duration}</Text>
@@ -358,7 +366,7 @@ export const TodaysClassesSection = React.memo(
                             <Feather
                               name="award"
                               size={10}
-                              color="#0284c7"
+                              color={colors.semantic.sky.accent}
                               style={{ marginRight: 3 }}
                             />
                             <SemesterOrdinalText
@@ -373,7 +381,7 @@ export const TodaysClassesSection = React.memo(
                             <Feather
                               name="layers"
                               size={10}
-                              color="#6d28d9"
+                              color={colors.semantic.violet.deep}
                               style={{ marginRight: 3 }}
                             />
                             <Text style={styles.sectionBadgeText}>
@@ -408,12 +416,12 @@ export const TodaysClassesSection = React.memo(
                         size={11}
                         color={
                           isCancelled
-                            ? "#dc2626"
+                            ? colors.semantic.red.accent
                             : isRoomChange
-                              ? "#b45309"
+                              ? colors.semantic.amber.deep
                               : isOnline
-                                ? "#0284c7"
-                                : "#475569"
+                                ? colors.semantic.sky.accent
+                                : colors.slate600
                         }
                         style={{ marginRight: 5 }}
                       />
@@ -447,7 +455,7 @@ export const TodaysClassesSection = React.memo(
                           <Feather
                             name="external-link"
                             size={9.5}
-                            color="#ffffff"
+                            color={colors.white}
                             style={{ marginRight: 3 }}
                           />
                           <Text style={styles.meetBtnText}>Join</Text>
@@ -467,7 +475,11 @@ export const TodaysClassesSection = React.memo(
                       <Feather
                         name="map-pin"
                         size={11.5}
-                        color={isRoomChange ? "#b45309" : "#0284c7"}
+                        color={
+                          isRoomChange
+                            ? colors.semantic.amber.deep
+                            : colors.semantic.sky.accent
+                        }
                         style={{ marginRight: 4 }}
                       />
                       <Text
@@ -489,7 +501,7 @@ export const TodaysClassesSection = React.memo(
                             : "user"
                         }
                         size={11.5}
-                        color="#475569"
+                        color={colors.slate600}
                         style={{ marginRight: 4 }}
                       />
                       {userRole === "TEACHER" || cls.userRole === "TEACHER" ? (
@@ -565,7 +577,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: FONT_FAMILIES.titleBold,
     fontSize: 19,
-    color: "#131b2e",
+    color: colors.navyDeep,
     fontWeight: "700",
     lineHeight: 24,
     letterSpacing: -0.3,
@@ -573,9 +585,9 @@ const styles = StyleSheet.create({
   liveIndicatorBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fef2f2",
+    backgroundColor: colors.semantic.red.tint,
     borderWidth: 1,
-    borderColor: "#fecaca",
+    borderColor: colors.semantic.red.border,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
@@ -585,12 +597,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     lineHeight: 13,
-    color: "#b91c1c",
+    color: colors.semantic.red.deep,
     letterSpacing: 0.45,
     includeFontPadding: false,
   },
   countPill: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -600,16 +612,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     lineHeight: 13,
-    color: "#475569",
+    color: colors.slate600,
     letterSpacing: 0.45,
     includeFontPadding: false,
   },
   freeDayPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ecfdf5",
+    backgroundColor: colors.semantic.emerald.tint,
     borderWidth: 1,
-    borderColor: "#d1fae5",
+    borderColor: colors.semantic.emerald.border,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -619,7 +631,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     lineHeight: 13,
-    color: "#059669",
+    color: colors.semantic.emerald.accent,
     letterSpacing: 0.45,
     includeFontPadding: false,
   },
@@ -633,7 +645,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 13.5,
     lineHeight: 18,
-    color: "#1e3a8a",
+    color: colors.semantic.blue.deep,
     fontWeight: "700",
   },
 
@@ -646,7 +658,7 @@ const styles = StyleSheet.create({
   skeletonCard: {
     width: 280,
     height: 164,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     borderRadius: 18,
   },
 
@@ -655,29 +667,33 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     paddingVertical: 24,
     paddingHorizontal: 20,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderRadius: 20,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderColor: colors.borderSubtle,
     ...shadows.level1,
   },
   emptyIconBox: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "#ecfdf5",
+    backgroundColor: colors.semantic.emerald.tint,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#d1fae5",
+    borderColor: colors.semantic.emerald.border,
+  },
+  emptyErrorIconBox: {
+    backgroundColor: colors.semantic.red.tint,
+    borderColor: colors.semantic.red.border,
   },
   emptyCardTitle: {
     fontFamily: FONT_FAMILIES.titleBold,
     fontSize: 15.5,
     lineHeight: 21,
-    color: "#131b2e",
+    color: colors.navyDeep,
     fontWeight: "700",
     marginBottom: 4,
     textAlign: "center",
@@ -685,7 +701,7 @@ const styles = StyleSheet.create({
   emptyCardSub: {
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 13,
-    color: "#64748b",
+    color: colors.slate500,
     fontWeight: "500",
     textAlign: "center",
     lineHeight: 19,
@@ -695,9 +711,9 @@ const styles = StyleSheet.create({
   emptyActionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#eff6ff",
+    backgroundColor: colors.semantic.blue.tint,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: colors.semantic.blue.border,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
@@ -706,7 +722,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 13,
     lineHeight: 17,
-    color: "#1e3a8a",
+    color: colors.semantic.blue.deep,
     fontWeight: "700",
   },
 
@@ -718,16 +734,16 @@ const styles = StyleSheet.create({
   },
   classCard: {
     width: 280,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.06)",
+    borderColor: colors.borderCard,
     borderLeftWidth: 4,
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
+        shadowColor: colors.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
@@ -738,12 +754,12 @@ const styles = StyleSheet.create({
     }),
   },
   classCardLive: {
-    backgroundColor: "#fffdfd",
-    borderColor: "rgba(239, 68, 68, 0.25)",
+    backgroundColor: colors.semantic.red.liveSurface,
+    borderColor: colors.semantic.red.alpha25,
   },
   classCardCancelled: {
-    backgroundColor: "#fffafa",
-    borderColor: "rgba(239, 68, 68, 0.25)",
+    backgroundColor: colors.semantic.red.cancelledSurface,
+    borderColor: colors.semantic.red.alpha25,
   },
 
   // Card Header Row
@@ -764,53 +780,53 @@ const styles = StyleSheet.create({
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fef2f2",
+    backgroundColor: colors.semantic.red.tint,
     paddingHorizontal: 6,
     paddingVertical: 2.5,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "#fecaca",
+    borderColor: colors.semantic.red.border,
   },
   liveBadgeText: {
     fontFamily: FONT_FAMILIES.bodyExtraBold,
     fontSize: 10,
     lineHeight: 13,
     fontWeight: "800",
-    color: "#b91c1c",
+    color: colors.semantic.red.deep,
     letterSpacing: 0.4,
     includeFontPadding: false,
   },
   nextBadge: {
-    backgroundColor: "#f0f9ff",
+    backgroundColor: colors.semantic.sky.tint,
     paddingHorizontal: 6,
     paddingVertical: 2.5,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "#bae6fd",
+    borderColor: colors.semantic.sky.border,
   },
   nextBadgeText: {
     fontFamily: FONT_FAMILIES.bodyExtraBold,
     fontSize: 10,
     lineHeight: 13,
     fontWeight: "800",
-    color: "#0369a1",
+    color: colors.semantic.sky.deep,
     letterSpacing: 0.4,
     includeFontPadding: false,
   },
   cancelledBadge: {
-    backgroundColor: "#fef2f2",
+    backgroundColor: colors.semantic.red.tint,
     paddingHorizontal: 6,
     paddingVertical: 2.5,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "#fca5a5",
+    borderColor: colors.semantic.red.borderStrong,
   },
   cancelledBadgeText: {
     fontFamily: FONT_FAMILIES.bodyExtraBold,
     fontSize: 10,
     lineHeight: 13,
     fontWeight: "800",
-    color: "#dc2626",
+    color: colors.semantic.red.accent,
     letterSpacing: 0.4,
     includeFontPadding: false,
   },
@@ -830,19 +846,19 @@ const styles = StyleSheet.create({
   durationChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     paddingHorizontal: 6,
     paddingVertical: 2.5,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: colors.slate100,
   },
   durationText: {
     fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 10.5,
     lineHeight: 14,
     fontWeight: "600",
-    color: BENTO_COLORS.subtleText,
+    color: colors.slate500,
     fontVariant: ["tabular-nums"],
     includeFontPadding: false,
   },
@@ -858,7 +874,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     fontWeight: "800",
-    color: BENTO_COLORS.deepNavy,
+    color: colors.navyDeep,
     fontVariant: ["tabular-nums"],
   },
   timeSeparatorText: {
@@ -866,7 +882,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: colors.slate400,
     marginHorizontal: 5,
   },
   timeSecondaryText: {
@@ -874,17 +890,17 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 18,
     fontWeight: "600",
-    color: "#475569",
+    color: colors.slate600,
     fontVariant: ["tabular-nums"],
   },
   timeStrikethrough: {
     textDecorationLine: "line-through",
-    color: "#94a3b8",
+    color: colors.slate400,
   },
   rescheduledBadge: {
-    backgroundColor: "#f5f3ff",
+    backgroundColor: colors.semantic.violet.tint,
     borderWidth: 1,
-    borderColor: "#ddd6fe",
+    borderColor: colors.semantic.violet.border,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -895,7 +911,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     fontWeight: "800",
-    color: "#6d28d9",
+    color: colors.semantic.violet.deep,
     includeFontPadding: false,
   },
 
@@ -912,7 +928,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.titleBold,
     fontSize: 15.5,
     fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
+    color: colors.navyDeep,
     lineHeight: 21,
     letterSpacing: -0.2,
     flexShrink: 1,
@@ -930,9 +946,9 @@ const styles = StyleSheet.create({
   semesterBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f9ff",
+    backgroundColor: colors.semantic.sky.tint,
     borderWidth: 1,
-    borderColor: "#bae6fd",
+    borderColor: colors.semantic.sky.border,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
@@ -942,7 +958,7 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     lineHeight: 14,
     fontWeight: "800",
-    color: "#0284c7",
+    color: colors.semantic.sky.accent,
     letterSpacing: 0.2,
     includeFontPadding: false,
   },
@@ -951,7 +967,7 @@ const styles = StyleSheet.create({
     fontSize: 7.5,
     lineHeight: 9,
     fontWeight: "800",
-    color: "#0284c7",
+    color: colors.semantic.sky.accent,
     marginLeft: 0.5,
     marginRight: 2.5,
     includeFontPadding: false,
@@ -959,9 +975,9 @@ const styles = StyleSheet.create({
   sectionBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f5f3ff",
+    backgroundColor: colors.semantic.violet.tint,
     borderWidth: 1,
-    borderColor: "#ddd6fe",
+    borderColor: colors.semantic.violet.border,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
@@ -971,7 +987,7 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     lineHeight: 14,
     fontWeight: "800",
-    color: "#6d28d9",
+    color: colors.semantic.violet.deep,
     letterSpacing: 0.25,
     includeFontPadding: false,
   },
@@ -980,47 +996,47 @@ const styles = StyleSheet.create({
   noticeBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 5,
     marginBottom: 10,
   },
   noticeBannerCancelled: {
-    backgroundColor: "#fef2f2",
-    borderColor: "#fecaca",
+    backgroundColor: colors.semantic.red.tint,
+    borderColor: colors.semantic.red.border,
   },
   noticeBannerRoom: {
-    backgroundColor: "#fffbeb",
-    borderColor: "#fde68a",
+    backgroundColor: colors.semantic.amber.tint,
+    borderColor: colors.semantic.amber.border,
   },
   noticeBannerOnline: {
-    backgroundColor: "#f0f9ff",
-    borderColor: "#bae6fd",
+    backgroundColor: colors.semantic.sky.tint,
+    borderColor: colors.semantic.sky.border,
   },
   noticeBannerText: {
     fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 11,
     lineHeight: 15,
     fontWeight: "700",
-    color: "#475569",
+    color: colors.slate600,
     flex: 1,
   },
   noticeTextCancelled: {
-    color: "#dc2626",
+    color: colors.semantic.red.accent,
   },
   noticeTextRoom: {
-    color: "#b45309",
+    color: colors.semantic.amber.deep,
   },
   noticeTextOnline: {
-    color: "#0284c7",
+    color: colors.semantic.sky.accent,
   },
   meetBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0284c7",
+    backgroundColor: colors.semantic.sky.accent,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 5,
@@ -1031,7 +1047,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     fontWeight: "800",
-    color: "#ffffff",
+    color: colors.white,
     includeFontPadding: false,
   },
 
@@ -1042,15 +1058,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.05)",
+    borderTopColor: colors.borderSubtle,
     paddingTop: 10,
   },
   roomPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f9ff",
+    backgroundColor: colors.semantic.sky.tint,
     borderWidth: 1,
-    borderColor: "#e0f2fe",
+    borderColor: colors.semantic.sky.soft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 7,
@@ -1058,26 +1074,26 @@ const styles = StyleSheet.create({
     maxWidth: "48%",
   },
   roomPillChanged: {
-    backgroundColor: "#fffbeb",
-    borderColor: "#fde68a",
+    backgroundColor: colors.semantic.amber.tint,
+    borderColor: colors.semantic.amber.border,
   },
   roomPillText: {
     fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 11,
     lineHeight: 15,
     fontWeight: "700",
-    color: "#0284c7",
+    color: colors.semantic.sky.accent,
     includeFontPadding: false,
   },
   roomPillTextChanged: {
-    color: "#b45309",
+    color: colors.semantic.amber.deep,
   },
   teacherPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: colors.slate100,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 7,
@@ -1095,7 +1111,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     fontWeight: "700",
-    color: "#475569",
+    color: colors.slate600,
     includeFontPadding: false,
   },
   teacherPillSupText: {
@@ -1103,7 +1119,7 @@ const styles = StyleSheet.create({
     fontSize: 7.5,
     lineHeight: 9,
     fontWeight: "700",
-    color: "#475569",
+    color: colors.slate600,
     marginLeft: 0.5,
     marginRight: 2.5,
     includeFontPadding: false,

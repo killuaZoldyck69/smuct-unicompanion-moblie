@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { getWeatherDetails, formatHour } from "@/hooks/use-weather-forecast";
 import { shadows } from "@/theme/layout";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 
 interface WeatherWidgetProps {
   weather: any;
@@ -34,7 +35,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
             <Feather
               name={currentWeatherDetails.icon as any}
               size={24}
-              color="#0284c7"
+              color={colors.semantic.sky.accent}
             />
           </View>
         </View>
@@ -72,7 +73,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
             <Feather
               name={getWeatherDetails(hour.code).icon as any}
               size={18}
-              color="#ffffff"
+              color={colors.white}
             />
             <Text style={styles.weatherSmallTemp}>
               {Math.round(hour.temp)}°
@@ -86,7 +87,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 
 const styles = StyleSheet.create({
   weatherWidget: {
-    backgroundColor: "#131b2e",
+    backgroundColor: colors.navyDeep,
     marginHorizontal: 20,
     borderRadius: 18,
     paddingVertical: 16,
@@ -103,13 +104,13 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.titleExtraBold,
     fontSize: 42,
     fontWeight: "800",
-    color: "#ffffff",
+    color: colors.white,
     lineHeight: 48,
     letterSpacing: -1,
     fontVariant: ["tabular-nums"],
   },
   weatherIconBlock: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     width: 48,
     height: 48,
     borderRadius: 14,
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 14.5,
     lineHeight: 19,
-    color: "#ffffff",
+    color: colors.white,
     fontWeight: "700",
     marginBottom: 2,
   },
@@ -129,13 +130,13 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 12,
     lineHeight: 16,
-    color: "#cbd5e1",
+    color: colors.slate300,
     fontWeight: "500",
     fontVariant: ["tabular-nums"],
   },
   weatherDivider: {
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.whiteAlpha10,
     marginVertical: 14,
   },
   weatherScroll: { gap: 18, paddingRight: 12 },
@@ -144,14 +145,14 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.bodySemiBold,
     fontSize: 11.5,
     lineHeight: 15,
-    color: "#cbd5e1",
+    color: colors.slate300,
     fontWeight: "600",
   },
   weatherSmallTemp: {
     fontFamily: FONT_FAMILIES.bodyBold,
     fontSize: 14,
     lineHeight: 18,
-    color: "#ffffff",
+    color: colors.white,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },

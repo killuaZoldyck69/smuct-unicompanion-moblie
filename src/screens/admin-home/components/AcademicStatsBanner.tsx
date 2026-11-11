@@ -11,6 +11,7 @@ import {
   DEPARTMENT_SHORT_NAMES,
 } from "@/data/programs";
 import { FONT_FAMILIES } from "@/theme/typography";
+import { colors } from "@/theme/colors";
 
 const CAMPUS_BG = require("@/assets/login-screen-bg.png");
 
@@ -85,15 +86,15 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 15,
     fontWeight: "800",
-    color: "#64748B",
+    color: colors.slate500,
     letterSpacing: 0.85,
     marginBottom: 12,
   },
   cardWrapper: {
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: "#0F172A",
-    shadowColor: "#0F172A",
+    backgroundColor: colors.navyInk,
+    shadowColor: colors.navyInk,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 10,
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   overlay: {
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    backgroundColor: colors.scrimDark,
     paddingVertical: 18,
     paddingHorizontal: 12,
     borderRadius: 20,
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontFamily: FONT_FAMILIES.bodyBold,
-    color: "#FFFFFF",
+    color: colors.white,
     fontSize: 11,
     lineHeight: 14,
     fontWeight: "700",
@@ -134,12 +135,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     ...Platform.select({
       ios: {
-        textShadowColor: "rgba(0, 0, 0, 0.7)",
+        textShadowColor: colors.textShadowDark,
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 3,
       },
       android: {
-        textShadowColor: "rgba(0, 0, 0, 0.7)",
+        textShadowColor: colors.textShadowDark,
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 3,
       },
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: FONT_FAMILIES.titleExtraBold,
-    color: "#FFFFFF",
+    color: colors.white,
     fontSize: 30,
     lineHeight: 34,
     fontWeight: "800",
@@ -156,12 +157,12 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     ...Platform.select({
       ios: {
-        textShadowColor: "rgba(0, 0, 0, 0.7)",
+        textShadowColor: colors.textShadowDark,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
       },
       android: {
-        textShadowColor: "rgba(0, 0, 0, 0.7)",
+        textShadowColor: colors.textShadowDark,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
       },
