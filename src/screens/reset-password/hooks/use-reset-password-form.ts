@@ -3,6 +3,7 @@ import { Keyboard } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import { authClient } from "@/services/auth-client";
 import { validatePassword } from "@/utils/password-validator";
 import { OTP_LENGTH, RESEND_COOLDOWN_SECONDS } from "../constants";
@@ -10,6 +11,7 @@ import { ResetPasswordState } from "../types";
 
 export function useResetPasswordForm(): ResetPasswordState {
   const router = useRouter();
+  const { isOnline } = useNetworkStatus();
   const params = useLocalSearchParams<{ email?: string; token?: string }>();
 
   const rawEmail = params.email;
@@ -61,6 +63,16 @@ export function useResetPasswordForm(): ResetPasswordState {
   // 2. Handle Password Reset
   const handleResetPassword = useCallback(async () => {
     Keyboard.dismiss();
+
+    if (!isOnline) {
+      Toast.show({
+        type: "error",
+        text1: "No Internet Connection",
+        text2: "Please connect to the internet before resetting your password.",
+      });
+      return;
+    }
+
     const code = otp.join("").trim();
 
     if (!email) {
@@ -147,11 +159,21 @@ export function useResetPasswordForm(): ResetPasswordState {
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, otp, newPassword, confirmPassword, router]);
+  }, [email, isOnline, otp, newPassword, confirmPassword, router]);
 
   // 3. Handle Resending Reset Code (Max 3 attempts per 15 minutes)
   const handleResend = useCallback(async () => {
     Keyboard.dismiss();
+
+    if (!isOnline) {
+      Toast.show({
+        type: "error",
+        text1: "No Internet Connection",
+        text2: "Please connect to the internet before requesting a new code.",
+      });
+      return;
+    }
+
     if (!email) {
       Toast.show({
         type: "error",
@@ -203,7 +225,7 @@ export function useResetPasswordForm(): ResetPasswordState {
     } finally {
       setIsResending(false);
     }
-  }, [email, clearOtp, resendAttempts]);
+  }, [email, clearOtp, isOnline, resendAttempts]);
 
   const handleBack = useCallback(() => {
     Keyboard.dismiss();

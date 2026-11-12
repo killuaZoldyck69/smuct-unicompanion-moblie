@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { OtpInputGroup } from "./otp-input-group";
 import {
   VERIFY_EMAIL_COLORS,
@@ -145,22 +144,22 @@ export function VerifyEmailCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: VERIFY_EMAIL_COLORS.cardBg,
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 24,
     width: "100%",
-    shadowColor: "#000",
+    shadowColor: VERIFY_EMAIL_COLORS.navyDark,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.05,
     shadowRadius: 16,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "rgba(226, 232, 240, 0.75)",
+    borderColor: VERIFY_EMAIL_COLORS.borderLight,
   },
   submitButton: {
-    backgroundColor: "#131B2E",
+    backgroundColor: VERIFY_EMAIL_COLORS.navyDark,
     borderRadius: 28,
     height: 52,
     alignItems: "center",
@@ -168,14 +167,14 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 6,
     marginBottom: 20,
-    shadowColor: "#131B2E",
+    shadowColor: VERIFY_EMAIL_COLORS.navyDark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
   },
   submitButtonIncomplete: {
-    backgroundColor: "#131B2E",
+    backgroundColor: VERIFY_EMAIL_COLORS.navyDark,
     opacity: 0.88,
   },
   buttonContent: {
@@ -184,7 +183,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   submitButtonText: {
-    color: "#ffffff",
+    color: VERIFY_EMAIL_COLORS.cardBg,
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.2,
@@ -200,7 +199,7 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: "#374151",
+    color: VERIFY_EMAIL_COLORS.navyLight,
     fontWeight: "400",
   },
   resendCountdownRow: {
@@ -209,18 +208,18 @@ const styles = StyleSheet.create({
   },
   resendActionActive: {
     fontSize: 14,
-    color: "#1D4ED8",
+    color: VERIFY_EMAIL_COLORS.brandBlue,
     fontWeight: "600",
     textDecorationLine: "underline",
   },
   resendActionMuted: {
     fontSize: 14,
-    color: "#1D4ED8",
+    color: VERIFY_EMAIL_COLORS.brandBlue,
     fontWeight: "600",
   },
   resendTimerText: {
     fontSize: 14,
-    color: "#374151",
+    color: VERIFY_EMAIL_COLORS.navyLight,
     fontWeight: "400",
   },
   resendSpinner: {
@@ -234,12 +233,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: "#6B7280",
+    color: VERIFY_EMAIL_COLORS.textMuted,
     fontWeight: "400",
   },
   linkText: {
     fontSize: 13,
-    color: "#6B7280",
+    color: VERIFY_EMAIL_COLORS.textMuted,
     fontWeight: "500",
     textDecorationLine: "underline",
   },

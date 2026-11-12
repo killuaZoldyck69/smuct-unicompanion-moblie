@@ -21,7 +21,7 @@ import {
   formatTimeDisplay,
 } from "@/screens/schedule/utils";
 import { LiveBeepDot } from "@/screens/schedule/components/live-beep-indicator";
-import { UserRole } from "@/types/auth";
+import { UserRole } from "@/features/auth/types";
 import { colors } from "@/theme/colors";
 import { shadows } from "@/theme/layout";
 import { FONT_FAMILIES } from "@/theme/typography";

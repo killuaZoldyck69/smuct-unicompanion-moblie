@@ -5,7 +5,7 @@ import {
   getStoredSessionData,
   setStoredSessionData,
 } from "../services/session-storage";
-import { UserRole, User } from "../types/auth";
+import { UserRole, User } from "@/features/auth/types";
 
 export interface CurrentUserResult {
   user: User | null;

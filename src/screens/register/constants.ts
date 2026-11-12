@@ -1,3 +1,5 @@
+import { colors } from "@/theme/colors";
+
 export const REGISTER_STRINGS = {
   TITLE: "Create your account",
   SUBTITLE: "Join your university campus community.",
@@ -8,51 +10,52 @@ export const REGISTER_STRINGS = {
   BUTTON_TEXT: "Create Account",
   ALREADY_ACCOUNT: "Already have an account? ",
   SIGN_IN: "Login",
+  PRIVACY_POLICY: "Privacy Policy",
 };
 
 export const REGISTER_COLORS = {
-  background: "#FAFCFF",
-  titleText: "#0D1E42",
-  subtitleText: "#5A6B82",
+  background: colors.auth.background,
+  titleText: colors.auth.titleText,
+  subtitleText: colors.auth.subtitleText,
 
   // Card & inputs
-  cardBackground: "#FFFFFF",
-  cardBorder: "#F1F5F9",
-  inputBorder: "#E2E8F0",
-  inputBorderFocused: "#0D9488",
-  inputPlaceholder: "#76777D",
-  inputText: "#0D1E42",
-  iconMuted: "#64748B",
-  iconFocused: "#0D9488",
+  cardBackground: colors.white,
+  cardBorder: colors.auth.cardBorder,
+  inputBorder: colors.auth.inputBorder,
+  inputBorderFocused: colors.auth.tealPrimary,
+  inputPlaceholder: colors.auth.inputPlaceholder,
+  inputText: colors.auth.titleText,
+  iconMuted: colors.slate500,
+  iconFocused: colors.auth.tealPrimary,
 
   // Primary action button (emerald/teal)
-  primaryButton: "#0D9488",
-  primaryButtonHover: "#0F766E",
-  primaryButtonText: "#FFFFFF",
-  accentBlue: "#2563EB",
+  primaryButton: colors.auth.tealPrimary,
+  primaryButtonHover: colors.auth.tealHover,
+  primaryButtonText: colors.white,
+  accentBlue: colors.auth.accentBlue,
 
   // Floating Hero Badges & Dots
-  badgeHatBg: "#FEF3C7",
-  badgeHatBorder: "rgba(245, 158, 11, 0.25)",
-  badgeHatIcon: "#0D9488",
+  badgeHatBg: colors.auth.badgeHatAmberBg,
+  badgeHatBorder: colors.auth.badgeHatAmberBorder,
+  badgeHatIcon: colors.auth.tealPrimary,
 
-  badgeBookBg: "#DCFCE7",
-  badgeBookBorder: "rgba(16, 185, 129, 0.25)",
-  badgeBookIcon: "#059669",
+  badgeBookBg: colors.auth.cornerGreen,
+  badgeBookBorder: colors.auth.badgeBookBorder,
+  badgeBookIcon: colors.auth.badgeBookIcon,
 
-  dotMint: "#A7F3D0",
-  dotGreen: "#6EE7B7",
-  dotSun: "#FDE047",
-  dotPurple: "#C084FC",
+  dotMint: colors.auth.dotMint,
+  dotGreen: colors.auth.dotGreenAlt,
+  dotSun: colors.auth.dotSun,
+  dotPurple: colors.auth.dotPurple,
 
   // Corner decorations & sprout motif
-  cornerPurple: "#EDE9FE",
-  cornerYellow: "#FEF08A",
-  cornerBlue: "#DDF0FF",
-  sproutLeaf: "#10B981",
-  sproutStem: "#059669",
+  cornerPurple: colors.auth.cornerPurple,
+  cornerYellow: colors.auth.cornerYellow,
+  cornerBlue: colors.auth.cornerBlue,
+  sproutLeaf: colors.auth.sproutLeaf,
+  sproutStem: colors.auth.sproutStem,
 
   // Bottom stage dots
-  dotActive: "#0D9488",
-  dotInactive: "#BAE6FD",
+  dotActive: colors.auth.tealPrimary,
+  dotInactive: colors.auth.dotInactive,
 };

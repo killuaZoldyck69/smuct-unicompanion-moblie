@@ -12,6 +12,7 @@ export function useNetworkStatus() {
 
   return {
     isOffline,
+    isOnline: !isOffline,
     networkState,
   };
 }

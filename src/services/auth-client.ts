@@ -4,6 +4,7 @@ import { emailOTPClient } from "better-auth/client/plugins";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import { API_BASE_URL } from "./api-config";
+import { getStoredSessionToken, setStoredSessionToken } from "./session-storage";
 
 const AUTH_URL = `${API_BASE_URL}/api/auth`;
 
@@ -33,23 +34,7 @@ export const authClient = createAuthClient({
     headers:
       Platform.OS !== "web" ? { Origin: "smuct-unicompanion://" } : undefined,
     onRequest: async (context) => {
-      let token: string | null = null;
-      if (Platform.OS === "web") {
-        token = typeof localStorage !== "undefined" ? localStorage.getItem("better-auth.session_token") : null;
-      } else {
-        token = await SecureStore.getItemAsync("better-auth.session_token");
-        if (!token) {
-          const cookieJson = await SecureStore.getItemAsync("better-auth_cookie");
-          if (cookieJson) {
-            try {
-              const parsed = JSON.parse(cookieJson);
-              token =
-                parsed["better-auth.session_token"]?.value ||
-                parsed["__Secure-better-auth.session_token"]?.value;
-            } catch {}
-          }
-        }
-      }
+      const token = await getStoredSessionToken();
 
       if (token) {
         context.headers.set("Authorization", `Bearer ${token}`);
@@ -67,22 +52,7 @@ export const authClient = createAuthClient({
         (context.data as any)?.token ||
         (context.data as any)?.session?.token;
       if (rawToken) {
-        if (Platform.OS === "web") {
-          if (typeof localStorage !== "undefined") {
-            localStorage.setItem("better-auth.session_token", rawToken);
-          }
-        } else {
-          await SecureStore.setItemAsync("better-auth.session_token", rawToken);
-          const cookiePayload = JSON.stringify({
-            "better-auth.session_token": {
-              value: rawToken,
-              expires: new Date(
-                Date.now() + 30 * 24 * 60 * 60 * 1000,
-              ).toISOString(),
-            },
-          });
-          await SecureStore.setItemAsync("better-auth_cookie", cookiePayload);
-        }
+        await setStoredSessionToken(String(rawToken));
       }
     },
   },

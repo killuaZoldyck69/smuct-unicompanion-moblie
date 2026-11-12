@@ -92,7 +92,7 @@ export function VerifyEmail() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: VERIFY_EMAIL_COLORS.screenBg,
   },
   keyboardContainer: {
     flex: 1,
@@ -114,28 +114,28 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#131B2E",
+    color: VERIFY_EMAIL_COLORS.navyDark,
     textAlign: "center",
     letterSpacing: -0.5,
     marginBottom: 12,
   },
   subtitleSentence: {
     fontSize: 15,
-    color: "#1F2937",
+    color: VERIFY_EMAIL_COLORS.navyMedium,
     textAlign: "center",
     lineHeight: 22,
     fontWeight: "400",
   },
   emailHighlighted: {
     fontSize: 15,
-    color: "#111827",
+    color: VERIFY_EMAIL_COLORS.navyDark,
     fontWeight: "700",
     textAlign: "center",
     lineHeight: 22,
   },
   instructionSentence: {
     fontSize: 14,
-    color: "#1F2937",
+    color: VERIFY_EMAIL_COLORS.navyMedium,
     textAlign: "center",
     lineHeight: 20,
     marginTop: 12,

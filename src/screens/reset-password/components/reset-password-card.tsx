@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { OtpInputGroup } from "@/screens/verify-email/components/otp-input-group";
 import {
   RESET_PASSWORD_COLORS,
@@ -373,24 +374,24 @@ export function ResetPasswordCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: RESET_PASSWORD_COLORS.cardBg,
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 20,
     width: "100%",
-    shadowColor: "#000",
+    shadowColor: RESET_PASSWORD_COLORS.navyDark,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.05,
     shadowRadius: 16,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "rgba(226, 232, 240, 0.75)",
+    borderColor: RESET_PASSWORD_COLORS.borderLight,
   },
   fieldLabel: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1F2937",
+    color: RESET_PASSWORD_COLORS.navyMedium,
     marginBottom: 6,
     marginTop: 4,
   },
@@ -403,18 +404,18 @@ const styles = StyleSheet.create({
   },
   resendPrefix: {
     fontSize: 12.5,
-    color: "#4B5563",
+    color: RESET_PASSWORD_COLORS.textSecondary,
     fontWeight: "400",
   },
   resendActionActive: {
     fontSize: 12.5,
-    color: "#1D4ED8",
+    color: RESET_PASSWORD_COLORS.brandBlue,
     fontWeight: "700",
     textDecorationLine: "underline",
   },
   resendTimerText: {
     fontSize: 12.5,
-    color: "#3B82F6",
+    color: RESET_PASSWORD_COLORS.brandBlueLight,
     fontWeight: "600",
   },
   resendSpinner: {
@@ -423,18 +424,18 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: RESET_PASSWORD_COLORS.inputBg,
     borderWidth: 1.5,
-    borderColor: "#D3DFEE",
+    borderColor: RESET_PASSWORD_COLORS.borderLight,
     borderRadius: 14,
     height: 50,
     paddingHorizontal: 14,
     marginBottom: 14,
   },
   inputContainerFocused: {
-    borderColor: "#1E293B",
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
+    borderColor: RESET_PASSWORD_COLORS.navyMedium,
+    backgroundColor: RESET_PASSWORD_COLORS.cardBg,
+    shadowColor: RESET_PASSWORD_COLORS.navyDark,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 14.5,
-    color: "#111827",
+    color: RESET_PASSWORD_COLORS.navyDark,
     fontWeight: "500",
     height: "100%",
   },
@@ -457,12 +458,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   criteriaContainer: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: RESET_PASSWORD_COLORS.inputBg,
     borderRadius: 14,
     padding: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.slate200,
   },
   criteriaHeaderRow: {
     flexDirection: "row",
@@ -474,14 +475,14 @@ const styles = StyleSheet.create({
   criteriaHeaderTitle: {
     fontSize: 11.5,
     fontWeight: "700",
-    color: "#64748B",
+    color: RESET_PASSWORD_COLORS.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
   strongBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.semantic.emerald.soft,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
   strongBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#059669",
+    color: colors.semantic.emerald.accent,
   },
   criteriaGrid: {
     flexDirection: "row",
@@ -500,29 +501,29 @@ const styles = StyleSheet.create({
   criteriaChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: RESET_PASSWORD_COLORS.cardBg,
     paddingHorizontal: 8,
     paddingVertical: 4.5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.slate200,
     gap: 4.5,
   },
   criteriaChipMet: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#A7F3D0",
+    backgroundColor: colors.semantic.emerald.tint,
+    borderColor: colors.semantic.emerald.mintBorderStrong,
   },
   criteriaChipText: {
     fontSize: 11,
     fontWeight: "500",
-    color: "#64748B",
+    color: RESET_PASSWORD_COLORS.textMuted,
   },
   criteriaChipTextMet: {
-    color: "#065F46",
+    color: colors.semantic.emerald.darkText,
     fontWeight: "700",
   },
   submitButton: {
-    backgroundColor: "#131B2E",
+    backgroundColor: RESET_PASSWORD_COLORS.navyDark,
     borderRadius: 28,
     height: 52,
     alignItems: "center",
@@ -530,14 +531,14 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 8,
     marginBottom: 16,
-    shadowColor: "#131B2E",
+    shadowColor: RESET_PASSWORD_COLORS.navyDark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
   },
   submitButtonIncomplete: {
-    backgroundColor: "#131B2E",
+    backgroundColor: RESET_PASSWORD_COLORS.navyDark,
     opacity: 0.88,
   },
   buttonContent: {
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   submitButtonText: {
-    color: "#ffffff",
+    color: RESET_PASSWORD_COLORS.cardBg,
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.2,
@@ -561,7 +562,7 @@ const styles = StyleSheet.create({
   },
   backToSignInText: {
     fontSize: 14,
-    color: "#1D4ED8",
+    color: RESET_PASSWORD_COLORS.brandBlue,
     fontWeight: "600",
     textDecorationLine: "underline",
   },

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { REGISTER_COLORS, REGISTER_STRINGS } from "../constants";
 import { RegisterFormState } from "../types";
 import { getPasswordCriteria } from "@/utils/password-validator";
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: REGISTER_COLORS.cardBorder,
     padding: 20,
-    shadowColor: "#0D1E42",
+    shadowColor: REGISTER_COLORS.titleText,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
     shadowRadius: 18,
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.2,
     borderColor: REGISTER_COLORS.inputBorder,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: REGISTER_COLORS.cardBackground,
     paddingHorizontal: 16,
     marginBottom: 14,
   },
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
-    shadowColor: "#0F224A",
+    shadowColor: colors.auth.primaryNavy,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 14,
@@ -439,12 +440,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   criteriaContainer: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colors.slate50,
     borderRadius: 14,
     padding: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.slate200,
   },
   criteriaHeaderRow: {
     flexDirection: "row",
@@ -456,14 +457,14 @@ const styles = StyleSheet.create({
   criteriaHeaderTitle: {
     fontSize: 11.5,
     fontWeight: "700",
-    color: "#64748B",
+    color: colors.slate500,
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
   strongBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.semantic.emerald.soft,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
   strongBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#059669",
+    color: colors.semantic.emerald.accent,
   },
   criteriaGrid: {
     flexDirection: "row",
@@ -482,25 +483,25 @@ const styles = StyleSheet.create({
   criteriaChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.white,
     paddingHorizontal: 8,
     paddingVertical: 4.5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.slate200,
     gap: 4.5,
   },
   criteriaChipMet: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#A7F3D0",
+    backgroundColor: colors.semantic.emerald.tint,
+    borderColor: colors.semantic.emerald.mintBorderStrong,
   },
   criteriaChipText: {
     fontSize: 11,
     fontWeight: "500",
-    color: "#64748B",
+    color: colors.slate500,
   },
   criteriaChipTextMet: {
-    color: "#065F46",
+    color: colors.semantic.emerald.darkText,
     fontWeight: "700",
   },
 });

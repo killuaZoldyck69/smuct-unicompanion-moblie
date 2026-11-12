@@ -3,6 +3,7 @@ import { TextInput, Keyboard } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import { authClient } from "@/services/auth-client";
 import { validatePassword } from "@/utils/password-validator";
 import { RegisterFormState } from "../types";
@@ -14,6 +15,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export function useRegisterForm(): RegisterFormState {
   const router = useRouter();
+  const { isOnline } = useNetworkStatus();
   const params = useLocalSearchParams<{ email?: string }>();
   const initialEmail = Array.isArray(params.email) ? params.email[0] : params.email || "";
 
@@ -37,8 +39,8 @@ export function useRegisterForm(): RegisterFormState {
   const confirmPasswordInputRef = useRef<TextInput | null>(null);
 
   useEffect(() => {
-    if (initialEmail && !email) {
-      setEmail(initialEmail);
+    if (initialEmail) {
+      setEmail((prev: string) => prev || initialEmail);
     }
   }, [initialEmail]);
 
@@ -50,6 +52,15 @@ export function useRegisterForm(): RegisterFormState {
 
   const handleRegister = useCallback(async () => {
     Keyboard.dismiss();
+
+    if (!isOnline) {
+      Toast.show({
+        type: "error",
+        text1: "No Internet Connection",
+        text2: "Please connect to the internet before creating an account.",
+      });
+      return;
+    }
 
     const trimmedName = fullName.trim();
     const trimmedEmail = email.trim();
@@ -146,7 +157,7 @@ export function useRegisterForm(): RegisterFormState {
     } finally {
       setIsSubmitting(false);
     }
-  }, [fullName, email, password, confirmPassword, router]);
+  }, [fullName, email, isOnline, password, confirmPassword, router]);
 
   return {
     fullName,

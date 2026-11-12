@@ -1,65 +1,134 @@
 import { useEffect, useRef, useCallback, useState } from "react";
-import { Platform } from "react-native";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { authClient } from "@/services/auth-client";
+import { getStudentProfile } from "@/services/student-service";
+import {
+  clearStoredAuthSession,
+  getStoredOnboardingState,
+  getStoredSessionData,
+  getStoredSessionToken,
+  setStoredOnboardingState,
+  setStoredSessionData,
+} from "@/services/session-storage";
+import {
+  RemoteSessionCheckResult,
+  SplashRouteDecision,
+  StudentProfileCheckStatus,
+  resolveSplashRoute,
+} from "@/features/auth/auth-routing-logic";
 import { SplashFlowResult } from "../types";
+
+function isSessionNetworkError(err: any): boolean {
+  if (!err) return false;
+  const status = err?.status ?? err?.response?.status;
+  if (typeof status === "number" && status > 0) {
+    return status >= 500;
+  }
+  const msg = String(err?.message || err?.statusText || "").toLowerCase();
+  return (
+    msg.includes("network") ||
+    msg.includes("fetch") ||
+    msg.includes("offline") ||
+    msg.includes("timeout") ||
+    msg.includes("failed to connect") ||
+    status === 0 ||
+    status === undefined
+  );
+}
 
 /**
  * Decoupled hook managing splash screen session verification,
- * the 3-second completion trigger, and secure routing.
+ * onboarding status enforcement, and secure routing (Mobile-19, Mobile-20).
  */
 export function useSplashFlow(): SplashFlowResult {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
-  // References to track state across async boundaries safely
   const isMountedRef = useRef(true);
   const hasNavigatedRef = useRef(false);
-  const authStatusRef = useRef<boolean | null>(null);
+  const destinationRef = useRef<SplashRouteDecision["destination"]>("/(auth)/login");
 
-  // Concurrently resolve authentication status in background during splash duration
   useEffect(() => {
     isMountedRef.current = true;
 
     async function checkAuthStatus() {
-      try {
-        // 1. Direct Better Auth session verification
-        const sessionRes = await authClient.getSession();
-        if (sessionRes?.data?.user) {
-          authStatusRef.current = true;
-          return;
-        }
-      } catch {
-        // Fallback to secure cache if network is slow/offline
-      }
+      const [storedToken, storedSession, storedOnboarded] = await Promise.all([
+        getStoredSessionToken(),
+        getStoredSessionData<{ user?: any; session?: any }>(),
+        getStoredOnboardingState(),
+      ]);
 
-      // 2. Fallback: check cached session data
+      const cachedSession = {
+        hasToken: Boolean(storedToken || storedSession?.user),
+        user: storedSession?.user ?? null,
+        onboarded: storedOnboarded,
+      };
+
+      let sessionCheck: RemoteSessionCheckResult = { status: "unauthenticated" };
+      let studentProfileCheck: StudentProfileCheckStatus = "not_applicable";
+
       try {
-        if (Platform.OS === "web") {
-          if (typeof localStorage !== "undefined") {
-            const cached = localStorage.getItem("better-auth_session_data");
-            const token = localStorage.getItem("better-auth.session_token");
-            if (cached || token) {
-              authStatusRef.current = true;
-              return;
+        const sessionRes = await authClient.getSession();
+        const remoteUser = sessionRes?.data?.user as any;
+
+        if (remoteUser) {
+          sessionCheck = {
+            status: "authenticated",
+            user: {
+              id: remoteUser.id,
+              role: remoteUser.role,
+              emailVerified: remoteUser.emailVerified,
+              isRestricted: remoteUser.isRestricted,
+            },
+          };
+
+          await setStoredSessionData({
+            user: remoteUser,
+            session: sessionRes?.data?.session,
+          });
+
+          const role = String(remoteUser.role || "STUDENT").toUpperCase();
+          if (
+            role === "STUDENT" &&
+            remoteUser.emailVerified !== false &&
+            !remoteUser.isRestricted
+          ) {
+            try {
+              const profileRes = await getStudentProfile();
+              studentProfileCheck = profileRes ? "exists" : "not_found";
+            } catch (profileErr: any) {
+              const status = profileErr?.response?.status;
+              if (status === 404) {
+                studentProfileCheck = "not_found";
+              } else if (status === 401 || status === 403) {
+                studentProfileCheck = "unauthorized";
+              } else {
+                studentProfileCheck = "transient_error";
+              }
             }
           }
+        } else if (sessionRes?.error && isSessionNetworkError(sessionRes.error)) {
+          sessionCheck = { status: "network_error" };
         } else {
-          const [cached, token] = await Promise.all([
-            SecureStore.getItemAsync("better-auth_session_data"),
-            SecureStore.getItemAsync("better-auth.session_token"),
-          ]);
-          if (cached || token) {
-            authStatusRef.current = true;
-            return;
-          }
+          sessionCheck = { status: "unauthenticated" };
         }
       } catch {
-        // Fallback default
+        sessionCheck = { status: "network_error" };
       }
 
-      authStatusRef.current = false;
+      const decision = resolveSplashRoute({
+        sessionCheck,
+        studentProfileCheck,
+        cachedSession,
+      });
+
+      if (decision.shouldClearSession) {
+        await clearStoredAuthSession();
+      } else if (typeof decision.onboardedStateToPersist === "boolean") {
+        await setStoredOnboardingState(decision.onboardedStateToPersist);
+      }
+
+      destinationRef.current = decision.destination;
     }
 
     checkAuthStatus();
@@ -77,13 +146,7 @@ export function useSplashFlow(): SplashFlowResult {
       setIsLoading(false);
     }
 
-    const isAuthenticated = authStatusRef.current === true;
-
-    if (isAuthenticated) {
-      router.replace("/(tabs)");
-    } else {
-      router.replace("/(auth)/login");
-    }
+    router.replace(destinationRef.current);
   }, [router]);
 
   const handleLoadingComplete = useCallback(() => {

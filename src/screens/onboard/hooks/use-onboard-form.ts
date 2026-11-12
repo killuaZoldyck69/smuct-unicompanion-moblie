@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
 
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import {
-  onboardStudentAPI,
-  updateInitialProfileImageAPI,
-} from "@/services/auth-service";
-import { updateStudentProfile } from "@/services/student-service";
+  useOnboardStudent,
+  useUpdateInitialProfileImage,
+} from "@/features/auth/useAuth";
+import { setStoredOnboardingState } from "@/services/session-storage";
 import type {
   AcademicProgram,
   OnboardFormData,
@@ -16,8 +18,14 @@ import type {
 } from "../types";
 import { sanitizeOnboardForm, parseOnboardApiError } from "../utils";
 
+const MAX_AVATAR_BYTES = 3 * 1024 * 1024; // 3 MB
+const COMPRESS_QUALITY = 0.65;
+
 export function useOnboardForm() {
   const router = useRouter();
+  const { isOnline } = useNetworkStatus();
+  const onboardMutation = useOnboardStudent();
+  const updateImageMutation = useUpdateInitialProfileImage();
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -106,47 +114,55 @@ export function useOnboardForm() {
         mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7,
-        base64: true,
+        quality: COMPRESS_QUALITY,
+        base64: false,
       });
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
-      const asset = result.assets[0];
+      const rawAsset = result.assets[0];
 
-      // Strict size limit: must be lower than 3 MB (3 * 1024 * 1024 = 3,145,728 bytes)
-      const MAX_BYTES = 3 * 1024 * 1024;
-      let fileSize = asset.fileSize;
+      let fileSize: number | undefined =
+        typeof rawAsset.fileSize === "number" && rawAsset.fileSize > 0
+          ? rawAsset.fileSize
+          : undefined;
 
-      if (fileSize === undefined || fileSize === null) {
+      if (!fileSize && Platform.OS !== "web") {
         try {
-          const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+          const fileInfo = await FileSystem.getInfoAsync(rawAsset.uri);
           if (fileInfo.exists && typeof fileInfo.size === "number") {
             fileSize = fileInfo.size;
           }
         } catch {
-          if (asset.base64) {
-            fileSize = Math.ceil((asset.base64.length * 3) / 4);
+          // Non-fatal fallback
+        }
+      } else if (!fileSize && Platform.OS === "web" && typeof fetch === "function") {
+        try {
+          const blob = await fetch(rawAsset.uri).then((res) => res.blob());
+          if (typeof blob.size === "number") {
+            fileSize = blob.size;
           }
+        } catch {
+          // Non-fatal fallback
         }
       }
 
-      if (fileSize && fileSize >= MAX_BYTES) {
+      if (fileSize && fileSize >= MAX_AVATAR_BYTES) {
         const sizeMb = (fileSize / (1024 * 1024)).toFixed(1);
         Toast.show({
           type: "error",
           text1: "Image Too Large",
-          text2: `Selected photo is ${sizeMb} MB. Profile picture must be smaller than 3 MB.`,
+          text2: `Selected photo is ${sizeMb} MB after compression. Profile picture must be smaller than 3 MB.`,
           visibilityTime: 4500,
         });
         return;
       }
 
-      setImageUri(asset.uri);
-      setImageBase64(asset.base64 || null);
-      setImageMimeType(asset.mimeType || "image/jpeg");
+      setImageUri(rawAsset.uri);
+      setImageBase64(null);
+      setImageMimeType(rawAsset.mimeType || "image/jpeg");
       if (errorField === "image") {
         setErrorField(null);
       }
@@ -185,6 +201,15 @@ export function useOnboardForm() {
   );
 
   const handleCompleteProfile = useCallback(async () => {
+    if (!isOnline) {
+      Toast.show({
+        type: "error",
+        text1: "No Internet Connection",
+        text2: "Please connect to the internet before completing your profile.",
+      });
+      return;
+    }
+
     const formData: OnboardFormData = {
       studentId,
       faculty,
@@ -200,7 +225,7 @@ export function useOnboardForm() {
       imageMimeType,
     };
 
-    // 1. Mandatory Fields Validation (No optional fields allowed)
+    // 1. Mandatory Fields Validation
     const validated = sanitizeOnboardForm(formData);
     if (validated.error) {
       setErrorField(validated.error.field);
@@ -217,27 +242,14 @@ export function useOnboardForm() {
       setIsSubmitting(true);
       setErrorField(null);
 
-      // 2. Onboard primary student record
-      await onboardStudentAPI(validated.payload);
+      // 2. Atomically onboard student academic profile + phoneNumber + bloodGroup
+      await onboardMutation.mutateAsync(validated.payload);
+      await setStoredOnboardingState(true);
 
-      // 3. Update secondary attributes (phone number is mandatory, blood group is optional)
-      const secondaryUpdates: Record<string, any> = {
-        phoneNumber: validated.phoneNumber,
-      };
-      if (validated.bloodGroup) {
-        secondaryUpdates.bloodGroup = validated.bloodGroup;
-      }
-
-      try {
-        await updateStudentProfile(secondaryUpdates);
-      } catch (secErr: any) {
-        console.warn("[Onboard] Secondary student profile update notice:", secErr);
-      }
-
-      // 4. Upload initial profile photo to Cloudinary
+      // 3. Upload compressed initial profile photo to Cloudinary via multipart FormData
       if (imageUri) {
         try {
-          await updateInitialProfileImageAPI(imageUri, imageBase64);
+          await updateImageMutation.mutateAsync(imageUri);
         } catch (uploadErr: any) {
           console.warn("[Onboard] Profile image upload issue:", uploadErr);
           const parsedImgErr = parseOnboardApiError(uploadErr);
@@ -276,6 +288,7 @@ export function useOnboardForm() {
 
       // Smart redirection for edge cases
       if (parsed.isAlreadyOnboarded) {
+        await setStoredOnboardingState(true);
         setTimeout(() => {
           if (isMounted.current) router.replace("/(tabs)");
         }, 1500);
@@ -290,6 +303,7 @@ export function useOnboardForm() {
       }
     }
   }, [
+    isOnline,
     studentId,
     faculty,
     department,
@@ -302,6 +316,8 @@ export function useOnboardForm() {
     imageUri,
     imageBase64,
     imageMimeType,
+    onboardMutation,
+    updateImageMutation,
     router,
   ]);
 

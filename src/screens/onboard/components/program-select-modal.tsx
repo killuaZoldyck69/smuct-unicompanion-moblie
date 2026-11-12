@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -71,6 +70,7 @@ export const ProgramSelectModal = memo(function ProgramSelectModal({
       transparent={true}
       onRequestClose={onClose}
       statusBarTranslucent={true}
+      navigationBarTranslucent={true}
     >
       <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
         {/* Backdrop Dismiss */}
@@ -129,7 +129,10 @@ export const ProgramSelectModal = memo(function ProgramSelectModal({
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[
+              styles.listContent,
+              { paddingBottom: Math.max(insets.bottom + 16, 24) },
+            ]}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>

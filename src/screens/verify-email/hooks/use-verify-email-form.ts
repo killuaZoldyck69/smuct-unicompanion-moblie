@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Keyboard, Platform } from "react-native";
+import { Keyboard } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
-import * as SecureStore from "expo-secure-store";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import { authClient } from "@/services/auth-client";
+import { persistAuthSession } from "@/services/session-storage";
 import { OTP_LENGTH, RESEND_COOLDOWN_SECONDS } from "../constants";
 import { VerifyEmailState } from "../types";
 
 export function useVerifyEmailForm(): VerifyEmailState {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { isOnline } = useNetworkStatus();
   const params = useLocalSearchParams<{ email?: string }>();
 
   const rawEmail = params.email;
@@ -57,6 +59,16 @@ export function useVerifyEmailForm(): VerifyEmailState {
   // 2. Handle OTP Verification
   const handleVerify = useCallback(async () => {
     Keyboard.dismiss();
+
+    if (!isOnline) {
+      Toast.show({
+        type: "error",
+        text1: "No Internet Connection",
+        text2: "Please connect to the internet before verifying your code.",
+      });
+      return;
+    }
+
     const code = otp.join("").trim();
 
     if (code.length < OTP_LENGTH) {
@@ -89,27 +101,18 @@ export function useVerifyEmailForm(): VerifyEmailState {
         throw new Error(error.message || "Invalid or expired verification code.");
       }
 
-      // Persist session if autoSignInAfterVerification returned token
+      // Persist session with onboarded: false until student completes onboarding (Mobile-19, Mobile-20)
       const sessionToken =
         (data as any)?.token ||
         (data as any)?.session?.token;
+      const verifiedUser = (data as any)?.user;
 
-      if (sessionToken) {
-        if (Platform.OS === "web") {
-          if (typeof localStorage !== "undefined") {
-            localStorage.setItem("better-auth.session_token", sessionToken);
-          }
-        } else {
-          await SecureStore.setItemAsync("better-auth.session_token", sessionToken);
-          const cookiePayload = JSON.stringify({
-            "better-auth.session_token": {
-              value: sessionToken,
-              expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            },
-          });
-          await SecureStore.setItemAsync("better-auth_cookie", cookiePayload);
-        }
-      }
+      await persistAuthSession({
+        token: sessionToken ? String(sessionToken) : undefined,
+        user: verifiedUser,
+        session: (data as any)?.session,
+        onboarded: false,
+      });
 
       // Invalidate queries so session status reflects immediately
       await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
@@ -134,13 +137,23 @@ export function useVerifyEmailForm(): VerifyEmailState {
     } finally {
       setIsVerifying(false);
     }
-  }, [otp, email, queryClient, router]);
+  }, [otp, email, isOnline, queryClient, router]);
 
   const [resendAttempts, setResendAttempts] = useState(0);
 
   // 3. Handle Resending OTP (Max 3 attempts per 15 minutes)
   const handleResend = useCallback(async () => {
     Keyboard.dismiss();
+
+    if (!isOnline) {
+      Toast.show({
+        type: "error",
+        text1: "No Internet Connection",
+        text2: "Please connect to the internet before requesting a new code.",
+      });
+      return;
+    }
+
     if (!email) {
       Toast.show({
         type: "error",
@@ -193,7 +206,7 @@ export function useVerifyEmailForm(): VerifyEmailState {
     } finally {
       setIsResending(false);
     }
-  }, [email, clearOtp, resendAttempts]);
+  }, [email, clearOtp, isOnline, resendAttempts]);
 
   const handleBack = useCallback(() => {
     Keyboard.dismiss();

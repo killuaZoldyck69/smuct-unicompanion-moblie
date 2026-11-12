@@ -9,14 +9,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { FORGOT_PASSWORD_COLORS, FORGOT_PASSWORD_STRINGS } from "../constants";
-
-interface ForgotPasswordCardProps {
-  email: string;
-  setEmail: (email: string) => void;
-  isSubmitting: boolean;
-  onSubmit: () => void;
-  onFocus?: () => void;
-}
+import { ForgotPasswordCardProps } from "../types";
 
 export const ForgotPasswordCard = React.memo(function ForgotPasswordCard({
   email,
@@ -131,7 +124,7 @@ const styles = StyleSheet.create({
   },
   inputContainerFocused: {
     borderColor: FORGOT_PASSWORD_COLORS.inputBorderFocused,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FORGOT_PASSWORD_COLORS.cardBackground,
   },
   inputIcon: {
     marginRight: 10,

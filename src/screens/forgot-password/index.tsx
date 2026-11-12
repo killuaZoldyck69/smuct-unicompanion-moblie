@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,13 +13,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import Toast from "react-native-toast-message";
 
-import { authClient } from "@/services/auth-client";
 import {
   FORGOT_PASSWORD_COLORS,
   FORGOT_PASSWORD_STRINGS,
 } from "./constants";
+import { useForgotPasswordForm } from "./hooks/use-forgot-password-form";
 import { ForgotPasswordBackgroundDecorations } from "./components/forgot-password-background-decorations";
 import { ForgotPasswordHeroIllustration } from "./components/forgot-password-hero-illustration";
 import { ForgotPasswordCard } from "./components/forgot-password-card";
@@ -29,8 +28,13 @@ export function ForgotPassword() {
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const [email, setEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    email,
+    setEmail,
+    isSubmitting,
+    handleBack,
+    handleRequestReset,
+  } = useForgotPasswordForm();
 
   useEffect(() => {
     const showEvent =
@@ -51,77 +55,8 @@ export function ForgotPassword() {
     return () => {
       showSub.remove();
       hideSub.remove();
-      Keyboard.dismiss();
     };
   }, []);
-
-  const handleBack = () => {
-    Keyboard.dismiss();
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(auth)/login");
-    }
-  };
-
-  const handleRequestReset = async () => {
-    Keyboard.dismiss();
-    const trimmedEmail = email.trim();
-
-    if (!trimmedEmail) {
-      Toast.show({
-        type: "error",
-        text1: "Email Required",
-        text2: "Please enter your email address to continue.",
-      });
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      Toast.show({
-        type: "error",
-        text1: "Invalid Email",
-        text2: "Please enter a valid email address.",
-      });
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-
-      const { error } = await authClient.emailOtp.requestPasswordReset({
-        email: trimmedEmail,
-      });
-
-      if (error) throw new Error(error.message);
-
-      Keyboard.dismiss();
-      Toast.show({
-        type: "success",
-        text1: "Reset Code Sent! 🔑",
-        text2: "We've sent a 6-digit password reset code to your email.",
-        visibilityTime: 4000,
-      });
-
-      router.push({
-        pathname: "/(auth)/reset-password",
-        params: { email: trimmedEmail },
-      });
-    } catch (error: any) {
-      const msg = error?.message || "Failed to send reset code. Please try again.";
-      const isNotFound = msg.toLowerCase().includes("no account found");
-
-      Toast.show({
-        type: "error",
-        text1: isNotFound ? "Account Not Found" : "Request Failed",
-        text2: msg,
-        visibilityTime: 4500,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <View style={styles.container}>

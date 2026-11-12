@@ -1,5 +1,8 @@
 import type { OnboardFormData, SanitizedOnboardData } from "./types";
-import { MIN_SEMESTER, MAX_SEMESTER, MAX_SECTION_LENGTH } from "./constants";
+
+export const MIN_SEMESTER = 1;
+export const MAX_SEMESTER = 12;
+export const MAX_SECTION_LENGTH = 1;
 
 /**
  * Validates all onboarding fields strictly.
@@ -48,7 +51,7 @@ export function sanitizeOnboardForm(form: OnboardFormData): SanitizedOnboardData
     };
   }
 
-  if (!/^\d+$/.test(studentId)) {
+  if (!/^\d{9}$/.test(studentId)) {
     return {
       payload: {} as any,
       bloodGroup: "",
@@ -56,7 +59,7 @@ export function sanitizeOnboardForm(form: OnboardFormData): SanitizedOnboardData
       error: {
         field: "studentId",
         title: "Invalid Student ID",
-        message: "Student ID must contain numbers only (no letters or symbols).",
+        message: "Student ID must be exactly 9 digits (numbers only).",
       },
     };
   }
@@ -213,6 +216,8 @@ export function sanitizeOnboardForm(form: OnboardFormData): SanitizedOnboardData
       batch,
       currentSemester: semesterNum,
       section,
+      phoneNumber: formattedPhoneNumber,
+      bloodGroup: optionalBloodGroup ?? null,
     },
     bloodGroup: optionalBloodGroup,
     phoneNumber: formattedPhoneNumber,
@@ -268,9 +273,10 @@ export function parseOnboardApiError(error: any): ParsedApiError {
     error.response.data?.message ||
     error.response.data?.error ||
     "";
+  const lowerServerMsg = String(serverMsg).toLowerCase();
 
-  // 2. Authentication / Session Expired (401 or 403)
-  if (status === 401 || status === 403) {
+  // 2. Authentication / Session Expired (401) or Account/Cooldown Restriction (403)
+  if (status === 401) {
     return {
       title: "Session Expired",
       message:
@@ -279,8 +285,42 @@ export function parseOnboardApiError(error: any): ParsedApiError {
     };
   }
 
-  // 3. Conflict: Profile Already Created (409)
+  if (status === 403) {
+    if (
+      lowerServerMsg.includes("cooldown") ||
+      lowerServerMsg.includes("deleted") ||
+      lowerServerMsg.includes("permanently blocked") ||
+      lowerServerMsg.includes("student id")
+    ) {
+      return {
+        title: "Registration Restricted",
+        message:
+          serverMsg ||
+          "This Student ID cannot be registered at this time.",
+        isSessionExpired: false,
+      };
+    }
+    return {
+      title: "Access Denied",
+      message:
+        serverMsg ||
+        "Your session or account is not permitted to complete onboarding. Please sign in again.",
+      isSessionExpired: true,
+    };
+  }
+
+  // 3. Conflict: Duplicate Student ID vs Profile Already Created (409)
   if (status === 409) {
+    const isDuplicateStudentId =
+      lowerServerMsg.includes("student id") &&
+      lowerServerMsg.includes("another account");
+    if (isDuplicateStudentId) {
+      return {
+        title: "Student ID Already Registered",
+        message: serverMsg,
+        isAlreadyOnboarded: false,
+      };
+    }
     return {
       title: "Profile Already Exists",
       message:

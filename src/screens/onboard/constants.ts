@@ -1,3 +1,4 @@
+import { colors } from "@/theme/colors";
 import type { BloodGroupOption } from "./types";
 
 export const BLOOD_GROUPS: BloodGroupOption[] = [
@@ -12,25 +13,23 @@ export const BLOOD_GROUPS: BloodGroupOption[] = [
 ];
 
 export const ONBOARD_COLORS = {
-  background: "#f7f9fb",
-  deepNavy: "#131b2e",
-  white: "#ffffff",
-  neutralText: "#191c1e",
-  mutedText: "#45464d",
-  placeholderText: "#76777d",
-  borderLight: "#e0e3e5",
-  blueBox: "#d0e4ff",
-  mintBox: "#c3f0d2",
-  roseBox: "#ffdad6",
-  yellowAvatar: "#f2e580",
-  cornerPurple: "#ede9fe",
-  warningBg: "rgba(255, 255, 255, 0.7)",
-  warningText: "#1e3a8a",
-  warningBorder: "rgba(30, 58, 138, 0.15)",
-  errorBorder: "#ef4444",
-  errorBg: "#fef2f2",
+  background: colors.auth.onboardBackground,
+  deepNavy: colors.auth.navyDark,
+  white: colors.white,
+  neutralText: colors.auth.neutralText,
+  mutedText: colors.auth.mutedText,
+  placeholderText: colors.auth.inputPlaceholder,
+  borderLight: colors.auth.onboardBorderLight,
+  blueBox: colors.auth.blueBox,
+  mintBox: colors.auth.mintBox,
+  roseBox: colors.auth.roseBox,
+  yellowAvatar: colors.auth.yellowAvatar,
+  cornerPurple: colors.auth.cornerPurple,
+  warningBg: colors.auth.warningBg,
+  warningText: colors.auth.warningText,
+  warningBorder: colors.auth.warningBorder,
+  errorBorder: colors.semantic.red.solid,
+  errorBg: colors.semantic.red.tint,
 };
 
-export const MIN_SEMESTER = 1;
-export const MAX_SEMESTER = 12;
-export const MAX_SECTION_LENGTH = 1;
+export { MIN_SEMESTER, MAX_SEMESTER, MAX_SECTION_LENGTH } from "./utils";

@@ -1,9 +1,21 @@
 import React from "react";
-import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
 import { fontFamily, titleFontFamily } from "@/theme/typography";
+
+interface PrivacyPolicyScreenProps {
+  showBackButton?: boolean;
+}
 
 interface PolicySection {
   title: string;
@@ -44,8 +56,19 @@ const POLICY_SECTIONS: PolicySection[] = [
   },
 ];
 
-export default function PrivacyPolicyScreen() {
+export default function PrivacyPolicyScreen({
+  showBackButton = false,
+}: PrivacyPolicyScreenProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(auth)/login");
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -56,6 +79,20 @@ export default function PrivacyPolicyScreen() {
       />
 
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+        {showBackButton && (
+          <Pressable
+            onPress={handleBack}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && styles.backButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Feather name="arrow-left" size={18} color={colors.navyDeep} />
+            <Text style={styles.backButtonText}>Back</Text>
+          </Pressable>
+        )}
         <Text style={styles.headerTitle}>Privacy Policy</Text>
         <Text style={styles.headerSubtitle}>SMUCT UniCompanion Data & Lifecycle Terms</Text>
       </View>
@@ -64,7 +101,11 @@ export default function PrivacyPolicyScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingBottom: insets.bottom > 0 ? insets.bottom + 128 : 132,
+            paddingBottom: showBackButton
+              ? Math.max(insets.bottom + 32, 40)
+              : insets.bottom > 0
+                ? insets.bottom + 128
+                : 132,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -113,6 +154,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     backgroundColor: colors.homeBackground,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.navyAlpha06,
+  },
+  backButtonPressed: {
+    opacity: 0.72,
+  },
+  backButtonText: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: colors.navyDeep,
   },
   headerTitle: {
     fontFamily: titleFontFamily,

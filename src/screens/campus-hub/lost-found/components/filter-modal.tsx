@@ -17,7 +17,7 @@ import type {
   LostFoundType,
   LostFoundCategory,
 } from "@/services/lost-found-service";
-import type { User } from "@/types/auth";
+import type { User } from "@/features/auth/types";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 
 export type TypeFilter = "ALL" | LostFoundType;

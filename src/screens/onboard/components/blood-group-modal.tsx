@@ -60,6 +60,7 @@ export const BloodGroupModal = memo(function BloodGroupModal({
       transparent={true}
       onRequestClose={onClose}
       statusBarTranslucent={true}
+      navigationBarTranslucent={true}
     >
       <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
         <TouchableOpacity
@@ -91,7 +92,9 @@ export const BloodGroupModal = memo(function BloodGroupModal({
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 24 }}
+            contentContainerStyle={{
+              paddingBottom: Math.max(insets.bottom + 16, 24),
+            }}
           />
         </SafeAreaView>
       </View>

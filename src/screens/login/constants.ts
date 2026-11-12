@@ -1,3 +1,5 @@
+import { colors } from "@/theme/colors";
+
 export const LOGIN_STRINGS = {
   TITLE: "Welcome back",
   SUBTITLE: "Login to continue to your campus.",
@@ -7,45 +9,46 @@ export const LOGIN_STRINGS = {
   SIGN_IN_BUTTON: "Log In",
   NO_ACCOUNT: "Don't have an account? ",
   REGISTER: "Register",
+  PRIVACY_POLICY: "Privacy Policy",
 };
 
 export const LOGIN_COLORS = {
-  background: "#FAFCFF",
-  titleText: "#0D1E42",
-  subtitleText: "#5A6B82",
+  background: colors.auth.background,
+  titleText: colors.auth.titleText,
+  subtitleText: colors.auth.subtitleText,
 
   // Card & inputs
-  cardBackground: "#FFFFFF",
-  cardBorder: "#F1F5F9",
-  inputBorder: "#E2E8F0",
-  inputBorderFocused: "#0F224A",
-  inputPlaceholder: "#76777D",
-  inputText: "#0D1E42",
-  iconMuted: "#64748B",
-  iconFocused: "#0D1E42",
+  cardBackground: colors.white,
+  cardBorder: colors.auth.cardBorder,
+  inputBorder: colors.auth.inputBorder,
+  inputBorderFocused: colors.auth.primaryNavy,
+  inputPlaceholder: colors.auth.inputPlaceholder,
+  inputText: colors.auth.titleText,
+  iconMuted: colors.slate500,
+  iconFocused: colors.auth.titleText,
 
   // Buttons & links
-  primaryButton: "#0F224A",
-  primaryButtonText: "#FFFFFF",
-  accentBlue: "#2563EB",
+  primaryButton: colors.auth.primaryNavy,
+  primaryButtonText: colors.white,
+  accentBlue: colors.auth.accentBlue,
 
   // Floating Hero Badges & Dots
-  badgeBookBg: "#E6F7F0",
-  badgeBookBorder: "rgba(16, 185, 129, 0.25)",
-  badgeBookIcon: "#059669",
+  badgeBookBg: colors.auth.badgeBookBg,
+  badgeBookBorder: colors.auth.badgeBookBorder,
+  badgeBookIcon: colors.auth.badgeBookIcon,
 
-  badgeHatBg: "#F3E8FF",
-  badgeHatBorder: "rgba(139, 92, 246, 0.25)",
-  badgeHatIcon: "#7C3AED",
+  badgeHatBg: colors.auth.badgeHatBg,
+  badgeHatBorder: colors.auth.badgeHatBorder,
+  badgeHatIcon: colors.auth.badgeHatIcon,
 
-  dotGreen: "#86EFAC",
-  dotPurple: "#C084FC",
-  dotSun: "#FDE047",
+  dotGreen: colors.auth.dotGreen,
+  dotPurple: colors.auth.dotPurple,
+  dotSun: colors.auth.dotSun,
 
   // Corner decorations & sprout motif
-  cornerBlue: "#DDF0FF",
-  cornerGreen: "#DCFCE7",
-  cornerPurple: "#EDE9FE",
-  sproutLeaf: "#10B981",
-  sproutStem: "#059669",
+  cornerBlue: colors.auth.cornerBlue,
+  cornerGreen: colors.auth.cornerGreen,
+  cornerPurple: colors.auth.cornerPurple,
+  sproutLeaf: colors.auth.sproutLeaf,
+  sproutStem: colors.auth.sproutStem,
 };

@@ -35,7 +35,7 @@ import type {
   ItemCondition,
   CreateMarketplaceInput,
 } from "@/services/marketplace-service";
-import type { User } from "@/types/auth";
+import type { User } from "@/features/auth/types";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../shared/design-tokens";
 import { ImagePickerRow } from "../shared/image-picker-row";
 import {

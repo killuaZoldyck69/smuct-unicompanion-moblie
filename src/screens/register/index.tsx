@@ -183,6 +183,20 @@ export function Register() {
               <Text style={styles.loginLink}>{REGISTER_STRINGS.SIGN_IN}</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Privacy Policy Link (Mobile-3) */}
+          <TouchableOpacity
+            style={styles.privacyPolicyButton}
+            onPress={() => router.push("/privacy-policy")}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="link"
+            accessibilityLabel="View Privacy Policy"
+          >
+            <Text style={styles.privacyPolicyLink}>
+              {REGISTER_STRINGS.PRIVACY_POLICY}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
     </View>
@@ -253,5 +267,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: REGISTER_COLORS.accentBlue,
+  },
+  privacyPolicyButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginBottom: 8,
+  },
+  privacyPolicyLink: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: REGISTER_COLORS.subtitleText,
+    textDecorationLine: "underline",
   },
 });
