@@ -1,32 +1,32 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 
+import { AuthKeyboardScrollView } from "../../components/ui";
 import {
   FORGOT_PASSWORD_COLORS,
   FORGOT_PASSWORD_STRINGS,
 } from "./constants";
 import { useForgotPasswordForm } from "./hooks/use-forgot-password-form";
 import { ForgotPasswordBackgroundDecorations } from "./components/forgot-password-background-decorations";
-import { ForgotPasswordHeroIllustration } from "./components/forgot-password-hero-illustration";
+import {
+  ForgotPasswordHeroIllustration,
+  ILLUSTRATION_HEIGHT,
+} from "./components/forgot-password-hero-illustration";
 import { ForgotPasswordCard } from "./components/forgot-password-card";
 
 export function ForgotPassword() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const scrollViewRef = useRef<ScrollView>(null);
 
   const {
     email,
@@ -35,28 +35,6 @@ export function ForgotPassword() {
     handleBack,
     handleRequestReset,
   } = useForgotPasswordForm();
-
-  useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const showSub = Keyboard.addListener(showEvent, () => {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    });
-
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -90,74 +68,50 @@ export function ForgotPassword() {
         />
       </TouchableOpacity>
 
-      {/* 3. SCROLLABLE CONTENT (Illustration stays permanently visible) */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-        style={styles.keyboardContainer}
+      {/* 3. ADAPTIVE KEYBOARD-AWARE SCROLLABLE CONTENT */}
+      <AuthKeyboardScrollView
+        collapsibleHero={<ForgotPasswordHeroIllustration />}
+        initialHeroHeight={ILLUSTRATION_HEIGHT}
+        expandedTopPadding={insets.top + (Platform.OS === "ios" ? 14 : 20)}
+        collapsedTopPadding={insets.top + 52}
+        contentContainerStyle={styles.formScrollContent}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.formScrollView}
-          contentContainerStyle={[
-            styles.formScrollContent,
-            {
-              paddingTop: insets.top + (Platform.OS === "ios" ? 14 : 20),
-              paddingBottom: Math.max(insets.bottom + 20, 32),
-            },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-          bounces={Platform.OS === "ios"}
-        >
-          {/* Base Campus Illustration & Animated Passkey Badge (Never Hidden) */}
-          <View style={styles.heroContainer}>
-            <ForgotPasswordHeroIllustration />
-          </View>
+        {/* Header Title & Subtitle */}
+        <View style={styles.typographyContainer}>
+          <Text style={styles.title}>{FORGOT_PASSWORD_STRINGS.TITLE}</Text>
+          <Text style={styles.subtitle}>
+            {FORGOT_PASSWORD_STRINGS.SUBTITLE}
+          </Text>
+        </View>
 
-          {/* Header Title & Subtitle */}
-          <View style={styles.typographyContainer}>
-            <Text style={styles.title}>{FORGOT_PASSWORD_STRINGS.TITLE}</Text>
-            <Text style={styles.subtitle}>
-              {FORGOT_PASSWORD_STRINGS.SUBTITLE}
+        {/* Elevated Forgot Password Card */}
+        <View style={styles.cardWrapper}>
+          <ForgotPasswordCard
+            email={email}
+            setEmail={setEmail}
+            isSubmitting={isSubmitting}
+            onSubmit={handleRequestReset}
+          />
+        </View>
+
+        {/* Remember Password / Sign In Link */}
+        <View style={styles.signInRow}>
+          <Text style={styles.footerText}>
+            {FORGOT_PASSWORD_STRINGS.REMEMBER_PASSWORD}
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push("/(auth)/login")}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to your account"
+          >
+            <Text style={styles.signInLink}>
+              {FORGOT_PASSWORD_STRINGS.SIGN_IN}
             </Text>
-          </View>
-
-          {/* Elevated Forgot Password Card */}
-          <View style={styles.cardWrapper}>
-            <ForgotPasswordCard
-              email={email}
-              setEmail={setEmail}
-              isSubmitting={isSubmitting}
-              onSubmit={handleRequestReset}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 120);
-              }}
-            />
-          </View>
-
-          {/* Remember Password / Sign In Link */}
-          <View style={styles.signInRow}>
-            <Text style={styles.footerText}>
-              {FORGOT_PASSWORD_STRINGS.REMEMBER_PASSWORD}
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push("/(auth)/login")}
-              activeOpacity={0.7}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Sign in to your account"
-            >
-              <Text style={styles.signInLink}>
-                {FORGOT_PASSWORD_STRINGS.SIGN_IN}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </TouchableOpacity>
+        </View>
+      </AuthKeyboardScrollView>
     </View>
   );
 }
@@ -179,25 +133,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  heroContainer: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  formScrollView: {
-    flex: 1,
-  },
   formScrollContent: {
-    flexGrow: 1,
     paddingHorizontal: 22,
-    alignItems: "center",
   },
   typographyContainer: {
     width: "100%",
     alignItems: "center",
+    marginTop: 4,
     marginBottom: 16,
     paddingHorizontal: 8,
   },

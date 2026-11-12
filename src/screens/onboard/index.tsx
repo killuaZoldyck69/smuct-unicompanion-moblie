@@ -4,14 +4,13 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StatusBar,
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AuthKeyboardScrollView } from "../../components/ui";
 import { ONBOARD_COLORS } from "./constants";
 import { useOnboardForm } from "./hooks/use-onboard-form";
 import { OnboardBackgroundDecorations } from "./components/onboard-background-decorations";
@@ -64,101 +63,89 @@ export function Onboard() {
       {/* 1. BACKGROUND DECORATIONS (Pastel wave corners & sprout motifs) */}
       <OnboardBackgroundDecorations />
 
-      {/* 2. SCROLLABLE CONTENT */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-        style={styles.container}
+      {/* 2. ADAPTIVE KEYBOARD-AWARE SCROLLABLE CONTENT */}
+      <AuthKeyboardScrollView
+        expandedTopPadding={insets.top + (Platform.OS === "ios" ? 18 : 24)}
+        collapsedTopPadding={insets.top + 12}
+        contentContainerStyle={styles.scrollContent}
+        extraScrollHeight={120}
+        resetScrollOnKeyboardHide={false}
       >
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            {
-              paddingTop: insets.top + (Platform.OS === "ios" ? 18 : 24),
-              paddingBottom: Math.max(insets.bottom + 20, 36),
-            },
+        {/* Header Title & Subtitle */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Complete Your Profile</Text>
+          <Text style={styles.subtitle}>Tell us more about yourself</Text>
+        </View>
+
+        {/* Profile Picture Avatar Picker */}
+        <OnboardAvatarPicker
+          imageUri={imageUri}
+          imageBase64={imageBase64}
+          imageMimeType={imageMimeType}
+          onPickImage={pickImage}
+          hasError={errorField === "image"}
+        />
+
+        {/* 1. SKY BLUE CARD: Student ID, Academic Program, Batch Number & Warning */}
+        <OnboardAcademicBox
+          studentId={studentId}
+          onChangeStudentId={handleStudentIdChange}
+          hasStudentIdError={errorField === "studentId"}
+          program={program}
+          onOpenProgramModal={() => setProgramModalVisible(true)}
+          hasProgramError={errorField === "program"}
+          batch={batch}
+          onChangeBatch={handleBatchChange}
+          hasBatchError={errorField === "batch"}
+        />
+
+        {/* 2. GREEN CARD: Semester, Section & Phone Number */}
+        <OnboardClassBox
+          currentSemester={currentSemester}
+          onChangeSemester={handleSemesterChange}
+          hasSemesterError={errorField === "currentSemester"}
+          section={section}
+          onChangeSection={handleSectionChange}
+          hasSectionError={errorField === "section"}
+          phoneNumber={phoneNumber}
+          onChangePhoneNumber={handlePhoneNumberChange}
+          hasPhoneError={errorField === "phoneNumber"}
+        />
+
+        {/* 3. PEACH/ROSE CARD: Blood Group Selection */}
+        <OnboardPersonalBox
+          bloodGroup={bloodGroup}
+          onOpenBloodGroupModal={() => setBloodGroupModalVisible(true)}
+          hasBloodGroupError={errorField === "bloodGroup"}
+        />
+
+        {/* 4. SUBMIT BUTTON (Complete Profile) */}
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            isSubmitting && styles.submitButtonDisabled,
           ]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-          bounces={Platform.OS === "ios"}
+          onPress={handleCompleteProfile}
+          disabled={isSubmitting}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Complete Profile"
+          activeOpacity={0.85}
         >
-          {/* Header Title & Subtitle */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Complete Your Profile</Text>
-            <Text style={styles.subtitle}>Tell us more about yourself</Text>
-          </View>
-
-          {/* Profile Picture Avatar Picker */}
-          <OnboardAvatarPicker
-            imageUri={imageUri}
-            imageBase64={imageBase64}
-            imageMimeType={imageMimeType}
-            onPickImage={pickImage}
-            hasError={errorField === "image"}
-          />
-
-          {/* 1. SKY BLUE CARD: Student ID, Academic Program, Batch Number & Warning */}
-          <OnboardAcademicBox
-            studentId={studentId}
-            onChangeStudentId={handleStudentIdChange}
-            hasStudentIdError={errorField === "studentId"}
-            program={program}
-            onOpenProgramModal={() => setProgramModalVisible(true)}
-            hasProgramError={errorField === "program"}
-            batch={batch}
-            onChangeBatch={handleBatchChange}
-            hasBatchError={errorField === "batch"}
-          />
-
-          {/* 2. GREEN CARD: Semester, Section & Phone Number */}
-          <OnboardClassBox
-            currentSemester={currentSemester}
-            onChangeSemester={handleSemesterChange}
-            hasSemesterError={errorField === "currentSemester"}
-            section={section}
-            onChangeSection={handleSectionChange}
-            hasSectionError={errorField === "section"}
-            phoneNumber={phoneNumber}
-            onChangePhoneNumber={handlePhoneNumberChange}
-            hasPhoneError={errorField === "phoneNumber"}
-          />
-
-          {/* 3. PEACH/ROSE CARD: Blood Group Selection */}
-          <OnboardPersonalBox
-            bloodGroup={bloodGroup}
-            onOpenBloodGroupModal={() => setBloodGroupModalVisible(true)}
-            hasBloodGroupError={errorField === "bloodGroup"}
-          />
-
-          {/* 4. SUBMIT BUTTON (Complete Profile) */}
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              isSubmitting && styles.submitButtonDisabled,
-            ]}
-            onPress={handleCompleteProfile}
-            disabled={isSubmitting}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Complete Profile"
-            activeOpacity={0.85}
-          >
-            {isSubmitting ? (
-              <View style={styles.buttonContent}>
-                <ActivityIndicator
-                  color={ONBOARD_COLORS.white}
-                  size="small"
-                  style={{ marginRight: 8 }}
-                />
-                <Text style={styles.submitButtonText}>Saving Profile...</Text>
-              </View>
-            ) : (
-              <Text style={styles.submitButtonText}>Complete Profile</Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {isSubmitting ? (
+            <View style={styles.buttonContent}>
+              <ActivityIndicator
+                color={ONBOARD_COLORS.white}
+                size="small"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.submitButtonText}>Saving Profile...</Text>
+            </View>
+          ) : (
+            <Text style={styles.submitButtonText}>Complete Profile</Text>
+          )}
+        </TouchableOpacity>
+      </AuthKeyboardScrollView>
 
       {/* Program Selection Modal */}
       <ProgramSelectModal
@@ -185,13 +172,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: ONBOARD_COLORS.background,
   },
-  container: {
-    flex: 1,
-  },
   scrollContent: {
-    flexGrow: 1,
     paddingHorizontal: 20,
-    alignItems: "center",
   },
   header: {
     marginTop: 16,

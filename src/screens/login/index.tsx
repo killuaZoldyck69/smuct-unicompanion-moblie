@@ -5,13 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
+import { AuthKeyboardScrollView } from "../../components/ui";
 import { LOGIN_COLORS, LOGIN_STRINGS } from "./constants";
 import { LoginBackgroundDecorations } from "./components/login-background-decorations";
 import { LoginHeroIllustration } from "./components/login-hero-illustration";
@@ -34,78 +32,52 @@ export function Login() {
       {/* 1. FIXED BACKGROUND DECORATIONS (Pastel shapes & sprout) */}
       <LoginBackgroundDecorations />
 
-      {/* 2. FIXED TOP HERO SECTION (Always stays at top, never scrolled away) */}
-      <View
-        style={[
-          styles.fixedHeroContainer,
-          {
-            paddingTop: insets.top + 4,
-          },
-        ]}
+      {/* 2. ADAPTIVE KEYBOARD-AWARE SCROLLABLE CONTENT */}
+      <AuthKeyboardScrollView
+        collapsibleHero={<LoginHeroIllustration />}
+        expandedTopPadding={insets.top + 4}
+        collapsedTopPadding={insets.top + 12}
+        contentContainerStyle={styles.formScrollContent}
       >
-        <LoginHeroIllustration />
-      </View>
+        {/* Header Title & Subtitle */}
+        <View style={styles.typographyContainer}>
+          <Text style={styles.title}>{LOGIN_STRINGS.TITLE}</Text>
+          <Text style={styles.subtitle}>{LOGIN_STRINGS.SUBTITLE}</Text>
+        </View>
 
-      {/* 3. SCROLLABLE FORM SECTION (Title, Login Card & Register Link) */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardContainer}
-      >
-        <ScrollView
-          style={styles.formScrollView}
-          contentContainerStyle={[
-            styles.formScrollContent,
-            {
-              paddingBottom: Math.max(insets.bottom + 12, 24),
-            },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-          bounces={Platform.OS === "ios"}
-        >
-          {/* Header Title & Subtitle */}
-          <View style={styles.typographyContainer}>
-            <Text style={styles.title}>{LOGIN_STRINGS.TITLE}</Text>
-            <Text style={styles.subtitle}>{LOGIN_STRINGS.SUBTITLE}</Text>
-          </View>
+        {/* Elevated Login Card */}
+        <View style={styles.cardWrapper}>
+          <LoginCard form={form} />
+        </View>
 
-          {/* Elevated Login Card */}
-          <View style={styles.cardWrapper}>
-            <LoginCard form={form} />
-          </View>
-
-          {/* Register Link */}
-          <View style={styles.registerRow}>
-            <Text style={styles.footerText}>{LOGIN_STRINGS.NO_ACCOUNT}</Text>
-            <TouchableOpacity
-              onPress={() => router.push("/(auth)/register")}
-              activeOpacity={0.7}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Register for an account"
-            >
-              <Text style={styles.registerLink}>
-                {LOGIN_STRINGS.REGISTER}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Privacy Policy Link (Mobile-3) */}
+        {/* Register Link */}
+        <View style={styles.registerRow}>
+          <Text style={styles.footerText}>{LOGIN_STRINGS.NO_ACCOUNT}</Text>
           <TouchableOpacity
-            style={styles.privacyPolicyButton}
-            onPress={() => router.push("/privacy-policy")}
+            onPress={() => router.push("/(auth)/register")}
             activeOpacity={0.7}
             accessible={true}
-            accessibilityRole="link"
-            accessibilityLabel="View Privacy Policy"
+            accessibilityRole="button"
+            accessibilityLabel="Register for an account"
           >
-            <Text style={styles.privacyPolicyLink}>
-              {LOGIN_STRINGS.PRIVACY_POLICY}
-            </Text>
+            <Text style={styles.registerLink}>{LOGIN_STRINGS.REGISTER}</Text>
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+
+        {/* Privacy Policy Link (Mobile-3) */}
+        <TouchableOpacity
+          style={styles.privacyPolicyButton}
+          onPress={() => router.push("/privacy-policy")}
+          activeOpacity={0.7}
+          accessible={true}
+          accessibilityRole="link"
+          accessibilityLabel="View Privacy Policy"
+        >
+          <Text style={styles.privacyPolicyLink}>
+            {LOGIN_STRINGS.PRIVACY_POLICY}
+          </Text>
+        </TouchableOpacity>
+      </AuthKeyboardScrollView>
     </View>
   );
 }
@@ -117,28 +89,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: LOGIN_COLORS.background,
   },
-  fixedHeroContainer: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
-  keyboardContainer: {
-    flex: 1,
-    zIndex: 2,
-  },
-  formScrollView: {
-    flex: 1,
-  },
   formScrollContent: {
-    flexGrow: 1,
     paddingHorizontal: 22,
-    paddingTop: 8,
-    alignItems: "center",
   },
   typographyContainer: {
     width: "100%",
     alignItems: "flex-start",
+    marginTop: 8,
     marginBottom: 14,
     paddingHorizontal: 2,
   },
