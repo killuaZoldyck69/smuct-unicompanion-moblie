@@ -26,8 +26,10 @@ import { ProfileSocialCard } from "./shared/profile-social-card";
 import { ProfileEditButton } from "./shared/profile-edit-button";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
 import { BloodGroupModal } from "./shared/blood-group-modal";
-import { ProfileErrorState } from "./shared/profile-states";
+import { ProfileErrorState, ProfileOfflineBanner } from "./shared/profile-states";
 import { ProfileLoadingSkeleton } from "./shared/profile-loading-skeleton";
+import { ProfileAccountActions } from "./shared/profile-account-actions";
+import { DeleteAccountModal } from "./shared/delete-account-modal";
 
 interface TeacherProfileProps {
   sessionUser: {
@@ -41,6 +43,7 @@ interface TeacherProfileProps {
 export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
   const insets = useSafeAreaInsets();
   const [bloodModalVisible, setBloodModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -63,6 +66,8 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
     isLoading,
     isRefetching,
     isError,
+    errorMessage,
+    isOffline,
     refetch,
     updateProfile: updateTeacherProfile,
     isUpdating,
@@ -101,10 +106,14 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
     return (
       <ProfileErrorState
         title={
-          !profile
-            ? "No faculty profile found"
-            : "Failed to load faculty profile"
+          isError
+            ? isOffline
+              ? "You are offline"
+              : "Failed to load faculty profile"
+            : "No faculty profile found"
         }
+        subtitle={errorMessage ?? undefined}
+        isOffline={isOffline}
         onRetry={refetch}
       />
     );
@@ -126,7 +135,6 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
         insetsTop={insets.top}
         isEditing={isEditing}
         isUpdating={isUpdating}
-        onEdit={() => setIsEditing(true)}
         onCancel={handleCancel}
         onSave={handleSave}
       />
@@ -153,6 +161,7 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           />
         }
       >
+        <ProfileOfflineBanner visible={isOffline} />
         {/* 1. Hero Faculty Identity Card */}
         <TeacherIdentityCard
           profile={profile}
@@ -227,7 +236,12 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           onSave={handleSave}
         />
 
-        {/* 8. Restrained Log Out Button */}
+        {/* 8. Account, Privacy & Restrained Log Out */}
+        <ProfileAccountActions
+          onPressDeleteAccount={() => setDeleteModalVisible(true)}
+          isOffline={isOffline}
+        />
+
         <View style={styles.logoutWrapper}>
           <ProfileLogoutButton />
         </View>
@@ -239,6 +253,12 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
         selectedGroup={formData.bloodGroup}
         onSelect={(bg) => updateField("bloodGroup", bg)}
         onClose={() => setBloodModalVisible(false)}
+      />
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        isOffline={isOffline}
+        onClose={() => setDeleteModalVisible(false)}
       />
     </KeyboardAvoidingView>
   );

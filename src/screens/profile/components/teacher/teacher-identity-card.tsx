@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { TeacherProfileData } from "@/services/teacher-service";
 import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
 import { AcademicHaloWatermark } from "./faculty-illustrations";
@@ -47,7 +48,7 @@ export const TeacherIdentityCard = React.memo(function TeacherIdentityCard({
         <View style={styles.avatarWrapper}>
           {/* Subtle Academic Halo Geometry behind portrait */}
           <View style={styles.haloBackground} pointerEvents="none">
-            <AcademicHaloWatermark width={110} height={110} opacity={0.3} color="#10b981" />
+            <AcademicHaloWatermark width={110} height={110} opacity={0.3} color={colors.semantic.emerald.solid} />
           </View>
 
           <TouchableOpacity
@@ -74,9 +75,9 @@ export const TeacherIdentityCard = React.memo(function TeacherIdentityCard({
 
             <View style={styles.cameraBadge}>
               {isUploading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Feather name="camera" size={12} color="#ffffff" />
+                <Feather name="camera" size={12} color={colors.white} />
               )}
             </View>
           </TouchableOpacity>
@@ -91,7 +92,7 @@ export const TeacherIdentityCard = React.memo(function TeacherIdentityCard({
           {/* Designation Tag (e.g. Lecturer) */}
           <View style={styles.roleRow}>
             <View style={styles.rolePill}>
-              <Ionicons name="school" size={12} color="#047857" />
+              <Ionicons name="school" size={12} color={colors.semantic.emerald.darker} />
               <Text style={styles.rolePillText}>{displayDesignation}</Text>
             </View>
           </View>
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.02)",
+    borderColor: colors.blackAlpha02,
     overflow: "hidden",
   },
   avatarRow: {
@@ -160,13 +161,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
   },
   avatarPlaceholder: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
   rolePill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ecfdf5",
+    backgroundColor: colors.semantic.emerald.tint,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: "#047857",
+    color: colors.semantic.emerald.darker,
   },
   infoRow: {
     flexDirection: "row",

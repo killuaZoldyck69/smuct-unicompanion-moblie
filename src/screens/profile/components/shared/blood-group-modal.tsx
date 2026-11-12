@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { BLOOD_GROUPS, PROFILE_COLORS, fontFamily } from "../../constants";
 
 interface BloodGroupModalProps {
@@ -118,7 +119,7 @@ export const BloodGroupModal = React.memo(function BloodGroupModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: colors.blackAlpha40,
     justifyContent: "flex-end",
   },
   modalBackdrop: {
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#cbd5e1",
+    backgroundColor: colors.slate300,
   },
   sheetHeader: {
     flexDirection: "row",
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -180,7 +181,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   groupRowSelected: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
   },
   groupText: {
     fontFamily,

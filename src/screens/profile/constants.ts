@@ -1,4 +1,5 @@
-import { Platform } from "react-native";
+import { colors } from "@/theme/colors";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 
 export const SPACING = {
   xs: 4,
@@ -37,157 +38,120 @@ export const BLOOD_GROUP_TO_UI: Record<string, string> = {
 export const SECTION_THEMES = {
   // Identity: Neutral surface with deep navy anchors
   IDENTITY: {
-    badgeBg: "#f1f5f9",
-    badgeBorder: "rgba(15, 23, 42, 0.08)",
-    accentText: "#131b2e",
-    accentColor: "#131b2e",
+    badgeBg: colors.slate100,
+    badgeBorder: colors.inkAlpha08,
+    accentText: colors.navyDeep,
+    accentColor: colors.navyDeep,
   },
 
-  // Student Academic Record: Calm academic blue (#1d4ed8 / #eff6ff)
+  // Student Academic Record: Calm academic blue
   ACADEMIC: {
-    primaryText: "#1d4ed8",
-    headerBg: "rgba(37, 99, 235, 0.06)",
-    badgeBg: "#eff6ff",
-    badgeBorder: "rgba(37, 99, 235, 0.14)",
-    tileBg: "#f8fafc",
-    tileBorder: "rgba(37, 99, 235, 0.10)",
-    iconColor: "#2563eb",
-    divider: "rgba(37, 99, 235, 0.08)",
+    primaryText: colors.semantic.blue.darker,
+    headerBg: colors.semantic.blue.alpha06,
+    badgeBg: colors.semantic.blue.tint,
+    badgeBorder: colors.semantic.blue.alpha14,
+    tileBg: colors.slate50,
+    tileBorder: colors.semantic.blue.alpha10,
+    iconColor: colors.semantic.blue.accent,
+    divider: colors.semantic.blue.alpha08,
   },
 
   // Faculty Academic Position: Amber/Yellow
   FACULTY_ACADEMIC: {
-    primaryText: "#854d0e",
-    headerBg: "rgba(202, 138, 4, 0.08)",
-    badgeBg: "#fefce8",
-    badgeBorder: "rgba(202, 138, 4, 0.18)",
-    tileBg: "#fffbeb",
-    tileBorder: "rgba(202, 138, 4, 0.14)",
-    iconColor: "#854d0e",
-    iconCircleBg: "#fef9c3",
-    divider: "rgba(202, 138, 4, 0.10)",
+    primaryText: colors.semantic.yellow.darkText,
+    headerBg: colors.semantic.yellow.alpha08,
+    badgeBg: colors.semantic.yellow.tint,
+    badgeBorder: colors.semantic.yellow.alpha18,
+    tileBg: colors.semantic.amber.tint,
+    tileBorder: colors.semantic.yellow.alpha14,
+    iconColor: colors.semantic.yellow.darkText,
+    iconCircleBg: colors.semantic.yellow.soft,
+    divider: colors.semantic.yellow.alpha10,
   },
 
   // Professional Skills: Sage/Teal — calm, technical
   SKILLS: {
-    primaryText: "#0D9488",
-    badgeBg: "#F0FDFA",
-    badgeBorder: "rgba(13, 148, 136, 0.14)",
-    iconColor: "#0D9488",
-    chipBg: "#ffffff",
-    chipBorder: "rgba(13, 148, 136, 0.18)",
-    chipText: "#065F46",
-    addBtnBg: "#0D9488",
+    primaryText: colors.semantic.teal.solid,
+    badgeBg: colors.semantic.teal.tint,
+    badgeBorder: colors.semantic.teal.alpha14,
+    iconColor: colors.semantic.teal.solid,
+    chipBg: colors.white,
+    chipBorder: colors.semantic.teal.alpha18,
+    chipText: colors.semantic.teal.darkText,
+    addBtnBg: colors.semantic.teal.solid,
   },
 
-  // Contact & Safety: muted coral (blood) + warm peach (phone)
+  // Contact & Safety: muted coral (blood) + warm amber (phone)
   BLOOD: {
-    primaryText: "#be123c",
-    badgeBg: "#fff1f2",
+    primaryText: colors.semantic.rose.deep,
+    badgeBg: colors.semantic.rose.tint,
   },
   PHONE: {
-    primaryText: "#d97706",
-    badgeBg: "#fffbeb",
+    primaryText: colors.semantic.amber.accent,
+    badgeBg: colors.semantic.amber.tint,
   },
   CONTACT: {
-    // Blood group
-    primaryText: "#be123c",
-    badgeBg: "#fff1f2",
-    badgeBorder: "rgba(225, 29, 72, 0.14)",
-    iconColor: "#dc2626",
-    iconCircleBg: "#fee2e2",
-    // Phone
-    phoneText: "#92400e",
-    phoneBg: "#fffbeb",
-    phoneBorder: "rgba(180, 83, 9, 0.14)",
-    phoneIconColor: "#d97706",
-    phoneIconCircleBg: "#fef3c7",
-    tileBg: "#ffffff",
+    primaryText: colors.semantic.rose.deep,
+    badgeBg: colors.semantic.rose.tint,
+    badgeBorder: colors.semantic.rose.alpha14,
+    iconColor: colors.semantic.red.accent,
+    iconCircleBg: colors.semantic.red.softBorder,
+    phoneText: colors.semantic.amber.darkText,
+    phoneBg: colors.semantic.amber.tint,
+    phoneBorder: colors.semantic.amber.brownAlpha14,
+    phoneIconColor: colors.semantic.amber.accent,
+    phoneIconCircleBg: colors.semantic.amber.soft,
+    tileBg: colors.white,
   },
 
   // Portfolio / Social: Soft indigo
   SOCIAL: {
-    primaryText: "#4F46E5",
-    badgeBg: "#EEF2FF",
+    primaryText: colors.semantic.indigo.solid,
+    badgeBg: colors.semantic.indigo.tint,
   },
   LINKS: {
-    primaryText: "#4F46E5",
-    badgeBg: "#EEF2FF",
-    badgeBorder: "rgba(79, 70, 229, 0.14)",
-    iconColor: "#4F46E5",
-    iconCircleBg: "#E0E7FF",
+    primaryText: colors.semantic.indigo.solid,
+    badgeBg: colors.semantic.indigo.tint,
+    badgeBorder: colors.semantic.indigo.alpha14,
+    iconColor: colors.semantic.indigo.solid,
+    iconCircleBg: colors.semantic.indigo.border,
   },
 } as const;
 
 export const PROFILE_COLORS = {
-  // Soft Editorial Campus palette (Bento theme matched)
-  background: "#f7f9fb",       // bento theme background
-  surface: "#FAFAF7",          // card surface (slightly brighter)
-  deepNavy: "#131b2e",         // primary text / headings
-  white: "#ffffff",
-  neutralText: "#191c1d",
-  subtleText: "#64748b",
-  mutedText: "#94a3b8",
+  background: colors.homeBackground,
+  surface: colors.profileSurface,
+  deepNavy: colors.navyDeep,
+  white: colors.white,
+  neutralText: colors.onSurface,
+  subtleText: colors.slate500,
+  mutedText: colors.slate400,
   cardRadius: 22,
   innerRadius: 14,
   pillRadius: 9999,
-  subtleBorder: "rgba(19, 27, 46, 0.06)",
-  border: "rgba(19, 27, 46, 0.08)",
+  subtleBorder: colors.navyAlpha06,
+  border: colors.navyAlpha08,
   shadow: {
-    shadowColor: "#131b2e",
+    shadowColor: colors.navyDeep,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
     elevation: 2,
   },
   heroShadow: {
-    shadowColor: "#131b2e",
+    shadowColor: colors.navyDeep,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 24,
     elevation: 4,
   },
 } as const;
 
-export const FACULTY_THEME = {
-  background: "#F7F5EF", // Warm ivory / cream canvas
-  surface: "#FFFFFF",
-  cardRadius: 22,
-  pillRadius: 9999,
-  primaryNavy: "#131b2e",
-  secondaryText: "#64748b",
-  subtleBorder: "rgba(19, 27, 46, 0.08)",
-  cardBorder: "rgba(19, 27, 46, 0.06)",
-  shadow: {
-    shadowColor: "#131b2e",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  accents: {
-    academic: "#3B82F6",
-    academicBg: "#EFF6FF",
-    expertise: "#10B981",
-    expertiseBg: "#ECFDF5",
-    qualifications: "#2563EB",
-    qualificationsBg: "#EFF6FF",
-    blood: "#EF4444",
-    bloodBg: "#FEF2F2",
-    phone: "#F97316",
-    phoneBg: "#FFF7ED",
-    social: "#2563EB",
-    socialBg: "#EFF6FF",
-  },
-} as const;
-
-// Unified font: Aligns with Bento theme / ExploreHeader
-import { fontFamily, titleFontFamily } from "@/theme/typography";
 export { fontFamily, titleFontFamily };
 
 export const PROFILE_CACHE_CONFIG = {
   staleTime: Infinity,
-  gcTime: 1000 * 60 * 60 * 24, // 24 hours
+  gcTime: 1000 * 60 * 60 * 24,
   refetchOnMount: false as const,
   refetchOnWindowFocus: false as const,
   refetchOnReconnect: false as const,

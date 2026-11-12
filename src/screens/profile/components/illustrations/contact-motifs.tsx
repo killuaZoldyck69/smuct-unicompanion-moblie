@@ -6,6 +6,7 @@
  */
 import React from "react";
 import Svg, { Path, G } from "react-native-svg";
+import { colors } from "@/theme/colors";
 
 interface DropMotifProps {
   width?: number;
@@ -18,7 +19,7 @@ export const DropMotif = React.memo(function DropMotif({
   width = 48,
   height = 56,
   opacity = 0.10,
-  color = "#dc2626",
+  color = colors.semantic.red.accent,
 }: DropMotifProps) {
   return (
     <Svg
@@ -63,7 +64,7 @@ export const WaveMotif = React.memo(function WaveMotif({
   width = 52,
   height = 52,
   opacity = 0.10,
-  color = "#d97706",
+  color = colors.semantic.amber.accent,
 }: WaveMotifProps) {
   return (
     <Svg

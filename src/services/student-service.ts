@@ -1,5 +1,6 @@
 import api from "./api";
 import { createSingleImageFormData } from "./cloudinary-service";
+import { isNotFoundError } from "@/features/profile/profile-error-utils";
 
 export interface StudentProfileData {
   id: string;
@@ -31,15 +32,15 @@ export interface StudentProfileData {
 
 export interface UpdateStudentProfileInput {
   name?: string;
-  phoneNumber?: string;
+  phoneNumber?: string | null;
   batch?: string;
   currentSemester?: number;
   section?: string;
   currentTerm?: string;
-  bloodGroup?: string;
+  bloodGroup?: string | null;
   skills?: string[];
-  linkedInUrl?: string;
-  personalWebsiteUrl?: string;
+  linkedInUrl?: string | null;
+  personalWebsiteUrl?: string | null;
 }
 
 export const getStudentProfile = async (): Promise<StudentProfileData | null> => {
@@ -47,7 +48,10 @@ export const getStudentProfile = async (): Promise<StudentProfileData | null> =>
     const response = await api.get("/students/profile");
     return response.data?.data ?? response.data?.profile ?? null;
   } catch (error) {
-    return null;
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    throw error;
   }
 };
 export const getStudentProfileAPI = getStudentProfile;

@@ -10,6 +10,7 @@ import {
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import Toast from "react-native-toast-message";
+import { colors } from "@/theme/colors";
 import {
   PROFILE_COLORS,
   SPACING,
@@ -72,7 +73,7 @@ export const TeacherContactCard = React.memo(function TeacherContactCard({
 
       <View style={styles.infoRow}>
         <View style={[styles.iconBadge, styles.phoneIconBadge]}>
-          <Feather name="phone" size={16} color="#ea580c" />
+          <Feather name="phone" size={16} color={colors.semantic.orange.accent} />
         </View>
         <View style={styles.infoContent}>
           <Text style={[styles.infoLabel, styles.phoneLabel]}>PHONE NUMBER</Text>
@@ -119,7 +120,7 @@ export const TeacherContactCard = React.memo(function TeacherContactCard({
             <Path
               d="M1 27h17l8-10 9 20 10-28 9 25 8-11h27"
               fill="none"
-              stroke="#f97316"
+              stroke={colors.semantic.orange.solid}
               strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -131,7 +132,7 @@ export const TeacherContactCard = React.memo(function TeacherContactCard({
 
       <View style={[styles.infoRow, styles.bloodRow]}>
         <View style={[styles.iconBadge, styles.bloodIconBadge]}>
-          <Ionicons name="water-outline" size={16} color="#e11d48" />
+          <Ionicons name="water-outline" size={16} color={colors.semantic.rose.solid} />
         </View>
         <View style={styles.infoContent}>
           <Text style={[styles.infoLabel, styles.bloodLabel]}>BLOOD GROUP</Text>
@@ -148,7 +149,7 @@ export const TeacherContactCard = React.memo(function TeacherContactCard({
             accessibilityLabel="Select blood group"
           >
             <Text style={styles.bloodGroupText}>{displayEditBloodGroup}</Text>
-            <Feather name="chevron-down" size={12} color="#e11d48" />
+            <Feather name="chevron-down" size={12} color={colors.semantic.rose.solid} />
           </TouchableOpacity>
         ) : (
           <View style={[styles.bloodGroupPill, styles.bloodGroupReadOnly]}>
@@ -160,7 +161,7 @@ export const TeacherContactCard = React.memo(function TeacherContactCard({
             <Path
               d="M1 27h14l7-9 8 18 9-27 9 24 7-10h8l6 8 7-14 6 10h7"
               fill="none"
-              stroke="#e11d48"
+              stroke={colors.semantic.rose.solid}
               strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -191,7 +192,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#475569",
+    color: colors.slate600,
     letterSpacing: 0.7,
     marginBottom: SPACING.md,
   },
@@ -203,16 +204,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 9,
     borderRadius: 14,
-    backgroundColor: "#fff7ed",
+    backgroundColor: colors.semantic.orange.tint,
     borderWidth: 1,
-    borderColor: "#ffedd5",
+    borderColor: colors.semantic.orange.soft,
     overflow: "hidden",
     position: "relative",
   },
   bloodRow: {
     marginTop: 10,
-    backgroundColor: "#fff1f2",
-    borderColor: "#ffe4e6",
+    backgroundColor: colors.semantic.rose.tint,
+    borderColor: colors.semantic.rose.softBorder,
   },
   iconBadge: {
     width: 34,
@@ -223,10 +224,10 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   phoneIconBadge: {
-    backgroundColor: "#ffedd5",
+    backgroundColor: colors.semantic.orange.soft,
   },
   bloodIconBadge: {
-    backgroundColor: "#ffe4e6",
+    backgroundColor: colors.semantic.rose.softBorder,
   },
   infoContent: {
     flex: 1,
@@ -237,15 +238,15 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10,
     fontWeight: "600",
-    color: "#8193ad",
+    color: colors.slateMutedTint,
     letterSpacing: 0.5,
     marginBottom: 3,
   },
   phoneLabel: {
-    color: "#c2410c",
+    color: colors.semantic.orange.deep,
   },
   bloodLabel: {
-    color: "#e11d48",
+    color: colors.semantic.rose.solid,
   },
   infoValue: {
     fontFamily,
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "500",
-    color: "#334155",
+    color: colors.slate700,
   },
   editInput: {
     flex: 1,
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#9a3412",
+    color: colors.semantic.orange.darkText,
   },
   callButton: {
     minWidth: 50,
@@ -285,16 +286,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 9,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: colors.semantic.blue.border,
     zIndex: 1,
   },
   callButtonText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
-    color: "#2563eb",
+    color: colors.semantic.blue.accent,
   },
   bloodSelect: {
     flexDirection: "row",
@@ -307,9 +308,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,
-    backgroundColor: "#ffe4e6",
+    backgroundColor: colors.semantic.rose.softBorder,
     borderWidth: 1,
-    borderColor: "#fecdd3",
+    borderColor: colors.semantic.rose.border,
     zIndex: 1,
   },
   bloodGroupReadOnly: {
@@ -319,7 +320,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: "#be123c",
+    color: colors.semantic.rose.deep,
   },
   phoneWatermark: {
     position: "absolute",

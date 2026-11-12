@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { PROFILE_COLORS, fontFamily } from "../../constants";
 
 interface LogoutModalProps {
@@ -58,7 +59,7 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
         />
         <View style={styles.cardContainer}>
           <View style={styles.iconCircle}>
-            <Feather name="log-out" size={22} color="#dc2626" />
+            <Feather name="log-out" size={22} color={colors.semantic.red.accent} />
           </View>
 
           <Text style={styles.titleText}>Log Out?</Text>
@@ -93,7 +94,7 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
               accessibilityLabel="Confirm log out"
             >
               {isLoggingOut ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={PROFILE_COLORS.white} />
               ) : (
                 <Text style={styles.confirmButtonText}>Log Out</Text>
               )}
@@ -108,7 +109,7 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    backgroundColor: colors.scrimDark,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
@@ -116,20 +117,20 @@ const styles = StyleSheet.create({
   cardContainer: {
     width: Platform.OS === "web" ? 340 : "100%",
     maxWidth: 320,
-    backgroundColor: "#ffffff",
+    backgroundColor: PROFILE_COLORS.white,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.08)",
+    borderColor: colors.navyAlpha08,
     paddingHorizontal: 20,
     paddingTop: 22,
     paddingBottom: 18,
     alignItems: "center",
     ...Platform.select({
       web: {
-        boxShadow: "0 20px 40px -10px rgba(15, 23, 42, 0.25)",
+        boxShadow: `0 20px 40px -10px ${colors.inkAlpha25}`,
       } as any,
       default: {
-        shadowColor: "#0f172a",
+        shadowColor: colors.navyInk,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.18,
         shadowRadius: 20,
@@ -141,9 +142,9 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "#fef2f2",
+    backgroundColor: colors.semantic.red.tint,
     borderWidth: 1,
-    borderColor: "#fee2e2",
+    borderColor: colors.semantic.red.softBorder,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     height: 44,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     borderRadius: PROFILE_COLORS.pillRadius,
     justifyContent: "center",
     alignItems: "center",
@@ -184,23 +185,23 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "600",
-    color: "#475569",
+    color: colors.slate600,
   },
   confirmButton: {
     flex: 1,
     height: 44,
-    backgroundColor: "#dc2626",
+    backgroundColor: colors.semantic.red.accent,
     borderRadius: PROFILE_COLORS.pillRadius,
     justifyContent: "center",
     alignItems: "center",
   },
   confirmButtonDisabled: {
-    backgroundColor: "#f87171",
+    backgroundColor: colors.semantic.red.light,
   },
   confirmButtonText: {
     fontFamily,
     fontSize: 14,
     fontWeight: "600",
-    color: "#ffffff",
+    color: PROFILE_COLORS.white,
   },
 });

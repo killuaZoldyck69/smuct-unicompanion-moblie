@@ -1,10 +1,21 @@
 import api from "./api";
 import { createSingleImageFormData } from "./cloudinary-service";
+import { isNotFoundError } from "@/features/profile/profile-error-utils";
 
 export interface ConsultationSlot {
   day: string;
   startTime: string;
   endTime: string;
+}
+
+export interface AcademicQualificationItem {
+  id?: string;
+  degree?: string;
+  field?: string | null;
+  institution?: string | null;
+  passingYear?: string | number | null;
+  year?: string | number | null;
+  honors?: string | null;
 }
 
 export interface TeacherProfileData {
@@ -16,6 +27,7 @@ export interface TeacherProfileData {
   bloodGroup?: string | null;
   teacherId?: string;
   designation: string;
+  administrativeRole?: string | null;
   department: string;
   faculty?: string;
   officeRoom?: string | null;
@@ -23,6 +35,8 @@ export interface TeacherProfileData {
   roomNo?: string | null;
   advisoryBatch?: number | null;
   dayOff?: string | null;
+  expertiseFields?: string[];
+  academicQualifications?: AcademicQualificationItem[] | null;
   researchInterests?: string[];
   education?: string[] | string;
   officeHours?: any[];
@@ -45,25 +59,21 @@ export interface TeacherProfileData {
 
 export interface UpdateTeacherProfileInput {
   name?: string;
-  phoneNumber?: string;
+  phoneNumber?: string | null;
   phone?: string;
-  bloodGroup?: string;
+  bloodGroup?: string | null;
   officeRoom?: string | null;
   department?: string;
   designation?: string;
+  administrativeRole?: string | null;
   faculty?: string;
   advisoryBatch?: number | null;
   dayOff?: string | null;
-  researchInterests?: string[];
-  education?: string[] | string;
-  officeHours?: any[];
+  expertiseFields?: string[];
+  academicQualifications?: AcademicQualificationItem[] | null;
   consultationSlots?: ConsultationSlot[] | null;
-  linkedInUrl?: string;
-  linkedinUrl?: string;
-  personalWebsiteUrl?: string;
-  websiteUrl?: string;
-  googleScholarUrl?: string;
-  bio?: string;
+  linkedInUrl?: string | null;
+  personalWebsiteUrl?: string | null;
 }
 
 export const getTeacherProfile = async (): Promise<TeacherProfileData | null> => {
@@ -71,7 +81,10 @@ export const getTeacherProfile = async (): Promise<TeacherProfileData | null> =>
     const response = await api.get("/teachers/profile");
     return response.data?.data ?? response.data?.profile ?? null;
   } catch (error) {
-    return null;
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    throw error;
   }
 };
 export const getTeacherProfileAPI = getTeacherProfile;
@@ -95,9 +108,7 @@ export const updateTeacherProfileImage = async (imageUriOrUrl: string) => {
   }
 
   const formData = await createSingleImageFormData(imageUriOrUrl, "image");
-  const response = await api.patch("/teachers/profile/image", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await api.patch("/teachers/profile/image", formData);
   return response.data?.user ?? response.data?.data;
 };
 export const updateTeacherProfileImageAPI = updateTeacherProfileImage;

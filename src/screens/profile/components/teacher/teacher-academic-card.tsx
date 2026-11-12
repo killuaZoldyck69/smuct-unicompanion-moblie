@@ -17,6 +17,7 @@ import {
   TeacherProfileData,
   ConsultationSlot,
 } from "@/services/teacher-service";
+import { colors } from "@/theme/colors";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
@@ -25,6 +26,28 @@ import {
 } from "../../constants";
 import { CampusBuildingWatermark } from "./faculty-illustrations";
 import { SMUCT_PROGRAM_DEPARTMENTS } from "@/data/programs";
+
+const WEB_TIME_OPTIONS = [
+  "09:00 AM",
+  "09:30 AM",
+  "10:00 AM",
+  "10:30 AM",
+  "11:00 AM",
+  "11:30 AM",
+  "12:00 PM",
+  "12:30 PM",
+  "01:00 PM",
+  "01:30 PM",
+  "02:00 PM",
+  "02:30 PM",
+  "03:00 PM",
+  "03:30 PM",
+  "04:00 PM",
+  "04:30 PM",
+  "05:00 PM",
+  "05:30 PM",
+  "06:00 PM",
+] as const;
 
 const DAYS_OF_WEEK = [
   "Sunday",
@@ -123,6 +146,7 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
     index: number;
     field: ConsultationTimeField;
   } | null>(null);
+  const [iosDraftDate, setIosDraftDate] = useState<Date>(() => new Date());
   const [departmentSearch, setDepartmentSearch] = useState("");
   const filteredDepartments = useMemo(() => {
     const query = departmentSearch.trim().toLowerCase();
@@ -135,7 +159,11 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
   }, [departmentSearch]);
 
   const displayOfficeRoom =
-    profile.officeRoom || profile.roomNumber || profile.roomNo || officeRoom || "Not provided";
+    profile.officeRoom ||
+    profile.roomNumber ||
+    profile.roomNo ||
+    officeRoom ||
+    "Not provided";
   const currentAdvisoryBatch = isEditing
     ? advisoryBatch
     : profile.advisoryBatch !== null && profile.advisoryBatch !== undefined
@@ -153,21 +181,41 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
     ? consultationSlots[activeTimePicker.index]
     : undefined;
   const activeTime =
-    activeSlot && activeTimePicker
-      ? activeSlot[activeTimePicker.field]
-      : "";
+    activeSlot && activeTimePicker ? activeSlot[activeTimePicker.field] : "";
   const pickerDate = parseTime(
     activeTime,
     activeTimePicker?.field === "endTime" ? 11 : 10,
   );
 
+  const openTimePicker = (index: number, field: ConsultationTimeField) => {
+    const slotValue = consultationSlots[index]?.[field] || "";
+    setIosDraftDate(parseTime(slotValue, field === "endTime" ? 11 : 10));
+    setActiveTimePicker({ index, field });
+  };
+
   const handleTimeChange = (
     _event: DateTimePickerChangeEvent,
     selectedDate?: Date,
   ) => {
+    if (Platform.OS === "ios") {
+      if (selectedDate) {
+        setIosDraftDate(selectedDate);
+      }
+      return;
+    }
+
     if (selectedDate && activeTimePicker) {
       onUpdateConsultationSlot(activeTimePicker.index, {
         [activeTimePicker.field]: formatTime(selectedDate),
+      });
+    }
+    setActiveTimePicker(null);
+  };
+
+  const handleConfirmIosTime = () => {
+    if (activeTimePicker) {
+      onUpdateConsultationSlot(activeTimePicker.index, {
+        [activeTimePicker.field]: formatTime(iosDraftDate),
       });
     }
     setActiveTimePicker(null);
@@ -217,7 +265,11 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
             <Text style={styles.departmentValue} numberOfLines={1}>
               {department || "Select department"}
             </Text>
-            <Feather name="chevron-down" size={16} color="#1d4ed8" />
+            <Feather
+              name="chevron-down"
+              size={16}
+              color={colors.semantic.blue.darker}
+            />
           </TouchableOpacity>
         ) : (
           <Text style={styles.departmentValue}>
@@ -228,7 +280,9 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
 
       <View style={styles.detailTiles}>
         <View style={[styles.detailTile, styles.officeTile]}>
-          <Text style={[styles.tileLabel, styles.officeLabel]}>OFFICE ROOM</Text>
+          <Text style={[styles.tileLabel, styles.officeLabel]}>
+            OFFICE ROOM
+          </Text>
           {isEditing ? (
             <TextInput
               style={styles.tileInput}
@@ -261,17 +315,15 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
               placeholderTextColor={PROFILE_COLORS.mutedText}
               accessibilityLabel="Faculty Advisory Batch Input"
             />
+          ) : currentAdvisoryBatch ? (
+            <View style={styles.batchValueRow}>
+              <Text style={styles.tileValue}>Batch {currentAdvisoryBatch}</Text>
+              <Text style={styles.ordinalSuffix}>{advisorySuffix}</Text>
+            </View>
           ) : (
-            currentAdvisoryBatch ? (
-              <View style={styles.batchValueRow}>
-                <Text style={styles.tileValue}>Batch {currentAdvisoryBatch}</Text>
-                <Text style={styles.ordinalSuffix}>{advisorySuffix}</Text>
-              </View>
-            ) : (
-              <Text style={styles.tileValue} numberOfLines={1}>
-                Not assigned
-              </Text>
-            )
+            <Text style={styles.tileValue} numberOfLines={1}>
+              Not assigned
+            </Text>
           )}
         </View>
         <View style={[styles.detailTile, styles.dayOffTile]}>
@@ -286,7 +338,11 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
               <Text style={styles.tileValue} numberOfLines={1}>
                 {dayOff || "Choose"}
               </Text>
-              <Feather name="chevron-down" size={13} color="#d97706" />
+              <Feather
+                name="chevron-down"
+                size={13}
+                color={colors.semantic.amber.accent}
+              />
             </TouchableOpacity>
           ) : (
             <Text style={styles.tileValue} numberOfLines={1}>
@@ -298,7 +354,9 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
 
       <View style={styles.scheduleHeader}>
         <Text style={styles.scheduleTitle}>Consultation Schedule</Text>
-        {!isEditing && <Feather name="clock" size={14} color="#2563eb" />}
+        {!isEditing && (
+          <Feather name="clock" size={14} color={colors.semantic.blue.accent} />
+        )}
       </View>
 
       {isEditing ? (
@@ -313,7 +371,11 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
                   accessibilityRole="button"
                   accessibilityLabel={`Delete consultation slot ${index + 1}`}
                 >
-                  <Feather name="trash-2" size={14} color="#ef4444" />
+                  <Feather
+                    name="trash-2"
+                    size={14}
+                    color={colors.semantic.red.solid}
+                  />
                 </TouchableOpacity>
               </View>
               <View style={styles.dayPillsRow}>
@@ -322,7 +384,10 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
                   return (
                     <TouchableOpacity
                       key={day}
-                      style={[styles.dayPill, selected && styles.dayPillSelected]}
+                      style={[
+                        styles.dayPill,
+                        selected && styles.dayPillSelected,
+                      ]}
                       onPress={() => onUpdateConsultationSlot(index, { day })}
                       accessibilityRole="button"
                       accessibilityLabel={`Set slot ${index + 1} day to ${day}`}
@@ -342,13 +407,15 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
               <View style={styles.timeInputsRow}>
                 <TouchableOpacity
                   style={styles.timePickerButton}
-                  onPress={() =>
-                    setActiveTimePicker({ index, field: "startTime" })
-                  }
+                  onPress={() => openTimePicker(index, "startTime")}
                   accessibilityRole="button"
                   accessibilityLabel={`Choose slot ${index + 1} start time`}
                 >
-                  <Feather name="clock" size={13} color="#2563eb" />
+                  <Feather
+                    name="clock"
+                    size={13}
+                    color={colors.semantic.blue.accent}
+                  />
                   <Text
                     style={[
                       styles.timePickerText,
@@ -361,13 +428,15 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
                 <Text style={styles.timeSeparator}>–</Text>
                 <TouchableOpacity
                   style={styles.timePickerButton}
-                  onPress={() =>
-                    setActiveTimePicker({ index, field: "endTime" })
-                  }
+                  onPress={() => openTimePicker(index, "endTime")}
                   accessibilityRole="button"
                   accessibilityLabel={`Choose slot ${index + 1} end time`}
                 >
-                  <Feather name="clock" size={13} color="#2563eb" />
+                  <Feather
+                    name="clock"
+                    size={13}
+                    color={colors.semantic.blue.accent}
+                  />
                   <Text
                     style={[
                       styles.timePickerText,
@@ -392,7 +461,11 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
             accessibilityRole="button"
             accessibilityLabel="Add another consultation slot"
           >
-            <Feather name="plus" size={14} color="#1d4ed8" />
+            <Feather
+              name="plus"
+              size={14}
+              color={colors.semantic.blue.darker}
+            />
             <Text style={styles.addSlotButtonText}>Add day and time slot</Text>
           </TouchableOpacity>
         </View>
@@ -467,11 +540,19 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
                     accessibilityState={{ selected }}
                   >
                     <View style={styles.departmentCode}>
-                      <Text style={styles.departmentCodeText}>{option.code}</Text>
+                      <Text style={styles.departmentCodeText}>
+                        {option.code}
+                      </Text>
                     </View>
-                    <Text style={styles.departmentOptionText}>{option.name}</Text>
+                    <Text style={styles.departmentOptionText}>
+                      {option.name}
+                    </Text>
                     {selected && (
-                      <Feather name="check" size={16} color="#1d4ed8" />
+                      <Feather
+                        name="check"
+                        size={16}
+                        color={colors.semantic.blue.darker}
+                      />
                     )}
                   </TouchableOpacity>
                 );
@@ -521,7 +602,11 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
                     {day}
                   </Text>
                   {selected && (
-                    <Feather name="check" size={16} color="#d97706" />
+                    <Feather
+                      name="check"
+                      size={16}
+                      color={colors.semantic.amber.accent}
+                    />
                   )}
                 </TouchableOpacity>
               );
@@ -529,15 +614,131 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
           </View>
         </View>
       </Modal>
-      {activeTimePicker && (
+      {activeTimePicker && Platform.OS === "android" && (
         <DateTimePicker
           value={pickerDate}
           mode="time"
           is24Hour={false}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
+          display="default"
           onValueChange={handleTimeChange}
           onDismiss={() => setActiveTimePicker(null)}
         />
+      )}
+
+      {activeTimePicker && Platform.OS === "ios" && (
+        <Modal
+          visible={true}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setActiveTimePicker(null)}
+        >
+          <View style={styles.departmentModalBackdrop}>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setActiveTimePicker(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel time selection"
+            />
+            <View style={styles.dayOffModal}>
+              <View style={styles.departmentModalHeader}>
+                <TouchableOpacity
+                  onPress={() => setActiveTimePicker(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel time picker"
+                >
+                  <Text style={styles.pickerCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.departmentModalTitle}>Select Time</Text>
+                <TouchableOpacity
+                  onPress={handleConfirmIosTime}
+                  accessibilityRole="button"
+                  accessibilityLabel="Confirm time selection"
+                >
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={iosDraftDate}
+                mode="time"
+                is24Hour={false}
+                display="spinner"
+                onValueChange={handleTimeChange}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {activeTimePicker && Platform.OS === "web" && (
+        <Modal
+          visible={true}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setActiveTimePicker(null)}
+        >
+          <View style={styles.departmentModalBackdrop}>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setActiveTimePicker(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Close time picker"
+            />
+            <View style={styles.dayOffModal}>
+              <View style={styles.departmentModalHeader}>
+                <Text style={styles.departmentModalTitle}>Select Time</Text>
+                <TouchableOpacity
+                  onPress={() => setActiveTimePicker(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close time picker"
+                >
+                  <Feather
+                    name="x"
+                    size={20}
+                    color={PROFILE_COLORS.subtleText}
+                  />
+                </TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {WEB_TIME_OPTIONS.map((option) => {
+                  const selected = activeTime === option;
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.departmentOption,
+                        selected && styles.departmentOptionSelected,
+                      ]}
+                      onPress={() => {
+                        onUpdateConsultationSlot(activeTimePicker.index, {
+                          [activeTimePicker.field]: option,
+                        });
+                        setActiveTimePicker(null);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.departmentOptionText,
+                          selected && styles.departmentOptionTextSelected,
+                        ]}
+                      >
+                        {option}
+                      </Text>
+                      {selected && (
+                        <Feather
+                          name="check"
+                          size={16}
+                          color={colors.semantic.blue.darker}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
     </View>
   );
@@ -589,10 +790,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   departmentTile: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
     paddingHorizontal: 12,
     paddingVertical: 11,
     marginBottom: SPACING.md,
@@ -604,7 +805,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontFamily,
     fontSize: 11,
-    color: "#8193ad",
+    color: colors.slateMutedTint,
     fontWeight: "600",
     letterSpacing: 0.5,
     marginBottom: 3,
@@ -626,9 +827,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: PROFILE_COLORS.deepNavy,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.16)",
+    borderColor: colors.semantic.blue.alpha16,
     borderRadius: 8,
     paddingHorizontal: 9,
     paddingVertical: 6,
@@ -651,16 +852,16 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   officeTile: {
-    backgroundColor: "#eef2ff",
-    borderColor: "#dbeafe",
+    backgroundColor: colors.semantic.indigo.tint,
+    borderColor: colors.semantic.blue.soft,
   },
   advisoryTile: {
-    backgroundColor: "#ecfdf5",
-    borderColor: "#bbf7d0",
+    backgroundColor: colors.semantic.emerald.tint,
+    borderColor: colors.semantic.emerald.mintBorder,
   },
   dayOffTile: {
-    backgroundColor: "#fffbeb",
-    borderColor: "#fde68a",
+    backgroundColor: colors.semantic.amber.tint,
+    borderColor: colors.semantic.amber.border,
   },
   tileLabel: {
     fontFamily,
@@ -669,9 +870,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 3,
   },
-  officeLabel: { color: "#4f46e5" },
-  advisoryLabel: { color: "#059669" },
-  dayOffLabel: { color: "#d97706" },
+  officeLabel: { color: colors.semantic.indigo.solid },
+  advisoryLabel: { color: colors.semantic.emerald.accent },
+  dayOffLabel: { color: colors.semantic.amber.accent },
   tileValue: {
     fontFamily,
     fontSize: 11.5,
@@ -710,13 +911,13 @@ const styles = StyleSheet.create({
   },
   departmentModalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.4)",
+    backgroundColor: colors.inkAlpha40,
     justifyContent: "center",
     paddingHorizontal: 20,
   },
   departmentModal: {
     maxHeight: "78%",
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderRadius: 20,
     padding: 18,
   },
@@ -740,8 +941,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#dbeafe",
-    backgroundColor: "#f8fafc",
+    borderColor: colors.semantic.blue.soft,
+    backgroundColor: colors.slate50,
     marginBottom: 10,
   },
   departmentOption: {
@@ -753,20 +954,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   departmentOptionSelected: {
-    backgroundColor: "#eff6ff",
+    backgroundColor: colors.semantic.blue.tint,
   },
   departmentCode: {
     width: 42,
     paddingVertical: 5,
     alignItems: "center",
     borderRadius: 7,
-    backgroundColor: "#eff6ff",
+    backgroundColor: colors.semantic.blue.tint,
   },
   departmentCodeText: {
     fontFamily,
     fontSize: 10,
     fontWeight: "700",
-    color: "#1d4ed8",
+    color: colors.semantic.blue.darker,
   },
   departmentOptionText: {
     flex: 1,
@@ -774,9 +975,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: PROFILE_COLORS.deepNavy,
   },
+  departmentOptionTextSelected: {
+    color: colors.semantic.blue.darker,
+    fontWeight: "700",
+  },
   dayOffModal: {
     maxHeight: "78%",
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderRadius: 20,
     padding: 18,
   },
@@ -789,10 +994,10 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   dayOffOptionSelected: {
-    backgroundColor: "#fffbeb",
+    backgroundColor: colors.semantic.amber.tint,
   },
   dayOffOptionTextSelected: {
-    color: "#b45309",
+    color: colors.semantic.amber.deep,
     fontWeight: "700",
   },
   scheduleHeader: {
@@ -807,7 +1012,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
-    color: "#475569",
+    color: colors.slate600,
   },
   slotsViewContainer: {
     gap: 6,
@@ -818,9 +1023,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#eff6ff",
+    backgroundColor: colors.semantic.blue.tint,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: colors.semantic.blue.border,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 12,
@@ -829,8 +1034,8 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: "#1d4ed8",
-    backgroundColor: "#ffffff",
+    color: colors.semantic.blue.darker,
+    backgroundColor: colors.white,
     borderRadius: 7,
     overflow: "hidden",
     paddingHorizontal: 7,
@@ -854,9 +1059,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   slotCard: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#dbeafe",
+    borderColor: colors.semantic.blue.soft,
     borderRadius: 12,
     padding: 9,
     gap: 8,
@@ -870,7 +1075,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: "#1d4ed8",
+    color: colors.semantic.blue.darker,
   },
   deleteSlotBtn: { padding: 4 },
   dayPillsRow: {
@@ -883,13 +1088,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
   },
   dayPillSelected: {
-    backgroundColor: "#1d4ed8",
-    borderColor: "#1d4ed8",
+    backgroundColor: colors.semantic.blue.darker,
+    borderColor: colors.semantic.blue.darker,
   },
   dayPillText: {
     fontFamily,
@@ -897,7 +1102,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: PROFILE_COLORS.subtleText,
   },
-  dayPillTextSelected: { color: "#ffffff" },
+  dayPillTextSelected: { color: colors.white },
   timeInputsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -910,9 +1115,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
     borderRadius: 7,
     paddingHorizontal: 7,
   },
@@ -935,9 +1140,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: "#eff6ff",
+    backgroundColor: colors.semantic.blue.tint,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: colors.semantic.blue.border,
     borderStyle: "dashed",
     borderRadius: 9,
     paddingVertical: 8,
@@ -946,6 +1151,18 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: "#1d4ed8",
+    color: colors.semantic.blue.darker,
+  },
+  pickerCancelText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.slate500,
+  },
+  pickerDoneText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.semantic.blue.darker,
   },
 });

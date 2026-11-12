@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Image,
   ScrollView,
@@ -9,6 +9,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Svg, { Circle, Path } from "react-native-svg";
+import { colors } from "@/theme/colors";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import {
   PROFILE_COLORS,
   BLOOD_GROUP_TO_UI,
@@ -19,6 +21,9 @@ import {
 } from "../constants";
 import { formatPhoneNumber } from "../utils";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
+import { ProfileOfflineBanner } from "./shared/profile-states";
+import { ProfileAccountActions } from "./shared/profile-account-actions";
+import { DeleteAccountModal } from "./shared/delete-account-modal";
 
 interface AdminProfileProps {
   sessionUser: {
@@ -41,18 +46,18 @@ function AdminShieldWatermark() {
       style={styles.heroWatermark}
       aria-hidden={true}
     >
-      <Circle cx="84" cy="72" r="72" fill="#ffffff" opacity={0.05} />
+      <Circle cx="84" cy="72" r="72" fill={colors.white} opacity={0.05} />
       <Path
         d="M75 26 119 42v31c0 27-18 43-44 55-26-12-44-28-44-55V42l44-16Z"
         fill="none"
-        stroke="#ffffff"
+        stroke={colors.white}
         strokeWidth="3"
         opacity={0.16}
       />
       <Path
         d="m58 74 12 12 24-27"
         fill="none"
-        stroke="#ffffff"
+        stroke={colors.white}
         strokeWidth="4"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -64,6 +69,8 @@ function AdminShieldWatermark() {
 
 export default function AdminProfile({ sessionUser }: AdminProfileProps) {
   const insets = useSafeAreaInsets();
+  const { isOffline } = useNetworkStatus();
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const displayName = sessionUser.name || "Administrator";
   const displayBloodGroup = sessionUser.bloodGroup
     ? BLOOD_GROUP_TO_UI[sessionUser.bloodGroup] || sessionUser.bloodGroup
@@ -82,6 +89,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <ProfileOfflineBanner visible={isOffline} />
         <View style={styles.pageHeader}>
           <View style={styles.headingCopy}>
             <Text style={styles.pageTitle}>My Profile</Text>
@@ -90,7 +98,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
             </Text>
           </View>
           <View style={styles.headerIcon}>
-            <Feather name="shield" size={19} color="#4338ca" />
+            <Feather name="shield" size={19} color={colors.semantic.indigo.deep} />
           </View>
         </View>
 
@@ -106,7 +114,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
                 />
               ) : (
                 <View style={styles.avatarFallback}>
-                  <Feather name="user" size={29} color="#4338ca" />
+                  <Feather name="user" size={29} color={colors.semantic.indigo.deep} />
                 </View>
               )}
             </View>
@@ -116,7 +124,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
                 {displayName}
               </Text>
               <View style={styles.roleBadge}>
-                <Feather name="shield" size={11} color="#4338ca" />
+                <Feather name="shield" size={11} color={colors.semantic.indigo.deep} />
                 <Text style={styles.roleText}>SYSTEM ADMIN</Text>
               </View>
               <Text style={styles.identityCaption}>UniCompanion administrator</Text>
@@ -124,7 +132,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
           </View>
           <View style={styles.heroFooter}>
             <View style={styles.heroFooterIcon}>
-              <Feather name="lock" size={13} color="#4338ca" />
+              <Feather name="lock" size={13} color={colors.semantic.indigo.deep} />
             </View>
             <Text style={styles.heroFooterText}>
               Administrative account
@@ -135,7 +143,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
         <View style={styles.accountCard}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIcon}>
-              <Feather name="user" size={15} color="#4338ca" />
+              <Feather name="user" size={15} color={colors.semantic.indigo.deep} />
             </View>
             <View>
               <Text style={styles.sectionTitle}>ACCOUNT DETAILS</Text>
@@ -147,7 +155,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
 
           <View style={styles.detailRow}>
             <View style={[styles.detailIcon, styles.emailIcon]}>
-              <Feather name="mail" size={16} color="#2563eb" />
+              <Feather name="mail" size={16} color={colors.semantic.blue.accent} />
             </View>
             <View style={styles.detailCopy}>
               <Text style={styles.detailLabel}>EMAIL ADDRESS</Text>
@@ -161,7 +169,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
 
           <View style={styles.detailRow}>
             <View style={[styles.detailIcon, styles.idIcon]}>
-              <Feather name="hash" size={16} color="#0d9488" />
+              <Feather name="hash" size={16} color={colors.semantic.teal.solid} />
             </View>
             <View style={styles.detailCopy}>
               <Text style={styles.detailLabel}>ACCOUNT ID</Text>
@@ -215,7 +223,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
 
         <View style={styles.accessCard}>
           <View style={styles.accessIcon}>
-            <Feather name="key" size={17} color="#047857" />
+            <Feather name="key" size={17} color={colors.semantic.emerald.darker} />
           </View>
           <View style={styles.accessCopy}>
             <Text style={styles.accessTitle}>Administrator access</Text>
@@ -223,8 +231,13 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
               This account has access to administrative features in the app.
             </Text>
           </View>
-          <Feather name="check-circle" size={18} color="#10b981" />
+          <Feather name="check-circle" size={18} color={colors.semantic.emerald.solid} />
         </View>
+
+        <ProfileAccountActions
+          onPressDeleteAccount={() => setDeleteModalVisible(true)}
+          isOffline={isOffline}
+        />
 
         <View style={styles.logoutCard}>
           <View style={styles.logoutCopy}>
@@ -236,6 +249,12 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
           <ProfileLogoutButton />
         </View>
       </ScrollView>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        isOffline={isOffline}
+        onClose={() => setDeleteModalVisible(false)}
+      />
     </View>
   );
 }
@@ -285,9 +304,9 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#eef2ff",
+    backgroundColor: colors.semantic.indigo.tint,
     borderWidth: 1,
-    borderColor: "#e0e7ff",
+    borderColor: colors.semantic.indigo.border,
   },
   heroCard: {
     position: "relative",
@@ -314,14 +333,14 @@ const styles = StyleSheet.create({
     height: 76,
     padding: 3,
     borderRadius: 38,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: colors.whiteAlpha18,
     marginRight: 14,
   },
   avatar: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "#e0e7ff",
+    backgroundColor: colors.semantic.indigo.border,
   },
   avatarFallback: {
     width: 70,
@@ -329,7 +348,7 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e0e7ff",
+    backgroundColor: colors.semantic.indigo.border,
   },
   identityCopy: {
     flex: 1,
@@ -339,7 +358,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 20,
     fontWeight: "800",
-    color: "#ffffff",
+    color: colors.white,
     letterSpacing: -0.35,
     marginBottom: 8,
   },
@@ -348,7 +367,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#e0e7ff",
+    backgroundColor: colors.semantic.indigo.border,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -358,21 +377,21 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 9,
     fontWeight: "800",
-    color: "#3730a3",
+    color: colors.semantic.indigo.darker,
     letterSpacing: 0.6,
   },
   identityCaption: {
     fontFamily,
     fontSize: 11,
     fontWeight: "500",
-    color: "#cbd5e1",
+    color: colors.slate300,
   },
   heroFooter: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.12)",
+    borderTopColor: colors.whiteAlpha12,
     marginTop: SPACING.lg,
     paddingTop: SPACING.md,
   },
@@ -382,13 +401,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e0e7ff",
+    backgroundColor: colors.semantic.indigo.border,
   },
   heroFooterText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "600",
-    color: "#e2e8f0",
+    color: colors.slate200,
   },
   accountCard: {
     backgroundColor: PROFILE_COLORS.white,
@@ -416,12 +435,12 @@ const styles = StyleSheet.create({
     ...PROFILE_COLORS.shadow,
   },
   bloodCard: {
-    borderColor: "#fecdd3",
-    backgroundColor: "#fffafb",
+    borderColor: colors.semantic.rose.border,
+    backgroundColor: colors.semantic.rose.warmSurface,
   },
   phoneCard: {
-    borderColor: "#fde68a",
-    backgroundColor: "#fffdf7",
+    borderColor: colors.semantic.amber.border,
+    backgroundColor: colors.semantic.amber.paleSurface,
   },
   contactHeader: {
     flexDirection: "row",
@@ -475,7 +494,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#eef2ff",
+    backgroundColor: colors.semantic.indigo.tint,
   },
   sectionTitle: {
     fontFamily,
@@ -504,10 +523,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emailIcon: {
-    backgroundColor: "#eff6ff",
+    backgroundColor: colors.semantic.blue.tint,
   },
   idIcon: {
-    backgroundColor: "#f0fdfa",
+    backgroundColor: colors.semantic.teal.tint,
   },
   detailCopy: {
     flex: 1,
@@ -529,17 +548,17 @@ const styles = StyleSheet.create({
   },
   detailDivider: {
     height: 1,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     marginLeft: 47,
   },
   accessCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 11,
-    backgroundColor: "#ecfdf5",
+    backgroundColor: colors.semantic.emerald.tint,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#c5f3df",
+    borderColor: colors.semantic.emerald.mintBorderSoft,
     padding: SPACING.md,
     marginBottom: SPACING.cardGap,
   },
@@ -549,7 +568,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#d1fae5",
+    backgroundColor: colors.semantic.emerald.border,
   },
   accessCopy: {
     flex: 1,
@@ -558,14 +577,14 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#065f46",
+    color: colors.semantic.emerald.darkText,
     marginBottom: 3,
   },
   accessDescription: {
     fontFamily,
     fontSize: 10,
     lineHeight: 15,
-    color: "#047857",
+    color: colors.semantic.emerald.darker,
   },
   logoutCard: {
     alignItems: "stretch",

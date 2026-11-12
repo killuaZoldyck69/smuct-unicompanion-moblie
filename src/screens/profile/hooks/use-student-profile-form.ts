@@ -2,17 +2,12 @@ import { Alert } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 import { StudentProfileData, UpdateStudentProfileInput } from "@/services/student-service";
 import { BLOOD_GROUP_TO_UI, BLOOD_GROUP_TO_DB } from "../constants";
-
-const normalizeBangladeshPhone = (phone?: string | null): string => {
-  const digits = (phone || "").replace(/\D/g, "");
-  if (!digits) return "";
-  const nationalNumber = digits.startsWith("880")
-    ? digits.slice(3)
-    : digits.startsWith("0")
-      ? digits.slice(1)
-      : digits;
-  return nationalNumber.slice(-10);
-};
+import {
+  areStringListsEqual,
+  normalizeBangladeshPhone,
+  normalizeSafeHttpUrl,
+  resolveBdPhoneUpdate,
+} from "../profile-form-logic";
 
 export interface StudentFormData {
   phoneNumber: string;
@@ -93,17 +88,16 @@ export function useStudentProfileForm(
     if (!profile) return;
     const payload: UpdateStudentProfileInput = {};
 
-    const phoneDigits = formData.phoneNumber.replace(/\D/g, "").slice(-10);
-    const currentPhoneDigits = normalizeBangladeshPhone(profile.phoneNumber);
-    if (phoneDigits !== currentPhoneDigits) {
-      if (phoneDigits.length !== 10) {
+    const phoneResolution = resolveBdPhoneUpdate(formData.phoneNumber, profile.phoneNumber);
+    if (phoneResolution.changed) {
+      if (!phoneResolution.valid) {
         Alert.alert(
           "Invalid phone number",
-          "Enter all 10 digits after the +880 country code.",
+          "Enter all 10 digits after the +880 country code, or leave blank to clear."
         );
         return;
       }
-      payload.phoneNumber = `+880${phoneDigits}`;
+      payload.phoneNumber = phoneResolution.value;
     }
 
     const cleanSection = formData.section.trim().toUpperCase().slice(0, 4);
@@ -131,22 +125,26 @@ export function useStudentProfileForm(
       }
     }
 
-    const originalSkills = profile.skills || [];
-    const isSkillsChanged =
-      formData.skills.length !== originalSkills.length ||
-      formData.skills.some((s, i) => s !== originalSkills[i]);
-    if (isSkillsChanged) {
-      payload.skills = formData.skills;
+    if (!areStringListsEqual(formData.skills, profile.skills)) {
+      payload.skills = formData.skills.map((s) => s.trim()).filter(Boolean);
     }
 
-    const cleanLinkedIn = formData.linkedInUrl.trim();
-    if (cleanLinkedIn !== (profile.linkedInUrl || "")) {
-      payload.linkedInUrl = cleanLinkedIn;
+    if (formData.linkedInUrl.trim() !== (profile.linkedInUrl || "")) {
+      const normalizedLinkedIn = normalizeSafeHttpUrl(formData.linkedInUrl);
+      if (normalizedLinkedIn === null) {
+        Alert.alert("Invalid LinkedIn URL", "Enter a valid http:// or https:// web address.");
+        return;
+      }
+      payload.linkedInUrl = normalizedLinkedIn;
     }
 
-    const cleanWebsite = formData.personalWebsiteUrl.trim();
-    if (cleanWebsite !== (profile.personalWebsiteUrl || "")) {
-      payload.personalWebsiteUrl = cleanWebsite;
+    if (formData.personalWebsiteUrl.trim() !== (profile.personalWebsiteUrl || "")) {
+      const normalizedWebsite = normalizeSafeHttpUrl(formData.personalWebsiteUrl);
+      if (normalizedWebsite === null) {
+        Alert.alert("Invalid Website URL", "Enter a valid http:// or https:// web address.");
+        return;
+      }
+      payload.personalWebsiteUrl = normalizedWebsite;
     }
 
     if (Object.keys(payload).length === 0) {

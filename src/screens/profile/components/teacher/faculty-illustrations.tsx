@@ -9,6 +9,7 @@ import Svg, {
   Ellipse,
   Text as SvgText,
 } from "react-native-svg";
+import { colors } from "@/theme/colors";
 
 /**
  * 1. Minimal University Faculty / Academic Building
@@ -28,7 +29,7 @@ export const CampusBuildingWatermark = React.memo(
     width = 140,
     height = 120,
     opacity = 0.14,
-    color = "#3b82f6",
+    color = colors.semantic.blue.solid,
     style,
   }: IllustrationProps) {
     return (
@@ -67,19 +68,19 @@ export const CampusBuildingWatermark = React.memo(
           <Rect x="30" y="70" width="80" height="38" rx="3" fill={color} />
 
           {/* Left Wing Windows */}
-          <Rect x="36" y="78" width="10" height="11" rx="2" fill="#ffffff" opacity={0.5} />
-          <Rect x="36" y="93" width="10" height="9" rx="2" fill="#ffffff" opacity={0.5} />
+          <Rect x="36" y="78" width="10" height="11" rx="2" fill={colors.white} opacity={0.5} />
+          <Rect x="36" y="93" width="10" height="9" rx="2" fill={colors.white} opacity={0.5} />
 
           {/* Right Wing Windows */}
-          <Rect x="94" y="78" width="10" height="11" rx="2" fill="#ffffff" opacity={0.5} />
-          <Rect x="94" y="93" width="10" height="9" rx="2" fill="#ffffff" opacity={0.5} />
+          <Rect x="94" y="78" width="10" height="11" rx="2" fill={colors.white} opacity={0.5} />
+          <Rect x="94" y="93" width="10" height="9" rx="2" fill={colors.white} opacity={0.5} />
 
           {/* Central Clock Tower */}
           <Rect x="56" y="44" width="28" height="46" rx="3" fill={color} />
 
           {/* Belfry & Clock Section */}
           <Rect x="59" y="28" width="22" height="18" rx="2" fill={color} />
-          <Circle cx="70" cy="37" r="6" fill="#ffffff" opacity={0.65} />
+          <Circle cx="70" cy="37" r="6" fill={colors.white} opacity={0.65} />
           <Line x1="70" y1="37" x2="70" y2="33" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
           <Line x1="70" y1="37" x2="73.5" y2="39" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
 
@@ -91,7 +92,7 @@ export const CampusBuildingWatermark = React.memo(
           {/* Grand Academic Entrance Archway */}
           <Path
             d="M63 108 L63 88 Q70 78 77 88 L77 108 Z"
-            fill="#ffffff"
+            fill={colors.white}
             opacity={0.75}
           />
 
@@ -114,7 +115,7 @@ export const ConnectedKnowledgeWatermark = React.memo(
     width = 110,
     height = 100,
     opacity = 0.14,
-    color = "#10b981",
+    color = colors.semantic.emerald.solid,
     style,
   }: IllustrationProps) {
     const cx = 55;
@@ -198,7 +199,7 @@ export const ConnectedKnowledgeWatermark = React.memo(
             textAnchor="middle"
             fontSize="14"
             fontWeight="bold"
-            fill="#ffffff"
+            fill={colors.white}
             opacity={0.95}
           >
             {"</>"}
@@ -219,7 +220,7 @@ export const DigitalPresenceWatermark = React.memo(
     width = 135,
     height = 95,
     opacity = 0.12,
-    color = "#3b82f6",
+    color = colors.semantic.blue.solid,
     style,
   }: IllustrationProps) {
     return (
@@ -243,9 +244,9 @@ export const DigitalPresenceWatermark = React.memo(
           />
           {/* Top header bar */}
           <Rect x="12" y="12" width="90" height="15" rx="8" fill={color} opacity={0.6} />
-          <Circle cx="21" cy="19.5" r="2.2" fill="#ffffff" />
-          <Circle cx="27" cy="19.5" r="2.2" fill="#ffffff" />
-          <Circle cx="33" cy="19.5" r="2.2" fill="#ffffff" />
+          <Circle cx="21" cy="19.5" r="2.2" fill={colors.white} />
+          <Circle cx="27" cy="19.5" r="2.2" fill={colors.white} />
+          <Circle cx="33" cy="19.5" r="2.2" fill={colors.white} />
 
           {/* Profile card preview inside window */}
           <Circle cx="30" cy="45" r="9" fill={color} opacity={0.5} />
@@ -315,7 +316,7 @@ export const AcademicHaloWatermark = React.memo(
     width = 110,
     height = 110,
     opacity = 0.35,
-    color = "#10b981",
+    color = colors.semantic.emerald.solid,
     style,
   }: IllustrationProps) {
     return (
@@ -368,7 +369,7 @@ export const DropletWatermark = React.memo(
     width = 54,
     height = 62,
     opacity = 0.12,
-    color = "#ef4444",
+    color = colors.semantic.red.solid,
     style,
   }: IllustrationProps) {
     return (
@@ -386,7 +387,7 @@ export const DropletWatermark = React.memo(
           />
           <Path
             d="M34 30 C32 25 30 22 27 20"
-            stroke="#ffffff"
+            stroke={colors.white}
             strokeWidth="2.5"
             strokeLinecap="round"
             opacity={0.5}
@@ -407,7 +408,7 @@ export const CommunicationWaveWatermark = React.memo(
     width = 58,
     height = 58,
     opacity = 0.12,
-    color = "#f97316",
+    color = colors.semantic.orange.solid,
     style,
   }: IllustrationProps) {
     return (

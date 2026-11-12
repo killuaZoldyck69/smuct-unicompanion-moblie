@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import Svg, { G, Path } from "react-native-svg";
 import {
   PROFILE_COLORS,
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.02)",
+    borderColor: colors.blackAlpha02,
     position: "relative",
     overflow: "hidden",
   },
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#92400e",
+    color: colors.semantic.amber.darkText,
   },
   editInput: {
     flex: 1,
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
     borderColor: PROFILE_COLORS.border,
     borderRadius: 8,

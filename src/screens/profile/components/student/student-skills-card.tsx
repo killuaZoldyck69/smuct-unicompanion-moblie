@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
@@ -61,7 +62,7 @@ export const StudentSkillsCard = React.memo(function StudentSkillsCard({
             accessible={true}
           />
           <TouchableOpacity onPress={handleAdd} style={styles.addBtn} activeOpacity={0.8}>
-            <Feather name="plus" size={15} color="#ffffff" />
+            <Feather name="plus" size={15} color={colors.white} />
           </TouchableOpacity>
         </View>
       )}
@@ -119,7 +120,7 @@ export const StudentSkillsCard = React.memo(function StudentSkillsCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fbfffd",
+    backgroundColor: colors.semantic.emerald.mintSurface,
     borderRadius: PROFILE_COLORS.cardRadius,
     marginBottom: SPACING.cardGap,
     shadowColor: PROFILE_COLORS.deepNavy,
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "#d1fae5",
+    borderColor: colors.semantic.emerald.border,
     padding: SPACING.lg,
     position: "relative",
     overflow: "hidden",
@@ -170,13 +171,13 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: PROFILE_COLORS.pillRadius,
     paddingHorizontal: 12,
     paddingVertical: 5,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.15)",
+    borderColor: colors.semantic.emerald.alpha15,
     zIndex: 1,
   },
   input: {
@@ -208,35 +209,35 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    shadowColor: "#0f172a",
+    shadowColor: colors.navyInk,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   },
   blueChip: {
-    backgroundColor: "#f0f9ff",
-    borderColor: "#dbeafe",
+    backgroundColor: colors.semantic.sky.tint,
+    borderColor: colors.semantic.blue.soft,
   },
   greenChip: {
-    backgroundColor: "#ecfdf5",
-    borderColor: "#c5f3df",
+    backgroundColor: colors.semantic.emerald.tint,
+    borderColor: colors.semantic.emerald.mintBorderSoft,
   },
   indigoChip: {
-    backgroundColor: "#eef2ff",
-    borderColor: "#dbe4ff",
+    backgroundColor: colors.semantic.indigo.tint,
+    borderColor: colors.semantic.blue.softAlt,
   },
   chipDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
   },
-  blueDot: { backgroundColor: "#22d3ee" },
-  greenDot: { backgroundColor: "#10b981" },
-  indigoDot: { backgroundColor: "#6366f1" },
-  blueChipText: { color: "#0369a1" },
-  greenChipText: { color: "#047857" },
-  indigoChipText: { color: "#3730a3" },
+  blueDot: { backgroundColor: colors.semantic.cyan.light },
+  greenDot: { backgroundColor: colors.semantic.emerald.solid },
+  indigoDot: { backgroundColor: colors.semantic.indigo.soft },
+  blueChipText: { color: colors.semantic.sky.deep },
+  greenChipText: { color: colors.semantic.emerald.darker },
+  indigoChipText: { color: colors.semantic.indigo.darker },
   chipText: {
     fontFamily,
     fontSize: 13,

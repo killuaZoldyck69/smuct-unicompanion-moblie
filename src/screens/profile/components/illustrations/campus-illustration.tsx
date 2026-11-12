@@ -17,6 +17,7 @@ import Svg, {
   G,
   Ellipse,
 } from "react-native-svg";
+import { colors } from "@/theme/colors";
 
 interface CampusIllustrationProps {
   width?: number;
@@ -29,7 +30,7 @@ export const CampusIllustration = React.memo(function CampusIllustration({
   width = 120,
   height = 110,
   opacity = 0.13,
-  color = "#2563eb",
+  color = colors.semantic.blue.accent,
 }: CampusIllustrationProps) {
   return (
     <Svg

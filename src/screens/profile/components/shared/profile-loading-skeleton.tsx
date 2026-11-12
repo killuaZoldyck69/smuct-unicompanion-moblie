@@ -1,5 +1,6 @@
 import React from "react";
 import { ScrollView, StatusBar, StyleSheet, View } from "react-native";
+import { colors } from "@/theme/colors";
 import { PROFILE_COLORS, SPACING } from "../../constants";
 
 type ProfileLoadingSkeletonProps = {
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     paddingBottom: 140,
   },
   placeholder: {
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
     borderRadius: 6,
   },
   identityCard: {
@@ -171,20 +172,20 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.whiteAlpha20,
     marginBottom: 14,
   },
   adminName: {
     width: 170,
     height: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.whiteAlpha20,
     marginBottom: 10,
   },
   adminRole: {
     width: 112,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: colors.whiteAlpha15,
   },
   sectionCard: {
     backgroundColor: PROFILE_COLORS.white,

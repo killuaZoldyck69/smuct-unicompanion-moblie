@@ -1,8 +1,10 @@
 import { Linking, Platform, Alert } from "react-native";
-import * as SecureStore from "expo-secure-store";
 import Toast from "react-native-toast-message";
 import { authClient } from "@/services/auth-client";
 import { unregisterPushNotificationsAsync } from "@/services/push-token.service";
+import { clearStoredAuthSession } from "@/services/session-storage";
+import { executeLogoutCleanup } from "./logout-logic";
+import { normalizeSafeHttpUrl } from "./profile-form-logic";
 
 /**
  * Splits a number into its numeric string and ordinal suffix (e.g. 9 -> { number: "9", suffix: "th" }).
@@ -96,15 +98,16 @@ export const formatFriendlyLink = (url?: string | null): string => {
 };
 
 export const safeOpenURL = async (url?: string | null): Promise<void> => {
-  if (!url || typeof url !== "string") return;
-
-  const trimmed = url.trim();
-  if (!trimmed) return;
-
-  // Security guard: ensure URL starts with http:// or https:// to prevent malicious schemes
-  let validUrl = trimmed;
-  if (!/^https?:\/\//i.test(trimmed)) {
-    validUrl = `https://${trimmed}`;
+  const validUrl = normalizeSafeHttpUrl(url);
+  if (!validUrl) {
+    if (url && url.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid URL",
+        text2: "Only safe public web links (http/https) can be opened.",
+      });
+    }
+    return;
   }
 
   try {
@@ -131,24 +134,28 @@ export const performLogout = async (
   router: { replace: (href: any) => void },
   queryClient: { setQueryData: (key: any, data: any) => void; clear: () => void }
 ): Promise<void> => {
-  try {
-    // Unregister push token for this device before session termination
-    await unregisterPushNotificationsAsync().catch(() => {});
+  const result = await executeLogoutCleanup({
+    unregisterPushToken: async () => {
+      await unregisterPushNotificationsAsync();
+    },
+    signOutRemote: async () => {
+      await authClient.signOut();
+    },
+    clearLocalSession: clearStoredAuthSession,
+    clearQueryCache: () => {
+      queryClient.setQueryData(["currentUser"], null);
+      queryClient.clear();
+    },
+    navigateToLogin: () => {
+      router.replace("/(auth)/login");
+    },
+  });
 
-    await authClient.signOut();
-    if (Platform.OS !== "web") {
-      await SecureStore.deleteItemAsync("better-auth.session_token");
-      await SecureStore.deleteItemAsync("better-auth_cookie");
-      await SecureStore.deleteItemAsync("better-auth_session_data");
-    }
-    queryClient.setQueryData(["currentUser"], null);
-    queryClient.clear();
-    router.replace("/(auth)/login");
-  } catch {
+  if (!result.remoteRevoked) {
     Toast.show({
-      type: "error",
-      text1: "Sign Out Error",
-      text2: "An error occurred while logging out. Please try again.",
+      type: "info",
+      text1: "Signed Out Locally",
+      text2: "Your session on this device has been cleared.",
     });
   }
 };

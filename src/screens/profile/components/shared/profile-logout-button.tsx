@@ -3,6 +3,7 @@ import { Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { colors } from "@/theme/colors";
 import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
 import { performLogout } from "../../utils";
 import { LogoutModal } from "./logout-modal";
@@ -47,7 +48,7 @@ export const ProfileLogoutButton = React.memo(function ProfileLogoutButton({
         <Feather
           name="log-out"
           size={16}
-          color="#dc2626"
+          color={colors.semantic.red.accent}
           style={{ marginRight: 8 }}
         />
         <Text
@@ -72,11 +73,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff1f2",
+    backgroundColor: colors.semantic.rose.tint,
     paddingVertical: 13,
     borderRadius: PROFILE_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.22)",
+    borderColor: colors.semantic.red.alpha22,
     marginTop: 6,
     marginBottom: 20,
     gap: 8,
@@ -85,13 +86,13 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
-    color: "#dc2626",
+    color: colors.semantic.red.accent,
   },
   studentButton: {
     borderRadius: 18,
     paddingVertical: 18,
-    backgroundColor: "#ffe4e6",
-    borderColor: "#fecdd3",
+    backgroundColor: colors.semantic.rose.softBorder,
+    borderColor: colors.semantic.rose.border,
     marginTop: SPACING.sm,
     marginBottom: SPACING.xl,
   },

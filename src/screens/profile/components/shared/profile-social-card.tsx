@@ -1,13 +1,15 @@
 import React from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Linking } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Svg, { Rect, Circle, G, Path } from "react-native-svg";
+import { colors } from "@/theme/colors";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
   SPACING,
   fontFamily,
 } from "../../constants";
+import { safeOpenURL } from "../../utils";
 
 interface ProfileSocialCardProps {
   variant?: "student" | "teacher";
@@ -27,9 +29,9 @@ const BrowserWatermark = ({ variant }: { variant: "student" | "teacher" }) =>
       style={styles.studentWatermark}
       aria-hidden={true}
     >
-      <G opacity={0.06} fill="none" stroke="#4f46e5" strokeWidth={5}>
+      <G opacity={0.06} fill="none" stroke={colors.semantic.indigo.solid} strokeWidth={5}>
         <Circle cx="84" cy="68" r="52" />
-        <Path d="m96 37-12 31 30-12-24-19Z" fill="#4f46e5" stroke="none" />
+        <Path d="m96 37-12 31 30-12-24-19Z" fill={colors.semantic.indigo.solid} stroke="none" />
       </G>
     </Svg>
   ) : (
@@ -38,14 +40,14 @@ const BrowserWatermark = ({ variant }: { variant: "student" | "teacher" }) =>
       {/* Browser Window */}
       <Rect x="20" y="20" width="100" height="70" rx="6" />
       {/* Top Bar */}
-      <Circle cx="30" cy="28" r="2" fill="#fff" />
-      <Circle cx="36" cy="28" r="2" fill="#fff" />
-      <Circle cx="42" cy="28" r="2" fill="#fff" />
-      <Rect x="20" y="34" width="100" height="1" fill="#fff" />
+      <Circle cx="30" cy="28" r="2" fill={colors.white} />
+      <Circle cx="36" cy="28" r="2" fill={colors.white} />
+      <Circle cx="42" cy="28" r="2" fill={colors.white} />
+      <Rect x="20" y="34" width="100" height="1" fill={colors.white} />
       {/* Content lines */}
-      <Rect x="30" y="44" width="30" height="30" rx="15" fill="#fff" />
-      <Rect x="70" y="52" width="40" height="6" rx="3" fill="#fff" />
-      <Rect x="70" y="64" width="30" height="4" rx="2" fill="#fff" />
+      <Rect x="30" y="44" width="30" height="30" rx="15" fill={colors.white} />
+      <Rect x="70" y="52" width="40" height="6" rx="3" fill={colors.white} />
+      <Rect x="70" y="64" width="30" height="4" rx="2" fill={colors.white} />
     </G>
   </Svg>
   );
@@ -80,7 +82,7 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
       {(isEditing || !!linkedInUrl) && (
         <View style={[styles.linkRow, variant === "student" && styles.studentLinkRow]}>
           <View style={styles.linkIconWrapper}>
-            <Feather name="linkedin" size={18} color="#ffffff" />
+            <Feather name="linkedin" size={18} color={colors.white} />
           </View>
           <View style={styles.linkContent}>
             <Text style={styles.linkLabel}>LinkedIn</Text>
@@ -97,10 +99,7 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
                />
              ) : (
               <TouchableOpacity
-                onPress={() => {
-                  const target = /^https?:\/\//i.test(linkedInUrl) ? linkedInUrl : `https://${linkedInUrl}`;
-                  Linking.openURL(target).catch(() => {});
-                }}
+                onPress={() => safeOpenURL(linkedInUrl)}
                 style={styles.linkUrlRow}
                 activeOpacity={0.7}
                 accessible={true}
@@ -117,7 +116,7 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
                 </Text>
                 {variant === "student" ? (
                   <View style={styles.studentArrow}>
-                    <Feather name="arrow-up-right" size={15} color="#94a3b8" />
+                    <Feather name="arrow-up-right" size={15} color={colors.slate400} />
                   </View>
                 ) : (
                   <Feather name="arrow-up-right" size={12} color={theme.primaryText} />
@@ -136,8 +135,8 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
             { marginTop: 12 },
           ]}
         >
-          <View style={[styles.linkIconWrapper, { backgroundColor: "#0f172a" }]}>
-            <Feather name="globe" size={18} color="#ffffff" />
+          <View style={[styles.linkIconWrapper, { backgroundColor: colors.navyInk }]}>
+            <Feather name="globe" size={18} color={colors.white} />
           </View>
           <View style={styles.linkContent}>
             <Text style={styles.linkLabel}>Website</Text>
@@ -154,10 +153,7 @@ export const ProfileSocialCard = React.memo(function ProfileSocialCard({
                />
             ) : (
               <TouchableOpacity
-                onPress={() => {
-                  const target = /^https?:\/\//i.test(personalWebsiteUrl) ? personalWebsiteUrl : `https://${personalWebsiteUrl}`;
-                  Linking.openURL(target).catch(() => {});
-                }}
+                onPress={() => safeOpenURL(personalWebsiteUrl)}
                 style={styles.linkUrlRow}
                 activeOpacity={0.7}
                 accessible={true}
@@ -187,7 +183,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.02)",
+    borderColor: colors.blackAlpha02,
     padding: SPACING.lg,
     position: "relative",
     overflow: "hidden",
@@ -244,16 +240,16 @@ const styles = StyleSheet.create({
     zIndex: 1,
     padding: 10,
     borderRadius: 14,
-    backgroundColor: "#f0f9ff",
+    backgroundColor: colors.semantic.sky.tint,
     borderWidth: 1,
-    borderColor: "#dbeafe",
+    borderColor: colors.semantic.blue.soft,
   },
   studentLinkRow: {
-    backgroundColor: "#ffffff",
-    borderColor: "#dbeafe",
+    backgroundColor: colors.white,
+    borderColor: colors.semantic.blue.soft,
     borderRadius: 16,
     padding: 12,
-    shadowColor: "#1d4ed8",
+    shadowColor: colors.semantic.blue.darker,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 5,
@@ -263,7 +259,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "#0A66C2", // LinkedIn blue
+    backgroundColor: colors.semantic.blue.linkedin,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -293,7 +289,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   studentLinkUrl: {
-    color: "#2563eb",
+    color: colors.semantic.blue.accent,
   },
   studentArrow: {
     width: 34,
@@ -301,9 +297,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 17,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e5edf6",
+    borderColor: colors.coolTint,
   },
   editInput: {
     flex: 1,
@@ -311,7 +307,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "400",
     color: PROFILE_COLORS.deepNavy,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
     borderColor: PROFILE_COLORS.border,
     borderRadius: 6,

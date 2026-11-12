@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Svg, { Circle, Path } from "react-native-svg";
+import { colors } from "@/theme/colors";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
@@ -42,14 +43,14 @@ export const TeacherExpertiseCard = React.memo(function TeacherExpertiseCard({
           <Path
             d="M37 20 13 43l24 22M75 13 57 74M83 20l24 23-24 22"
             fill="none"
-            stroke="#14b8a6"
+            stroke={colors.semantic.teal.light}
             strokeWidth={8}
             strokeLinecap="round"
             strokeLinejoin="round"
             opacity={0.1}
           />
-          <Circle cx={99} cy={12} r={5} fill="#14b8a6" opacity={0.1} />
-          <Circle cx={105} cy={76} r={5} fill="#14b8a6" opacity={0.1} />
+          <Circle cx={99} cy={12} r={5} fill={colors.semantic.teal.light} opacity={0.1} />
+          <Circle cx={105} cy={76} r={5} fill={colors.semantic.teal.light} opacity={0.1} />
         </Svg>
       </View>
 
@@ -75,7 +76,7 @@ export const TeacherExpertiseCard = React.memo(function TeacherExpertiseCard({
             accessible={true}
           />
           <TouchableOpacity onPress={handleAdd} style={styles.addBtn} activeOpacity={0.8}>
-            <Feather name="plus" size={15} color="#ffffff" />
+            <Feather name="plus" size={15} color={colors.white} />
           </TouchableOpacity>
         </View>
       )}
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.02)",
+    borderColor: colors.blackAlpha02,
     padding: SPACING.lg,
     position: "relative",
     overflow: "hidden",
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
     right: -12,
     bottom: -10,
     borderTopLeftRadius: 70,
-    backgroundColor: "#f0fdfa",
+    backgroundColor: colors.semantic.teal.tint,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: PROFILE_COLORS.pillRadius,
     paddingHorizontal: 12,
     paddingVertical: 4,

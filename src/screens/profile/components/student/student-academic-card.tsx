@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TextInput, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { StudentProfileData } from "@/services/student-service";
 import {
   PROFILE_COLORS,
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.02)",
+    borderColor: colors.blackAlpha02,
     padding: SPACING.lg,
   },
   topSection: {
@@ -203,10 +204,10 @@ const styles = StyleSheet.create({
   },
 
   programPanel: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#edf2f7",
+    borderColor: colors.softNeutralSurface,
     paddingHorizontal: 15,
     paddingVertical: 14,
     zIndex: 1,
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#94a3b8",
+    backgroundColor: colors.slate400,
   },
   departmentValue: {
     fontFamily,
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#e5edf6",
+    borderColor: colors.coolTint,
     paddingHorizontal: 14,
     marginTop: SPACING.md,
     zIndex: 1,
@@ -261,9 +262,9 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#047857",
-    backgroundColor: "#ecfdf5",
-    borderColor: "#a7f3d0",
+    color: colors.semantic.emerald.darker,
+    backgroundColor: colors.semantic.emerald.tint,
+    borderColor: colors.semantic.emerald.mintBorderStrong,
     borderWidth: 1,
     borderRadius: 999,
     overflow: "hidden",
@@ -276,9 +277,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: PROFILE_COLORS.deepNavy,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.15)",
+    borderColor: colors.semantic.blue.alpha15,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -292,31 +293,31 @@ const styles = StyleSheet.create({
   statTile: {
     flex: 1,
     flexDirection: "column",
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderRadius: 15,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.05)",
+    borderColor: colors.navyAlpha05,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
   },
   statTileEditing: {
-    backgroundColor: "#eff6ff",
-    borderColor: "rgba(37, 99, 235, 0.2)",
+    backgroundColor: colors.semantic.blue.tint,
+    borderColor: colors.semantic.blue.alpha20,
   },
   semesterTile: {
-    backgroundColor: "#eef2ff",
-    borderColor: "#dbe4ff",
+    backgroundColor: colors.semantic.indigo.tint,
+    borderColor: colors.semantic.blue.softAlt,
   },
   batchTile: {
-    backgroundColor: "#ecfdf5",
-    borderColor: "#c5f3df",
+    backgroundColor: colors.semantic.emerald.tint,
+    borderColor: colors.semantic.emerald.mintBorderSoft,
   },
   sectionTile: {
-    backgroundColor: "#fffbeb",
-    borderColor: "#fde9a6",
+    backgroundColor: colors.semantic.amber.tint,
+    borderColor: colors.semantic.amber.softBorder,
   },
   statTileLabel: {
     fontFamily,
@@ -325,9 +326,9 @@ const styles = StyleSheet.create({
     color: PROFILE_COLORS.subtleText,
     letterSpacing: 0.5,
   },
-  semesterLabel: { color: "#6366f1" },
-  batchLabel: { color: "#059669" },
-  sectionLabel: { color: "#d97706" },
+  semesterLabel: { color: colors.semantic.indigo.soft },
+  batchLabel: { color: colors.semantic.emerald.accent },
+  sectionLabel: { color: colors.semantic.amber.accent },
   ordinalRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -340,8 +341,8 @@ const styles = StyleSheet.create({
     color: SECTION_THEMES.ACADEMIC.primaryText,
     letterSpacing: -0.3,
   },
-  batchNumber: { color: "#047857" },
-  sectionNumber: { color: "#b45309" },
+  batchNumber: { color: colors.semantic.emerald.darker },
+  sectionNumber: { color: colors.semantic.amber.deep },
   statSuffix: {
     fontFamily,
     fontSize: 11,

@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import {
   PROFILE_COLORS,
   SECTION_THEMES,
@@ -58,7 +59,7 @@ export const TeacherQualificationsCard = React.memo(
             <Path
               d="M22 8h34l24 24v62a6 6 0 0 1-6 6H22a6 6 0 0 1-6-6V14a6 6 0 0 1 6-6Z"
               fill="none"
-              stroke="#6366f1"
+              stroke={colors.semantic.indigo.soft}
               strokeWidth={8}
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -67,7 +68,7 @@ export const TeacherQualificationsCard = React.memo(
             <Path
               d="M56 10v22h22M32 58h34M32 73h34"
               fill="none"
-              stroke="#6366f1"
+              stroke={colors.semantic.indigo.soft}
               strokeWidth={7}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -116,7 +117,7 @@ export const TeacherQualificationsCard = React.memo(
                 accessibilityRole="button"
                 accessibilityLabel="Add qualification"
               >
-                <Feather name="plus" size={15} color="#ffffff" />
+                <Feather name="plus" size={15} color={colors.white} />
               </TouchableOpacity>
             </View>
           </View>
@@ -155,7 +156,7 @@ export const TeacherQualificationsCard = React.memo(
                       accessibilityRole="button"
                       accessibilityLabel={`Remove qualification ${degree}`}
                     >
-                      <Feather name="trash-2" size={14} color="#dc2626" />
+                      <Feather name="trash-2" size={14} color={colors.semantic.red.accent} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.02)",
+    borderColor: colors.blackAlpha02,
     padding: SPACING.lg,
     position: "relative",
     overflow: "hidden",
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
     right: -12,
     bottom: -12,
     borderTopLeftRadius: 70,
-    backgroundColor: "#f5f3ff",
+    backgroundColor: colors.semantic.violet.tint,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -232,21 +233,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   editContainer: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     padding: 10,
     borderRadius: 10,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.15)",
+    borderColor: colors.semantic.blue.alpha15,
   },
   editInput: {
     fontFamily,
     fontSize: 13.5,
     fontWeight: "600",
     color: PROFILE_COLORS.deepNavy,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.08)",
+    borderColor: colors.navyAlpha08,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     top: 6,
     bottom: 12,
     width: 1.5,
-    backgroundColor: "rgba(19, 27, 46, 0.08)",
+    backgroundColor: colors.navyAlpha08,
   },
   timelineItem: {
     flexDirection: "row",
@@ -293,13 +294,13 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   timelineDotPrimary: {
-    backgroundColor: "#2563eb",
+    backgroundColor: colors.semantic.blue.accent,
   },
   timelineDotSecondary: {
-    backgroundColor: "#6366f1",
+    backgroundColor: colors.semantic.indigo.soft,
   },
   timelineDotMuted: {
-    backgroundColor: "#cbd5e1",
+    backgroundColor: colors.slate300,
   },
   fieldContent: {
     flex: 1,

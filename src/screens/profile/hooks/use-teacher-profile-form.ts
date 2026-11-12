@@ -6,19 +6,17 @@ import {
   ConsultationSlot,
 } from "@/services/teacher-service";
 import { BLOOD_GROUP_TO_UI, BLOOD_GROUP_TO_DB } from "../constants";
-import { sortQualificationEntries } from "@/utils/qualification-order";
 import { SMUCT_PROGRAM_DEPARTMENTS } from "@/data/programs";
-
-const normalizeBangladeshPhone = (phone?: string | null): string => {
-  const digits = (phone || "").replace(/\D/g, "");
-  if (!digits) return "";
-  const nationalNumber = digits.startsWith("880")
-    ? digits.slice(3)
-    : digits.startsWith("0")
-      ? digits.slice(1)
-      : digits;
-  return `+880${nationalNumber.slice(-10)}`;
-};
+import {
+  areConsultationSlotsEqual,
+  areQualificationRecordsEqual,
+  areStringListsEqual,
+  normalizeBangladeshPhone,
+  normalizeSafeHttpUrl,
+  resolveBdPhoneUpdate,
+  serializeQualificationRecord,
+  toQualificationRecord,
+} from "../profile-form-logic";
 
 export interface TeacherFormData {
   department: string;
@@ -34,6 +32,16 @@ export interface TeacherFormData {
   linkedInUrl: string;
   personalWebsiteUrl: string;
 }
+
+const VALID_DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
 
 export function useTeacherProfileForm(
   profile: TeacherProfileData | null | undefined,
@@ -58,82 +66,34 @@ export function useTeacherProfileForm(
   const resetForm = useCallback(() => {
     if (!profile) return;
 
-    let rawParsedQuals: Record<string, string> = {};
-    if (
-      typeof (profile as any).academicQualifications === "object" &&
-      (profile as any).academicQualifications !== null &&
-      !Array.isArray((profile as any).academicQualifications)
-    ) {
-      rawParsedQuals = (profile as any).academicQualifications as Record<string, string>;
-    } else if (Array.isArray((profile as any).academicQualifications)) {
-      (profile as any).academicQualifications.forEach((q: any) => {
-        if (!q) return;
-        if (typeof q === "string") {
-          const parts = q.split(" - ");
-          if (parts.length >= 2) {
-            rawParsedQuals[parts[0].trim()] = parts.slice(1).join(" - ").trim();
-          } else {
-            rawParsedQuals[q.trim()] = "Completed";
-          }
-        } else if (typeof q === "object") {
-          const deg =
-            q.degree || q.title || (q.field ? `Degree in ${q.field}` : "") || "Degree";
-          const detailsParts = [
-            q.institution || q.institute || q.university,
-            q.passingYear || q.year,
-          ].filter(Boolean);
-          rawParsedQuals[deg.trim()] = detailsParts.join(" — ").trim() || "Completed";
-        }
-      });
-    } else if (Array.isArray(profile.education)) {
-      profile.education.forEach((item) => {
-        if (typeof item === "string") {
-          const parts = item.split(" - ");
-          if (parts.length >= 2) {
-            rawParsedQuals[parts[0].trim()] = parts.slice(1).join(" - ").trim();
-          } else {
-            rawParsedQuals[item.trim()] = "Completed";
-          }
-        }
-      });
-    }
+    const rawQuals = toQualificationRecord(
+      profile.academicQualifications ?? (profile.education as unknown as Record<string, string>)
+    );
 
-    // Sort qualifications in exact reverse-chronological order
-    const sortedEntries = sortQualificationEntries(Object.entries(rawParsedQuals));
-    const parsedQuals: Record<string, string> = {};
-    sortedEntries.forEach(([d, i]) => {
-      parsedQuals[d] = i;
-    });
-
-    let slots: ConsultationSlot[] = [];
-    if (
-      Array.isArray((profile as any).consultationSlots) &&
-      (profile as any).consultationSlots.length > 0
-    ) {
-      slots = (profile as any).consultationSlots.map((s: any) => ({
-        day: s.day || "Sunday",
-        startTime: s.startTime || "",
-        endTime: s.endTime || "",
-      }));
-    }
+    const slots: ConsultationSlot[] = Array.isArray(profile.consultationSlots)
+      ? profile.consultationSlots.map((s) => ({
+          day: s.day || "Sunday",
+          startTime: s.startTime || "",
+          endTime: s.endTime || "",
+        }))
+      : [];
 
     setFormData({
       department: profile.department || "",
       faculty: profile.faculty || "",
-      officeRoom:
-        profile.officeRoom || profile.roomNumber || profile.roomNo || "",
+      officeRoom: profile.officeRoom || profile.roomNumber || profile.roomNo || "",
       advisoryBatch:
         profile.advisoryBatch !== null && profile.advisoryBatch !== undefined
           ? String(profile.advisoryBatch)
           : "",
       dayOff: profile.dayOff || "",
       consultationSlots: slots,
-      phoneNumber: normalizeBangladeshPhone(
-        profile.phoneNumber || profile.phone,
-      ),
+      phoneNumber: normalizeBangladeshPhone(profile.phoneNumber || profile.phone),
       bloodGroup: profile.bloodGroup ? BLOOD_GROUP_TO_UI[profile.bloodGroup] || "" : "",
-      expertiseFields: (profile as any).expertiseFields || profile.researchInterests || [],
-      academicQualifications: parsedQuals,
+      expertiseFields: [
+        ...(profile.expertiseFields ?? profile.researchInterests ?? []),
+      ],
+      academicQualifications: rawQuals,
       linkedInUrl: profile.linkedInUrl || profile.linkedinUrl || "",
       personalWebsiteUrl: profile.personalWebsiteUrl || profile.websiteUrl || "",
     });
@@ -232,12 +192,12 @@ export function useTeacherProfileForm(
     const cleanDept = formData.department.trim();
     if (cleanDept !== (profile.department || "")) {
       const isAllowedDepartment = SMUCT_PROGRAM_DEPARTMENTS.some(
-        (option) => option.name === cleanDept,
+        (option) => option.name === cleanDept
       );
       if (!isAllowedDepartment) {
         Alert.alert(
           "Invalid department",
-          "Choose a department from the university department list.",
+          "Choose a department from the university department list."
         );
         return;
       }
@@ -250,8 +210,7 @@ export function useTeacherProfileForm(
     }
 
     const cleanRoom = formData.officeRoom.trim().replace(/\D/g, "");
-    const currentRoom =
-      profile.officeRoom || profile.roomNumber || profile.roomNo || "";
+    const currentRoom = profile.officeRoom || profile.roomNumber || profile.roomNo || "";
     if (cleanRoom !== currentRoom) {
       payload.officeRoom = cleanRoom;
     }
@@ -259,46 +218,43 @@ export function useTeacherProfileForm(
     const cleanBatch = formData.advisoryBatch.trim();
     const batchNum = cleanBatch ? parseInt(cleanBatch, 10) : null;
     const currentBatch = profile.advisoryBatch ?? null;
+    if (batchNum !== null && (isNaN(batchNum) || batchNum <= 0)) {
+      Alert.alert("Invalid advisory batch", "Advisory batch must be a positive number.");
+      return;
+    }
     if (batchNum !== currentBatch) {
-      payload.advisoryBatch = isNaN(batchNum as number) ? null : batchNum;
+      payload.advisoryBatch = batchNum;
     }
 
     const cleanDayOff = formData.dayOff.trim();
     if (cleanDayOff !== (profile.dayOff || "")) {
-      const validDays = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ];
-      if (!validDays.includes(cleanDayOff)) {
-        Alert.alert("Invalid day off", "Choose one of the seven days.");
+      if (
+        cleanDayOff !== "" &&
+        !VALID_DAYS.includes(cleanDayOff as (typeof VALID_DAYS)[number])
+      ) {
+        Alert.alert("Invalid day off", "Choose one of the seven days or leave blank.");
         return;
       }
       payload.dayOff = cleanDayOff;
     }
 
-    // Consultation slots
-    payload.consultationSlots = formData.consultationSlots;
-
-    const phoneDigits = formData.phoneNumber.replace(/\D/g, "").slice(-10);
-    const currentPhone = normalizeBangladeshPhone(
-      profile.phoneNumber || profile.phone,
-    );
-    const isPhoneChanged = formData.phoneNumber !== currentPhone;
-    if (isPhoneChanged && phoneDigits.length !== 10) {
-      Alert.alert(
-        "Invalid phone number",
-        "Enter all 10 digits after the +880 country code.",
-      );
-      return;
+    if (!areConsultationSlotsEqual(formData.consultationSlots, profile.consultationSlots)) {
+      payload.consultationSlots = formData.consultationSlots;
     }
-    const cleanPhone = isPhoneChanged ? `+880${phoneDigits}` : currentPhone;
-    if (cleanPhone !== currentPhone) {
-      payload.phoneNumber = cleanPhone;
+
+    const phoneResolution = resolveBdPhoneUpdate(
+      formData.phoneNumber,
+      profile.phoneNumber || profile.phone
+    );
+    if (phoneResolution.changed) {
+      if (!phoneResolution.valid) {
+        Alert.alert(
+          "Invalid phone number",
+          "Enter all 10 digits after the +880 country code, or leave blank to clear."
+        );
+        return;
+      }
+      payload.phoneNumber = phoneResolution.value;
     }
 
     if (formData.bloodGroup) {
@@ -308,31 +264,39 @@ export function useTeacherProfileForm(
       }
     }
 
-    const currentExpertise = (profile as any)?.expertiseFields || profile.researchInterests || [];
-    const isExpertiseChanged =
-      formData.expertiseFields.length !== currentExpertise.length ||
-      formData.expertiseFields.some((f, i) => f !== currentExpertise[i]);
-    if (isExpertiseChanged) {
-      payload.researchInterests = formData.expertiseFields;
+    const originalExpertise = profile.expertiseFields ?? profile.researchInterests ?? [];
+    if (!areStringListsEqual(formData.expertiseFields, originalExpertise)) {
+      payload.expertiseFields = formData.expertiseFields.map((f) => f.trim()).filter(Boolean);
     }
 
-    // Qualifications mapping sorted in exact reverse-chronological hierarchy
-    const qualEntries = sortQualificationEntries(
-      Object.entries(formData.academicQualifications),
+    const originalQualRecord = toQualificationRecord(
+      profile.academicQualifications ?? (profile.education as unknown as Record<string, string>)
     );
-    const educationArray = qualEntries.map(([d, i]) => `${d} - ${i}`);
-    payload.education = educationArray;
-
-    const cleanLinkedIn = formData.linkedInUrl.trim();
-    if (cleanLinkedIn !== (profile.linkedInUrl || profile.linkedinUrl || "")) {
-      payload.linkedInUrl = cleanLinkedIn;
-      payload.linkedinUrl = cleanLinkedIn;
+    if (!areQualificationRecordsEqual(formData.academicQualifications, originalQualRecord)) {
+      payload.academicQualifications = serializeQualificationRecord(
+        formData.academicQualifications,
+        profile.academicQualifications
+      );
     }
 
-    const cleanWebsite = formData.personalWebsiteUrl.trim();
-    if (cleanWebsite !== (profile.personalWebsiteUrl || profile.websiteUrl || "")) {
-      payload.personalWebsiteUrl = cleanWebsite;
-      payload.websiteUrl = cleanWebsite;
+    const currentLinkedIn = profile.linkedInUrl || profile.linkedinUrl || "";
+    if (formData.linkedInUrl.trim() !== currentLinkedIn) {
+      const normalizedLinkedIn = normalizeSafeHttpUrl(formData.linkedInUrl);
+      if (normalizedLinkedIn === null) {
+        Alert.alert("Invalid LinkedIn URL", "Enter a valid http:// or https:// web address.");
+        return;
+      }
+      payload.linkedInUrl = normalizedLinkedIn;
+    }
+
+    const currentWebsite = profile.personalWebsiteUrl || profile.websiteUrl || "";
+    if (formData.personalWebsiteUrl.trim() !== currentWebsite) {
+      const normalizedWebsite = normalizeSafeHttpUrl(formData.personalWebsiteUrl);
+      if (normalizedWebsite === null) {
+        Alert.alert("Invalid Website URL", "Enter a valid http:// or https:// web address.");
+        return;
+      }
+      payload.personalWebsiteUrl = normalizedWebsite;
     }
 
     if (Object.keys(payload).length === 0) {

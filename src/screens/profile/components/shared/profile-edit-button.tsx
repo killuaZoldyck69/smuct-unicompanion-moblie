@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
 
 interface ProfileEditButtonProps {
@@ -39,7 +40,7 @@ export const ProfileEditButton = React.memo(function ProfileEditButton({
           accessibilityRole="button"
           accessibilityLabel="Cancel editing profile"
         >
-          <Feather name="x" size={14} color="#dc2626" />
+          <Feather name="x" size={14} color={colors.semantic.red.accent} />
           <Text style={[styles.cancelText, variant === "student" && styles.studentActionText]}>
             Cancel
           </Text>
@@ -55,9 +56,9 @@ export const ProfileEditButton = React.memo(function ProfileEditButton({
           accessibilityLabel="Save profile changes"
         >
           {isUpdating ? (
-            <ActivityIndicator size="small" color="#ffffff" />
+            <ActivityIndicator size="small" color={PROFILE_COLORS.white} />
           ) : (
-            <Feather name="check" size={14} color="#ffffff" />
+            <Feather name="check" size={14} color={PROFILE_COLORS.white} />
           )}
           <Text style={[styles.saveText, variant === "student" && styles.studentActionText]}>
             {isUpdating ? "Saving..." : "Save Changes"}
@@ -79,7 +80,7 @@ export const ProfileEditButton = React.memo(function ProfileEditButton({
       <Feather
         name="edit-3"
         size={15}
-        color="#ffffff"
+        color={PROFILE_COLORS.white}
         style={{ marginRight: 6 }}
       />
       <Text style={[styles.text, variant === "student" && styles.studentText]}>
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
-    color: "#ffffff",
+    color: PROFILE_COLORS.white,
   },
   studentButton: {
     borderRadius: 18,
@@ -150,14 +151,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   cancelBtn: {
-    backgroundColor: "#fef2f2",
-    borderColor: "#fecaca",
+    backgroundColor: colors.semantic.red.tint,
+    borderColor: colors.semantic.red.border,
   },
   cancelText: {
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
-    color: "#dc2626",
+    color: colors.semantic.red.accent,
   },
   saveBtn: {
     backgroundColor: PROFILE_COLORS.deepNavy,
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
-    color: "#ffffff",
+    color: PROFILE_COLORS.white,
   },
   studentActionText: {
     fontSize: 14,

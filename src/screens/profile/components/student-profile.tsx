@@ -24,8 +24,10 @@ import { ProfileSocialCard } from "./shared/profile-social-card";
 import { ProfileEditButton } from "./shared/profile-edit-button";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
 import { BloodGroupModal } from "./shared/blood-group-modal";
-import { ProfileErrorState } from "./shared/profile-states";
+import { ProfileErrorState, ProfileOfflineBanner } from "./shared/profile-states";
 import { ProfileLoadingSkeleton } from "./shared/profile-loading-skeleton";
+import { ProfileAccountActions } from "./shared/profile-account-actions";
+import { DeleteAccountModal } from "./shared/delete-account-modal";
 
 interface StudentProfileProps {
   sessionUser: {
@@ -40,6 +42,7 @@ interface StudentProfileProps {
 export default function StudentProfile({ sessionUser }: StudentProfileProps) {
   const insets = useSafeAreaInsets();
   const [bloodModalVisible, setBloodModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -62,6 +65,8 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
     isLoading,
     isRefetching,
     isError,
+    errorMessage,
+    isOffline,
     refetch,
     updateProfile: updateStudentProfile,
     isUpdating,
@@ -95,10 +100,14 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
     return (
       <ProfileErrorState
         title={
-          !profile
-            ? "No student profile found"
-            : "Failed to load student profile"
+          isError
+            ? isOffline
+              ? "You are offline"
+              : "Failed to load student profile"
+            : "No student profile found"
         }
+        subtitle={errorMessage ?? undefined}
+        isOffline={isOffline}
         onRetry={refetch}
       />
     );
@@ -119,7 +128,6 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
         insetsTop={insets.top}
         isEditing={isEditing}
         isUpdating={isUpdating}
-        onEdit={() => setIsEditing(true)}
         onCancel={handleCancel}
         onSave={handleSave}
       />
@@ -146,6 +154,7 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
           />
         }
       >
+        <ProfileOfflineBanner visible={isOffline} />
         <StudentIdentityCard
           profile={profile}
           sessionUser={sessionUser}
@@ -199,6 +208,11 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
           onSave={handleSave}
         />
 
+        <ProfileAccountActions
+          onPressDeleteAccount={() => setDeleteModalVisible(true)}
+          isOffline={isOffline}
+        />
+
         <ProfileLogoutButton variant="student" />
       </ScrollView>
 
@@ -207,6 +221,12 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
         selectedGroup={formData.bloodGroup}
         onSelect={(bg) => updateField("bloodGroup", bg)}
         onClose={() => setBloodModalVisible(false)}
+      />
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        isOffline={isOffline}
+        onClose={() => setDeleteModalVisible(false)}
       />
     </KeyboardAvoidingView>
   );

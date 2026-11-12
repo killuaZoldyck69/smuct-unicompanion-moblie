@@ -10,6 +10,7 @@ import {
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Svg, { Circle, G, Path, Polygon } from "react-native-svg";
 import { StudentProfileData } from "@/services/student-service";
+import { colors } from "@/theme/colors";
 import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
 
 interface StudentIdentityCardProps {
@@ -27,18 +28,18 @@ interface StudentIdentityCardProps {
 const IdentityWatermark = () => (
   <Svg width={170} height={160} viewBox="0 0 170 160" style={styles.watermark}>
     <G opacity={0.08}>
-      <Circle cx="135" cy="28" r="72" fill="#2563EB" />
+      <Circle cx="135" cy="28" r="72" fill={colors.semantic.blue.accent} />
       <Polygon
         points="55,45 112,16 169,45 112,74"
         fill="none"
-        stroke="#64748b"
+        stroke={colors.slate500}
         strokeWidth="4"
         strokeLinejoin="round"
       />
       <Path
         d="M75 56v34c0 20 17 34 37 34s37-14 37-34V56"
         fill="none"
-        stroke="#64748b"
+        stroke={colors.slate500}
         strokeWidth="4"
         strokeLinecap="round"
       />
@@ -83,9 +84,9 @@ export const StudentIdentityCard = React.memo(function StudentIdentityCard({
           
           <View style={styles.cameraBadge}>
             {isUploading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Feather name="camera" size={12} color="#ffffff" />
+              <Feather name="camera" size={12} color={colors.white} />
             )}
           </View>
         </TouchableOpacity>
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.02)",
+    borderColor: colors.blackAlpha02,
     overflow: "hidden",
   },
   watermark: {
@@ -158,19 +159,19 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRadius: 48,
     borderWidth: 3,
-    borderColor: "#f1f5f9",
+    borderColor: colors.slate100,
   },
   avatar: {
     width: 82,
     height: 82,
     borderRadius: 41,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
   },
   avatarPlaceholder: {
     width: 82,
     height: 82,
     borderRadius: 41,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
   rolePill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -221,13 +222,13 @@ const styles = StyleSheet.create({
     color: PROFILE_COLORS.deepNavy,
   },
   crPill: {
-    backgroundColor: "#e0e7ff",
+    backgroundColor: colors.semantic.indigo.border,
   },
   crPillText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: "#4338ca",
+    color: colors.semantic.indigo.deep,
   },
   infoRow: {
     flexDirection: "row",

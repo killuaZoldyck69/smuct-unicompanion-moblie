@@ -8,6 +8,7 @@
  */
 import React from "react";
 import Svg, { Circle, Line, Text as SvgText, G } from "react-native-svg";
+import { colors } from "@/theme/colors";
 
 interface SkillsIllustrationProps {
   width?: number;
@@ -20,7 +21,7 @@ export const SkillsIllustration = React.memo(function SkillsIllustration({
   width = 90,
   height = 90,
   opacity = 0.13,
-  color = "#0D9488",
+  color = colors.semantic.teal.solid,
 }: SkillsIllustrationProps) {
   // Central hub position
   const cx = 45;
