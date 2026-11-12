@@ -85,7 +85,7 @@ export const TeacherIdentityCard = React.memo(function TeacherIdentityCard({
 
         <View style={styles.avatarTextContainer}>
           {/* Full Faculty Name */}
-          <Text style={styles.nameText}>
+          <Text style={styles.nameText} numberOfLines={2}>
             {displayName}
           </Text>
 
@@ -125,15 +125,11 @@ const styles = StyleSheet.create({
     position: "relative",
     backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
-    padding: SPACING.xl,
+    padding: SPACING.lg,
     marginBottom: SPACING.cardGap,
-    shadowColor: PROFILE_COLORS.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: colors.blackAlpha02,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    ...PROFILE_COLORS.shadow,
     overflow: "hidden",
   },
   avatarRow: {
@@ -143,19 +139,23 @@ const styles = StyleSheet.create({
   },
   avatarWrapper: {
     position: "relative",
-    marginRight: 20,
+    marginRight: 16,
     justifyContent: "center",
     alignItems: "center",
   },
   haloBackground: {
     position: "absolute",
-    top: -15,
-    left: -15,
+    top: -12,
+    left: -12,
     zIndex: 0,
   },
   avatarContainer: {
     position: "relative",
     zIndex: 1,
+    padding: 3,
+    borderRadius: 46,
+    borderWidth: 3,
+    borderColor: colors.slate100,
   },
   avatar: {
     width: 80,
@@ -186,6 +186,7 @@ const styles = StyleSheet.create({
   },
   avatarTextContainer: {
     flex: 1,
+    minWidth: 0,
     justifyContent: "center",
   },
   nameText: {
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     color: PROFILE_COLORS.deepNavy,
     letterSpacing: -0.4,
     marginBottom: 6,
-    lineHeight: 25,
+    lineHeight: 26,
   },
   roleRow: {
     flexDirection: "row",

@@ -7,46 +7,62 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { colors } from "@/theme/colors";
 import Svg, { G, Path } from "react-native-svg";
+import { colors } from "@/theme/colors";
 import {
+  BLOOD_GROUP_TO_UI,
   PROFILE_COLORS,
   SECTION_THEMES,
   SPACING,
-  BLOOD_GROUP_TO_UI,
   fontFamily,
 } from "../../constants";
+import { formatPhoneNumber } from "../../utils";
 import { WaveMotif } from "../illustrations/contact-motifs";
 
-interface StudentContactCardProps {
+interface ProfileContactCardsProps {
   phoneNumber: string;
   bloodGroup: string;
   dbBloodGroup?: string | null;
   profilePhone?: string | null;
-  isEditing: boolean;
-  onOpenBloodModal: () => void;
-  onChangePhone: (val: string) => void;
+  isEditing?: boolean;
+  emptyBloodLabel?: string;
+  emptyPhoneLabel?: string;
+  onOpenBloodModal?: () => void;
+  onChangePhone?: (digits: string) => void;
 }
 
-export const StudentContactCard = React.memo(function StudentContactCard({
+export const ProfileContactCards = React.memo(function ProfileContactCards({
   phoneNumber,
   bloodGroup,
   dbBloodGroup,
   profilePhone,
-  isEditing,
+  isEditing = false,
+  emptyBloodLabel = "Not set",
+  emptyPhoneLabel = "Not set",
   onOpenBloodModal,
   onChangePhone,
-}: StudentContactCardProps) {
-  const phoneDigits = phoneNumber.replace(/\D/g, "").slice(-10);
+}: ProfileContactCardsProps) {
+  const digitsSource = phoneNumber || profilePhone || "";
+  const rawDigits = digitsSource.replace(/\D/g, "");
+  const phoneDigits = rawDigits.startsWith("880")
+    ? rawDigits.slice(3, 13)
+    : rawDigits.slice(-10);
+
+  const hasBloodGroup = Boolean(dbBloodGroup);
   const displayBloodGroup = dbBloodGroup
-    ? BLOOD_GROUP_TO_UI[dbBloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || dbBloodGroup
-    : "N/A";
+    ? BLOOD_GROUP_TO_UI[dbBloodGroup as keyof typeof BLOOD_GROUP_TO_UI] ||
+      dbBloodGroup
+    : emptyBloodLabel;
 
   const displayEditBloodGroup = bloodGroup
-      ? BLOOD_GROUP_TO_UI[bloodGroup as keyof typeof BLOOD_GROUP_TO_UI] || bloodGroup
-      : "Select";
+    ? BLOOD_GROUP_TO_UI[bloodGroup as keyof typeof BLOOD_GROUP_TO_UI] ||
+      bloodGroup
+    : "Select";
 
-    return (
+  const formattedPhone = profilePhone ? formatPhoneNumber(profilePhone) : "";
+  const hasPhone = Boolean(formattedPhone && formattedPhone !== "Not provided");
+
+  return (
     <View style={styles.container}>
       {/* Blood Group Card */}
       <View style={styles.halfCard}>
@@ -70,34 +86,60 @@ export const StudentContactCard = React.memo(function StudentContactCard({
             </G>
           </Svg>
         </View>
+
         <View style={styles.headerRow}>
-          <View style={[styles.iconBadge, { backgroundColor: SECTION_THEMES.BLOOD.badgeBg }]}>
-            <Ionicons name="water" size={14} color={SECTION_THEMES.BLOOD.primaryText} />
+          <View style={[styles.iconBadge, styles.bloodIconBadge]}>
+            <Ionicons
+              name="water"
+              size={14}
+              color={SECTION_THEMES.BLOOD.primaryText}
+            />
           </View>
-          <Text style={[styles.cardTitle, { color: SECTION_THEMES.BLOOD.primaryText }]}>
+          <Text
+            style={[styles.cardTitle, { color: SECTION_THEMES.BLOOD.primaryText }]}
+            numberOfLines={1}
+          >
             BLOOD GROUP
           </Text>
         </View>
-        
-        {isEditing ? (
+
+        {isEditing && onOpenBloodModal ? (
           <TouchableOpacity
             style={styles.editBtn}
             onPress={onOpenBloodModal}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Select blood group"
           >
-            <Text style={[styles.editBtnText, { color: SECTION_THEMES.BLOOD.primaryText }]}>
+            <Text
+              style={[
+                styles.editBtnText,
+                { color: SECTION_THEMES.BLOOD.primaryText },
+              ]}
+            >
               {displayEditBloodGroup}
             </Text>
-            <Feather name="chevron-down" size={14} color={SECTION_THEMES.BLOOD.primaryText} />
+            <Feather
+              name="chevron-down"
+              size={14}
+              color={SECTION_THEMES.BLOOD.primaryText}
+            />
           </TouchableOpacity>
         ) : (
-          <Text style={[styles.cardValue, { color: SECTION_THEMES.BLOOD.primaryText }]}>
+          <Text
+            style={[
+              styles.bloodValue,
+              !hasBloodGroup && styles.emptyValueText,
+            ]}
+            numberOfLines={1}
+          >
             {displayBloodGroup}
           </Text>
         )}
       </View>
 
-      {/* Phone Card */}
+      {/* Phone Number Card */}
       <View style={styles.halfCard}>
         <View style={styles.watermarkContainer} pointerEvents="none">
           <WaveMotif
@@ -107,16 +149,24 @@ export const StudentContactCard = React.memo(function StudentContactCard({
             color={SECTION_THEMES.PHONE.primaryText}
           />
         </View>
+
         <View style={styles.headerRow}>
-          <View style={[styles.iconBadge, { backgroundColor: SECTION_THEMES.PHONE.badgeBg }]}>
-            <Feather name="phone" size={14} color={SECTION_THEMES.PHONE.primaryText} />
+          <View style={[styles.iconBadge, styles.phoneIconBadge]}>
+            <Feather
+              name="phone"
+              size={14}
+              color={SECTION_THEMES.PHONE.primaryText}
+            />
           </View>
-          <Text style={[styles.cardTitle, { color: SECTION_THEMES.PHONE.primaryText }]}>
+          <Text
+            style={[styles.cardTitle, { color: SECTION_THEMES.PHONE.primaryText }]}
+            numberOfLines={1}
+          >
             PHONE NUMBER
           </Text>
         </View>
-        
-        {isEditing ? (
+
+        {isEditing && onChangePhone ? (
           <View style={styles.phoneInputRow}>
             <Text style={styles.countryCode}>+880</Text>
             <TextInput
@@ -138,8 +188,14 @@ export const StudentContactCard = React.memo(function StudentContactCard({
             />
           </View>
         ) : (
-          <Text style={[styles.cardValue, { color: PROFILE_COLORS.deepNavy }]}>
-            {profilePhone || "Not set"}
+          <Text
+            style={[styles.phoneValue, !hasPhone && styles.emptyValueText]}
+            selectable={hasPhone}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.76}
+          >
+            {hasPhone ? formattedPhone : emptyPhoneLabel}
           </Text>
         )}
       </View>
@@ -155,18 +211,15 @@ const styles = StyleSheet.create({
   },
   halfCard: {
     flex: 1,
+    minWidth: 0,
     minHeight: 116,
     justifyContent: "space-between",
     backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
     padding: SPACING.md,
-    shadowColor: PROFILE_COLORS.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: colors.blackAlpha02,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    ...PROFILE_COLORS.shadow,
     position: "relative",
     overflow: "hidden",
   },
@@ -179,37 +232,63 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
+    gap: 8,
     zIndex: 1,
   },
   iconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-
+  bloodIconBadge: {
+    backgroundColor: SECTION_THEMES.BLOOD.badgeBg,
+  },
+  phoneIconBadge: {
+    backgroundColor: SECTION_THEMES.PHONE.badgeBg,
+  },
   cardTitle: {
     fontFamily,
     flex: 1,
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
     zIndex: 1,
   },
-  cardValue: {
+  bloodValue: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "700",
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
+    color: SECTION_THEMES.BLOOD.primaryText,
     zIndex: 1,
+  },
+  phoneValue: {
+    fontFamily,
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: -0.2,
+    color: PROFILE_COLORS.deepNavy,
+    zIndex: 1,
+  },
+  emptyValueText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: PROFILE_COLORS.subtleText,
+    letterSpacing: 0,
   },
   phoneInputRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
     minWidth: 0,
+    backgroundColor: colors.slate50,
+    borderWidth: 1,
+    borderColor: PROFILE_COLORS.border,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     zIndex: 1,
   },
   countryCode: {
@@ -225,7 +304,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: PROFILE_COLORS.deepNavy,
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   editBtn: {
     flexDirection: "row",
@@ -236,12 +315,12 @@ const styles = StyleSheet.create({
     borderColor: PROFILE_COLORS.border,
     borderRadius: 8,
     paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingVertical: 7,
     zIndex: 1,
   },
   editBtnText: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "600",
-  }
+  },
 });

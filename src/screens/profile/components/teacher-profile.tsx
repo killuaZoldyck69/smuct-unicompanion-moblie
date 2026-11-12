@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
-  View,
   ScrollView,
   StyleSheet,
   StatusBar,
@@ -21,12 +20,15 @@ import { TeacherIdentityCard } from "./teacher/teacher-identity-card";
 import { TeacherAcademicCard } from "./teacher/teacher-academic-card";
 import { TeacherExpertiseCard } from "./teacher/teacher-expertise-card";
 import { TeacherQualificationsCard } from "./teacher/teacher-qualifications-card";
-import { TeacherContactCard } from "./teacher/teacher-contact-card";
+import { ProfileContactCards } from "./shared/profile-contact-cards";
 import { ProfileSocialCard } from "./shared/profile-social-card";
 import { ProfileEditButton } from "./shared/profile-edit-button";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
 import { BloodGroupModal } from "./shared/blood-group-modal";
-import { ProfileErrorState, ProfileOfflineBanner } from "./shared/profile-states";
+import {
+  ProfileErrorState,
+  ProfileOfflineBanner,
+} from "./shared/profile-states";
 import { ProfileLoadingSkeleton } from "./shared/profile-loading-skeleton";
 import { ProfileAccountActions } from "./shared/profile-account-actions";
 import { DeleteAccountModal } from "./shared/delete-account-modal";
@@ -49,11 +51,11 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      () => setIsKeyboardVisible(true)
+      () => setIsKeyboardVisible(true),
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => setIsKeyboardVisible(false)
+      () => setIsKeyboardVisible(false),
     );
     return () => {
       showSub.remove();
@@ -145,9 +147,7 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           {
             paddingBottom: isKeyboardVisible
               ? 20
-              : insets.bottom > 0
-                ? insets.bottom + 128
-                : 132,
+              : Math.max(insets.bottom + 120, 132),
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -189,7 +189,7 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
         />
 
         {/* 3. Contact Information */}
-        <TeacherContactCard
+        <ProfileContactCards
           phoneNumber={formData.phoneNumber}
           bloodGroup={formData.bloodGroup}
           dbBloodGroup={profile.bloodGroup}
@@ -228,7 +228,6 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
 
         {/* 7. Edit Profile Button */}
         <ProfileEditButton
-          variant="teacher"
           isEditing={isEditing}
           isUpdating={isUpdating}
           onEdit={() => setIsEditing(true)}
@@ -242,9 +241,7 @@ export default function TeacherProfile({ sessionUser }: TeacherProfileProps) {
           isOffline={isOffline}
         />
 
-        <View style={styles.logoutWrapper}>
-          <ProfileLogoutButton />
-        </View>
+        <ProfileLogoutButton />
       </ScrollView>
 
       {/* Modal for Selecting Blood Group */}
@@ -270,10 +267,10 @@ const styles = StyleSheet.create({
     backgroundColor: PROFILE_COLORS.background,
   },
   scrollContent: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
     paddingHorizontal: SPACING.xl,
     paddingTop: SPACING.sm,
-  },
-  logoutWrapper: {
-    marginTop: SPACING.xs,
   },
 });

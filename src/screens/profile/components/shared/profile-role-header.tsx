@@ -6,24 +6,26 @@ import { PROFILE_COLORS, SPACING, fontFamily, titleFontFamily } from "../../cons
 
 interface ProfileRoleHeaderProps {
   insetsTop: number;
-  isEditing: boolean;
-  isUpdating: boolean;
+  isEditing?: boolean;
+  isUpdating?: boolean;
   subtitle: string;
-  cancelAccessibilityLabel: string;
-  saveAccessibilityLabel: string;
+  cancelAccessibilityLabel?: string;
+  saveAccessibilityLabel?: string;
   maxWidth?: number;
-  onCancel: () => void;
-  onSave: () => void;
+  rightAccessory?: React.ReactNode;
+  onCancel?: () => void;
+  onSave?: () => void;
 }
 
 export const ProfileRoleHeader = React.memo(function ProfileRoleHeader({
   insetsTop,
-  isEditing,
-  isUpdating,
+  isEditing = false,
+  isUpdating = false,
   subtitle,
-  cancelAccessibilityLabel,
-  saveAccessibilityLabel,
-  maxWidth,
+  cancelAccessibilityLabel = "Cancel editing profile",
+  saveAccessibilityLabel = "Save profile changes",
+  maxWidth = 520,
+  rightAccessory,
   onCancel,
   onSave,
 }: ProfileRoleHeaderProps) {
@@ -44,42 +46,42 @@ export const ProfileRoleHeader = React.memo(function ProfileRoleHeader({
         )}
       </View>
 
-      <View style={styles.controlsRow}>
-        {isEditing && (
-          <>
-            <TouchableOpacity
-              onPress={onCancel}
-              style={[styles.pillBtn, styles.cancelBtn]}
-              activeOpacity={0.75}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={cancelAccessibilityLabel}
-            >
-              <Feather name="x" size={13} color={colors.semantic.red.accent} />
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
+      {isEditing && onCancel && onSave ? (
+        <View style={styles.controlsRow}>
+          <TouchableOpacity
+            onPress={onCancel}
+            style={[styles.pillBtn, styles.cancelBtn]}
+            activeOpacity={0.75}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={cancelAccessibilityLabel}
+          >
+            <Feather name="x" size={13} color={colors.semantic.red.accent} />
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={onSave}
-              style={[styles.pillBtn, styles.saveBtn]}
-              activeOpacity={0.75}
-              disabled={isUpdating}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={saveAccessibilityLabel}
-            >
-              {isUpdating ? (
-                <ActivityIndicator size="small" color={PROFILE_COLORS.white} />
-              ) : (
-                <>
-                  <Feather name="check" size={13} color={PROFILE_COLORS.white} />
-                  <Text style={styles.saveBtnText}>Save</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
+          <TouchableOpacity
+            onPress={onSave}
+            style={[styles.pillBtn, styles.saveBtn]}
+            activeOpacity={0.75}
+            disabled={isUpdating}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={saveAccessibilityLabel}
+          >
+            {isUpdating ? (
+              <ActivityIndicator size="small" color={PROFILE_COLORS.white} />
+            ) : (
+              <>
+                <Feather name="check" size={13} color={PROFILE_COLORS.white} />
+                <Text style={styles.saveBtnText}>Save</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : (
+        rightAccessory ?? null
+      )}
     </View>
   );
 });

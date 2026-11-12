@@ -13,6 +13,7 @@ export const TeacherHeader = React.memo(function TeacherHeader(props: TeacherHea
   return (
     <ProfileRoleHeader
       {...props}
+      maxWidth={520}
       subtitle="View your details, academic position and professional information."
       cancelAccessibilityLabel="Cancel editing faculty profile"
       saveAccessibilityLabel="Save faculty profile changes"

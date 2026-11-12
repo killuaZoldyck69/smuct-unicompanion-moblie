@@ -120,16 +120,12 @@ export const StudentSkillsCard = React.memo(function StudentSkillsCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.semantic.emerald.mintSurface,
+    backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
     marginBottom: SPACING.cardGap,
-    shadowColor: PROFILE_COLORS.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: colors.semantic.emerald.border,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    ...PROFILE_COLORS.shadow,
     padding: SPACING.lg,
     position: "relative",
     overflow: "hidden",
@@ -205,8 +201,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
     shadowColor: colors.navyInk,
@@ -240,7 +236,7 @@ const styles = StyleSheet.create({
   indigoChipText: { color: colors.semantic.indigo.darker },
   chipText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "700",
   },
   emptyText: {

@@ -3,15 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   FlatList,
-  StatusBar,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
 import { BLOOD_GROUPS, PROFILE_COLORS, fontFamily } from "../../constants";
+import { ProfileModalFrame } from "./profile-modal-frame";
 
 interface BloodGroupModalProps {
   visible: boolean;
@@ -26,166 +24,118 @@ export const BloodGroupModal = React.memo(function BloodGroupModal({
   onSelect,
   onClose,
 }: BloodGroupModalProps) {
-  const insets = useSafeAreaInsets();
-
   return (
-    <Modal
+    <ProfileModalFrame
       visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-      statusBarTranslucent={true}
+      onClose={onClose}
+      maxHeightRatio={0.78}
+      cardStyle={styles.modalCard}
+      backdropAccessibilityLabel="Close blood group selection"
     >
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent={true}
-      />
-      <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>Select Blood Group</Text>
         <TouchableOpacity
-          style={styles.modalBackdrop}
-          activeOpacity={1}
           onPress={onClose}
-          accessible={false}
-        />
-        <SafeAreaView edges={["bottom"]} style={styles.modalSheet}>
-          <View style={styles.dragPillContainer}>
-            <View style={styles.dragPill} />
-          </View>
+          style={styles.closeBtn}
+          hitSlop={8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Close blood group selection"
+        >
+          <Feather name="x" size={20} color={PROFILE_COLORS.deepNavy} />
+        </TouchableOpacity>
+      </View>
 
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Select Blood Group</Text>
+      <FlatList
+        style={styles.list}
+        data={BLOOD_GROUPS}
+        keyExtractor={(item) => item}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => {
+          const isSelected = selectedGroup === item;
+          return (
             <TouchableOpacity
-              onPress={onClose}
-              style={styles.closeBtn}
+              style={[
+                styles.groupRow,
+                isSelected && styles.groupRowSelected,
+              ]}
+              onPress={() => {
+                onSelect(item);
+                onClose();
+              }}
+              activeOpacity={0.7}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Close blood group selection"
+              accessibilityLabel={`Blood group ${item}${isSelected ? ", selected" : ""}`}
             >
-              <Feather name="x" size={20} color={PROFILE_COLORS.deepNavy} />
+              <Text
+                style={[
+                  styles.groupText,
+                  isSelected && styles.groupTextSelected,
+                ]}
+              >
+                {item}
+              </Text>
+              {isSelected && (
+                <Feather
+                  name="check"
+                  size={18}
+                  color={PROFILE_COLORS.deepNavy}
+                />
+              )}
             </TouchableOpacity>
-          </View>
-
-          <FlatList
-            data={BLOOD_GROUPS}
-            keyExtractor={(item) => item}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.listContent,
-              { paddingBottom: Math.max(insets.bottom, 16) },
-            ]}
-            renderItem={({ item }) => {
-              const isSelected = selectedGroup === item;
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.groupRow,
-                    isSelected && styles.groupRowSelected,
-                  ]}
-                  onPress={() => {
-                    onSelect(item);
-                    onClose();
-                  }}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Blood group ${item}${isSelected ? ", selected" : ""}`}
-                >
-                  <Text
-                    style={[
-                      styles.groupText,
-                      isSelected && styles.groupTextSelected,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                  {isSelected && (
-                    <Feather
-                      name="check"
-                      size={18}
-                      color={PROFILE_COLORS.deepNavy}
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </SafeAreaView>
-      </View>
-    </Modal>
+          );
+        }}
+      />
+    </ProfileModalFrame>
   );
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.blackAlpha40,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  modalSheet: {
-    backgroundColor: PROFILE_COLORS.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingTop: 12,
-    paddingHorizontal: 24,
-    maxHeight: "75%",
+  modalCard: {
+    maxWidth: 420,
+    borderRadius: 20,
+    padding: 18,
     ...PROFILE_COLORS.shadow,
   },
-  dragPillContainer: {
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  dragPill: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.slate300,
-  },
-  sheetHeader: {
+  modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: 14,
+    marginBottom: 14,
   },
-  sheetTitle: {
+  modalTitle: {
     fontFamily,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.slate100,
     alignItems: "center",
     justifyContent: "center",
   },
-  listContent: {
-    paddingTop: 4,
+  list: {
+    flexGrow: 0,
   },
   groupRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    marginBottom: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 4,
   },
   groupRowSelected: {
     backgroundColor: colors.slate100,
   },
   groupText: {
     fontFamily,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "500",
     color: PROFILE_COLORS.neutralText,
   },

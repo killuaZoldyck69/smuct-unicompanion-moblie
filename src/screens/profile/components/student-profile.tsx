@@ -19,7 +19,7 @@ import { StudentHeader } from "./student/student-header";
 import { StudentIdentityCard } from "./student/student-identity-card";
 import { StudentAcademicCard } from "./student/student-academic-card";
 import { StudentSkillsCard } from "./student/student-skills-card";
-import { StudentContactCard } from "./student/student-contact-card";
+import { ProfileContactCards } from "./shared/profile-contact-cards";
 import { ProfileSocialCard } from "./shared/profile-social-card";
 import { ProfileEditButton } from "./shared/profile-edit-button";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
@@ -180,7 +180,7 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
           onRemoveSkill={removeSkill}
         />
 
-        <StudentContactCard
+        <ProfileContactCards
           phoneNumber={formData.phoneNumber}
           bloodGroup={formData.bloodGroup}
           dbBloodGroup={profile.bloodGroup}
@@ -191,7 +191,6 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
         />
 
         <ProfileSocialCard
-          variant="student"
           isEditing={isEditing}
           linkedInUrl={formData.linkedInUrl}
           personalWebsiteUrl={formData.personalWebsiteUrl}
@@ -200,7 +199,6 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
         />
 
         <ProfileEditButton
-          variant="student"
           isEditing={isEditing}
           isUpdating={isUpdating}
           onEdit={() => setIsEditing(true)}
@@ -213,7 +211,7 @@ export default function StudentProfile({ sessionUser }: StudentProfileProps) {
           isOffline={isOffline}
         />
 
-        <ProfileLogoutButton variant="student" />
+        <ProfileLogoutButton />
       </ScrollView>
 
       <BloodGroupModal

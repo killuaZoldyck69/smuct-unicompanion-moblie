@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   ScrollView,
   Platform,
 } from "react-native";
@@ -24,6 +23,7 @@ import {
   SPACING,
   fontFamily,
 } from "../../constants";
+import { ProfileModalFrame } from "../shared/profile-modal-frame";
 import { CampusBuildingWatermark } from "./faculty-illustrations";
 import { SMUCT_PROGRAM_DEPARTMENTS } from "@/data/programs";
 
@@ -483,137 +483,131 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
       ) : (
         <Text style={styles.emptySchedule}>No consultation hours provided</Text>
       )}
-      <Modal
+      <ProfileModalFrame
         visible={isDepartmentPickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsDepartmentPickerOpen(false)}
+        onClose={() => setIsDepartmentPickerOpen(false)}
+        keyboardAvoiding={true}
+        maxHeightRatio={0.78}
+        cardStyle={styles.departmentModal}
+        backdropAccessibilityLabel="Close department picker"
       >
-        <View style={styles.departmentModalBackdrop}>
+        <View style={styles.departmentModalHeader}>
+          <Text style={styles.departmentModalTitle}>Select Department</Text>
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
             onPress={() => setIsDepartmentPickerOpen(false)}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Close department picker"
-          />
-          <View style={styles.departmentModal}>
-            <View style={styles.departmentModalHeader}>
-              <Text style={styles.departmentModalTitle}>Select Department</Text>
-              <TouchableOpacity
-                onPress={() => setIsDepartmentPickerOpen(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Close department picker"
-              >
-                <Feather name="x" size={20} color={PROFILE_COLORS.deepNavy} />
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.departmentSearch}
-              value={departmentSearch}
-              onChangeText={setDepartmentSearch}
-              placeholder="Search departments"
-              placeholderTextColor={PROFILE_COLORS.mutedText}
-              autoCapitalize="none"
-              accessibilityLabel="Search departments"
-            />
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {filteredDepartments.map((option) => {
-                const selected =
-                  option.name.toLowerCase() === department.toLowerCase();
-                return (
-                  <TouchableOpacity
-                    key={option.code}
-                    style={[
-                      styles.departmentOption,
-                      selected && styles.departmentOptionSelected,
-                    ]}
-                    onPress={() => {
-                      onChangeDepartment(option.name);
-                      setDepartmentSearch("");
-                      setIsDepartmentPickerOpen(false);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                  >
-                    <View style={styles.departmentCode}>
-                      <Text style={styles.departmentCodeText}>
-                        {option.code}
-                      </Text>
-                    </View>
-                    <Text style={styles.departmentOptionText}>
-                      {option.name}
-                    </Text>
-                    {selected && (
-                      <Feather
-                        name="check"
-                        size={16}
-                        color={colors.semantic.blue.darker}
-                      />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+          >
+            <Feather name="x" size={20} color={PROFILE_COLORS.deepNavy} />
+          </TouchableOpacity>
         </View>
-      </Modal>
-      <Modal
+        <TextInput
+          style={styles.departmentSearch}
+          value={departmentSearch}
+          onChangeText={setDepartmentSearch}
+          placeholder="Search departments"
+          placeholderTextColor={PROFILE_COLORS.mutedText}
+          autoCapitalize="none"
+          accessibilityLabel="Search departments"
+        />
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {filteredDepartments.map((option) => {
+            const selected =
+              option.name.toLowerCase() === department.toLowerCase();
+            return (
+              <TouchableOpacity
+                key={option.code}
+                style={[
+                  styles.departmentOption,
+                  selected && styles.departmentOptionSelected,
+                ]}
+                onPress={() => {
+                  onChangeDepartment(option.name);
+                  setDepartmentSearch("");
+                  setIsDepartmentPickerOpen(false);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+              >
+                <View style={styles.departmentCode}>
+                  <Text style={styles.departmentCodeText}>
+                    {option.code}
+                  </Text>
+                </View>
+                <Text style={styles.departmentOptionText}>
+                  {option.name}
+                </Text>
+                {selected && (
+                  <Feather
+                    name="check"
+                    size={16}
+                    color={colors.semantic.blue.darker}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </ProfileModalFrame>
+      <ProfileModalFrame
         visible={isDayOffPickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsDayOffPickerOpen(false)}
+        onClose={() => setIsDayOffPickerOpen(false)}
+        maxHeightRatio={0.78}
+        cardStyle={styles.dayOffModal}
+        backdropAccessibilityLabel="Close day off picker"
       >
-        <View style={styles.departmentModalBackdrop}>
+        <View style={styles.departmentModalHeader}>
+          <Text style={styles.departmentModalTitle}>Choose Day Off</Text>
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
             onPress={() => setIsDayOffPickerOpen(false)}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Close day off picker"
-          />
-          <View style={styles.dayOffModal}>
-            <Text style={styles.departmentModalTitle}>Choose Day Off</Text>
-            {DAYS_OF_WEEK.map((day) => {
-              const selected = dayOff === day;
-              return (
-                <TouchableOpacity
-                  key={day}
-                  style={[
-                    styles.dayOffOption,
-                    selected && styles.dayOffOptionSelected,
-                  ]}
-                  onPress={() => {
-                    onChangeDayOff(day);
-                    setIsDayOffPickerOpen(false);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                >
-                  <Text
-                    style={[
-                      styles.departmentOptionText,
-                      selected && styles.dayOffOptionTextSelected,
-                    ]}
-                  >
-                    {day}
-                  </Text>
-                  {selected && (
-                    <Feather
-                      name="check"
-                      size={16}
-                      color={colors.semantic.amber.accent}
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          >
+            <Feather name="x" size={20} color={PROFILE_COLORS.deepNavy} />
+          </TouchableOpacity>
         </View>
-      </Modal>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {DAYS_OF_WEEK.map((day) => {
+            const selected = dayOff === day;
+            return (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.dayOffOption,
+                  selected && styles.dayOffOptionSelected,
+                ]}
+                onPress={() => {
+                  onChangeDayOff(day);
+                  setIsDayOffPickerOpen(false);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+              >
+                <Text
+                  style={[
+                    styles.departmentOptionText,
+                    selected && styles.dayOffOptionTextSelected,
+                  ]}
+                >
+                  {day}
+                </Text>
+                {selected && (
+                  <Feather
+                    name="check"
+                    size={16}
+                    color={colors.semantic.amber.accent}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </ProfileModalFrame>
       {activeTimePicker && Platform.OS === "android" && (
         <DateTimePicker
           value={pickerDate}
@@ -626,119 +620,100 @@ export const TeacherAcademicCard = React.memo(function TeacherAcademicCard({
       )}
 
       {activeTimePicker && Platform.OS === "ios" && (
-        <Modal
+        <ProfileModalFrame
           visible={true}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setActiveTimePicker(null)}
+          onClose={() => setActiveTimePicker(null)}
+          maxHeightRatio={0.78}
+          cardStyle={styles.dayOffModal}
+          backdropAccessibilityLabel="Cancel time selection"
         >
-          <View style={styles.departmentModalBackdrop}>
+          <View style={styles.departmentModalHeader}>
             <TouchableOpacity
-              style={StyleSheet.absoluteFill}
-              activeOpacity={1}
               onPress={() => setActiveTimePicker(null)}
               accessibilityRole="button"
-              accessibilityLabel="Cancel time selection"
-            />
-            <View style={styles.dayOffModal}>
-              <View style={styles.departmentModalHeader}>
-                <TouchableOpacity
-                  onPress={() => setActiveTimePicker(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel time picker"
-                >
-                  <Text style={styles.pickerCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <Text style={styles.departmentModalTitle}>Select Time</Text>
-                <TouchableOpacity
-                  onPress={handleConfirmIosTime}
-                  accessibilityRole="button"
-                  accessibilityLabel="Confirm time selection"
-                >
-                  <Text style={styles.pickerDoneText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={iosDraftDate}
-                mode="time"
-                is24Hour={false}
-                display="spinner"
-                onValueChange={handleTimeChange}
-              />
-            </View>
+              accessibilityLabel="Cancel time picker"
+            >
+              <Text style={styles.pickerCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.departmentModalTitle}>Select Time</Text>
+            <TouchableOpacity
+              onPress={handleConfirmIosTime}
+              accessibilityRole="button"
+              accessibilityLabel="Confirm time selection"
+            >
+              <Text style={styles.pickerDoneText}>Done</Text>
+            </TouchableOpacity>
           </View>
-        </Modal>
+          <DateTimePicker
+            value={iosDraftDate}
+            mode="time"
+            is24Hour={false}
+            display="spinner"
+            onValueChange={handleTimeChange}
+          />
+        </ProfileModalFrame>
       )}
 
       {activeTimePicker && Platform.OS === "web" && (
-        <Modal
+        <ProfileModalFrame
           visible={true}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setActiveTimePicker(null)}
+          onClose={() => setActiveTimePicker(null)}
+          maxHeightRatio={0.78}
+          cardStyle={styles.dayOffModal}
+          backdropAccessibilityLabel="Close time picker"
         >
-          <View style={styles.departmentModalBackdrop}>
+          <View style={styles.departmentModalHeader}>
+            <Text style={styles.departmentModalTitle}>Select Time</Text>
             <TouchableOpacity
-              style={StyleSheet.absoluteFill}
-              activeOpacity={1}
               onPress={() => setActiveTimePicker(null)}
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Close time picker"
-            />
-            <View style={styles.dayOffModal}>
-              <View style={styles.departmentModalHeader}>
-                <Text style={styles.departmentModalTitle}>Select Time</Text>
-                <TouchableOpacity
-                  onPress={() => setActiveTimePicker(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close time picker"
-                >
-                  <Feather
-                    name="x"
-                    size={20}
-                    color={PROFILE_COLORS.subtleText}
-                  />
-                </TouchableOpacity>
-              </View>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {WEB_TIME_OPTIONS.map((option) => {
-                  const selected = activeTime === option;
-                  return (
-                    <TouchableOpacity
-                      key={option}
-                      style={[
-                        styles.departmentOption,
-                        selected && styles.departmentOptionSelected,
-                      ]}
-                      onPress={() => {
-                        onUpdateConsultationSlot(activeTimePicker.index, {
-                          [activeTimePicker.field]: option,
-                        });
-                        setActiveTimePicker(null);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.departmentOptionText,
-                          selected && styles.departmentOptionTextSelected,
-                        ]}
-                      >
-                        {option}
-                      </Text>
-                      {selected && (
-                        <Feather
-                          name="check"
-                          size={16}
-                          color={colors.semantic.blue.darker}
-                        />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
+            >
+              <Feather
+                name="x"
+                size={20}
+                color={PROFILE_COLORS.subtleText}
+              />
+            </TouchableOpacity>
           </View>
-        </Modal>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {WEB_TIME_OPTIONS.map((option) => {
+              const selected = activeTime === option;
+              return (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.departmentOption,
+                    selected && styles.departmentOptionSelected,
+                  ]}
+                  onPress={() => {
+                    onUpdateConsultationSlot(activeTimePicker.index, {
+                      [activeTimePicker.field]: option,
+                    });
+                    setActiveTimePicker(null);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.departmentOptionText,
+                      selected && styles.departmentOptionTextSelected,
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                  {selected && (
+                    <Feather
+                      name="check"
+                      size={16}
+                      color={colors.semantic.blue.darker}
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </ProfileModalFrame>
       )}
     </View>
   );
@@ -777,7 +752,7 @@ const styles = StyleSheet.create({
   sectionIconBadge: {
     width: 28,
     height: 28,
-    borderRadius: 9,
+    borderRadius: 14,
     backgroundColor: SECTION_THEMES.ACADEMIC.badgeBg,
     alignItems: "center",
     justifyContent: "center",
@@ -865,7 +840,7 @@ const styles = StyleSheet.create({
   },
   tileLabel: {
     fontFamily,
-    fontSize: 9,
+    fontSize: 10,
     letterSpacing: 0.5,
     fontWeight: "700",
     marginBottom: 3,
@@ -875,7 +850,7 @@ const styles = StyleSheet.create({
   dayOffLabel: { color: colors.semantic.amber.accent },
   tileValue: {
     fontFamily,
-    fontSize: 11.5,
+    fontSize: 12.5,
     color: PROFILE_COLORS.deepNavy,
     fontWeight: "700",
     textAlign: "center",
@@ -909,14 +884,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 2,
   },
-  departmentModalBackdrop: {
-    flex: 1,
-    backgroundColor: colors.inkAlpha40,
-    justifyContent: "center",
-    paddingHorizontal: 20,
-  },
   departmentModal: {
-    maxHeight: "78%",
+    width: "100%",
+    maxWidth: 420,
     backgroundColor: colors.white,
     borderRadius: 20,
     padding: 18,
@@ -980,7 +950,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   dayOffModal: {
-    maxHeight: "78%",
+    width: "100%",
+    maxWidth: 420,
     backgroundColor: colors.white,
     borderRadius: 20,
     padding: 18,

@@ -4,17 +4,15 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { colors } from "@/theme/colors";
-import { PROFILE_COLORS, SPACING, fontFamily } from "../../constants";
+import { SPACING, fontFamily } from "../../constants";
 import { performLogout } from "../../utils";
 import { LogoutModal } from "./logout-modal";
 
 interface ProfileLogoutButtonProps {
-  variant?: "student" | "teacher";
   onBeforeLogout?: () => void;
 }
 
 export const ProfileLogoutButton = React.memo(function ProfileLogoutButton({
-  variant = "teacher",
   onBeforeLogout,
 }: ProfileLogoutButtonProps = {}) {
   const router = useRouter();
@@ -38,24 +36,15 @@ export const ProfileLogoutButton = React.memo(function ProfileLogoutButton({
   return (
     <>
       <TouchableOpacity
-        style={[styles.button, variant === "student" && styles.studentButton]}
+        style={styles.button}
         onPress={() => setIsModalVisible(true)}
         activeOpacity={0.8}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel="Sign out of your account"
       >
-        <Feather
-          name="log-out"
-          size={16}
-          color={colors.semantic.red.accent}
-          style={{ marginRight: 8 }}
-        />
-        <Text
-          style={[styles.text, variant === "student" && styles.studentText]}
-        >
-          Log Out
-        </Text>
+        <Feather name="log-out" size={16} color={colors.semantic.red.accent} />
+        <Text style={styles.text}>Log Out</Text>
       </TouchableOpacity>
 
       <LogoutModal
@@ -73,31 +62,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 50,
     backgroundColor: colors.semantic.rose.tint,
     paddingVertical: 13,
-    borderRadius: PROFILE_COLORS.pillRadius,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.semantic.red.alpha22,
-    marginTop: 6,
-    marginBottom: 20,
+    marginBottom: SPACING.md,
     gap: 8,
   },
   text: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "700",
+    letterSpacing: 0.1,
     color: colors.semantic.red.accent,
-  },
-  studentButton: {
-    borderRadius: 18,
-    paddingVertical: 18,
-    backgroundColor: colors.semantic.rose.softBorder,
-    borderColor: colors.semantic.rose.border,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.xl,
-  },
-  studentText: {
-    fontSize: 16,
-    letterSpacing: 0.3,
   },
 });

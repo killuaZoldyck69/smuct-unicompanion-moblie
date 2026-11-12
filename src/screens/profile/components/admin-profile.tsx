@@ -2,24 +2,24 @@ import React, { useState } from "react";
 import {
   Image,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import Svg, { Circle, Path } from "react-native-svg";
 import { colors } from "@/theme/colors";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import {
   PROFILE_COLORS,
-  BLOOD_GROUP_TO_UI,
   SECTION_THEMES,
   SPACING,
   fontFamily,
-  titleFontFamily,
 } from "../constants";
-import { formatPhoneNumber } from "../utils";
+import { ProfileRoleHeader } from "./shared/profile-role-header";
+import { ProfileContactCards } from "./shared/profile-contact-cards";
 import { ProfileLogoutButton } from "./shared/profile-logout-button";
 import { ProfileOfflineBanner } from "./shared/profile-states";
 import { ProfileAccountActions } from "./shared/profile-account-actions";
@@ -72,35 +72,40 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
   const { isOffline } = useNetworkStatus();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const displayName = sessionUser.name || "Administrator";
-  const displayBloodGroup = sessionUser.bloodGroup
-    ? BLOOD_GROUP_TO_UI[sessionUser.bloodGroup] || sessionUser.bloodGroup
-    : "Not provided";
-  const displayPhone = formatPhoneNumber(sessionUser.phoneNumber);
 
   return (
     <View style={styles.screen}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+
+      <ProfileRoleHeader
+        insetsTop={insets.top}
+        maxWidth={520}
+        subtitle="Your account identity and administrative access."
+        rightAccessory={
+          <View style={styles.headerIcon}>
+            <Feather
+              name="shield"
+              size={18}
+              color={colors.semantic.indigo.deep}
+            />
+          </View>
+        }
+      />
+
       <ScrollView
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + SPACING.lg,
             paddingBottom: Math.max(insets.bottom + 120, 132),
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <ProfileOfflineBanner visible={isOffline} />
-        <View style={styles.pageHeader}>
-          <View style={styles.headingCopy}>
-            <Text style={styles.pageTitle}>My Profile</Text>
-            <Text style={styles.pageSubtitle}>
-              Your account identity and administrative access.
-            </Text>
-          </View>
-          <View style={styles.headerIcon}>
-            <Feather name="shield" size={19} color={colors.semantic.indigo.deep} />
-          </View>
-        </View>
 
         <View style={styles.heroCard}>
           <AdminShieldWatermark />
@@ -114,7 +119,11 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
                 />
               ) : (
                 <View style={styles.avatarFallback}>
-                  <Feather name="user" size={29} color={colors.semantic.indigo.deep} />
+                  <Feather
+                    name="user"
+                    size={29}
+                    color={colors.semantic.indigo.deep}
+                  />
                 </View>
               )}
             </View>
@@ -124,38 +133,51 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
                 {displayName}
               </Text>
               <View style={styles.roleBadge}>
-                <Feather name="shield" size={11} color={colors.semantic.indigo.deep} />
+                <Feather
+                  name="shield"
+                  size={12}
+                  color={colors.semantic.indigo.deep}
+                />
                 <Text style={styles.roleText}>SYSTEM ADMIN</Text>
               </View>
-              <Text style={styles.identityCaption}>UniCompanion administrator</Text>
+              <Text style={styles.identityCaption}>
+                UniCompanion administrator
+              </Text>
             </View>
           </View>
           <View style={styles.heroFooter}>
             <View style={styles.heroFooterIcon}>
-              <Feather name="lock" size={13} color={colors.semantic.indigo.deep} />
+              <Feather
+                name="lock"
+                size={13}
+                color={colors.semantic.indigo.deep}
+              />
             </View>
-            <Text style={styles.heroFooterText}>
-              Administrative account
-            </Text>
+            <Text style={styles.heroFooterText}>Administrative account</Text>
           </View>
         </View>
 
         <View style={styles.accountCard}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIcon}>
-              <Feather name="user" size={15} color={colors.semantic.indigo.deep} />
+              <Feather
+                name="user"
+                size={15}
+                color={SECTION_THEMES.SOCIAL.primaryText}
+              />
             </View>
-            <View>
+            <View style={styles.sectionHeaderText}>
               <Text style={styles.sectionTitle}>ACCOUNT DETAILS</Text>
-              <Text style={styles.sectionSubtitle}>
-                Information linked to your account
-              </Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
             <View style={[styles.detailIcon, styles.emailIcon]}>
-              <Feather name="mail" size={16} color={colors.semantic.blue.accent} />
+              <Feather
+                name="mail"
+                size={16}
+                color={colors.semantic.blue.accent}
+              />
             </View>
             <View style={styles.detailCopy}>
               <Text style={styles.detailLabel}>EMAIL ADDRESS</Text>
@@ -169,7 +191,11 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
 
           <View style={styles.detailRow}>
             <View style={[styles.detailIcon, styles.idIcon]}>
-              <Feather name="hash" size={16} color={colors.semantic.teal.solid} />
+              <Feather
+                name="hash"
+                size={16}
+                color={colors.semantic.teal.solid}
+              />
             </View>
             <View style={styles.detailCopy}>
               <Text style={styles.detailLabel}>ACCOUNT ID</Text>
@@ -180,50 +206,22 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
           </View>
         </View>
 
-        <View style={styles.contactCards}>
-          <View style={[styles.contactCard, styles.bloodCard]}>
-            <View style={styles.contactHeader}>
-              <View style={styles.bloodIcon}>
-                <Ionicons
-                  name="water"
-                  size={15}
-                  color={SECTION_THEMES.BLOOD.primaryText}
-                />
-              </View>
-              <Text style={[styles.contactLabel, styles.bloodText]}>
-                BLOOD GROUP
-              </Text>
-            </View>
-            <Text
-              style={[styles.contactValue, styles.bloodText]}
-              numberOfLines={1}
-            >
-              {displayBloodGroup}
-            </Text>
-          </View>
-
-          <View style={[styles.contactCard, styles.phoneCard]}>
-            <View style={styles.contactHeader}>
-              <View style={styles.phoneIcon}>
-                <Feather
-                  name="phone"
-                  size={14}
-                  color={SECTION_THEMES.PHONE.primaryText}
-                />
-              </View>
-              <Text style={[styles.contactLabel, styles.phoneText]}>
-                PHONE NUMBER
-              </Text>
-            </View>
-            <Text style={styles.contactValue} selectable numberOfLines={1}>
-              {displayPhone}
-            </Text>
-          </View>
-        </View>
+        <ProfileContactCards
+          phoneNumber={sessionUser.phoneNumber || ""}
+          bloodGroup={sessionUser.bloodGroup || ""}
+          dbBloodGroup={sessionUser.bloodGroup}
+          profilePhone={sessionUser.phoneNumber}
+          emptyBloodLabel="Not set"
+          emptyPhoneLabel="Not set"
+        />
 
         <View style={styles.accessCard}>
           <View style={styles.accessIcon}>
-            <Feather name="key" size={17} color={colors.semantic.emerald.darker} />
+            <Feather
+              name="key"
+              size={17}
+              color={colors.semantic.emerald.darker}
+            />
           </View>
           <View style={styles.accessCopy}>
             <Text style={styles.accessTitle}>Administrator access</Text>
@@ -231,7 +229,11 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
               This account has access to administrative features in the app.
             </Text>
           </View>
-          <Feather name="check-circle" size={18} color={colors.semantic.emerald.solid} />
+          <Feather
+            name="check-circle"
+            size={18}
+            color={colors.semantic.emerald.solid}
+          />
         </View>
 
         <ProfileAccountActions
@@ -239,15 +241,7 @@ export default function AdminProfile({ sessionUser }: AdminProfileProps) {
           isOffline={isOffline}
         />
 
-        <View style={styles.logoutCard}>
-          <View style={styles.logoutCopy}>
-            <Text style={styles.logoutTitle}>Sign out</Text>
-            <Text style={styles.logoutSubtitle}>
-              End your current session on this device.
-            </Text>
-          </View>
-          <ProfileLogoutButton />
-        </View>
+        <ProfileLogoutButton />
       </ScrollView>
 
       <DeleteAccountModal
@@ -269,39 +263,12 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     alignSelf: "center",
     paddingHorizontal: SPACING.xl,
-  },
-  pageHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: SPACING.lg,
-  },
-  headingCopy: {
-    flex: 1,
-    marginRight: SPACING.md,
-  },
-  pageTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 24,
-    fontWeight: "800",
-    letterSpacing: -0.4,
-    color: PROFILE_COLORS.deepNavy,
-    lineHeight: 30,
-    marginBottom: 4,
-  },
-  pageSubtitle: {
-    fontFamily,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "500",
-    color: PROFILE_COLORS.subtleText,
-    letterSpacing: -0.1,
-    marginTop: 4,
+    paddingTop: SPACING.sm,
   },
   headerIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.semantic.indigo.tint,
@@ -312,7 +279,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     backgroundColor: PROFILE_COLORS.deepNavy,
-    borderRadius: 26,
+    borderRadius: PROFILE_COLORS.cardRadius,
     padding: SPACING.lg,
     marginBottom: SPACING.cardGap,
     ...PROFILE_COLORS.heroShadow,
@@ -329,23 +296,23 @@ const styles = StyleSheet.create({
   },
   avatarFrame: {
     position: "relative",
-    width: 76,
-    height: 76,
+    width: 80,
+    height: 80,
     padding: 3,
-    borderRadius: 38,
+    borderRadius: 40,
     backgroundColor: colors.whiteAlpha18,
-    marginRight: 14,
+    marginRight: 16,
   },
   avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     backgroundColor: colors.semantic.indigo.border,
   },
   avatarFallback: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.semantic.indigo.border,
@@ -357,10 +324,11 @@ const styles = StyleSheet.create({
   nameText: {
     fontFamily,
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "700",
     color: colors.white,
-    letterSpacing: -0.35,
-    marginBottom: 8,
+    letterSpacing: -0.4,
+    lineHeight: 26,
+    marginBottom: 6,
   },
   roleBadge: {
     alignSelf: "flex-start",
@@ -368,21 +336,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     backgroundColor: colors.semantic.indigo.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     marginBottom: 7,
   },
   roleText: {
     fontFamily,
-    fontSize: 9,
-    fontWeight: "800",
+    fontSize: 11,
+    fontWeight: "700",
     color: colors.semantic.indigo.darker,
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
   },
   identityCaption: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "500",
     color: colors.slate300,
   },
@@ -392,7 +360,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderTopWidth: 1,
     borderTopColor: colors.whiteAlpha12,
-    marginTop: SPACING.lg,
+    marginTop: SPACING.md,
     paddingTop: SPACING.md,
   },
   heroFooterIcon: {
@@ -405,114 +373,47 @@ const styles = StyleSheet.create({
   },
   heroFooterText: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.slate200,
   },
   accountCard: {
     backgroundColor: PROFILE_COLORS.white,
-    borderRadius: 24,
+    borderRadius: PROFILE_COLORS.cardRadius,
     padding: SPACING.lg,
     marginBottom: SPACING.cardGap,
     borderWidth: 1,
     borderColor: PROFILE_COLORS.subtleBorder,
     ...PROFILE_COLORS.shadow,
   },
-  contactCards: {
-    flexDirection: "row",
-    gap: SPACING.md,
-    marginBottom: SPACING.cardGap,
-  },
-  contactCard: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 112,
-    justifyContent: "space-between",
-    padding: SPACING.md,
-    backgroundColor: PROFILE_COLORS.white,
-    borderRadius: 20,
-    borderWidth: 1,
-    ...PROFILE_COLORS.shadow,
-  },
-  bloodCard: {
-    borderColor: colors.semantic.rose.border,
-    backgroundColor: colors.semantic.rose.warmSurface,
-  },
-  phoneCard: {
-    borderColor: colors.semantic.amber.border,
-    backgroundColor: colors.semantic.amber.paleSurface,
-  },
-  contactHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  bloodIcon: {
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 15,
-    backgroundColor: SECTION_THEMES.BLOOD.badgeBg,
-  },
-  phoneIcon: {
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 15,
-    backgroundColor: SECTION_THEMES.PHONE.badgeBg,
-  },
-  contactLabel: {
-    flex: 1,
-    fontFamily,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-  },
-  bloodText: {
-    color: SECTION_THEMES.BLOOD.primaryText,
-  },
-  phoneText: {
-    color: SECTION_THEMES.PHONE.primaryText,
-  },
-  contactValue: {
-    fontFamily,
-    fontSize: 15,
-    fontWeight: "700",
-    color: PROFILE_COLORS.deepNavy,
-  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     marginBottom: SPACING.md,
   },
   sectionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.semantic.indigo.tint,
   },
+  sectionHeaderText: {
+    flex: 1,
+  },
   sectionTitle: {
     fontFamily,
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
     letterSpacing: 0.8,
-    color: PROFILE_COLORS.deepNavy,
-  },
-  sectionSubtitle: {
-    fontFamily,
-    fontSize: 10,
-    color: PROFILE_COLORS.subtleText,
-    marginTop: 2,
+    color: SECTION_THEMES.SOCIAL.primaryText,
   },
   detailRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 11,
+    gap: 12,
     minHeight: 50,
   },
   detailIcon: {
@@ -534,83 +435,58 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontFamily,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
     color: PROFILE_COLORS.mutedText,
     letterSpacing: 0.7,
-    marginBottom: 3,
+    marginBottom: 2,
   },
   detailValue: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "600",
     color: PROFILE_COLORS.deepNavy,
   },
   detailDivider: {
     height: 1,
-    backgroundColor: colors.slate100,
-    marginLeft: 47,
+    backgroundColor: colors.dividerSubtle,
+    marginLeft: 48,
+    marginVertical: 2,
   },
   accessCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 11,
+    gap: 12,
     backgroundColor: colors.semantic.emerald.tint,
-    borderRadius: 20,
+    borderRadius: PROFILE_COLORS.cardRadius,
     borderWidth: 1,
     borderColor: colors.semantic.emerald.mintBorderSoft,
-    padding: SPACING.md,
+    padding: SPACING.lg,
     marginBottom: SPACING.cardGap,
   },
   accessIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 13,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.semantic.emerald.border,
   },
   accessCopy: {
     flex: 1,
+    minWidth: 0,
   },
   accessTitle: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     color: colors.semantic.emerald.darkText,
-    marginBottom: 3,
+    marginBottom: 2,
   },
   accessDescription: {
     fontFamily,
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.semantic.emerald.darker,
-  },
-  logoutCard: {
-    alignItems: "stretch",
-    gap: SPACING.sm,
-    backgroundColor: PROFILE_COLORS.white,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: PROFILE_COLORS.subtleBorder,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-    marginBottom: SPACING.md,
-  },
-  logoutCopy: {
-    flex: 1,
-  },
-  logoutTitle: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    color: PROFILE_COLORS.deepNavy,
-    marginBottom: 3,
-  },
-  logoutSubtitle: {
-    fontFamily,
-    fontSize: 10,
-    lineHeight: 15,
-    color: PROFILE_COLORS.subtleText,
   },
 });

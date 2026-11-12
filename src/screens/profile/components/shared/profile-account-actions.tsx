@@ -18,11 +18,16 @@ export const ProfileAccountActions: React.FC<ProfileAccountActionsProps> = ({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionLabel}>ACCOUNT & PRIVACY</Text>
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.sectionIconBadge}>
+          <Feather name="shield" size={15} color={colors.semantic.indigo.solid} />
+        </View>
+        <Text style={styles.sectionLabel}>ACCOUNT & PRIVACY</Text>
+      </View>
 
       <TouchableOpacity
         style={styles.actionRow}
-        onPress={() => router.push("/privacy-policy")}
+        onPress={() => router.push("/(tabs)/privacy-policy")}
         activeOpacity={0.75}
       >
         <View style={[styles.iconBadge, styles.privacyBadge]}>
@@ -66,20 +71,29 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     marginBottom: SPACING.cardGap,
     borderWidth: 1,
-    borderColor: colors.navyAlpha06,
-    shadowColor: PROFILE_COLORS.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    ...PROFILE_COLORS.shadow,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: SPACING.md,
+  },
+  sectionIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.semantic.indigo.tint,
+    alignItems: "center",
+    justifyContent: "center",
   },
   sectionLabel: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    color: colors.slate500,
+    color: colors.semantic.indigo.solid,
     letterSpacing: 0.8,
-    marginBottom: 10,
   },
   actionRow: {
     flexDirection: "row",
@@ -105,13 +119,13 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontFamily,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
   },
   dangerTitle: {
     fontFamily,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: "700",
     color: colors.semantic.red.accent,
   },

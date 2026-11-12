@@ -92,7 +92,7 @@ export const StudentIdentityCard = React.memo(function StudentIdentityCard({
         </TouchableOpacity>
 
         <View style={styles.avatarTextContainer}>
-          <Text style={styles.nameText} numberOfLines={1}>
+          <Text style={styles.nameText} numberOfLines={2}>
             {profile.name || sessionUser.name}
           </Text>
           <View style={styles.roleRow}>
@@ -131,15 +131,11 @@ const styles = StyleSheet.create({
     position: "relative",
     backgroundColor: PROFILE_COLORS.white,
     borderRadius: PROFILE_COLORS.cardRadius,
-    padding: SPACING.xl,
+    padding: SPACING.lg,
     marginBottom: SPACING.cardGap,
-    shadowColor: PROFILE_COLORS.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: colors.blackAlpha02,
+    borderColor: PROFILE_COLORS.subtleBorder,
+    ...PROFILE_COLORS.shadow,
     overflow: "hidden",
   },
   watermark: {
@@ -156,21 +152,21 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: "relative",
     marginRight: 16,
-    padding: 4,
-    borderRadius: 48,
+    padding: 3,
+    borderRadius: 46,
     borderWidth: 3,
     borderColor: colors.slate100,
   },
   avatar: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: colors.slate100,
   },
   avatarPlaceholder: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: colors.slate100,
     justifyContent: "center",
     alignItems: "center",
@@ -190,6 +186,7 @@ const styles = StyleSheet.create({
   },
   avatarTextContainer: {
     flex: 1,
+    minWidth: 0,
     justifyContent: "center",
   },
   nameText: {
@@ -198,6 +195,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: PROFILE_COLORS.deepNavy,
     letterSpacing: -0.4,
+    lineHeight: 26,
     marginBottom: 6,
   },
   roleRow: {
@@ -245,7 +243,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontFamily,
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
     color: PROFILE_COLORS.subtleText,
     lineHeight: 16,
     includeFontPadding: false,

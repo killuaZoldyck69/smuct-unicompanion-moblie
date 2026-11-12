@@ -253,6 +253,7 @@ export default function TabsLayout() {
         name="notifications"
         options={{ href: null }}
       />
+      <Tabs.Screen name="privacy-policy" options={{ href: null }} />
     </Tabs>
   );
 }

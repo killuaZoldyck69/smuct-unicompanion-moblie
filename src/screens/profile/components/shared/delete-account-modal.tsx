@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +16,8 @@ import { clearStoredAuthSession } from "@/services/session-storage";
 import { extractApiErrorMessage } from "@/features/profile/profile-error-utils";
 import { colors } from "@/theme/colors";
 import { fontFamily } from "@/theme/typography";
+import { SPACING } from "../../constants";
+import { ProfileModalFrame } from "./profile-modal-frame";
 
 interface DeleteAccountModalProps {
   visible: boolean;
@@ -97,83 +98,81 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.modalCard}>
-          <View style={styles.iconCircle}>
-            <Feather name="alert-triangle" size={22} color={colors.semantic.red.accent} />
-          </View>
-
-          <Text style={styles.title}>Delete Account</Text>
-          <Text style={styles.description}>
-            This permanently erases your profile, sessions, push tokens, and uploaded
-            photo. A non-reversible security hash enforces a 30-day re-registration
-            cooldown (or permanent block after repeated deletions).
-          </Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              Type <Text style={styles.keyword}>DELETE</Text> to confirm
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={confirmText}
-              onChangeText={(value) => {
-                setConfirmText(value);
-                if (errorMsg) setErrorMsg(null);
-              }}
-              placeholder="DELETE"
-              placeholderTextColor={colors.slate400}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              editable={!isDeleting}
-            />
-          </View>
-
-          {errorMsg ? (
-            <View style={styles.errorBox}>
-              <Feather name="info" size={14} color={colors.semantic.red.deep} />
-              <Text style={styles.errorText}>{errorMsg}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleClose}
-              disabled={isDeleting}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.deleteButton, !canConfirm && styles.deleteButtonDisabled]}
-              onPress={handleDelete}
-              disabled={!canConfirm}
-              activeOpacity={0.8}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Text style={styles.deleteText}>Delete Forever</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
+    <ProfileModalFrame
+      visible={visible}
+      onClose={handleClose}
+      dismissDisabled={isDeleting}
+      keyboardAvoiding={true}
+      scrollable={true}
+      horizontalPadding={SPACING.xl}
+      cardStyle={styles.modalCard}
+      backdropAccessibilityLabel="Cancel account deletion"
+    >
+      <View style={styles.iconCircle}>
+        <Feather name="alert-triangle" size={22} color={colors.semantic.red.accent} />
       </View>
-    </Modal>
+
+      <Text style={styles.title}>Delete Account</Text>
+      <Text style={styles.description}>
+        This permanently erases your profile, sessions, push tokens, and uploaded
+        photo. A non-reversible security hash enforces a 30-day re-registration
+        cooldown (or permanent block after repeated deletions).
+      </Text>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>
+          Type <Text style={styles.keyword}>DELETE</Text> to confirm
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={confirmText}
+          onChangeText={(value) => {
+            setConfirmText(value);
+            if (errorMsg) setErrorMsg(null);
+          }}
+          placeholder="DELETE"
+          placeholderTextColor={colors.slate400}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          editable={!isDeleting}
+        />
+      </View>
+
+      {errorMsg ? (
+        <View style={styles.errorBox}>
+          <Feather name="info" size={14} color={colors.semantic.red.deep} />
+          <Text style={styles.errorText}>{errorMsg}</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.actionsRow}>
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={handleClose}
+          disabled={isDeleting}
+          activeOpacity={0.75}
+        >
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.deleteButton, !canConfirm && styles.deleteButtonDisabled]}
+          onPress={handleDelete}
+          disabled={!canConfirm}
+          activeOpacity={0.8}
+        >
+          {isDeleting ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Text style={styles.deleteText}>Delete Forever</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </ProfileModalFrame>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: colors.scrimDark,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalCard: {
     width: "100%",
     maxWidth: 380,

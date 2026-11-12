@@ -1,7 +1,6 @@
 import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
 import { fontFamily, titleFontFamily } from "@/theme/typography";
@@ -46,28 +45,28 @@ const POLICY_SECTIONS: PolicySection[] = [
 ];
 
 export default function PrivacyPolicyScreen() {
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Feather name="arrow-left" size={20} color={colors.navyDeep} />
-        </TouchableOpacity>
-        <View style={styles.headerTextWrap}>
-          <Text style={styles.headerTitle}>Privacy Policy</Text>
-          <Text style={styles.headerSubtitle}>SMUCT UniCompanion Data & Lifecycle Terms</Text>
-        </View>
+    <View style={styles.screen}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+        <Text style={styles.headerTitle}>Privacy Policy</Text>
+        <Text style={styles.headerSubtitle}>SMUCT UniCompanion Data & Lifecycle Terms</Text>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingBottom: insets.bottom > 0 ? insets.bottom + 128 : 132,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.introBanner}>
@@ -98,51 +97,46 @@ export default function PrivacyPolicyScreen() {
           Effective November 2026 • SMUCT UniCompanion Mobile & API
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
     backgroundColor: colors.homeBackground,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.navyAlpha06,
-    gap: 12,
-  },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.slate100,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTextWrap: {
-    flex: 1,
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: colors.homeBackground,
   },
   headerTitle: {
     fontFamily: titleFontFamily,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 24,
+    fontWeight: "800",
     color: colors.navyDeep,
+    letterSpacing: -0.4,
+    lineHeight: 30,
+    marginBottom: 4,
   },
   headerSubtitle: {
     fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: "500",
     color: colors.slate500,
-    marginTop: 2,
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 36,
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingTop: 8,
     gap: 12,
   },
   introBanner: {
