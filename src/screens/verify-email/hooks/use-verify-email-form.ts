@@ -101,17 +101,19 @@ export function useVerifyEmailForm(): VerifyEmailState {
         throw new Error(error.message || "Invalid or expired verification code.");
       }
 
-      // Persist session with onboarded: false until student completes onboarding (Mobile-19, Mobile-20)
+      // Persist session and check role before redirecting (Mobile-19, Mobile-20)
       const sessionToken =
         (data as any)?.token ||
         (data as any)?.session?.token;
       const verifiedUser = (data as any)?.user;
+      const verifiedRole = String((verifiedUser as any)?.role || "STUDENT").toUpperCase();
+      const isStaff = verifiedRole === "TEACHER" || verifiedRole === "ADMIN";
 
       await persistAuthSession({
         token: sessionToken ? String(sessionToken) : undefined,
         user: verifiedUser,
         session: (data as any)?.session,
-        onboarded: false,
+        onboarded: isStaff,
       });
 
       // Invalidate queries so session status reflects immediately
@@ -119,13 +121,14 @@ export function useVerifyEmailForm(): VerifyEmailState {
 
       Toast.show({
         type: "success",
-        text1: "Email Verified! 🚀",
-        text2: "Your account is active. Complete your profile to get started.",
+        text1: "Email Verified!",
+        text2: isStaff
+          ? "Your account is active. Welcome to SMUCT UniCompanion."
+          : "Your account is active. Complete your profile to get started.",
         visibilityTime: 4000,
       });
 
-      // Per specification: Redirect to Onboard screen!
-      router.replace("/(auth)/onboard");
+      router.replace(isStaff ? "/(tabs)" : "/(auth)/onboard");
     } catch (err: any) {
       Toast.show({
         type: "error",

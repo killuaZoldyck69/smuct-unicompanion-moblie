@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, TextInput, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { ONBOARD_COLORS, MAX_SECTION_LENGTH } from "../constants";
 
 interface OnboardClassBoxProps {
@@ -40,6 +41,11 @@ export const OnboardClassBox = memo(function OnboardClassBox({
 
   return (
     <View style={styles.bentoBox}>
+      <View style={styles.bentoHeader}>
+        <Feather name="layers" size={14} color={colors.semantic.emerald.darkText} />
+        <Text style={styles.bentoHeaderText}>CLASS & CONTACT</Text>
+      </View>
+
       {/* 1. SEMESTER AND SECTION (ROW) */}
       <View style={styles.row}>
         {/* Semester: Integer only, 1 to 12 */}
@@ -151,11 +157,22 @@ export const OnboardClassBox = memo(function OnboardClassBox({
 const styles = StyleSheet.create({
   bentoBox: {
     width: "100%",
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 20,
     marginBottom: 16,
     gap: 14,
     backgroundColor: ONBOARD_COLORS.mintBox,
+  },
+  bentoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  bentoHeaderText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    color: colors.semantic.emerald.darkText,
   },
   row: {
     flexDirection: "row",
@@ -169,7 +186,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: ONBOARD_COLORS.white,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 16,
     height: 54,
     borderWidth: 1.5,
@@ -197,7 +214,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "500",
     color: ONBOARD_COLORS.neutralText,
     height: "100%",

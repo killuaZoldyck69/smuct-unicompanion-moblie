@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { ONBOARD_COLORS, BLOOD_GROUPS } from "../constants";
 
 interface OnboardPersonalBoxProps {
@@ -20,6 +21,11 @@ export const OnboardPersonalBox = memo(function OnboardPersonalBox({
 
   return (
     <View style={styles.bentoBox}>
+      <View style={styles.bentoHeader}>
+        <Feather name="heart" size={14} color={colors.semantic.rose.darkText} />
+        <Text style={styles.bentoHeaderText}>HEALTH & EMERGENCY</Text>
+      </View>
+
       <TouchableOpacity
         style={[
           styles.inputWrapper,
@@ -33,8 +39,12 @@ export const OnboardPersonalBox = memo(function OnboardPersonalBox({
       >
         <Feather
           name="droplet"
-          size={20}
-          color={hasBloodGroupError ? ONBOARD_COLORS.errorBorder : "#DC2626"}
+          size={19}
+          color={
+            hasBloodGroupError
+              ? ONBOARD_COLORS.errorBorder
+              : colors.semantic.red.accent
+          }
           style={styles.inputIcon}
         />
         <Text
@@ -63,17 +73,28 @@ export const OnboardPersonalBox = memo(function OnboardPersonalBox({
 const styles = StyleSheet.create({
   bentoBox: {
     width: "100%",
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 20,
     marginBottom: 16,
     gap: 14,
     backgroundColor: ONBOARD_COLORS.roseBox,
   },
+  bentoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  bentoHeaderText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    color: colors.semantic.rose.darkText,
+  },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: ONBOARD_COLORS.white,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 16,
     height: 54,
     borderWidth: 1.5,
@@ -87,7 +108,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "500",
     color: ONBOARD_COLORS.neutralText,
   },

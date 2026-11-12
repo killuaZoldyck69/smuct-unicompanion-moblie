@@ -183,7 +183,7 @@ export const RegisterCard = React.memo(function RegisterCard({
             <Text style={styles.criteriaHeaderTitle}>Password requirements:</Text>
             {criteria.allValid && (
               <View style={styles.strongBadge}>
-                <Feather name="check" size={11} color="#059669" />
+                <Feather name="check" size={11} color={colors.semantic.emerald.accent} />
                 <Text style={styles.strongBadgeText}>Strong</Text>
               </View>
             )}
@@ -198,7 +198,9 @@ export const RegisterCard = React.memo(function RegisterCard({
               <Feather
                 name={criteria.hasMinLength ? "check" : "circle"}
                 size={11}
-                color={criteria.hasMinLength ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasMinLength ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -219,7 +221,9 @@ export const RegisterCard = React.memo(function RegisterCard({
               <Feather
                 name={criteria.hasUppercase ? "check" : "circle"}
                 size={11}
-                color={criteria.hasUppercase ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasUppercase ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -240,7 +244,9 @@ export const RegisterCard = React.memo(function RegisterCard({
               <Feather
                 name={criteria.hasLowercase ? "check" : "circle"}
                 size={11}
-                color={criteria.hasLowercase ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasLowercase ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -261,7 +267,9 @@ export const RegisterCard = React.memo(function RegisterCard({
               <Feather
                 name={criteria.hasNumber ? "check" : "circle"}
                 size={11}
-                color={criteria.hasNumber ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasNumber ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -282,7 +290,9 @@ export const RegisterCard = React.memo(function RegisterCard({
               <Feather
                 name={criteria.hasSpecialChar ? "check" : "circle"}
                 size={11}
-                color={criteria.hasSpecialChar ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasSpecialChar ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -392,7 +402,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 54,
     borderRadius: 16,
-    borderWidth: 1.2,
+    borderWidth: 1.5,
     borderColor: REGISTER_COLORS.inputBorder,
     backgroundColor: REGISTER_COLORS.cardBackground,
     paddingHorizontal: 16,

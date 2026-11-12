@@ -106,17 +106,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "800",
-    letterSpacing: -0.6,
+    letterSpacing: -0.5,
     color: REGISTER_COLORS.titleText,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
     fontWeight: "500",
     color: REGISTER_COLORS.subtitleText,
-    lineHeight: 21,
+    lineHeight: 22,
   },
   cardWrapper: {
     width: "100%",

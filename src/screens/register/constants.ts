@@ -15,22 +15,22 @@ export const REGISTER_STRINGS = {
 
 export const REGISTER_COLORS = {
   background: colors.auth.background,
-  titleText: colors.auth.titleText,
-  subtitleText: colors.auth.subtitleText,
+  titleText: colors.auth.navyDark,
+  subtitleText: colors.auth.textSecondary,
 
   // Card & inputs
   cardBackground: colors.white,
   cardBorder: colors.auth.cardBorder,
   inputBorder: colors.auth.inputBorder,
-  inputBorderFocused: colors.auth.tealPrimary,
+  inputBorderFocused: colors.auth.navyDark,
   inputPlaceholder: colors.auth.inputPlaceholder,
-  inputText: colors.auth.titleText,
+  inputText: colors.auth.navyDark,
   iconMuted: colors.slate500,
-  iconFocused: colors.auth.tealPrimary,
+  iconFocused: colors.auth.navyDark,
 
-  // Primary action button (emerald/teal)
-  primaryButton: colors.auth.tealPrimary,
-  primaryButtonHover: colors.auth.tealHover,
+  // Primary action button (unified Deep Navy across all Auth CTA buttons)
+  primaryButton: colors.auth.navyDark,
+  primaryButtonHover: colors.auth.navyMedium,
   primaryButtonText: colors.white,
   accentBlue: colors.auth.accentBlue,
 

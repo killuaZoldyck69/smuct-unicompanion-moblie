@@ -38,8 +38,6 @@ export function Onboard() {
     handlePhoneNumberChange,
     bloodGroup,
     imageUri,
-    imageBase64,
-    imageMimeType,
     errorField,
     isSubmitting,
     isProgramModalVisible,
@@ -80,8 +78,6 @@ export function Onboard() {
         {/* Profile Picture Avatar Picker */}
         <OnboardAvatarPicker
           imageUri={imageUri}
-          imageBase64={imageBase64}
-          imageMimeType={imageMimeType}
           onPickImage={pickImage}
           hasError={errorField === "image"}
         />
@@ -189,10 +185,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 15.5,
+    fontSize: 15,
     fontWeight: "500",
     color: ONBOARD_COLORS.mutedText,
     textAlign: "center",
+    lineHeight: 22,
   },
   submitButton: {
     backgroundColor: ONBOARD_COLORS.deepNavy,

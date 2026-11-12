@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 import { AuthKeyboardScrollView } from "../../components/ui";
-import { RESET_PASSWORD_STRINGS } from "./constants";
+import { RESET_PASSWORD_COLORS, RESET_PASSWORD_STRINGS } from "./constants";
 import { ResetPasswordBackgroundDecorations } from "./components/reset-password-background-decorations";
 import { ResetPasswordHeroIllustration } from "./components/reset-password-hero-illustration";
 import { ResetPasswordCard } from "./components/reset-password-card";
@@ -43,7 +43,7 @@ export function ResetPassword() {
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
-              <Feather name="arrow-left" size={24} color="#131B2E" />
+              <Feather name="arrow-left" size={24} color={RESET_PASSWORD_COLORS.navyDark} />
             </TouchableOpacity>
           </View>
         }
@@ -98,7 +98,7 @@ export function ResetPassword() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: RESET_PASSWORD_COLORS.screenBg,
   },
   topBar: {
     width: "100%",
@@ -123,21 +123,21 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#131B2E",
+    color: RESET_PASSWORD_COLORS.navyDark,
     textAlign: "center",
     letterSpacing: -0.5,
     marginBottom: 8,
   },
   subtitleSentence: {
-    fontSize: 14.5,
-    color: "#1F2937",
+    fontSize: 15,
+    color: RESET_PASSWORD_COLORS.textSecondary,
     textAlign: "center",
     lineHeight: 22,
-    fontWeight: "400",
+    fontWeight: "500",
   },
   emailHighlighted: {
-    fontSize: 14.5,
-    color: "#111827",
+    fontSize: 15,
+    color: RESET_PASSWORD_COLORS.navyDark,
     fontWeight: "700",
   },
   cardWrapper: {

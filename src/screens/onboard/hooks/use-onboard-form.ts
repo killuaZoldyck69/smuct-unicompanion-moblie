@@ -46,8 +46,6 @@ export function useOnboardForm() {
 
   const [bloodGroup, setBloodGroup] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [imageMimeType, setImageMimeType] = useState<string>("image/jpeg");
 
   const [errorField, setErrorField] = useState<OnboardFormField | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,8 +159,6 @@ export function useOnboardForm() {
       }
 
       setImageUri(rawAsset.uri);
-      setImageBase64(null);
-      setImageMimeType(rawAsset.mimeType || "image/jpeg");
       if (errorField === "image") {
         setErrorField(null);
       }
@@ -221,8 +217,6 @@ export function useOnboardForm() {
       bloodGroup,
       phoneNumber,
       imageUri,
-      imageBase64,
-      imageMimeType,
     };
 
     // 1. Mandatory Fields Validation
@@ -314,8 +308,6 @@ export function useOnboardForm() {
     bloodGroup,
     phoneNumber,
     imageUri,
-    imageBase64,
-    imageMimeType,
     onboardMutation,
     updateImageMutation,
     router,
@@ -342,8 +334,6 @@ export function useOnboardForm() {
     handlePhoneNumberChange,
     bloodGroup,
     imageUri,
-    imageBase64,
-    imageMimeType,
     errorField,
     isSubmitting,
     isProgramModalVisible,

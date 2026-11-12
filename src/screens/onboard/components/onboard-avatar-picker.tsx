@@ -1,20 +1,17 @@
-import React, { memo, useState, useEffect, useMemo } from "react";
+import React, { memo, useState, useEffect } from "react";
 import { View, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { ONBOARD_COLORS } from "../constants";
 
 interface OnboardAvatarPickerProps {
   imageUri: string | null;
-  imageBase64?: string | null;
-  imageMimeType?: string;
   onPickImage: () => void;
   hasError?: boolean;
 }
 
 export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
   imageUri,
-  imageBase64,
-  imageMimeType,
   onPickImage,
   hasError,
 }: OnboardAvatarPickerProps) {
@@ -22,31 +19,9 @@ export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
 
   useEffect(() => {
     setLoadError(false);
-  }, [imageUri, imageBase64]);
+  }, [imageUri]);
 
-  const source = useMemo(() => {
-    if (loadError) {
-      if (imageBase64) {
-        return {
-          uri: imageBase64.startsWith("data:")
-            ? imageBase64
-            : `data:${imageMimeType || "image/jpeg"};base64,${imageBase64}`,
-        };
-      }
-      return null;
-    }
-    if (imageUri) {
-      return { uri: imageUri };
-    }
-    if (imageBase64) {
-      return {
-        uri: imageBase64.startsWith("data:")
-          ? imageBase64
-          : `data:${imageMimeType || "image/jpeg"};base64,${imageBase64}`,
-      };
-    }
-    return null;
-  }, [imageUri, imageBase64, imageMimeType, loadError]);
+  const showPreview = Boolean(imageUri && !loadError);
 
   return (
     <View style={styles.container}>
@@ -59,15 +34,15 @@ export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
         accessibilityLabel="Choose profile photo"
       >
         <View style={[styles.imageCircle, hasError && styles.imageCircleError]}>
-          {source ? (
+          {showPreview && imageUri ? (
             <Image
-              source={source}
+              source={{ uri: imageUri }}
               style={styles.profileImage}
               resizeMode="cover"
               onError={(e) => {
                 console.warn(
-                  "Image failed to render from primary URI, trying base64 fallback:",
-                  e.nativeEvent.error
+                  "Profile image preview failed to load:",
+                  e.nativeEvent.error,
                 );
                 setLoadError(true);
               }}
@@ -78,7 +53,11 @@ export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
             <Feather
               name="camera"
               size={34}
-              color={hasError ? ONBOARD_COLORS.errorBorder : "#565e74"}
+              color={
+                hasError
+                  ? ONBOARD_COLORS.errorBorder
+                  : colors.slate600
+              }
             />
           )}
         </View>
@@ -89,7 +68,11 @@ export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
             hasError && { backgroundColor: ONBOARD_COLORS.errorBorder },
           ]}
         >
-          <Feather name={source ? "edit-2" : "plus"} size={16} color="#FFF" />
+          <Feather
+            name={showPreview ? "edit-2" : "plus"}
+            size={16}
+            color={ONBOARD_COLORS.white}
+          />
         </View>
       </TouchableOpacity>
     </View>
@@ -99,7 +82,7 @@ export const OnboardAvatarPicker = memo(function OnboardAvatarPicker({
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: 24,
   },
   avatarWrapper: {
     position: "relative",
@@ -136,7 +119,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 3,
     borderColor: ONBOARD_COLORS.background,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3,

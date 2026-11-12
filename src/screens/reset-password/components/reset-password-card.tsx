@@ -102,7 +102,7 @@ export function ResetPasswordCard({
             {isResending ? (
               <ActivityIndicator
                 size="small"
-                color="#1D4ED8"
+                color={RESET_PASSWORD_COLORS.brandBlue}
                 style={styles.resendSpinner}
               />
             ) : (
@@ -132,13 +132,17 @@ export function ResetPasswordCard({
         <Feather
           name="shield"
           size={18}
-          color="#334155"
+          color={
+            isPasswordFocused
+              ? RESET_PASSWORD_COLORS.navyDark
+              : colors.slate500
+          }
           style={styles.inputLeftIcon}
         />
         <TextInput
           style={styles.textInput}
           placeholder={RESET_PASSWORD_STRINGS.newPasswordPlaceholder}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={colors.auth.inputPlaceholder}
           value={newPassword}
           onChangeText={setNewPassword}
           secureTextEntry={!showPassword}
@@ -157,9 +161,9 @@ export function ResetPasswordCard({
           accessibilityLabel={showPassword ? "Hide password" : "Show password"}
         >
           <Feather
-            name={showPassword ? "eye-off" : "eye"}
+            name={showPassword ? "eye" : "eye-off"}
             size={19}
-            color="#64748B"
+            color={colors.slate500}
           />
         </TouchableOpacity>
       </View>
@@ -171,7 +175,7 @@ export function ResetPasswordCard({
             <Text style={styles.criteriaHeaderTitle}>Password requirements:</Text>
             {criteria.allValid && (
               <View style={styles.strongBadge}>
-                <Feather name="check" size={11} color="#059669" />
+                <Feather name="check" size={11} color={colors.semantic.emerald.accent} />
                 <Text style={styles.strongBadgeText}>Strong</Text>
               </View>
             )}
@@ -186,7 +190,9 @@ export function ResetPasswordCard({
               <Feather
                 name={criteria.hasMinLength ? "check" : "circle"}
                 size={11}
-                color={criteria.hasMinLength ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasMinLength ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -207,7 +213,9 @@ export function ResetPasswordCard({
               <Feather
                 name={criteria.hasUppercase ? "check" : "circle"}
                 size={11}
-                color={criteria.hasUppercase ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasUppercase ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -228,7 +236,9 @@ export function ResetPasswordCard({
               <Feather
                 name={criteria.hasLowercase ? "check" : "circle"}
                 size={11}
-                color={criteria.hasLowercase ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasLowercase ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -249,7 +259,9 @@ export function ResetPasswordCard({
               <Feather
                 name={criteria.hasNumber ? "check" : "circle"}
                 size={11}
-                color={criteria.hasNumber ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasNumber ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -270,7 +282,9 @@ export function ResetPasswordCard({
               <Feather
                 name={criteria.hasSpecialChar ? "check" : "circle"}
                 size={11}
-                color={criteria.hasSpecialChar ? "#0D9488" : "#94A3B8"}
+                color={
+                  criteria.hasSpecialChar ? colors.semantic.teal.solid : colors.slate400
+                }
               />
               <Text
                 style={[
@@ -298,13 +312,17 @@ export function ResetPasswordCard({
         <Feather
           name="check-circle"
           size={18}
-          color="#334155"
+          color={
+            isConfirmPasswordFocused
+              ? RESET_PASSWORD_COLORS.navyDark
+              : colors.slate500
+          }
           style={styles.inputLeftIcon}
         />
         <TextInput
           style={styles.textInput}
           placeholder={RESET_PASSWORD_STRINGS.confirmPasswordPlaceholder}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={colors.auth.inputPlaceholder}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry={!showConfirmPassword}
@@ -325,9 +343,9 @@ export function ResetPasswordCard({
           }
         >
           <Feather
-            name={showConfirmPassword ? "eye-off" : "eye"}
+            name={showConfirmPassword ? "eye" : "eye-off"}
             size={19}
-            color="#64748B"
+            color={colors.slate500}
           />
         </TouchableOpacity>
       </View>
@@ -346,7 +364,7 @@ export function ResetPasswordCard({
         accessibilityLabel="Set new password"
       >
         {isSubmitting ? (
-          <ActivityIndicator color="#ffffff" size="small" />
+          <ActivityIndicator color={RESET_PASSWORD_COLORS.cardBg} size="small" />
         ) : (
           <Text style={styles.submitButtonText}>
             {RESET_PASSWORD_STRINGS.ctaButtonText}
@@ -427,13 +445,13 @@ const styles = StyleSheet.create({
     backgroundColor: RESET_PASSWORD_COLORS.inputBg,
     borderWidth: 1.5,
     borderColor: RESET_PASSWORD_COLORS.borderLight,
-    borderRadius: 14,
-    height: 50,
-    paddingHorizontal: 14,
+    borderRadius: 16,
+    height: 54,
+    paddingHorizontal: 16,
     marginBottom: 14,
   },
   inputContainerFocused: {
-    borderColor: RESET_PASSWORD_COLORS.navyMedium,
+    borderColor: RESET_PASSWORD_COLORS.navyDark,
     backgroundColor: RESET_PASSWORD_COLORS.cardBg,
     shadowColor: RESET_PASSWORD_COLORS.navyDark,
     shadowOffset: { width: 0, height: 2 },
@@ -446,7 +464,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 14.5,
+    fontSize: 15,
     color: RESET_PASSWORD_COLORS.navyDark,
     fontWeight: "500",
     height: "100%",
@@ -524,18 +542,18 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: RESET_PASSWORD_COLORS.navyDark,
-    borderRadius: 28,
-    height: 52,
+    borderRadius: 9999,
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
     marginTop: 8,
     marginBottom: 16,
     shadowColor: RESET_PASSWORD_COLORS.navyDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
+    elevation: 4,
   },
   submitButtonIncomplete: {
     backgroundColor: RESET_PASSWORD_COLORS.navyDark,

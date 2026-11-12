@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { ONBOARD_COLORS } from "../constants";
 
 interface OnboardAcademicBoxProps {
@@ -34,6 +35,11 @@ export const OnboardAcademicBox = memo(function OnboardAcademicBox({
 }: OnboardAcademicBoxProps) {
   return (
     <View style={styles.bentoBox}>
+      <View style={styles.bentoHeader}>
+        <Feather name="award" size={14} color={colors.semantic.blue.deep} />
+        <Text style={styles.bentoHeaderText}>ACADEMIC IDENTITY</Text>
+      </View>
+
       {/* 1. STUDENT ID AND BATCH NUMBER (SAME ROW, 2 COLUMNS) */}
       <View style={styles.row}>
         {/* Student ID Column */}
@@ -111,8 +117,8 @@ export const OnboardAcademicBox = memo(function OnboardAcademicBox({
         activeOpacity={0.7}
       >
         <Feather
-          name="smartphone"
-          size={20}
+          name="book-open"
+          size={19}
           color={
             hasProgramError
               ? ONBOARD_COLORS.errorBorder
@@ -156,11 +162,22 @@ export const OnboardAcademicBox = memo(function OnboardAcademicBox({
 const styles = StyleSheet.create({
   bentoBox: {
     width: "100%",
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 20,
     marginBottom: 16,
     gap: 14,
     backgroundColor: ONBOARD_COLORS.blueBox,
+  },
+  bentoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  bentoHeaderText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    color: colors.semantic.blue.deep,
   },
   row: {
     flexDirection: "row",
@@ -174,7 +191,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: ONBOARD_COLORS.white,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 16,
     height: 54,
     borderWidth: 1.5,
@@ -188,14 +205,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "500",
     color: ONBOARD_COLORS.neutralText,
     height: "100%",
   },
   dropdownText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "500",
     color: ONBOARD_COLORS.neutralText,
   },

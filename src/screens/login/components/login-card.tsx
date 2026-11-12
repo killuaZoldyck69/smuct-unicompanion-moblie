@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 54,
     borderRadius: 16,
-    borderWidth: 1.2,
+    borderWidth: 1.5,
     borderColor: LOGIN_COLORS.inputBorder,
     backgroundColor: LOGIN_COLORS.cardBackground,
     paddingHorizontal: 16,

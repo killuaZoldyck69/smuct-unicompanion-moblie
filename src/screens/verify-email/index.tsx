@@ -94,10 +94,10 @@ const styles = StyleSheet.create({
   },
   subtitleSentence: {
     fontSize: 15,
-    color: VERIFY_EMAIL_COLORS.navyMedium,
+    color: VERIFY_EMAIL_COLORS.textSecondary,
     textAlign: "center",
     lineHeight: 22,
-    fontWeight: "400",
+    fontWeight: "500",
   },
   emailHighlighted: {
     fontSize: 15,
@@ -108,11 +108,11 @@ const styles = StyleSheet.create({
   },
   instructionSentence: {
     fontSize: 14,
-    color: VERIFY_EMAIL_COLORS.navyMedium,
+    color: VERIFY_EMAIL_COLORS.textSecondary,
     textAlign: "center",
     lineHeight: 20,
     marginTop: 12,
-    fontWeight: "400",
+    fontWeight: "500",
   },
   cardWrapper: {
     width: "100%",

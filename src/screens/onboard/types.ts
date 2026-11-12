@@ -17,8 +17,6 @@ export interface OnboardFormData {
   bloodGroup: string;
   phoneNumber: string;
   imageUri: string | null;
-  imageBase64: string | null;
-  imageMimeType: string;
 }
 
 export type OnboardFormField =

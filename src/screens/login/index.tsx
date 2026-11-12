@@ -100,14 +100,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   title: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: "800",
-    letterSpacing: -0.6,
+    letterSpacing: -0.5,
     color: LOGIN_COLORS.titleText,
     marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "500",
     color: LOGIN_COLORS.subtitleText,
     lineHeight: 22,

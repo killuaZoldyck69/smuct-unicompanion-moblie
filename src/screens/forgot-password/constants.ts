@@ -13,23 +13,23 @@ export const FORGOT_PASSWORD_STRINGS = {
 
 export const FORGOT_PASSWORD_COLORS = {
   background: colors.auth.forgotBackground,
-  titleText: colors.auth.titleText,
-  subtitleText: colors.auth.subtitleText,
+  titleText: colors.auth.navyDark,
+  subtitleText: colors.auth.textSecondary,
 
   // Card & inputs
   cardBackground: colors.white,
   cardBorder: colors.auth.cardBorder,
-  cardShadow: colors.auth.titleText,
+  cardShadow: colors.auth.navyDark,
   inputBackground: colors.white,
   inputBorder: colors.auth.inputBorder,
-  inputBorderFocused: colors.auth.primaryNavy,
+  inputBorderFocused: colors.auth.navyDark,
   inputPlaceholder: colors.auth.placeholderSlate,
-  inputText: colors.auth.titleText,
+  inputText: colors.auth.navyDark,
   iconMuted: colors.slate500,
-  iconFocused: colors.auth.primaryNavy,
+  iconFocused: colors.auth.navyDark,
 
   // Primary Action Button (Pill button)
-  primaryButton: colors.auth.primaryNavy,
+  primaryButton: colors.auth.navyDark,
   primaryButtonText: colors.white,
   accentBlue: colors.auth.brandBlue,
 

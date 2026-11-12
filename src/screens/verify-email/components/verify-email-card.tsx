@@ -69,7 +69,7 @@ export function VerifyEmailCard({
         accessibilityLabel="Verify and proceed"
       >
         {isVerifying ? (
-          <ActivityIndicator color="#ffffff" size="small" />
+          <ActivityIndicator color={VERIFY_EMAIL_COLORS.cardBg} size="small" />
         ) : (
           <Text style={styles.submitButtonText}>
             {VERIFY_EMAIL_STRINGS.ctaButtonText}
@@ -94,7 +94,7 @@ export function VerifyEmailCard({
             {isResending ? (
               <ActivityIndicator
                 size="small"
-                color="#1D4ED8"
+                color={VERIFY_EMAIL_COLORS.brandBlue}
                 style={styles.resendSpinner}
               />
             ) : (
@@ -160,18 +160,18 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: VERIFY_EMAIL_COLORS.navyDark,
-    borderRadius: 28,
-    height: 52,
+    borderRadius: 9999,
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
     marginTop: 6,
     marginBottom: 20,
     shadowColor: VERIFY_EMAIL_COLORS.navyDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
+    elevation: 4,
   },
   submitButtonIncomplete: {
     backgroundColor: VERIFY_EMAIL_COLORS.navyDark,

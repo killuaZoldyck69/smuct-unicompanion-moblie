@@ -14,21 +14,21 @@ export const LOGIN_STRINGS = {
 
 export const LOGIN_COLORS = {
   background: colors.auth.background,
-  titleText: colors.auth.titleText,
-  subtitleText: colors.auth.subtitleText,
+  titleText: colors.auth.navyDark,
+  subtitleText: colors.auth.textSecondary,
 
   // Card & inputs
   cardBackground: colors.white,
   cardBorder: colors.auth.cardBorder,
   inputBorder: colors.auth.inputBorder,
-  inputBorderFocused: colors.auth.primaryNavy,
+  inputBorderFocused: colors.auth.navyDark,
   inputPlaceholder: colors.auth.inputPlaceholder,
-  inputText: colors.auth.titleText,
+  inputText: colors.auth.navyDark,
   iconMuted: colors.slate500,
-  iconFocused: colors.auth.titleText,
+  iconFocused: colors.auth.navyDark,
 
   // Buttons & links
-  primaryButton: colors.auth.primaryNavy,
+  primaryButton: colors.auth.navyDark,
   primaryButtonText: colors.white,
   accentBlue: colors.auth.accentBlue,
 
