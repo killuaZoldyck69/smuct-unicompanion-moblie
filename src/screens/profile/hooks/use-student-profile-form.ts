@@ -7,6 +7,7 @@ import {
   normalizeBangladeshPhone,
   normalizeSafeHttpUrl,
   resolveBdPhoneUpdate,
+  validateStudentAcademicUpdate,
 } from "../profile-form-logic";
 
 export interface StudentFormData {
@@ -100,22 +101,27 @@ export function useStudentProfileForm(
       payload.phoneNumber = phoneResolution.value;
     }
 
-    const cleanSection = formData.section.trim().toUpperCase().slice(0, 4);
-    if (cleanSection !== (profile.section || "")) {
-      payload.section = cleanSection;
+    const academicCheck = validateStudentAcademicUpdate(
+      {
+        section: formData.section,
+        currentSemester: formData.currentSemester,
+      },
+      profile
+    );
+    if (!academicCheck.valid) {
+      Alert.alert(academicCheck.title, academicCheck.message);
+      return;
+    }
+    if (academicCheck.section !== undefined) {
+      payload.section = academicCheck.section;
+    }
+    if (academicCheck.currentSemester !== undefined) {
+      payload.currentSemester = academicCheck.currentSemester;
     }
 
     const cleanTerm = formData.currentTerm.trim();
     if (cleanTerm !== (profile.currentTerm || "")) {
       payload.currentTerm = cleanTerm;
-    }
-
-    const digitsOnly = formData.currentSemester.replace(/\D/g, "");
-    if (digitsOnly) {
-      const parsedSemester = Math.min(12, Math.max(1, parseInt(digitsOnly, 10)));
-      if (parsedSemester !== profile.currentSemester) {
-        payload.currentSemester = parsedSemester;
-      }
     }
 
     if (formData.bloodGroup) {

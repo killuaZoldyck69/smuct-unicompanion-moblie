@@ -16,6 +16,9 @@ import {
   areConsultationSlotsEqual,
   normalizeBangladeshPhone,
   resolveBdPhoneUpdate,
+  resolveContactPhoneDigits,
+  validateStudentAcademicUpdate,
+  findIncompleteConsultationSlotIndex,
 } from "../src/screens/profile/profile-form-logic.ts";
 
 describe("executeLogoutCleanup", () => {
@@ -259,6 +262,60 @@ describe("profile-form-logic", () => {
         [{ day: "MON", startTime: "10:00 AM", endTime: "11:00 AM" }]
       ),
       false
+    );
+
+    // Clearing a saved phone number in edit mode stays empty instead of snapping back
+    assert.equal(
+      resolveContactPhoneDigits({
+        isEditing: true,
+        draftPhone: "",
+        persistedPhone: "+8801643574469",
+      }),
+      ""
+    );
+    assert.equal(
+      resolveContactPhoneDigits({
+        isEditing: false,
+        draftPhone: "",
+        persistedPhone: "+8801643574469",
+      }),
+      "1643574469"
+    );
+
+    assert.equal(
+      validateStudentAcademicUpdate(
+        { section: " ", currentSemester: "8" },
+        { section: "A", currentSemester: 8 }
+      ).valid,
+      false
+    );
+    assert.equal(
+      validateStudentAcademicUpdate(
+        { section: "B", currentSemester: "" },
+        { section: "A", currentSemester: 8 }
+      ).valid,
+      false
+    );
+    assert.deepEqual(
+      validateStudentAcademicUpdate(
+        { section: "b", currentSemester: "10" },
+        { section: "A", currentSemester: 9 }
+      ),
+      { valid: true, section: "B", currentSemester: 10 }
+    );
+
+    assert.equal(
+      findIncompleteConsultationSlotIndex([
+        { day: "Sunday", startTime: "10:00 AM", endTime: "11:00 AM" },
+        { day: "Monday", startTime: "", endTime: "02:00 PM" },
+      ]),
+      1
+    );
+    assert.equal(
+      findIncompleteConsultationSlotIndex([
+        { day: "Sunday", startTime: "10:00 AM", endTime: "11:00 AM" },
+      ]),
+      -1
     );
   });
 });

@@ -215,3 +215,74 @@ export function resolveBdPhoneUpdate(
   }
   return { changed: true, valid: true, value: `+880${cleanDigits}` };
 }
+
+/**
+ * Resolves the 10 national digits rendered inside ProfileContactCards.
+ * While editing, preserves an intentionally cleared empty string instead of
+ * snapping back to persistedProfilePhone.
+ */
+export function resolveContactPhoneDigits(params: {
+  isEditing: boolean;
+  draftPhone?: string | null;
+  persistedPhone?: string | null;
+}): string {
+  const digitsSource = params.isEditing
+    ? params.draftPhone || ""
+    : params.persistedPhone || "";
+  const rawDigits = digitsSource.replace(/\D/g, "");
+  return rawDigits.startsWith("880")
+    ? rawDigits.slice(3, 13)
+    : rawDigits.slice(-10);
+}
+
+/**
+ * Validates edited Student academic fields (`section` and `currentSemester`)
+ * before building the PATCH payload so empty values fail fast with feedback.
+ */
+export function validateStudentAcademicUpdate(
+  draft: { section: string; currentSemester: string },
+  persisted: { section?: string | null; currentSemester?: number | null }
+):
+  | { valid: false; title: string; message: string }
+  | { valid: true; section?: string; currentSemester?: number } {
+  const cleanSection = draft.section.trim().toUpperCase().slice(0, 4);
+  if (!cleanSection) {
+    return {
+      valid: false,
+      title: "Invalid section",
+      message: "Section cannot be empty (for example, A, B, or C).",
+    };
+  }
+
+  const digitsOnly = draft.currentSemester.replace(/\D/g, "");
+  const parsedSemester = digitsOnly ? parseInt(digitsOnly, 10) : NaN;
+  if (!Number.isInteger(parsedSemester) || parsedSemester < 1 || parsedSemester > 12) {
+    return {
+      valid: false,
+      title: "Invalid semester",
+      message: "Enter a semester number between 1 and 12.",
+    };
+  }
+
+  const result: { valid: true; section?: string; currentSemester?: number } = { valid: true };
+  if (cleanSection !== (persisted.section || "")) {
+    result.section = cleanSection;
+  }
+  if (parsedSemester !== persisted.currentSemester) {
+    result.currentSemester = parsedSemester;
+  }
+  return result;
+}
+
+/**
+ * Returns the 0-based index of the first consultation slot missing a day, startTime, or endTime,
+ * or -1 when all slots are complete.
+ */
+export function findIncompleteConsultationSlotIndex(
+  slots: ConsultationSlotValue[]
+): number {
+  return slots.findIndex(
+    (slot) =>
+      !slot.day.trim() || !slot.startTime.trim() || !slot.endTime.trim()
+  );
+}

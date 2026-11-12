@@ -17,6 +17,7 @@ import {
   fontFamily,
 } from "../../constants";
 import { formatPhoneNumber } from "../../utils";
+import { resolveContactPhoneDigits } from "../../profile-form-logic";
 import { WaveMotif } from "../illustrations/contact-motifs";
 
 interface ProfileContactCardsProps {
@@ -42,11 +43,11 @@ export const ProfileContactCards = React.memo(function ProfileContactCards({
   onOpenBloodModal,
   onChangePhone,
 }: ProfileContactCardsProps) {
-  const digitsSource = phoneNumber || profilePhone || "";
-  const rawDigits = digitsSource.replace(/\D/g, "");
-  const phoneDigits = rawDigits.startsWith("880")
-    ? rawDigits.slice(3, 13)
-    : rawDigits.slice(-10);
+  const phoneDigits = resolveContactPhoneDigits({
+    isEditing,
+    draftPhone: phoneNumber,
+    persistedPhone: profilePhone,
+  });
 
   const hasBloodGroup = Boolean(dbBloodGroup);
   const displayBloodGroup = dbBloodGroup

@@ -11,6 +11,7 @@ import {
   areConsultationSlotsEqual,
   areQualificationRecordsEqual,
   areStringListsEqual,
+  findIncompleteConsultationSlotIndex,
   normalizeBangladeshPhone,
   normalizeSafeHttpUrl,
   resolveBdPhoneUpdate,
@@ -236,6 +237,17 @@ export function useTeacherProfileForm(
         return;
       }
       payload.dayOff = cleanDayOff;
+    }
+
+    const incompleteSlotIndex = findIncompleteConsultationSlotIndex(
+      formData.consultationSlots
+    );
+    if (incompleteSlotIndex !== -1) {
+      Alert.alert(
+        "Incomplete consultation slot",
+        `Select both a start time and end time for Slot ${incompleteSlotIndex + 1}, or remove it before saving.`
+      );
+      return;
     }
 
     if (!areConsultationSlotsEqual(formData.consultationSlots, profile.consultationSlots)) {
