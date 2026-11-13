@@ -1,4 +1,3 @@
-import type React from "react";
 import { LOST_FOUND_LIMITS } from "@/features/campus-hub/lost-found-logic";
 import {
   deleteRemovedCloudinaryUploads,
@@ -8,6 +7,7 @@ import {
   uploadPendingImages,
   useUgcTermsRetry as useCampusHubUgcTermsRetry,
   validateLocalImageSizes as validateCampusHubImageSizes,
+  type UploadedUrlMapUpdater,
 } from "@/features/campus-hub/campus-hub-upload";
 import type { CloudinaryFolder } from "@/services/cloudinary-service";
 
@@ -17,6 +17,7 @@ export {
   scheduleSuccessToast,
   showApiErrorToast,
 };
+export type { UploadedUrlMapUpdater };
 
 export function useUgcTermsRetry<TPayload>(userId: string | undefined) {
   return useCampusHubUgcTermsRetry<TPayload>(userId, "UGC_TERMS_REQUIRED");
@@ -40,7 +41,7 @@ export function uploadPendingLostFoundImages(params: {
   uploadErrorTitle?: string;
   uploadErrorFallback?: string;
   setIsUploading: (uploading: boolean) => void;
-  setUploadedMap: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setUploadedMap: (updater: UploadedUrlMapUpdater) => void;
 }): Promise<Record<string, string> | null> {
   return uploadPendingImages({
     ...params,

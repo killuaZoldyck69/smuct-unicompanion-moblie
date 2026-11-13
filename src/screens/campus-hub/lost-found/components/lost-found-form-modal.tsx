@@ -30,6 +30,7 @@ import {
   LOST_FOUND_CATEGORY_OPTIONS,
   LOST_FOUND_LIMITS,
   validateLostFoundForm,
+  type SanitizedLostFoundForm,
 } from "@/features/campus-hub/lost-found-logic";
 import {
   useCreateLostFoundPost,
@@ -42,7 +43,9 @@ import {
   showApiErrorToast,
   uploadPendingLostFoundImages,
   useUgcTermsRetry,
+  type UploadedUrlMapUpdater,
 } from "@/features/campus-hub/useLostFoundUpload";
+import { useUgcTermsStatus } from "@/features/ugc/useUgcModeration";
 import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guidelines-modal";
 import {
   CLOUDINARY_FOLDERS,
@@ -55,10 +58,7 @@ import type {
   LostFoundType,
 } from "@/services/lost-found-service";
 import type { User } from "@/features/auth/types";
-import {
-  CAMPUS_HUB_COLORS,
-  fontFamily,
-} from "../../shared/design-tokens";
+import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
 import {
   LostFoundModalFooter,
@@ -88,6 +88,10 @@ interface FormState {
   verificationQuestion: string;
   verificationAnswer: string;
 }
+
+type PendingLostFoundPayload = SanitizedLostFoundForm<LostFoundCategory> & {
+  images?: string[];
+};
 
 const EMPTY_FORM: FormState = {
   type: "LOST",
@@ -138,10 +142,8 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
 
   const [form, setForm] = useState<FormState>(() => buildFormFromPost(post));
   const [isUploading, setIsUploading] = useState(false);
-  // Track localUri -> Cloudinary URL across validation/UGC retries to avoid double-uploading.
-  const [uploadedImageMap, setUploadedImageMap] = useState<
-    Record<string, string>
-  >({});
+  // Track localUri -> Cloudinary URL synchronously across validation/UGC retries to avoid double-uploading.
+  const uploadedImageMapRef = useRef<Record<string, string>>({});
 
   const initialFormRef = useRef<FormState>(buildFormFromPost(post));
   const prevVisibleRef = useRef(false);
@@ -151,23 +153,38 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
   const verificationQuestionRef = useRef<TextInput>(null);
   const verificationAnswerRef = useRef<TextInput>(null);
 
+  const ugcUserId = currentUser?.id ?? post?.authorId;
+  const ugcTermsQuery = useUgcTermsStatus(ugcUserId, visible);
+
   const createMutation = useCreateLostFoundPost();
   const updateMutation = useUpdateLostFoundPost();
   const isSubmitting =
     isUploading || createMutation.isPending || updateMutation.isPending;
+
+  const syncUploadedImageMap = useCallback((updater: UploadedUrlMapUpdater) => {
+    uploadedImageMapRef.current =
+      typeof updater === "function"
+        ? updater(uploadedImageMapRef.current)
+        : updater;
+  }, []);
+
+  const ugcRetry = useUgcTermsRetry<PendingLostFoundPayload>(ugcUserId);
+  const { clearQueuedPayload } = ugcRetry;
 
   useEffect(() => {
     if (visible && !prevVisibleRef.current) {
       const initial = isEdit ? buildFormFromPost(post) : EMPTY_FORM;
       setForm(initial);
       initialFormRef.current = initial;
-      setUploadedImageMap({});
+      uploadedImageMapRef.current = {};
+      submittingRef.current = false;
+      clearQueuedPayload();
       idempotencyKeyRef.current = isEdit
         ? null
         : `lf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     }
     prevVisibleRef.current = visible;
-  }, [visible, isEdit, post]);
+  }, [visible, isEdit, post, clearQueuedPayload]);
 
   const updateField = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -176,26 +193,91 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
   );
 
   const cleanupSessionUploads = useCallback(() => {
-    Object.values(uploadedImageMap).forEach((url) => {
+    Object.values(uploadedImageMapRef.current).forEach((url) => {
       deleteFileFromCloudinaryApi(url, "image").catch((err) => {
         console.warn("[Cloudinary] Failed to remove discarded image:", err);
       });
     });
-    setUploadedImageMap({});
-  }, [uploadedImageMap]);
+    uploadedImageMapRef.current = {};
+  }, []);
 
-  const ugcRetry = useUgcTermsRetry<CreateLostFoundInput>(currentUser?.id);
+  const submitFormPayload = useCallback(
+    (payload: PendingLostFoundPayload) => {
+      const images = payload.images ?? [];
 
-  const executeCreate = useCallback(
-    (payload: CreateLostFoundInput) => {
+      if (isEdit) {
+        if (!post) return;
+        submittingRef.current = true;
+        ugcRetry.queuePayload(payload, submitFormPayload);
+        updateMutation.mutate(
+          {
+            id: post.id,
+            data: {
+              type: payload.type,
+              title: payload.title,
+              description: payload.description,
+              category: payload.category,
+              location: payload.location,
+              images,
+              ...(canEditVerification
+                ? {
+                    verificationQuestion: payload.verificationQuestion,
+                    verificationAnswer: payload.verificationAnswer,
+                  }
+                : {}),
+            },
+          },
+          {
+            onSuccess: (updatedPost) => {
+              ugcRetry.clearQueuedPayload();
+              Keyboard.dismiss();
+              uploadedImageMapRef.current = {};
+              onSuccess?.(updatedPost);
+              onClose();
+              scheduleSuccessToast(
+                "Post Updated",
+                "Your changes have been saved successfully.",
+              );
+            },
+            onError: (err) => {
+              if (ugcRetry.handleUgcError(err)) return;
+              showApiErrorToast(
+                err,
+                "Failed to update",
+                "Please check your input and try again.",
+              );
+            },
+            onSettled: () => {
+              submittingRef.current = false;
+            },
+          },
+        );
+        return;
+      }
+
+      if (!idempotencyKeyRef.current) {
+        idempotencyKeyRef.current = `lf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+      const createPayload: CreateLostFoundInput = {
+        type: payload.type,
+        title: payload.title,
+        description: payload.description ?? undefined,
+        category: payload.category,
+        location: payload.location ?? undefined,
+        images,
+        verificationQuestion: payload.verificationQuestion,
+        verificationAnswer: payload.verificationAnswer,
+        idempotencyKey: idempotencyKeyRef.current,
+      };
+
       submittingRef.current = true;
-      ugcRetry.queuePayload(payload, executeCreate);
-      createMutation.mutate(payload, {
+      ugcRetry.queuePayload(payload, submitFormPayload);
+      createMutation.mutate(createPayload, {
         onSuccess: () => {
           ugcRetry.clearQueuedPayload();
           idempotencyKeyRef.current = null;
           Keyboard.dismiss();
-          setUploadedImageMap({});
+          uploadedImageMapRef.current = {};
           setForm(EMPTY_FORM);
           onClose();
           scheduleSuccessToast(
@@ -216,7 +298,16 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
         },
       });
     },
-    [ugcRetry, createMutation, onClose],
+    [
+      isEdit,
+      post,
+      canEditVerification,
+      ugcRetry,
+      updateMutation,
+      createMutation,
+      onSuccess,
+      onClose,
+    ],
   );
 
   const isDirty = isEdit
@@ -243,7 +334,9 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
     Keyboard.dismiss();
 
     const discard = () => {
+      clearQueuedPayload();
       cleanupSessionUploads();
+      submittingRef.current = false;
       if (!isEdit) setForm(EMPTY_FORM);
       onClose();
     };
@@ -263,14 +356,58 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
         { text: "Discard", style: "destructive", onPress: discard },
       ],
     );
-  }, [isSubmitting, isDirty, isEdit, cleanupSessionUploads, onClose]);
+  }, [
+    isSubmitting,
+    isDirty,
+    isEdit,
+    clearQueuedPayload,
+    cleanupSessionUploads,
+    onClose,
+  ]);
 
   const canSubmit = form.title.trim().length >= LOST_FOUND_LIMITS.MIN_TITLE;
+
+  const runUploadAndSubmit = useCallback(
+    async (validatedPayload: PendingLostFoundPayload) => {
+      if (submittingRef.current || isSubmitting) return;
+      submittingRef.current = true;
+      let startedMutation = false;
+      try {
+        const currentMap = await uploadPendingLostFoundImages({
+          uris: form.images,
+          uploadedMap: uploadedImageMapRef.current,
+          folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
+          setIsUploading,
+          setUploadedMap: syncUploadedImageMap,
+        });
+        if (!currentMap) return;
+
+        const resolvedImages = form.images
+          .map((uri) =>
+            uri.startsWith("http://") || uri.startsWith("https://")
+              ? uri
+              : currentMap[uri],
+          )
+          .filter((uri): uri is string => Boolean(uri));
+
+        startedMutation = true;
+        submitFormPayload({
+          ...validatedPayload,
+          images: resolvedImages,
+        });
+      } finally {
+        if (!startedMutation) {
+          submittingRef.current = false;
+        }
+      }
+    },
+    [isSubmitting, form.images, syncUploadedImageMap, submitFormPayload],
+  );
 
   const handleSubmit = useCallback(async () => {
     if (submittingRef.current || isSubmitting) return;
     submittingRef.current = true;
-    let startedMutation = false;
+    let handedOffToUpload = false;
     try {
       if (
         !requireOnline(
@@ -311,88 +448,41 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
         return;
       }
 
-      const currentMap = await uploadPendingLostFoundImages({
-        uris: form.images,
-        uploadedMap: uploadedImageMap,
-        folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
-        setIsUploading,
-        setUploadedMap: setUploadedImageMap,
-      });
-      if (!currentMap) return;
-
-      const resolvedImages = form.images
-        .map((uri) =>
-          uri.startsWith("http://") || uri.startsWith("https://")
-            ? uri
-            : currentMap[uri],
-        )
-        .filter((uri): uri is string => Boolean(uri));
-
-      if (!isEdit) {
-        if (!idempotencyKeyRef.current) {
-          idempotencyKeyRef.current = `lf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const hasPendingLocalImages = form.images.some(
+        (uri) =>
+          !uri.startsWith("http://") &&
+          !uri.startsWith("https://") &&
+          !uploadedImageMapRef.current[uri],
+      );
+      if (hasPendingLocalImages) {
+        let ugcAccepted = ugcTermsQuery.data?.accepted;
+        if (ugcAccepted === undefined) {
+          const refreshed = await ugcTermsQuery.refetch();
+          ugcAccepted = refreshed.data?.accepted;
         }
-        startedMutation = true;
-        executeCreate({
-          type: validation.payload.type,
-          title: validation.payload.title,
-          description: validation.payload.description ?? undefined,
-          category: validation.payload.category,
-          location: validation.payload.location ?? undefined,
-          images: resolvedImages,
-          verificationQuestion: validation.payload.verificationQuestion,
-          verificationAnswer: validation.payload.verificationAnswer,
-          idempotencyKey: idempotencyKeyRef.current,
-        });
-        return;
+        if (ugcTermsQuery.data?.accepted === false || ugcAccepted === false) {
+          ugcRetry.queuePayload(validation.payload, (queued) => {
+            void runUploadAndSubmit(queued);
+          });
+          ugcRetry.setShowGuidelines(true);
+          return;
+        }
+        if (ugcAccepted !== true) {
+          Toast.show({
+            type: "error",
+            text1: "Unable to Verify Guidelines",
+            text2: "Please check your connection and try again.",
+          });
+          return;
+        }
       }
 
-      if (!post) return;
-
-      startedMutation = true;
-      updateMutation.mutate(
-        {
-          id: post.id,
-          data: {
-            type: validation.payload.type,
-            title: validation.payload.title,
-            description: validation.payload.description,
-            category: validation.payload.category,
-            location: validation.payload.location,
-            images: resolvedImages,
-            ...(canEditVerification
-              ? {
-                  verificationQuestion: validation.payload.verificationQuestion,
-                  verificationAnswer: validation.payload.verificationAnswer,
-                }
-              : {}),
-          },
-        },
-        {
-          onSuccess: (updatedPost) => {
-            Keyboard.dismiss();
-            setUploadedImageMap({});
-            onSuccess?.(updatedPost);
-            onClose();
-            scheduleSuccessToast(
-              "Post Updated",
-              "Your changes have been saved successfully.",
-            );
-          },
-          onError: (err) => {
-            showApiErrorToast(
-              err,
-              "Failed to update",
-              "Please check your input and try again.",
-            );
-          },
-          onSettled: () => {
-            submittingRef.current = false;
-          },
-        },
-      );
+      // Release pre-check lock so runUploadAndSubmit owns the submission lifecycle.
+      submittingRef.current = false;
+      handedOffToUpload = true;
+      await runUploadAndSubmit(validation.payload);
     } finally {
-      if (!startedMutation) {
+      if (!handedOffToUpload) {
         submittingRef.current = false;
       }
     }
@@ -402,13 +492,19 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
     isEdit,
     form,
     canEditVerification,
-    uploadedImageMap,
-    executeCreate,
-    post,
-    updateMutation,
-    onSuccess,
-    onClose,
+    ugcTermsQuery,
+    ugcRetry,
+    runUploadAndSubmit,
   ]);
+
+  const handleAcceptGuidelines = useCallback(() => {
+    if (
+      !requireOnline(isOffline, "Reconnect to accept community guidelines.")
+    ) {
+      return;
+    }
+    ugcRetry.acceptGuidelines();
+  }, [isOffline, ugcRetry]);
 
   return (
     <Modal
@@ -689,8 +785,8 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
                 onImagesChange={(imgs) => {
                   deleteRemovedCloudinaryUploads(
                     imgs,
-                    uploadedImageMap,
-                    setUploadedImageMap,
+                    uploadedImageMapRef.current,
+                    syncUploadedImageMap,
                   );
                   updateField("images", imgs);
                 }}
@@ -713,16 +809,14 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
           />
         </ModalKeyboardAvoidingView>
 
-        {!isEdit && (
-          <UgcGuidelinesModal
-            visible={ugcRetry.showGuidelines}
-            renderInline={true}
-            isOffline={isOffline}
-            isSubmitting={ugcRetry.isAcceptingGuidelines}
-            onClose={() => ugcRetry.setShowGuidelines(false)}
-            onAccept={ugcRetry.acceptGuidelines}
-          />
-        )}
+        <UgcGuidelinesModal
+          visible={ugcRetry.showGuidelines}
+          renderInline={true}
+          isOffline={isOffline}
+          isSubmitting={ugcRetry.isAcceptingGuidelines}
+          onClose={() => ugcRetry.setShowGuidelines(false)}
+          onAccept={handleAcceptGuidelines}
+        />
 
         <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
       </SafeAreaView>

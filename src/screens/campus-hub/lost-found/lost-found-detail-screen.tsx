@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
 } from "react";
 import {
   View,
@@ -211,6 +212,10 @@ export function LostFoundDetailScreen() {
   const rejectClaimMutation = useRejectLostFoundClaim(id);
   const withdrawClaimMutation = useWithdrawLostFoundClaim(id);
   const reportMutation = useReportLostFoundPost(id);
+  const deleteLockRef = useRef(false);
+  const acceptLockRef = useRef(false);
+  const confirmLockRef = useRef(false);
+  const reportLockRef = useRef(false);
   const isConfirmPending =
     rejectClaimMutation.isPending ||
     withdrawClaimMutation.isPending ||
@@ -349,14 +354,16 @@ export function LostFoundDetailScreen() {
 
   const handleConfirmDelete = useCallback(() => {
     if (
+      deleteLockRef.current ||
+      deleteMutation.isPending ||
       !requireOnline(
         isOffline,
         "Reconnect to the internet before deleting this listing.",
-      ) ||
-      deleteMutation.isPending
+      )
     ) {
       return;
     }
+    deleteLockRef.current = true;
     deleteMutation.mutate(id, {
       onSuccess: () => {
         closeModal("delete");
@@ -365,6 +372,9 @@ export function LostFoundDetailScreen() {
       },
       onError: (err) => {
         showApiErrorToast(err, "Failed to delete post", "Please try again.");
+      },
+      onSettled: () => {
+        deleteLockRef.current = false;
       },
     });
   }, [id, isOffline, deleteMutation, handleBack, closeModal]);
@@ -384,15 +394,17 @@ export function LostFoundDetailScreen() {
 
   const handleConfirmAcceptClaim = useCallback(() => {
     if (
+      acceptLockRef.current ||
+      acceptClaimMutation.isPending ||
+      !claimToAccept ||
       !requireOnline(
         isOffline,
         "Reconnect to the internet before accepting a claim.",
-      ) ||
-      !claimToAccept ||
-      acceptClaimMutation.isPending
+      )
     ) {
       return;
     }
+    acceptLockRef.current = true;
     acceptClaimMutation.mutate(claimToAccept.id, {
       onSuccess: () => {
         handleCloseAcceptSheet();
@@ -405,6 +417,9 @@ export function LostFoundDetailScreen() {
       },
       onError: (err) => {
         showApiErrorToast(err, "Action failed", "Could not accept claim.");
+      },
+      onSettled: () => {
+        acceptLockRef.current = false;
       },
     });
   }, [isOffline, claimToAccept, acceptClaimMutation, handleCloseAcceptSheet]);
@@ -474,12 +489,13 @@ export function LostFoundDetailScreen() {
 
   const handleExecutePendingConfirm = useCallback(() => {
     if (
+      confirmLockRef.current ||
+      isConfirmPending ||
+      !pendingConfirm ||
       !requireOnline(
         isOffline,
         "Reconnect to the internet before performing this action.",
-      ) ||
-      !pendingConfirm ||
-      isConfirmPending
+      )
     ) {
       return;
     }
@@ -491,7 +507,11 @@ export function LostFoundDetailScreen() {
       setPendingConfirm(null);
       Toast.show({ type, text1 });
     };
+    const releaseConfirmLock = () => {
+      confirmLockRef.current = false;
+    };
 
+    confirmLockRef.current = true;
     if (pendingConfirm.kind === "REJECT_CLAIM") {
       rejectClaimMutation.mutate(pendingConfirm.claimId, {
         onSuccess: () => onSuccess("info", "Claim declined"),
@@ -501,6 +521,7 @@ export function LostFoundDetailScreen() {
             "Failed to decline claim",
             "Failed to decline claim.",
           ),
+        onSettled: releaseConfirmLock,
       });
       return;
     }
@@ -510,6 +531,7 @@ export function LostFoundDetailScreen() {
         onSuccess: () => onSuccess("info", "Claim withdrawn"),
         onError: (err) =>
           showApiErrorToast(err, "Withdraw failed", "Withdraw failed."),
+        onSettled: releaseConfirmLock,
       });
       return;
     }
@@ -533,6 +555,7 @@ export function LostFoundDetailScreen() {
             "Status Update Failed",
             "Could not update status.",
           ),
+        onSettled: releaseConfirmLock,
       },
     );
   }, [
@@ -567,6 +590,8 @@ export function LostFoundDetailScreen() {
   const handleSubmitReport = useCallback(
     (payload: { reason: UgcReportReason; details?: string }) => {
       if (
+        reportLockRef.current ||
+        reportMutation.isPending ||
         !requireOnline(
           isOffline,
           "Reconnect to the internet before submitting a report.",
@@ -574,6 +599,7 @@ export function LostFoundDetailScreen() {
       ) {
         return;
       }
+      reportLockRef.current = true;
       reportMutation.mutate(payload, {
         onSuccess: () => {
           closeModal("report");
@@ -585,6 +611,9 @@ export function LostFoundDetailScreen() {
         },
         onError: (err) => {
           showApiErrorToast(err, "Report Failed", "Could not submit report.");
+        },
+        onSettled: () => {
+          reportLockRef.current = false;
         },
       });
     },

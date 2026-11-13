@@ -388,8 +388,17 @@ describe("lost-found UI & media regression guards", () => {
     );
 
     assert.match(formSrc, /submittingRef\.current/);
+    assert.match(formSrc, /useUgcTermsStatus/);
+    assert.match(formSrc, /uploadedImageMapRef\.current/);
     assert.match(formSrc, /idempotencyKey/);
     assert.match(claimSrc, /submittingRef\.current/);
+    assert.match(claimSrc, /useUgcTermsStatus/);
+    assert.match(claimSrc, /uploadedProofMapRef\.current/);
+    assert.match(feedSrc, /deleteLockRef\.current/);
+    assert.match(detailSrc, /deleteLockRef\.current/);
+    assert.match(detailSrc, /acceptLockRef\.current/);
+    assert.match(detailSrc, /confirmLockRef\.current/);
+    assert.match(detailSrc, /reportLockRef\.current/);
     assert.match(cloudinarySrc, /timeout:\s*60000/);
     assert.match(hooksSrc, /adminForumReports/);
     assert.doesNotMatch(detailSrc, /<ClaimModal[\s\S]*onSuccess=\{\(\)\s*=>\s*refetch\(\)\}/);

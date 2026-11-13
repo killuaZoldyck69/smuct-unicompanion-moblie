@@ -37,7 +37,9 @@ import {
   showApiErrorToast,
   uploadPendingLostFoundImages,
   useUgcTermsRetry,
+  type UploadedUrlMapUpdater,
 } from "@/features/campus-hub/useLostFoundUpload";
+import { useUgcTermsStatus } from "@/features/ugc/useUgcModeration";
 import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guidelines-modal";
 import {
   deleteFileFromCloudinaryApi,
@@ -82,13 +84,12 @@ export const ClaimModal = React.memo(function ClaimModal({
   const [answer, setAnswer] = useState("");
   const [localImages, setLocalImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadedProofMap, setUploadedProofMap] = useState<
-    Record<string, string>
-  >({});
+  const uploadedProofMapRef = useRef<Record<string, string>>({});
   const claimMessageRef = useRef<TextInput>(null);
   const prevVisibleRef = useRef(false);
   const submittingRef = useRef(false);
 
+  const ugcTermsQuery = useUgcTermsStatus(currentUser?.id, visible);
   const submitMutation = useSubmitLostFoundClaim(post.id);
   const isSubmitting = isUploading || submitMutation.isPending;
 
@@ -98,14 +99,21 @@ export const ClaimModal = React.memo(function ClaimModal({
     ? "Describe where and when you found it, item condition, or where it is safely kept..."
     : "Describe unique features, marks, contents, or circumstances when you lost it...";
 
+  const syncUploadedProofMap = useCallback((updater: UploadedUrlMapUpdater) => {
+    uploadedProofMapRef.current =
+      typeof updater === "function"
+        ? updater(uploadedProofMapRef.current)
+        : updater;
+  }, []);
+
   const cleanupUploadedProof = useCallback(() => {
-    Object.values(uploadedProofMap).forEach((url) => {
+    Object.values(uploadedProofMapRef.current).forEach((url) => {
       deleteFileFromCloudinaryApi(url, "image").catch((err) => {
         console.warn("[Cloudinary] Failed to remove proof image:", err);
       });
     });
-    setUploadedProofMap({});
-  }, [uploadedProofMap]);
+    uploadedProofMapRef.current = {};
+  }, []);
 
   const ugcRetry = useUgcTermsRetry<CreateClaimInput>(currentUser?.id);
   const { clearQueuedPayload } = ugcRetry;
@@ -115,7 +123,7 @@ export const ClaimModal = React.memo(function ClaimModal({
       setMessage("");
       setAnswer("");
       setLocalImages([]);
-      setUploadedProofMap({});
+      uploadedProofMapRef.current = {};
       submittingRef.current = false;
       clearQueuedPayload();
     }
@@ -129,7 +137,7 @@ export const ClaimModal = React.memo(function ClaimModal({
       submitMutation.mutate(payload, {
         onSuccess: () => {
           ugcRetry.clearQueuedPayload();
-          setUploadedProofMap({});
+          uploadedProofMapRef.current = {};
           setMessage("");
           setAnswer("");
           setLocalImages([]);
@@ -167,13 +175,57 @@ export const ClaimModal = React.memo(function ClaimModal({
     message.trim().length >= LOST_FOUND_LIMITS.MIN_CLAIM_MESSAGE &&
     (!post.verificationQuestion || answer.trim().length > 0);
 
+  const runUploadAndSubmit = useCallback(
+    async (validatedPayload: CreateClaimInput) => {
+      if (submittingRef.current || isSubmitting) return;
+      submittingRef.current = true;
+      let startedMutation = false;
+      try {
+        let proofImageUrl: string | null = validatedPayload.proofImage ?? null;
+        if (!proofImageUrl && localImages.length > 0 && localImages[0]) {
+          const uri = localImages[0];
+          const uploaded = await uploadPendingLostFoundImages({
+            uris: [uri],
+            uploadedMap: uploadedProofMapRef.current,
+            folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS,
+            singlePhotoLabel: "Proof photo",
+            uploadErrorTitle: "Upload Failed",
+            uploadErrorFallback:
+              "Could not upload proof image. Check connection.",
+            setIsUploading,
+            setUploadedMap: syncUploadedProofMap,
+          });
+          if (!uploaded) return;
+          proofImageUrl = uploaded[uri] ?? null;
+        }
+
+        startedMutation = true;
+        submitClaimPayload({
+          message: validatedPayload.message,
+          answer: validatedPayload.answer,
+          proofImage: proofImageUrl || null,
+        });
+      } finally {
+        if (!startedMutation) {
+          submittingRef.current = false;
+        }
+      }
+    },
+    [isSubmitting, localImages, syncUploadedProofMap, submitClaimPayload],
+  );
+
   const handleSubmit = useCallback(async () => {
     if (submittingRef.current || isSubmitting) return;
     submittingRef.current = true;
-    let startedMutation = false;
+    let handedOffToUpload = false;
     try {
       Keyboard.dismiss();
-      if (!requireOnline(isOffline, "Reconnect to the internet before submitting a claim.")) {
+      if (
+        !requireOnline(
+          isOffline,
+          "Reconnect to the internet before submitting a claim.",
+        )
+      ) {
         return;
       }
 
@@ -200,31 +252,51 @@ export const ClaimModal = React.memo(function ClaimModal({
         return;
       }
 
-      let proofImageUrl: string | null = null;
-      if (localImages.length > 0 && localImages[0]) {
-        const uri = localImages[0];
-        const uploaded = await uploadPendingLostFoundImages({
-          uris: [uri],
-          uploadedMap: uploadedProofMap,
-          folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS,
-          singlePhotoLabel: "Proof photo",
-          uploadErrorTitle: "Upload Failed",
-          uploadErrorFallback: "Could not upload proof image. Check connection.",
-          setIsUploading,
-          setUploadedMap: setUploadedProofMap,
-        });
-        if (!uploaded) return;
-        proofImageUrl = uploaded[uri] ?? null;
+      const pendingUri = localImages[0];
+      const hasPendingLocalProof = Boolean(
+        pendingUri &&
+        !pendingUri.startsWith("http://") &&
+        !pendingUri.startsWith("https://") &&
+        !uploadedProofMapRef.current[pendingUri],
+      );
+      if (hasPendingLocalProof) {
+        let ugcAccepted = ugcTermsQuery.data?.accepted;
+        if (ugcAccepted === undefined) {
+          const refreshed = await ugcTermsQuery.refetch();
+          ugcAccepted = refreshed.data?.accepted;
+        }
+        if (ugcTermsQuery.data?.accepted === false || ugcAccepted === false) {
+          ugcRetry.queuePayload(
+            {
+              message: validation.payload.message,
+              answer: validation.payload.answer,
+            },
+            (queued) => {
+              void runUploadAndSubmit(queued);
+            },
+          );
+          ugcRetry.setShowGuidelines(true);
+          return;
+        }
+        if (ugcAccepted !== true) {
+          Toast.show({
+            type: "error",
+            text1: "Unable to Verify Guidelines",
+            text2: "Please check your connection and try again.",
+          });
+          return;
+        }
       }
 
-      startedMutation = true;
-      submitClaimPayload({
+      // Release pre-check lock so runUploadAndSubmit owns the submission lifecycle.
+      submittingRef.current = false;
+      handedOffToUpload = true;
+      await runUploadAndSubmit({
         message: validation.payload.message,
         answer: validation.payload.answer,
-        proofImage: proofImageUrl || null,
       });
     } finally {
-      if (!startedMutation) {
+      if (!handedOffToUpload) {
         submittingRef.current = false;
       }
     }
@@ -235,9 +307,19 @@ export const ClaimModal = React.memo(function ClaimModal({
     answer,
     localImages,
     post.verificationQuestion,
-    uploadedProofMap,
-    submitClaimPayload,
+    ugcTermsQuery,
+    ugcRetry,
+    runUploadAndSubmit,
   ]);
+
+  const handleAcceptGuidelines = useCallback(() => {
+    if (
+      !requireOnline(isOffline, "Reconnect to accept community guidelines.")
+    ) {
+      return;
+    }
+    ugcRetry.acceptGuidelines();
+  }, [isOffline, ugcRetry]);
 
   return (
     <Modal
@@ -355,8 +437,8 @@ export const ClaimModal = React.memo(function ClaimModal({
                 onImagesChange={(imgs) => {
                   deleteRemovedCloudinaryUploads(
                     imgs,
-                    uploadedProofMap,
-                    setUploadedProofMap,
+                    uploadedProofMapRef.current,
+                    syncUploadedProofMap,
                   );
                   setLocalImages(imgs);
                 }}
@@ -386,7 +468,7 @@ export const ClaimModal = React.memo(function ClaimModal({
           isOffline={isOffline}
           isSubmitting={ugcRetry.isAcceptingGuidelines}
           onClose={() => ugcRetry.setShowGuidelines(false)}
-          onAccept={ugcRetry.acceptGuidelines}
+          onAccept={handleAcceptGuidelines}
         />
 
         <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -81,6 +81,7 @@ export function LostFoundSection({
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
 
   const deleteMutation = useDeleteLostFoundPost();
+  const deleteLockRef = useRef(false);
   const [postToDelete, setPostToDelete] = useState<{
     id: string;
     title: string;
@@ -100,7 +101,9 @@ export function LostFoundSection({
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
-    if (!postToDelete || deleteMutation.isPending) return;
+    if (!postToDelete || deleteLockRef.current || deleteMutation.isPending) {
+      return;
+    }
     if (
       !requireOnline(
         isOffline,
@@ -109,6 +112,7 @@ export function LostFoundSection({
     ) {
       return;
     }
+    deleteLockRef.current = true;
     deleteMutation.mutate(postToDelete.id, {
       onSuccess: () => {
         setPostToDelete(null);
@@ -121,6 +125,9 @@ export function LostFoundSection({
       onError: (err: unknown) => {
         setPostToDelete(null);
         showApiErrorToast(err, "Delete Failed", "Failed to delete post.");
+      },
+      onSettled: () => {
+        deleteLockRef.current = false;
       },
     });
   }, [postToDelete, isOffline, deleteMutation]);
