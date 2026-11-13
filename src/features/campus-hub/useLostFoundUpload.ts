@@ -4,7 +4,37 @@ import Toast from "react-native-toast-message";
 import { extractApiErrorInfo } from "@/features/forum/forum-logic";
 import { LOST_FOUND_LIMITS } from "@/features/campus-hub/lost-found-logic";
 import { useAcceptUgcTerms } from "@/features/ugc/useUgcModeration";
-import { deleteFileFromCloudinaryApi } from "@/services/cloudinary-service";
+import {
+  deleteFileFromCloudinaryApi,
+  uploadMultipleImages,
+  type CloudinaryFolder,
+} from "@/services/cloudinary-service";
+
+export function requireOnline(isOffline: boolean, offlineMessage: string): boolean {
+  if (!isOffline) return true;
+  Toast.show({
+    type: "error",
+    text1: "You're Offline",
+    text2: offlineMessage,
+  });
+  return false;
+}
+
+export function scheduleSuccessToast(text1: string, text2?: string): void {
+  // Delay slightly so modal dismissal animations settle before showing the toast.
+  setTimeout(() => {
+    Toast.show({ type: "success", text1, text2 });
+  }, 350);
+}
+
+export function showApiErrorToast(
+  err: unknown,
+  title: string,
+  fallbackMessage: string,
+): void {
+  const info = extractApiErrorInfo(err, fallbackMessage);
+  Toast.show({ type: "error", text1: title, text2: info.message });
+}
 
 export async function validateLocalImageSizes(
   uris: string[],
@@ -35,6 +65,64 @@ export async function validateLocalImageSizes(
   return null;
 }
 
+export async function uploadPendingLostFoundImages(params: {
+  uris: string[];
+  uploadedMap: Record<string, string>;
+  folder: CloudinaryFolder;
+  singlePhotoLabel?: string;
+  uploadErrorTitle?: string;
+  uploadErrorFallback?: string;
+  setIsUploading: (uploading: boolean) => void;
+  setUploadedMap: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}): Promise<Record<string, string> | null> {
+  const {
+    uris,
+    uploadedMap,
+    folder,
+    singlePhotoLabel,
+    uploadErrorTitle = "Image Upload Failed",
+    uploadErrorFallback = "Check your connection or try again.",
+    setIsUploading,
+    setUploadedMap,
+  } = params;
+
+  const currentMap = { ...uploadedMap };
+  const pendingLocalUris = uris.filter(
+    (uri) =>
+      !uri.startsWith("http://") &&
+      !uri.startsWith("https://") &&
+      !currentMap[uri],
+  );
+
+  if (pendingLocalUris.length === 0) {
+    return currentMap;
+  }
+
+  const sizeError = await validateLocalImageSizes(
+    pendingLocalUris,
+    singlePhotoLabel,
+  );
+  if (sizeError) {
+    Toast.show({ type: "error", text1: "Photo Exceeds 5MB", text2: sizeError });
+    return null;
+  }
+
+  setIsUploading(true);
+  try {
+    const results = await uploadMultipleImages(pendingLocalUris, folder);
+    results.forEach((result, idx) => {
+      currentMap[pendingLocalUris[idx]] = result.secureUrl;
+    });
+    setUploadedMap(currentMap);
+    return currentMap;
+  } catch (err) {
+    showApiErrorToast(err, uploadErrorTitle, uploadErrorFallback);
+    return null;
+  } finally {
+    setIsUploading(false);
+  }
+}
+
 export function deleteRemovedCloudinaryUploads(
   currentImages: string[],
   uploadedMap: Record<string, string>,
@@ -61,25 +149,27 @@ export function deleteRemovedCloudinaryUploads(
   });
 }
 
-export function useUgcTermsRetry<TPayload>(
-  userId: string | undefined,
-  submitPayload: (payload: TPayload) => void,
-) {
+export function useUgcTermsRetry<TPayload>(userId: string | undefined) {
   const [showGuidelines, setShowGuidelines] = useState(false);
-  const pendingPayloadRef = useRef<TPayload | null>(null);
+  const pendingActionRef = useRef<{
+    payload: TPayload;
+    retry: (payload: TPayload) => void;
+  } | null>(null);
   const acceptTermsMutation = useAcceptUgcTerms(userId);
 
-  const queuePayload = useCallback((payload: TPayload) => {
-    pendingPayloadRef.current = payload;
-  }, []);
+  const queuePayload = useCallback(
+    (payload: TPayload, retry: (payload: TPayload) => void) => {
+      pendingActionRef.current = { payload, retry };
+    },
+    [],
+  );
 
   const clearQueuedPayload = useCallback(() => {
-    pendingPayloadRef.current = null;
+    pendingActionRef.current = null;
   }, []);
 
   const handleUgcError = useCallback((err: unknown): boolean => {
-    const info = extractApiErrorInfo(err, "");
-    if (info.code === "UGC_TERMS_REQUIRED") {
+    if (extractApiErrorInfo(err, "").code === "UGC_TERMS_REQUIRED") {
       setShowGuidelines(true);
       return true;
     }
@@ -90,21 +180,19 @@ export function useUgcTermsRetry<TPayload>(
     acceptTermsMutation.mutate(undefined, {
       onSuccess: () => {
         setShowGuidelines(false);
-        const queued = pendingPayloadRef.current;
-        if (queued) {
-          submitPayload(queued);
-        }
+        const pending = pendingActionRef.current;
+        pendingActionRef.current = null;
+        pending?.retry(pending.payload);
       },
       onError: (err) => {
-        const info = extractApiErrorInfo(err, "Could not accept guidelines.");
-        Toast.show({
-          type: "error",
-          text1: "Agreement Failed",
-          text2: info.message,
-        });
+        showApiErrorToast(
+          err,
+          "Agreement Failed",
+          "Could not accept guidelines.",
+        );
       },
     });
-  }, [acceptTermsMutation, submitPayload]);
+  }, [acceptTermsMutation]);
 
   return {
     showGuidelines,

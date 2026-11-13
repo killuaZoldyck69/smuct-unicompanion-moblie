@@ -78,7 +78,6 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
             bounces={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {/* Warning Halo Circle */}
             <View style={styles.haloOuter}>
               <View style={styles.haloInner}>
                 <Feather
@@ -89,7 +88,6 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
               </View>
             </View>
 
-            {/* Title & Description */}
             <Text style={styles.title} maxFontSizeMultiplier={1.35}>
               Delete Listing?
             </Text>
@@ -99,7 +97,6 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
               cannot be undone.
             </Text>
 
-            {/* Inset Post Preview Card */}
             <View style={styles.previewCard}>
               <View style={styles.previewThumbContainer}>
                 {postImage && !imgError ? (
@@ -137,7 +134,6 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
             </View>
           </ScrollView>
 
-          {/* Actions Button Row */}
           <View style={styles.buttonRow}>
             <Pressable
               style={({ pressed }) => [

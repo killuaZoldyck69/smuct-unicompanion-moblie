@@ -107,7 +107,6 @@ export function AcceptConfirmationSheet({
             },
           ]}
         >
-          {/* Grab handle */}
           <View style={styles.handle} />
 
           <ScrollView
@@ -115,7 +114,6 @@ export function AcceptConfirmationSheet({
             bounces={false}
             contentContainerStyle={styles.scrollBody}
           >
-            {/* Icon + heading */}
             <View style={styles.headingSection}>
               <View style={styles.iconRing}>
                 <View style={styles.iconCircle}>
@@ -130,7 +128,6 @@ export function AcceptConfirmationSheet({
               </Text>
             </View>
 
-            {/* Claimant identity card */}
             <View style={styles.claimantCard}>
               <View style={styles.avatarWrap}>
                 {claimant?.image && !avatarError ? (
@@ -181,7 +178,6 @@ export function AcceptConfirmationSheet({
               </View>
             </View>
 
-            {/* Consequences list */}
             <View style={styles.consequenceList}>
               {CONSEQUENCES.map((item, idx) => (
                 <View key={idx} style={styles.consequenceItem}>
@@ -207,7 +203,6 @@ export function AcceptConfirmationSheet({
             </View>
           </ScrollView>
 
-          {/* Pinned Action Footer */}
           <View
             style={[
               styles.footer,

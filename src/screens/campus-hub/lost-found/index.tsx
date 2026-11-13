@@ -11,9 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   Keyboard,
-  useWindowDimensions,
 } from "react-native";
-import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -22,11 +20,14 @@ import { colors } from "@/theme/colors";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useNetworkStatus } from "@/hooks/use-network-status";
-import { extractApiErrorInfo } from "@/features/forum/forum-logic";
 import {
   useInfiniteLostFoundFeed,
   useDeleteLostFoundPost,
 } from "@/features/campus-hub/useLostFound";
+import {
+  requireOnline,
+  showApiErrorToast,
+} from "@/features/campus-hub/useLostFoundUpload";
 import type {
   LostFoundPost,
   LostFoundCategory,
@@ -36,19 +37,13 @@ import {
   CAMPUS_HUB_COLORS,
   fontFamily,
   titleFontFamily,
-  timeAgo,
 } from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
 import { LostFoundFeedSkeleton } from "../shared/skeleton-loaders";
-import { ComposeLostFoundModal } from "./compose-modal";
+import { LostFoundCard } from "./components/lost-found-card";
 import { LostFoundDeleteModal } from "./components/lost-found-delete-modal";
-import {
-  TypeBadge,
-  StatusBadge,
-  CategoryBadge,
-  LocationBadge,
-  CATEGORY_LABELS,
-} from "./components/status-badge";
+import { LostFoundFormModal } from "./components/lost-found-form-modal";
+import { CATEGORY_LABELS } from "./components/status-badge";
 import {
   FilterModal,
   type TypeFilter,
@@ -73,7 +68,6 @@ export function LostFoundSection({
   const { user: currentUser } = useCurrentUser();
   const { isOffline } = useNetworkStatus();
 
-  // Filters state
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [categoryFilter, setCategoryFilter] = useState<
@@ -107,12 +101,12 @@ export function LostFoundSection({
 
   const handleConfirmDelete = useCallback(() => {
     if (!postToDelete || deleteMutation.isPending) return;
-    if (isOffline) {
-      Toast.show({
-        type: "error",
-        text1: "You're Offline",
-        text2: "Reconnect to the internet before deleting this listing.",
-      });
+    if (
+      !requireOnline(
+        isOffline,
+        "Reconnect to the internet before deleting this listing.",
+      )
+    ) {
       return;
     }
     deleteMutation.mutate(postToDelete.id, {
@@ -126,24 +120,62 @@ export function LostFoundSection({
       },
       onError: (err: unknown) => {
         setPostToDelete(null);
-        const info = extractApiErrorInfo(err, "Failed to delete post.");
-        Toast.show({
-          type: "error",
-          text1: "Delete Failed",
-          text2: info.message,
-        });
+        showApiErrorToast(err, "Delete Failed", "Failed to delete post.");
       },
     });
   }, [postToDelete, isOffline, deleteMutation]);
 
-  const activeFilterCount = useMemo(() => {
-    return (
-      (typeFilter !== "ALL" ? 1 : 0) +
-      (statusFilter !== "ALL" ? 1 : 0) +
-      (categoryFilter !== "ALL" ? 1 : 0) +
-      (myPostsOnly ? 1 : 0)
-    );
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{
+      key: string;
+      label: string;
+      accessibilityLabel: string;
+      onRemove: () => void;
+    }> = [];
+    if (typeFilter !== "ALL") {
+      const label = typeFilter === "LOST" ? "Lost" : "Found";
+      chips.push({
+        key: "type",
+        label,
+        accessibilityLabel: `Remove ${label} filter`,
+        onRemove: () => setTypeFilter("ALL"),
+      });
+    }
+    if (statusFilter !== "ALL") {
+      const label =
+        statusFilter === "ACTIVE"
+          ? "Active"
+          : statusFilter === "CLOSED"
+            ? "Closed"
+            : "Resolved";
+      chips.push({
+        key: "status",
+        label,
+        accessibilityLabel: `Remove ${statusFilter.toLowerCase()} status filter`,
+        onRemove: () => setStatusFilter("ALL"),
+      });
+    }
+    if (categoryFilter !== "ALL") {
+      const label = CATEGORY_LABELS[categoryFilter] || categoryFilter;
+      chips.push({
+        key: "category",
+        label,
+        accessibilityLabel: `Remove ${label} category filter`,
+        onRemove: () => setCategoryFilter("ALL"),
+      });
+    }
+    if (myPostsOnly) {
+      chips.push({
+        key: "myPosts",
+        label: "My Posts",
+        accessibilityLabel: "Remove My Posts filter",
+        onRemove: () => setMyPostsOnly(false),
+      });
+    }
+    return chips;
   }, [typeFilter, statusFilter, categoryFilter, myPostsOnly]);
+
+  const activeFilterCount = activeFilterChips.length;
 
   const resetAllFilters = useCallback(() => {
     setTypeFilter("ALL");
@@ -167,7 +199,6 @@ export function LostFoundSection({
     [],
   );
 
-  // Debounce search query to relieve frontend and trigger server-side query
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchQuery.trim());
@@ -185,7 +216,6 @@ export function LostFoundSection({
   );
   const handleCloseCompose = externalOnCloseCompose ?? closeInternalCompose;
 
-  // Construct query parameters for server-side filtering & search
   const queryParams = useMemo<GetLostFoundFeedParams>(() => {
     const p: GetLostFoundFeedParams = {};
 
@@ -198,7 +228,6 @@ export function LostFoundSection({
     return p;
   }, [typeFilter, statusFilter, categoryFilter, myPostsOnly, debouncedSearch]);
 
-  // Infinite query for lazy loading
   const {
     data,
     isLoading,
@@ -209,13 +238,11 @@ export function LostFoundSection({
     isFetchingNextPage,
   } = useInfiniteLostFoundFeed(queryParams);
 
-  // Flatten paginated posts
   const posts = useMemo(() => {
     if (!data?.pages) return [];
     return data.pages.flatMap((page) => page.data);
   }, [data]);
 
-  // Overall quick stats (uses backend aggregate counts when available)
   const stats = useMemo(() => {
     const serverCounts = data?.pages?.[0]?.meta?.counts;
     if (serverCounts) {
@@ -263,7 +290,10 @@ export function LostFoundSection({
   const navigateToDetail = useCallback(
     (id: string) => {
       setCampusHubActiveSection("LOST_FOUND");
-      router.push(`/campus-hub/lost-found/${id}` as any);
+      router.push({
+        pathname: "/campus-hub/lost-found/[id]",
+        params: { id },
+      });
     },
     [router],
   );
@@ -279,7 +309,6 @@ export function LostFoundSection({
     );
     return (
       <View style={styles.statsBarContainer}>
-        {/* Compact Modern Stats Bar */}
         <View style={styles.statsBar}>
           <View style={styles.statsBarHeader}>
             <View style={styles.statsBarTag}>
@@ -569,8 +598,7 @@ export function LostFoundSection({
           </View>
         </View>
 
-        {/* Active Filter Chips Strip */}
-        {activeFilterCount > 0 && (
+        {activeFilterChips.length > 0 && (
           <View style={styles.activeChipsRow}>
             <ScrollView
               horizontal
@@ -578,100 +606,28 @@ export function LostFoundSection({
               contentContainerStyle={styles.activeChipsContent}
               keyboardShouldPersistTaps="handled"
             >
-              {typeFilter !== "ALL" && (
+              {activeFilterChips.map((chip) => (
                 <Pressable
+                  key={chip.key}
                   style={({ pressed }) => [
                     styles.activeChip,
                     pressed && { opacity: 0.75 },
                   ]}
-                  onPress={() => setTypeFilter("ALL")}
+                  onPress={chip.onRemove}
                   hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
                   android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   accessible
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${typeFilter === "LOST" ? "Lost" : "Found"} filter`}
+                  accessibilityLabel={chip.accessibilityLabel}
                 >
-                  <Text style={styles.activeChipText}>
-                    {typeFilter === "LOST" ? "Lost" : "Found"}
-                  </Text>
+                  <Text style={styles.activeChipText}>{chip.label}</Text>
                   <Feather
                     name="x"
                     size={12}
                     color={CAMPUS_HUB_COLORS.lostFoundAccentText}
                   />
                 </Pressable>
-              )}
-              {statusFilter !== "ALL" && (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.activeChip,
-                    pressed && { opacity: 0.75 },
-                  ]}
-                  onPress={() => setStatusFilter("ALL")}
-                  hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove ${statusFilter.toLowerCase()} status filter`}
-                >
-                  <Text style={styles.activeChipText}>
-                    {statusFilter === "ACTIVE"
-                      ? "Active"
-                      : statusFilter === "CLOSED"
-                        ? "Closed"
-                        : "Resolved"}
-                  </Text>
-                  <Feather
-                    name="x"
-                    size={12}
-                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
-                  />
-                </Pressable>
-              )}
-              {categoryFilter !== "ALL" && (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.activeChip,
-                    pressed && { opacity: 0.75 },
-                  ]}
-                  onPress={() => setCategoryFilter("ALL")}
-                  hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove ${CATEGORY_LABELS[categoryFilter] || categoryFilter} category filter`}
-                >
-                  <Text style={styles.activeChipText}>
-                    {CATEGORY_LABELS[categoryFilter] || categoryFilter}
-                  </Text>
-                  <Feather
-                    name="x"
-                    size={12}
-                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
-                  />
-                </Pressable>
-              )}
-              {myPostsOnly && (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.activeChip,
-                    pressed && { opacity: 0.75 },
-                  ]}
-                  onPress={() => setMyPostsOnly(false)}
-                  hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel="Remove My Posts filter"
-                >
-                  <Text style={styles.activeChipText}>My Posts</Text>
-                  <Feather
-                    name="x"
-                    size={12}
-                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
-                  />
-                </Pressable>
-              )}
+              ))}
               <Pressable
                 style={({ pressed }) => [
                   styles.clearAllBtn,
@@ -767,14 +723,13 @@ export function LostFoundSection({
         }
       />
 
-      {/* Post Creation Modal */}
-      <ComposeLostFoundModal
+      <LostFoundFormModal
+        mode="create"
         visible={isComposeVisible}
         onClose={handleCloseCompose}
         currentUser={currentUser}
       />
 
-      {/* Filter Options Modal */}
       <FilterModal
         visible={isFilterModalVisible}
         onClose={() => setIsFilterModalVisible(false)}
@@ -802,176 +757,6 @@ export function LostFoundSection({
     </View>
   );
 }
-
-interface LostFoundCardProps {
-  post: LostFoundPost;
-  onPress: () => void;
-  currentUserId?: string;
-  isAdmin?: boolean;
-  onDelete?: (post: LostFoundPost) => void;
-}
-
-const LostFoundCard = React.memo(function LostFoundCard({
-  post,
-  onPress,
-  currentUserId,
-  isAdmin = false,
-  onDelete,
-}: LostFoundCardProps) {
-  const { width: windowWidth } = useWindowDimensions();
-  const thumbSize = windowWidth < 380 ? 72 : 84;
-  const isOwner = currentUserId === post.authorId;
-  const isResolved = post.status === "RESOLVED" || post.status === "CLAIMED";
-  const isClosed = post.status === "CLOSED";
-  const isInactive = isResolved || isClosed;
-  const claimCount = post._count?.claims ?? 0;
-  const imageUri = post.images?.[0];
-  const [imgError, setImgError] = useState(false);
-
-  useEffect(() => {
-    setImgError(false);
-  }, [imageUri]);
-
-  const hasImage = Boolean(imageUri && !imgError);
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        isInactive && styles.cardResolved,
-        pressed && { opacity: 0.92 },
-      ]}
-      onPress={onPress}
-      android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
-      accessible
-      accessibilityRole="button"
-      accessibilityLabel={`${post.type === "LOST" ? "Lost" : "Found"} item (${post.status.toLowerCase()}): ${post.title}.${post.category ? ` Category: ${CATEGORY_LABELS[post.category] || post.category}.` : ""}${post.location ? ` Location: ${post.location}.` : ""}`}
-    >
-      <View style={styles.cardLeft}>
-        {/* Semantic Badges Row */}
-        <View style={styles.cardTopRow}>
-          <View style={styles.badgeGroup}>
-            <TypeBadge type={post.type} />
-            {post.category && <CategoryBadge category={post.category} />}
-            {isInactive && <StatusBadge status={post.status} />}
-          </View>
-        </View>
-
-        {/* Title & Description */}
-        <Text
-          style={[styles.cardTitle, isInactive && styles.cardTitleResolved]}
-          numberOfLines={2}
-        >
-          {post.title}
-        </Text>
-
-        {!!post.description?.trim() && (
-          <Text style={styles.cardDesc} numberOfLines={2}>
-            {post.description}
-          </Text>
-        )}
-
-        {/* Key Facts Row: Location Badge */}
-        {!!post.location && (
-          <View style={styles.cardFooter}>
-            <LocationBadge location={post.location} />
-          </View>
-        )}
-
-        {/* Owner-only Claim notification badge */}
-        {isOwner && claimCount > 0 && !isInactive && (
-          <View style={styles.claimBadge}>
-            <Feather
-              name="inbox"
-              size={11}
-              color={CAMPUS_HUB_COLORS.skyAccentInk}
-            />
-            <Text style={styles.claimBadgeText} maxFontSizeMultiplier={1.25}>
-              {claimCount}{" "}
-              {claimCount === 1 ? "claim received" : "claims received"}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Right Column: Responsive Framed Thumbnail + Posted Time + Admin Delete */}
-      <View style={[styles.cardRightCol, { width: thumbSize }]}>
-        <View
-          style={[
-            styles.thumbWrapper,
-            { width: thumbSize, height: thumbSize },
-          ]}
-        >
-          {hasImage ? (
-            <Image
-              source={{ uri: imageUri }}
-              style={styles.cardThumb}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={150}
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <View style={styles.thumbPlaceholder}>
-              <Feather
-                name={post.type === "LOST" ? "search" : "gift"}
-                size={22}
-                color={CAMPUS_HUB_COLORS.subtleText}
-              />
-            </View>
-          )}
-        </View>
-
-        {/* Time directly under the card image */}
-        <View style={styles.imageTimeRow}>
-          <Feather
-            name="clock"
-            size={10}
-            color={CAMPUS_HUB_COLORS.mutedInk}
-          />
-          <Text
-            style={styles.imageTimeText}
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.25}
-          >
-            {timeAgo(post.createdAt)}
-          </Text>
-        </View>
-
-        {/* Admin Delete Action Button moved under the thumbnail image */}
-        {isAdmin && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.adminDeleteBtn,
-              pressed && { opacity: 0.78 },
-            ]}
-            onPress={(e) => {
-              e.stopPropagation?.();
-              onDelete?.(post);
-            }}
-            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={`Delete listing: ${post.title}`}
-          >
-            <Feather
-              name="trash-2"
-              size={11}
-              color={colors.semantic.red.accent}
-            />
-            <Text
-              style={styles.adminDeleteBtnText}
-              maxFontSizeMultiplier={1.25}
-            >
-              Delete
-            </Text>
-          </Pressable>
-        )}
-      </View>
-    </Pressable>
-  );
-});
 
 const styles = StyleSheet.create({
   scroll: {
@@ -1256,157 +1041,6 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
 
-  // Cards
-  card: {
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.cardBorder,
-    width: "100%",
-    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
-    alignSelf: "center",
-    overflow: "hidden",
-    ...CAMPUS_HUB_COLORS.shadow,
-  },
-  cardResolved: {
-    backgroundColor: colors.slate50,
-    borderColor: colors.slate200,
-  },
-  cardLeft: {
-    flex: 1,
-    gap: 4,
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 6,
-    marginBottom: 2,
-  },
-  badgeGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-    flex: 1,
-  },
-  adminDeleteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.semantic.red.softBorder,
-    width: "100%",
-    minHeight: 36,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.semantic.red.border,
-    gap: 4,
-    marginTop: 6,
-    overflow: "hidden",
-  },
-  adminDeleteBtnText: {
-    fontFamily,
-    fontSize: 10.5,
-    lineHeight: 14,
-    fontWeight: "700",
-    color: colors.semantic.red.accent,
-    letterSpacing: 0.1,
-    includeFontPadding: false,
-  },
-  cardTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 15.5,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.deepNavy,
-    lineHeight: 21,
-    letterSpacing: -0.2,
-  },
-  cardTitleResolved: {
-    color: CAMPUS_HUB_COLORS.mutedInk,
-  },
-  cardDesc: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: "500",
-    color: CAMPUS_HUB_COLORS.mutedInk,
-    lineHeight: 17,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  claimBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: CAMPUS_HUB_COLORS.skyTint,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    alignSelf: "flex-start",
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.skyBorder,
-  },
-  claimBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    lineHeight: 13,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.skyAccentInk,
-    includeFontPadding: false,
-    fontVariant: ["tabular-nums"],
-  },
-
-  // Right Column: Thumbnail + Time underneath
-  cardRightCol: {
-    alignItems: "center",
-    width: 84,
-  },
-  thumbWrapper: {
-    width: 84,
-    height: 84,
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
-    borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
-  },
-  cardThumb: {
-    width: "100%",
-    height: "100%",
-  },
-  thumbPlaceholder: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  imageTimeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-    marginTop: 6,
-    width: "100%",
-  },
-  imageTimeText: {
-    fontFamily,
-    fontSize: 10,
-    lineHeight: 13,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
-    textAlign: "center",
-    includeFontPadding: false,
-  },
-
-  // States & Loaders
   centerState: {
     alignItems: "center",
     paddingVertical: 60,

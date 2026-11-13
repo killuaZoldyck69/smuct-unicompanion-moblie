@@ -32,6 +32,10 @@ import { useNetworkStatus } from "@/hooks/use-network-status";
 import { extractApiErrorInfo } from "@/features/forum/forum-logic";
 import { resolveLostFoundBackDestination } from "@/features/campus-hub/lost-found-logic";
 import {
+  requireOnline,
+  showApiErrorToast,
+} from "@/features/campus-hub/useLostFoundUpload";
+import {
   useLostFoundPost,
   useDeleteLostFoundPost,
   useUpdateLostFoundStatus,
@@ -57,29 +61,21 @@ import { setCampusHubActiveSection } from "@/screens/campus-hub";
 import { ClaimModal } from "@/screens/campus-hub/lost-found/components/claim-modal";
 import { HandoverCard } from "@/screens/campus-hub/lost-found/components/handover-card";
 import { AcceptConfirmationSheet } from "@/screens/campus-hub/lost-found/components/accept-confirmation-sheet";
-import { EditLostFoundModal } from "./edit-modal";
+import { LostFoundFormModal } from "./components/lost-found-form-modal";
 import { LostFoundDeleteModal } from "./components/lost-found-delete-modal";
 import { LostFoundDetailSkeleton } from "../shared/skeleton-loaders";
 import type {
   LostFoundClaim,
   LostFoundStatus,
 } from "@/services/lost-found-service";
-
-// Detail sub-components
 import { LFDetailHeader } from "./components/detail/lf-detail-header";
 import { LFImageGallery } from "./components/detail/lf-image-gallery";
 import { LFInfoCard } from "./components/detail/lf-info-card";
 import { LFClaimsSection } from "./components/detail/lf-claims-section";
 import { LFMyClaimCard } from "./components/detail/lf-my-claim-card";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 const EDIT_THRESHOLD_MS = 10_000;
 
-// ---------------------------------------------------------------------------
-// Modal state reducer
-// ---------------------------------------------------------------------------
 type ModalState = {
   imageViewer: boolean;
   claim: boolean;
@@ -139,9 +135,6 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
 export function LostFoundDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -150,24 +143,18 @@ export function LostFoundDetailScreen() {
   const { isOffline } = useNetworkStatus();
   const isAdmin = currentUserRole === "ADMIN";
 
-  // Image gallery & fullscreen viewer
   const [selectedImage, setSelectedImage] = useState(0);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
   const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
-
-  // Author modal
   const [selectedAuthor, setSelectedAuthor] =
     useState<AuthorProfileModalData | null>(null);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
-
-  // Claim being acted on
   const [claimToAccept, setClaimToAccept] = useState<LostFoundClaim | null>(
     null,
   );
   const [pendingConfirm, setPendingConfirm] =
     useState<PendingActionConfirm | null>(null);
 
-  // Modal state
   const [modals, dispatchModal] = useReducer(modalReducer, initialModalState);
   const openModal = useCallback(
     (modal: keyof ModalState) => dispatchModal({ type: "OPEN", modal }),
@@ -178,9 +165,6 @@ export function LostFoundDetailScreen() {
     [],
   );
 
-  // ---------------------------------------------------------------------------
-  // Queries & mutations
-  // ---------------------------------------------------------------------------
   const {
     data: post,
     isLoading,
@@ -232,10 +216,6 @@ export function LostFoundDetailScreen() {
     withdrawClaimMutation.isPending ||
     statusMutation.isPending;
 
-  // ---------------------------------------------------------------------------
-  // Derived values
-  // ---------------------------------------------------------------------------
-
   const isEdited = useMemo(
     () =>
       Boolean(
@@ -268,16 +248,13 @@ export function LostFoundDetailScreen() {
     }
   }, [post?.images?.length, selectedImage]);
 
-  // ---------------------------------------------------------------------------
-  // Navigation & Status Handlers
-  // ---------------------------------------------------------------------------
   const handleBack = useCallback(() => {
     setCampusHubActiveSection("LOST_FOUND");
     const destination = resolveLostFoundBackDestination({
       userRole: currentUserRole,
     });
     router.replace({
-      pathname: destination.href as any,
+      pathname: destination.href,
       params: destination.params,
     });
   }, [currentUserRole, router]);
@@ -343,9 +320,6 @@ export function LostFoundDetailScreen() {
     closeModal,
   ]);
 
-  // ---------------------------------------------------------------------------
-  // Image viewer helpers
-  // ---------------------------------------------------------------------------
   const openProofImageViewer = useCallback(
     (url: string) => {
       setViewerImages([url]);
@@ -365,9 +339,6 @@ export function LostFoundDetailScreen() {
     [post?.images, openModal],
   );
 
-  // ---------------------------------------------------------------------------
-  // Action handlers
-  // ---------------------------------------------------------------------------
   const handleEditPress = useCallback(() => {
     openModal("edit");
   }, [openModal]);
@@ -377,15 +348,15 @@ export function LostFoundDetailScreen() {
   }, [openModal]);
 
   const handleConfirmDelete = useCallback(() => {
-    if (isOffline) {
-      Toast.show({
-        type: "error",
-        text1: "You're Offline",
-        text2: "Reconnect to the internet before deleting this listing.",
-      });
+    if (
+      !requireOnline(
+        isOffline,
+        "Reconnect to the internet before deleting this listing.",
+      ) ||
+      deleteMutation.isPending
+    ) {
       return;
     }
-    if (deleteMutation.isPending) return;
     deleteMutation.mutate(id, {
       onSuccess: () => {
         closeModal("delete");
@@ -393,12 +364,7 @@ export function LostFoundDetailScreen() {
         handleBack();
       },
       onError: (err) => {
-        const info = extractApiErrorInfo(err, "Please try again.");
-        Toast.show({
-          type: "error",
-          text1: "Failed to delete post",
-          text2: info.message,
-        });
+        showApiErrorToast(err, "Failed to delete post", "Please try again.");
       },
     });
   }, [id, isOffline, deleteMutation, handleBack, closeModal]);
@@ -417,15 +383,16 @@ export function LostFoundDetailScreen() {
   }, [closeModal]);
 
   const handleConfirmAcceptClaim = useCallback(() => {
-    if (isOffline) {
-      Toast.show({
-        type: "error",
-        text1: "You're Offline",
-        text2: "Reconnect to the internet before accepting a claim.",
-      });
+    if (
+      !requireOnline(
+        isOffline,
+        "Reconnect to the internet before accepting a claim.",
+      ) ||
+      !claimToAccept ||
+      acceptClaimMutation.isPending
+    ) {
       return;
     }
-    if (!claimToAccept || acceptClaimMutation.isPending) return;
     acceptClaimMutation.mutate(claimToAccept.id, {
       onSuccess: () => {
         handleCloseAcceptSheet();
@@ -437,12 +404,7 @@ export function LostFoundDetailScreen() {
         });
       },
       onError: (err) => {
-        const info = extractApiErrorInfo(err, "Could not accept claim.");
-        Toast.show({
-          type: "error",
-          text1: "Action failed",
-          text2: info.message,
-        });
+        showApiErrorToast(err, "Action failed", "Could not accept claim.");
       },
     });
   }, [isOffline, claimToAccept, acceptClaimMutation, handleCloseAcceptSheet]);
@@ -511,75 +473,66 @@ export function LostFoundDetailScreen() {
   );
 
   const handleExecutePendingConfirm = useCallback(() => {
-    if (isOffline) {
-      Toast.show({
-        type: "error",
-        text1: "You're Offline",
-        text2: "Reconnect to the internet before performing this action.",
-      });
+    if (
+      !requireOnline(
+        isOffline,
+        "Reconnect to the internet before performing this action.",
+      ) ||
+      !pendingConfirm ||
+      isConfirmPending
+    ) {
       return;
     }
-    if (!pendingConfirm || isConfirmPending) return;
+
+    const onSuccess = (
+      type: "info" | "success",
+      text1: string,
+    ) => {
+      setPendingConfirm(null);
+      Toast.show({ type, text1 });
+    };
+
     if (pendingConfirm.kind === "REJECT_CLAIM") {
       rejectClaimMutation.mutate(pendingConfirm.claimId, {
-        onSuccess: () => {
-          setPendingConfirm(null);
-          Toast.show({ type: "info", text1: "Claim declined" });
-        },
-        onError: (err) => {
-          const info = extractApiErrorInfo(err, "Failed to decline claim.");
-          Toast.show({
-            type: "error",
-            text1: "Failed to decline claim",
-            text2: info.message,
-          });
-        },
+        onSuccess: () => onSuccess("info", "Claim declined"),
+        onError: (err) =>
+          showApiErrorToast(
+            err,
+            "Failed to decline claim",
+            "Failed to decline claim.",
+          ),
       });
       return;
     }
 
     if (pendingConfirm.kind === "WITHDRAW_CLAIM") {
       withdrawClaimMutation.mutate(pendingConfirm.claimId, {
-        onSuccess: () => {
-          setPendingConfirm(null);
-          Toast.show({ type: "info", text1: "Claim withdrawn" });
-        },
-        onError: (err) => {
-          const info = extractApiErrorInfo(err, "Withdraw failed.");
-          Toast.show({
-            type: "error",
-            text1: "Withdraw failed",
-            text2: info.message,
-          });
-        },
+        onSuccess: () => onSuccess("info", "Claim withdrawn"),
+        onError: (err) =>
+          showApiErrorToast(err, "Withdraw failed", "Withdraw failed."),
       });
       return;
     }
 
+    const targetStatus = pendingConfirm.status;
     statusMutation.mutate(
-      { id, status: pendingConfirm.status },
+      { id, status: targetStatus },
       {
-        onSuccess: () => {
-          const applied = pendingConfirm.status;
-          setPendingConfirm(null);
-          Toast.show({
-            type: "success",
-            text1:
-              applied === "ACTIVE"
-                ? "Listing Reopened"
-                : applied === "CLOSED"
-                  ? "Listing Closed"
-                  : "Listing Resolved",
-          });
-        },
-        onError: (err) => {
-          const info = extractApiErrorInfo(err, "Could not update status.");
-          Toast.show({
-            type: "error",
-            text1: "Status Update Failed",
-            text2: info.message,
-          });
-        },
+        onSuccess: () =>
+          onSuccess(
+            "success",
+            targetStatus === "ACTIVE"
+              ? "Listing Reopened"
+              : targetStatus === "CLOSED"
+                ? "Listing Closed"
+                : "Listing Resolved",
+          ),
+        onError: (err) =>
+          showApiErrorToast(
+            err,
+            "Status Update Failed",
+            "Could not update status.",
+          ),
       },
     );
   }, [
@@ -594,33 +547,31 @@ export function LostFoundDetailScreen() {
 
   const handleClaimPress = useCallback(() => {
     if (!currentUser) {
-      return Toast.show({ type: "error", text1: "Please log in first" });
+      Toast.show({ type: "error", text1: "Please log in first" });
+      return;
     }
-    if (isOffline) {
-      return Toast.show({
-        type: "error",
-        text1: "You're Offline",
-        text2: "Reconnect to the internet to submit a claim.",
-      });
+    if (!requireOnline(isOffline, "Reconnect to the internet to submit a claim.")) {
+      return;
     }
     openModal("claim");
   }, [currentUser, isOffline, openModal]);
 
   const handleOpenReport = useCallback(() => {
     if (!currentUser) {
-      return Toast.show({ type: "error", text1: "Please log in first" });
+      Toast.show({ type: "error", text1: "Please log in first" });
+      return;
     }
     openModal("report");
   }, [currentUser, openModal]);
 
   const handleSubmitReport = useCallback(
     (payload: { reason: UgcReportReason; details?: string }) => {
-      if (isOffline) {
-        Toast.show({
-          type: "error",
-          text1: "You're Offline",
-          text2: "Reconnect to the internet before submitting a report.",
-        });
+      if (
+        !requireOnline(
+          isOffline,
+          "Reconnect to the internet before submitting a report.",
+        )
+      ) {
         return;
       }
       reportMutation.mutate(payload, {
@@ -633,12 +584,7 @@ export function LostFoundDetailScreen() {
           });
         },
         onError: (err) => {
-          const info = extractApiErrorInfo(err, "Could not submit report.");
-          Toast.show({
-            type: "error",
-            text1: "Report Failed",
-            text2: info.message,
-          });
+          showApiErrorToast(err, "Report Failed", "Could not submit report.");
         },
       });
     },
@@ -649,9 +595,6 @@ export function LostFoundDetailScreen() {
     setSelectedAuthor(author);
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Loading / error states
-  // ---------------------------------------------------------------------------
   if (isLoading) {
     return <LostFoundDetailSkeleton />;
   }
@@ -871,8 +814,8 @@ export function LostFoundDetailScreen() {
         </View>
       )}
 
-      {/* Modals */}
-      <EditLostFoundModal
+      <LostFoundFormModal
+        mode="edit"
         visible={modals.edit}
         onClose={() => closeModal("edit")}
         post={post}

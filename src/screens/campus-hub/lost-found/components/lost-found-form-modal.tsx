@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Keyboard,
   Modal,
@@ -27,7 +26,6 @@ import {
 import { colors } from "@/theme/colors";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useNetworkStatus } from "@/hooks/use-network-status";
-import { extractApiErrorInfo } from "@/features/forum/forum-logic";
 import {
   LOST_FOUND_CATEGORY_OPTIONS,
   LOST_FOUND_LIMITS,
@@ -39,14 +37,16 @@ import {
 } from "@/features/campus-hub/useLostFound";
 import {
   deleteRemovedCloudinaryUploads,
+  requireOnline,
+  scheduleSuccessToast,
+  showApiErrorToast,
+  uploadPendingLostFoundImages,
   useUgcTermsRetry,
-  validateLocalImageSizes,
 } from "@/features/campus-hub/useLostFoundUpload";
 import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guidelines-modal";
 import {
   CLOUDINARY_FOLDERS,
   deleteFileFromCloudinaryApi,
-  uploadMultipleImages,
 } from "@/services/cloudinary-service";
 import type {
   CreateLostFoundInput,
@@ -58,9 +58,12 @@ import type { User } from "@/features/auth/types";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
-  titleFontFamily,
 } from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
+import {
+  LostFoundModalFooter,
+  LostFoundModalHeader,
+} from "./lost-found-modal-chrome";
 
 export interface LostFoundFormModalProps {
   mode: "create" | "edit";
@@ -181,9 +184,11 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
     setUploadedImageMap({});
   }, [uploadedImageMap]);
 
+  const ugcRetry = useUgcTermsRetry<CreateLostFoundInput>(currentUser?.id);
+
   const executeCreate = useCallback(
     (payload: CreateLostFoundInput) => {
-      ugcRetry.queuePayload(payload);
+      ugcRetry.queuePayload(payload, executeCreate);
       createMutation.mutate(payload, {
         onSuccess: () => {
           ugcRetry.clearQueuedPayload();
@@ -192,35 +197,22 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
           setUploadedImageMap({});
           setForm(EMPTY_FORM);
           onClose();
-          setTimeout(() => {
-            Toast.show({
-              type: "success",
-              text1: "Post Published!",
-              text2: "Your Lost & Found post is now live.",
-            });
-          }, 350);
+          scheduleSuccessToast(
+            "Post Published!",
+            "Your Lost & Found post is now live.",
+          );
         },
         onError: (err) => {
           if (ugcRetry.handleUgcError(err)) return;
-          const info = extractApiErrorInfo(
+          showApiErrorToast(
             err,
+            "Failed to publish",
             "Please check your input and try again.",
           );
-          Toast.show({
-            type: "error",
-            text1: "Failed to publish",
-            text2: info.message,
-          });
         },
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [createMutation, onClose],
-  );
-
-  const ugcRetry = useUgcTermsRetry<CreateLostFoundInput>(
-    currentUser?.id,
-    executeCreate,
+    [ugcRetry, createMutation, onClose],
   );
 
   const isDirty = isEdit
@@ -275,14 +267,14 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
     if (submittingRef.current || isSubmitting) return;
     submittingRef.current = true;
     try {
-      if (isOffline) {
-        Toast.show({
-          type: "error",
-          text1: "You're Offline",
-          text2: isEdit
+      if (
+        !requireOnline(
+          isOffline,
+          isEdit
             ? "Reconnect to the internet before saving changes."
             : "Reconnect to the internet before publishing.",
-        });
+        )
+      ) {
         return;
       }
 
@@ -314,50 +306,14 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
         return;
       }
 
-      const currentMap = { ...uploadedImageMap };
-      const pendingLocalUris = form.images.filter(
-        (uri) =>
-          !uri.startsWith("http://") &&
-          !uri.startsWith("https://") &&
-          !currentMap[uri],
-      );
-
-      if (pendingLocalUris.length > 0) {
-        const sizeError = await validateLocalImageSizes(pendingLocalUris);
-        if (sizeError) {
-          Toast.show({
-            type: "error",
-            text1: "Photo Exceeds 5MB",
-            text2: sizeError,
-          });
-          return;
-        }
-
-        setIsUploading(true);
-        try {
-          const results = await uploadMultipleImages(
-            pendingLocalUris,
-            CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
-          );
-          results.forEach((result, idx) => {
-            currentMap[pendingLocalUris[idx]] = result.secureUrl;
-          });
-          setUploadedImageMap(currentMap);
-        } catch (err) {
-          setIsUploading(false);
-          const info = extractApiErrorInfo(
-            err,
-            "Check your connection or try again.",
-          );
-          Toast.show({
-            type: "error",
-            text1: "Image Upload Failed",
-            text2: info.message,
-          });
-          return;
-        }
-        setIsUploading(false);
-      }
+      const currentMap = await uploadPendingLostFoundImages({
+        uris: form.images,
+        uploadedMap: uploadedImageMap,
+        folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
+        setIsUploading,
+        setUploadedMap: setUploadedImageMap,
+      });
+      if (!currentMap) return;
 
       const resolvedImages = form.images
         .map((uri) =>
@@ -411,24 +367,17 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
             setUploadedImageMap({});
             onSuccess?.(updatedPost);
             onClose();
-            setTimeout(() => {
-              Toast.show({
-                type: "success",
-                text1: "Post Updated",
-                text2: "Your changes have been saved successfully.",
-              });
-            }, 350);
+            scheduleSuccessToast(
+              "Post Updated",
+              "Your changes have been saved successfully.",
+            );
           },
           onError: (err) => {
-            const info = extractApiErrorInfo(
+            showApiErrorToast(
               err,
+              "Failed to update",
               "Please check your input and try again.",
             );
-            Toast.show({
-              type: "error",
-              text1: "Failed to update",
-              text2: info.message,
-            });
           },
         },
       );
@@ -473,43 +422,12 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
         edges={["top"]}
         accessibilityViewIsModal={true}
       >
-        <View style={styles.topHeader}>
-          <View style={styles.topHeaderInner}>
-            <View style={styles.headerTitleGroup}>
-              <Text style={styles.headerTitle}>
-                {isEdit ? "Edit Listing" : "Lost & Found Post"}
-              </Text>
-              <View style={styles.hubBadge}>
-                <Text style={styles.hubBadgeText} maxFontSizeMultiplier={1.25}>
-                  CAMPUS HUB
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              onPress={handleClose}
-              disabled={isSubmitting}
-              style={({ pressed }) => [
-                styles.circleBtn,
-                isSubmitting && { opacity: 0.45 },
-                pressed && !isSubmitting && { opacity: 0.75 },
-              ]}
-              android_ripple={{
-                color: CAMPUS_HUB_COLORS.androidRipple,
-                borderless: true,
-              }}
-              accessible
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isSubmitting }}
-              accessibilityLabel={
-                isEdit ? "Close edit modal" : "Close compose modal"
-              }
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
-            </Pressable>
-          </View>
-        </View>
+        <LostFoundModalHeader
+          title={isEdit ? "Edit Listing" : "Lost & Found Post"}
+          closeLabel={isEdit ? "Close edit modal" : "Close compose modal"}
+          isSubmitting={isSubmitting}
+          onClose={handleClose}
+        />
 
         <ModalKeyboardAvoidingView
           enabled={visible}
@@ -771,67 +689,16 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
             </View>
           </ScrollView>
 
-          <View
-            style={[
-              styles.modalFooter,
-              { paddingBottom: isKeyboardOpen ? 12 : Math.max(insets.bottom, 16) },
-            ]}
-          >
-            <View style={styles.modalFooterInner}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.submitBtn,
-                  (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
-                  pressed &&
-                    canSubmit &&
-                    !isSubmitting && { opacity: 0.88 },
-                ]}
-                onPress={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
-                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
-                accessible
-                accessibilityRole="button"
-                accessibilityState={{
-                  disabled: !canSubmit || isSubmitting,
-                  busy: isSubmitting,
-                }}
-                accessibilityLabel={
-                  isEdit ? "Save post changes" : "Publish post"
-                }
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={CAMPUS_HUB_COLORS.white}
-                  />
-                ) : (
-                  <>
-                    <Feather
-                      name={isEdit ? "check" : "send"}
-                      size={16}
-                      color={
-                        !canSubmit && !isSubmitting
-                          ? CAMPUS_HUB_COLORS.mutedInk
-                          : CAMPUS_HUB_COLORS.white
-                      }
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text
-                      style={[
-                        styles.submitBtnText,
-                        !canSubmit &&
-                          !isSubmitting &&
-                          styles.submitBtnTextDisabled,
-                      ]}
-                      maxFontSizeMultiplier={1.25}
-                    >
-                      {isEdit ? "Save Changes" : "Publish Post"}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
-          </View>
+          <LostFoundModalFooter
+            label={isEdit ? "Save Changes" : "Publish Post"}
+            accessibilityLabel={isEdit ? "Save post changes" : "Publish post"}
+            iconName={isEdit ? "check" : "send"}
+            canSubmit={canSubmit}
+            isSubmitting={isSubmitting}
+            paddingBottom={isKeyboardOpen ? 12 : Math.max(insets.bottom, 16)}
+            accentFillColor={ACCENT_FILL}
+            onSubmit={handleSubmit}
+          />
         </ModalKeyboardAvoidingView>
 
         {!isEdit && (
@@ -855,59 +722,6 @@ const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
     backgroundColor: CAMPUS_HUB_COLORS.white,
-  },
-  topHeader: {
-    borderBottomWidth: 1,
-    borderBottomColor: CAMPUS_HUB_COLORS.cardBorder,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-  },
-  topHeaderInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    width: "100%",
-    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
-    alignSelf: "center",
-  },
-  headerTitleGroup: {
-    flex: 1,
-    alignItems: "flex-start",
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 18,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.deepNavy,
-    letterSpacing: -0.3,
-  },
-  hubBadge: {
-    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginTop: 4,
-    alignSelf: "flex-start",
-  },
-  hubBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    lineHeight: 13,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
-    letterSpacing: 0.6,
-    includeFontPadding: false,
-  },
-  circleBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.slate100,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
   },
   keyboardAvoid: {
     flex: 1,
@@ -1062,45 +876,5 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.skyAccentInk,
     lineHeight: 16,
     marginBottom: 4,
-  },
-  modalFooter: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: CAMPUS_HUB_COLORS.cardBorder,
-    ...CAMPUS_HUB_COLORS.footerShadow,
-  },
-  modalFooterInner: {
-    width: "100%",
-    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
-    alignSelf: "center",
-  },
-  submitBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: ACCENT_FILL,
-    height: 50,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    overflow: "hidden",
-    ...CAMPUS_HUB_COLORS.shadow,
-  },
-  submitBtnDisabled: {
-    backgroundColor: colors.slate200,
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  submitBtnText: {
-    fontFamily,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.white,
-    includeFontPadding: false,
-  },
-  submitBtnTextDisabled: {
-    color: CAMPUS_HUB_COLORS.mutedInk,
   },
 });

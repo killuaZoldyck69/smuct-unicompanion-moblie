@@ -5,10 +5,8 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  Pressable,
   TextInput,
   Platform,
-  ActivityIndicator,
   StatusBar,
   Keyboard,
 } from "react-native";
@@ -27,7 +25,6 @@ import { colors } from "@/theme/colors";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useNetworkStatus } from "@/hooks/use-network-status";
-import { extractApiErrorInfo } from "@/features/forum/forum-logic";
 import {
   LOST_FOUND_LIMITS,
   validateClaimForm,
@@ -35,12 +32,14 @@ import {
 import { useSubmitLostFoundClaim } from "@/features/campus-hub/useLostFound";
 import {
   deleteRemovedCloudinaryUploads,
+  requireOnline,
+  scheduleSuccessToast,
+  showApiErrorToast,
+  uploadPendingLostFoundImages,
   useUgcTermsRetry,
-  validateLocalImageSizes,
 } from "@/features/campus-hub/useLostFoundUpload";
 import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guidelines-modal";
 import {
-  uploadImageToCloudinary,
   deleteFileFromCloudinaryApi,
   CLOUDINARY_FOLDERS,
 } from "@/services/cloudinary-service";
@@ -51,9 +50,12 @@ import type {
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
-  titleFontFamily,
 } from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
+import {
+  LostFoundModalFooter,
+  LostFoundModalHeader,
+} from "./lost-found-modal-chrome";
 import { LocationBadge, TypeBadge } from "./status-badge";
 
 interface ClaimModalProps {
@@ -104,9 +106,11 @@ export const ClaimModal = React.memo(function ClaimModal({
     setUploadedProofMap({});
   }, [uploadedProofMap]);
 
+  const ugcRetry = useUgcTermsRetry<CreateClaimInput>(currentUser?.id);
+
   const submitClaimPayload = useCallback(
     (payload: CreateClaimInput) => {
-      ugcRetry.queuePayload(payload);
+      ugcRetry.queuePayload(payload, submitClaimPayload);
       submitMutation.mutate(payload, {
         onSuccess: () => {
           ugcRetry.clearQueuedPayload();
@@ -116,33 +120,18 @@ export const ClaimModal = React.memo(function ClaimModal({
           setLocalImages([]);
           onClose();
           onSuccess?.();
-          setTimeout(() => {
-            Toast.show({
-              type: "success",
-              text1: "Claim Submitted!",
-              text2:
-                "The post owner has been notified and will review your claim.",
-            });
-          }, 350);
+          scheduleSuccessToast(
+            "Claim Submitted!",
+            "The post owner has been notified and will review your claim.",
+          );
         },
         onError: (err) => {
           if (ugcRetry.handleUgcError(err)) return;
-          const info = extractApiErrorInfo(err, "Failed to submit claim.");
-          Toast.show({
-            type: "error",
-            text1: "Submission Failed",
-            text2: info.message,
-          });
+          showApiErrorToast(err, "Submission Failed", "Failed to submit claim.");
         },
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [submitMutation, onClose, onSuccess],
-  );
-
-  const ugcRetry = useUgcTermsRetry<CreateClaimInput>(
-    currentUser?.id,
-    submitClaimPayload,
+    [ugcRetry, submitMutation, onClose, onSuccess],
   );
 
   const handleClose = useCallback(() => {
@@ -164,12 +153,7 @@ export const ClaimModal = React.memo(function ClaimModal({
     submittingRef.current = true;
     try {
       Keyboard.dismiss();
-      if (isOffline) {
-        Toast.show({
-          type: "error",
-          text1: "You're Offline",
-          text2: "Reconnect to the internet before submitting a claim.",
-        });
+      if (!requireOnline(isOffline, "Reconnect to the internet before submitting a claim.")) {
         return;
       }
 
@@ -199,45 +183,18 @@ export const ClaimModal = React.memo(function ClaimModal({
       let proofImageUrl: string | null = null;
       if (localImages.length > 0 && localImages[0]) {
         const uri = localImages[0];
-        if (uploadedProofMap[uri]) {
-          proofImageUrl = uploadedProofMap[uri];
-        } else {
-          const sizeError = await validateLocalImageSizes([uri], "Proof photo");
-          if (sizeError) {
-            Toast.show({
-              type: "error",
-              text1: "Photo Exceeds 5MB",
-              text2: sizeError,
-            });
-            return;
-          }
-
-          setIsUploading(true);
-          try {
-            const result = await uploadImageToCloudinary(
-              uri,
-              CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS,
-            );
-            proofImageUrl = result.secureUrl;
-            setUploadedProofMap((prev) => ({
-              ...prev,
-              [uri]: result.secureUrl,
-            }));
-          } catch (err) {
-            setIsUploading(false);
-            const info = extractApiErrorInfo(
-              err,
-              "Could not upload proof image. Check connection.",
-            );
-            Toast.show({
-              type: "error",
-              text1: "Upload Failed",
-              text2: info.message,
-            });
-            return;
-          }
-          setIsUploading(false);
-        }
+        const uploaded = await uploadPendingLostFoundImages({
+          uris: [uri],
+          uploadedMap: uploadedProofMap,
+          folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS,
+          singlePhotoLabel: "Proof photo",
+          uploadErrorTitle: "Upload Failed",
+          uploadErrorFallback: "Could not upload proof image. Check connection.",
+          setIsUploading,
+          setUploadedMap: setUploadedProofMap,
+        });
+        if (!uploaded) return;
+        proofImageUrl = uploaded[uri] ?? null;
       }
 
       submitClaimPayload({
@@ -283,49 +240,17 @@ export const ClaimModal = React.memo(function ClaimModal({
         edges={["top"]}
         accessibilityViewIsModal={true}
       >
-        {/* Top Header Navigation Bar */}
-        <View style={styles.topHeader}>
-          <View style={styles.topHeaderInner}>
-            <View style={styles.headerTitleGroup}>
-              <Text style={styles.headerTitle}>{claimActionTitle}</Text>
-              <View style={styles.hubBadge}>
-                <Text
-                  style={styles.hubBadgeText}
-                  maxFontSizeMultiplier={1.25}
-                >
-                  CAMPUS HUB
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              onPress={handleClose}
-              disabled={isSubmitting}
-              style={({ pressed }) => [
-                styles.circleBtn,
-                isSubmitting && { opacity: 0.45 },
-                pressed && !isSubmitting && { opacity: 0.75 },
-              ]}
-              android_ripple={{
-                color: CAMPUS_HUB_COLORS.androidRipple,
-                borderless: true,
-              }}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isSubmitting }}
-              accessibilityLabel="Close claim modal"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
-            </Pressable>
-          </View>
-        </View>
+        <LostFoundModalHeader
+          title={claimActionTitle}
+          closeLabel="Close claim modal"
+          isSubmitting={isSubmitting}
+          onClose={handleClose}
+        />
 
         <ModalKeyboardAvoidingView
           enabled={visible}
           style={styles.keyboardAvoid}
         >
-          {/* Scrollable form content */}
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scroll}
@@ -333,17 +258,14 @@ export const ClaimModal = React.memo(function ClaimModal({
             automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
             showsVerticalScrollIndicator={false}
           >
-            {/* Post Summary Card */}
             <View style={styles.summaryCard}>
               <View style={styles.summaryTop}>
                 <TypeBadge type={post.type} />
                 {!!post.location && <LocationBadge location={post.location} />}
               </View>
-              {/* Show FULL title, no truncation */}
               <Text style={styles.summaryTitle}>{post.title}</Text>
             </View>
 
-            {/* Verification Question Prompt (if configured by author) */}
             {!!post.verificationQuestion && (
               <View style={styles.verificationBox}>
                 <View style={styles.verificationHeader}>
@@ -423,66 +345,16 @@ export const ClaimModal = React.memo(function ClaimModal({
             </View>
           </ScrollView>
 
-          {/* Bottom Docked Action Footer with Safe Area */}
-          <View
-            style={[
-              styles.modalFooter,
-              { paddingBottom: isKeyboardOpen ? 12 : Math.max(insets.bottom, 16) },
-            ]}
-          >
-            <View style={styles.modalFooterInner}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.submitBtn,
-                  (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
-                  pressed &&
-                    canSubmit &&
-                    !isSubmitting && { opacity: 0.88 },
-                ]}
-                onPress={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
-                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
-                accessible
-                accessibilityRole="button"
-                accessibilityState={{
-                  disabled: !canSubmit || isSubmitting,
-                  busy: isSubmitting,
-                }}
-                accessibilityLabel="Submit claim"
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={CAMPUS_HUB_COLORS.white}
-                  />
-                ) : (
-                  <>
-                    <Feather
-                      name="send"
-                      size={16}
-                      color={
-                        !canSubmit && !isSubmitting
-                          ? CAMPUS_HUB_COLORS.mutedInk
-                          : CAMPUS_HUB_COLORS.white
-                      }
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text
-                      style={[
-                        styles.submitBtnText,
-                        !canSubmit &&
-                          !isSubmitting &&
-                          styles.submitBtnTextDisabled,
-                      ]}
-                      maxFontSizeMultiplier={1.25}
-                    >
-                      Submit Claim
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
-          </View>
+          <LostFoundModalFooter
+            label="Submit Claim"
+            accessibilityLabel="Submit claim"
+            iconName="send"
+            canSubmit={canSubmit}
+            isSubmitting={isSubmitting}
+            paddingBottom={isKeyboardOpen ? 12 : Math.max(insets.bottom, 16)}
+            accentFillColor={ACCENT_FILL}
+            onSubmit={handleSubmit}
+          />
         </ModalKeyboardAvoidingView>
 
         <UgcGuidelinesModal
@@ -494,7 +366,6 @@ export const ClaimModal = React.memo(function ClaimModal({
           onAccept={ugcRetry.acceptGuidelines}
         />
 
-        {/* Embedded Toast Overlay for Modal Viewport */}
         <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
       </SafeAreaView>
     </Modal>
@@ -505,59 +376,6 @@ const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
     backgroundColor: CAMPUS_HUB_COLORS.white,
-  },
-  topHeader: {
-    borderBottomWidth: 1,
-    borderBottomColor: CAMPUS_HUB_COLORS.cardBorder,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-  },
-  topHeaderInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    width: "100%",
-    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
-    alignSelf: "center",
-  },
-  headerTitleGroup: {
-    flex: 1,
-    alignItems: "flex-start",
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 18,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.deepNavy,
-    letterSpacing: -0.3,
-  },
-  hubBadge: {
-    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginTop: 4,
-    alignSelf: "flex-start",
-  },
-  hubBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    lineHeight: 13,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
-    letterSpacing: 0.6,
-    includeFontPadding: false,
-  },
-  circleBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.slate100,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
   },
   keyboardAvoid: {
     flex: 1,
@@ -682,45 +500,5 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.mutedInk,
     marginBottom: 10,
     lineHeight: 16,
-  },
-  modalFooter: {
-    paddingTop: 12,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: CAMPUS_HUB_COLORS.cardBorder,
-    ...CAMPUS_HUB_COLORS.footerShadow,
-  },
-  modalFooterInner: {
-    width: "100%",
-    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
-    alignSelf: "center",
-  },
-  submitBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: ACCENT_FILL,
-    height: 50,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    overflow: "hidden",
-    ...CAMPUS_HUB_COLORS.shadow,
-  },
-  submitBtnDisabled: {
-    backgroundColor: colors.slate200,
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  submitBtnText: {
-    fontFamily,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.white,
-    includeFontPadding: false,
-  },
-  submitBtnTextDisabled: {
-    color: CAMPUS_HUB_COLORS.mutedInk,
   },
 });

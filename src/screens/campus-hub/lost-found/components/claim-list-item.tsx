@@ -70,7 +70,6 @@ export const ClaimListItem = React.memo(function ClaimListItem({
 
   return (
     <View style={[styles.card, isAccepted && styles.cardAccepted]}>
-      {/* Claimant Header */}
       <View style={styles.topRow}>
         <Pressable
           style={({ pressed }) => [
@@ -108,7 +107,6 @@ export const ClaimListItem = React.memo(function ClaimListItem({
           </View>
         </Pressable>
 
-        {/* Status Pill */}
         <View
           style={[
             styles.statusBadge,
@@ -148,7 +146,6 @@ export const ClaimListItem = React.memo(function ClaimListItem({
         </View>
       </View>
 
-      {/* Verification Answer (if provided) */}
       {!!claim.answer && (
         <View style={styles.answerBox}>
           <View style={styles.answerLabelRow}>
@@ -165,10 +162,8 @@ export const ClaimListItem = React.memo(function ClaimListItem({
         </View>
       )}
 
-      {/* Message Content */}
       <Text style={styles.messageText}>{claim.message}</Text>
 
-      {/* Attached Proof Image Box */}
       {!!claim.proofImage && (
         <Pressable
           style={({ pressed }) => [
