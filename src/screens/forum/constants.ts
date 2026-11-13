@@ -10,6 +10,8 @@ export const BENTO_COLORS = {
   neutralText: colors.onBackground,
   subtleText: colors.slate500,
   subtleBorder: colors.borderCard,
+  cardBorder: colors.slate200,
+  contentMaxWidth: 720,
   primaryBlue: colors.semantic.blue.deep,
   emerald: colors.semantic.emerald.darker,
   emeraldBg: colors.semantic.emerald.border,
@@ -33,6 +35,13 @@ export const BENTO_COLORS = {
     shadowOpacity: 0.12,
     shadowRadius: 24,
     elevation: 4,
+  },
+  footerShadow: {
+    shadowColor: colors.navyDeep,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
 };
 

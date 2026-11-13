@@ -14,6 +14,7 @@ import { colors } from "@/theme/colors";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  titleFontFamily,
   formatCampusUserSubtitle,
 } from "../../shared/design-tokens";
 import type { LostFoundClaim } from "@/services/lost-found-service";
@@ -211,13 +212,13 @@ export function AcceptConfirmationSheet({
               accessibilityLabel="Accept and resolve claim"
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.white} />
               ) : (
                 <>
                   <Feather
                     name="check"
                     size={15}
-                    color="#ffffff"
+                    color={CAMPUS_HUB_COLORS.white}
                     style={styles.confirmIcon}
                   />
                   <Text style={styles.confirmBtnText}>Accept & Resolve</Text>
@@ -250,15 +251,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: colors.slate200,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     paddingTop: 10,
     paddingHorizontal: 20,
-    elevation: 8,
+    ...CAMPUS_HUB_COLORS.heroShadow,
   },
   handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+    width: 44,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: colors.slate300,
     alignSelf: "center",
     marginBottom: 20,
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
     borderColor: colors.semantic.emerald.mintBorderStrong,
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 19,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
@@ -435,7 +436,7 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     height: 50,
-    borderRadius: 14,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: colors.slate100,
     alignItems: "center",
     justifyContent: "center",
@@ -454,12 +455,12 @@ const styles = StyleSheet.create({
   confirmBtn: {
     flex: 1.8,
     height: 50,
-    borderRadius: 14,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: ACCENT,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 3,
+    ...CAMPUS_HUB_COLORS.shadow,
     overflow: "hidden",
   },
   confirmBtnDisabled: {
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
     includeFontPadding: false,
   },
 });

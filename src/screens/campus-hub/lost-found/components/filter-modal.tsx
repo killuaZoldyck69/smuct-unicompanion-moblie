@@ -20,7 +20,11 @@ import type {
 } from "@/services/lost-found-service";
 import { LOST_FOUND_CATEGORY_OPTIONS } from "@/features/campus-hub/lost-found-logic";
 import type { User } from "@/features/auth/types";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  titleFontFamily,
+} from "../../shared/design-tokens";
 
 export type TypeFilter = "ALL" | LostFoundType;
 export type StatusFilter = "ALL" | "ACTIVE" | "RESOLVED" | "CLOSED";
@@ -239,7 +243,7 @@ export function FilterModal({
                           size={13}
                           color={
                             isSelected
-                              ? "#ffffff"
+                              ? CAMPUS_HUB_COLORS.white
                               : CAMPUS_HUB_COLORS.subtleText
                           }
                           style={{ marginRight: 6 }}
@@ -386,7 +390,11 @@ export function FilterModal({
                   ]}
                 >
                   {localMyPosts && (
-                    <Feather name="check" size={14} color="#ffffff" />
+                    <Feather
+                      name="check"
+                      size={14}
+                      color={CAMPUS_HUB_COLORS.white}
+                    />
                   )}
                 </View>
               </Pressable>
@@ -481,9 +489,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.neutralText,
+    color: CAMPUS_HUB_COLORS.deepNavy,
   },
   subtitle: {
     fontSize: 12,
@@ -574,7 +582,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   choicePillTextSelected: {
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
     fontWeight: "700",
   },
   wrapRow: {
@@ -586,7 +594,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingVertical: 9,
     paddingHorizontal: 15,
-    borderRadius: 20,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: colors.slate50,
     borderWidth: 1,
     borderColor: colors.slate200,
@@ -606,7 +614,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   categoryPillTextSelected: {
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
     fontWeight: "800",
   },
   toggleCard: {
@@ -681,7 +689,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingVertical: 12,
     paddingHorizontal: 18,
-    borderRadius: 14,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: colors.slate100,
     borderWidth: 1,
     borderColor: colors.slate200,
@@ -702,7 +710,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     backgroundColor: ACCENT_FILL,
     paddingVertical: 13,
-    borderRadius: 14,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -715,7 +723,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     fontFamily,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
     includeFontPadding: false,
     fontVariant: ["tabular-nums"],
   },

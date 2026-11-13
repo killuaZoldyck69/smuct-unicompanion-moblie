@@ -97,7 +97,12 @@ export const DiscussionComposer = memo(function DiscussionComposer({
         <View>
           {isEditMode && (
             <View style={styles.editBanner}>
-              <Feather name="edit-2" size={12} color="#92400e" style={styles.bannerIcon} />
+              <Feather
+                name="edit-2"
+                size={12}
+                color={colors.semantic.amber.darkText}
+                style={styles.bannerIcon}
+              />
               <Text style={styles.editBannerText}>Editing response</Text>
               <TouchableOpacity
                 onPress={onCancelEdit}
@@ -171,13 +176,13 @@ export const DiscussionComposer = memo(function DiscussionComposer({
               {isSubmitting ? (
                 <ActivityIndicator
                   size="small"
-                  color={canSend ? "#ffffff" : BENTO_COLORS.subtleText}
+                  color={canSend ? BENTO_COLORS.white : BENTO_COLORS.subtleText}
                 />
               ) : (
                 <Feather
                   name={isEditMode ? "check" : "send"}
                   size={18}
-                  color={canSend ? "#ffffff" : BENTO_COLORS.subtleText}
+                  color={canSend ? BENTO_COLORS.white : BENTO_COLORS.subtleText}
                   style={!isEditMode ? styles.sendIcon : undefined}
                 />
               )}

@@ -2,7 +2,7 @@ import React, { memo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
-import { BENTO_COLORS, fontFamily } from "../../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../../constants";
 import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
 import type { ForumPostItem, ForumAuthor } from "../../types";
 import {
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     borderRadius: BENTO_COLORS.cardRadius,
     padding: 20,
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: BENTO_COLORS.cardBorder,
     marginBottom: 16,
     ...BENTO_COLORS.shadow,
   },
@@ -187,11 +187,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   title: {
-    fontFamily,
-    fontSize: 18,
+    fontFamily: titleFontFamily,
+    fontSize: 20,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
-    lineHeight: 24,
+    lineHeight: 26,
+    letterSpacing: -0.3,
     marginBottom: 14,
   },
   moderationBanner: {
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   responsesTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 16,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,

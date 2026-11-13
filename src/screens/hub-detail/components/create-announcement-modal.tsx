@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   ScrollView,
@@ -19,7 +18,11 @@ import Toast from "react-native-toast-message";
 
 import { useGoogleDrive } from "@/hooks/use-google-drive";
 import { RichTextEditor } from "@/components/rich-text-editor";
-import { fontFamily, titleFontFamily } from "@/theme/typography";
+import {
+  ModalKeyboardAvoidingView,
+  useSoftKeyboardOpen,
+} from "@/components/ui/modal-keyboard-avoider";
+import { fontFamily } from "@/theme/typography";
 
 interface StagedAnnouncementAttachment {
   id: string;
@@ -143,6 +146,7 @@ export default function CreateAnnouncementModal({
   courseTitle,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const isKeyboardOpen = useSoftKeyboardOpen(isVisible);
   const { ensureConnected, uploadFiles, deleteFiles } = useGoogleDrive();
   const [content, setContent] = useState("");
   const [plainTextContent, setPlainTextContent] = useState("");
@@ -420,8 +424,8 @@ export default function CreateAnnouncementModal({
           },
         ]}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        <ModalKeyboardAvoidingView
+          enabled={isVisible}
           style={{ flex: 1 }}
         >
           {/* Soft Bento Top Header - Matched to Canvas with Centered Title */}
@@ -742,7 +746,9 @@ export default function CreateAnnouncementModal({
             style={[
               styles.bottomBar,
               {
-                paddingBottom: Platform.OS === "ios" ? Math.max(insets.bottom, 10) : 10,
+                paddingBottom: isKeyboardOpen
+                  ? 10
+                  : Math.max(insets.bottom, 10),
               },
             ]}
           >
@@ -789,7 +795,7 @@ export default function CreateAnnouncementModal({
               )}
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </ModalKeyboardAvoidingView>
       </View>
     </Modal>
   );

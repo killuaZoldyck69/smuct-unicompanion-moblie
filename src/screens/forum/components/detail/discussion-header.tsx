@@ -2,7 +2,7 @@ import React, { memo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { BENTO_COLORS, fontFamily } from "../../constants";
+import { BENTO_COLORS, titleFontFamily } from "../../constants";
 
 interface DiscussionHeaderProps {
   canManage: boolean;
@@ -76,20 +76,25 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
     width: "100%",
-    maxWidth: 720,
+    maxWidth: BENTO_COLORS.contentMaxWidth,
     alignSelf: "center",
   },
   headerBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: BENTO_COLORS.pillRadius,
+    backgroundColor: BENTO_COLORS.white,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.cardBorder,
     justifyContent: "center",
     alignItems: "center",
+    ...BENTO_COLORS.shadow,
   },
   headerTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 17,
     fontWeight: "800",
+    letterSpacing: -0.2,
     color: BENTO_COLORS.deepNavy,
   },
   headerSpacer: {

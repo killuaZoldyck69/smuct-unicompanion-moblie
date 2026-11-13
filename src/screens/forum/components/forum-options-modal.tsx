@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../constants";
 
 interface ForumOptionsModalProps {
   visible: boolean;
@@ -285,35 +285,31 @@ const styles = StyleSheet.create({
   },
   sheetContainer: {
     backgroundColor: BENTO_COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
     borderWidth: 1,
     borderBottomWidth: 0,
     borderColor: BENTO_COLORS.subtleBorder,
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 10,
     width: "100%",
     maxWidth: 480,
     alignSelf: "center",
     marginBottom: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 16,
+    ...BENTO_COLORS.heroShadow,
   },
   dragHandleContainer: {
     alignItems: "center",
-    paddingTop: 4,
-    paddingBottom: 10,
+    paddingTop: 2,
+    paddingBottom: 8,
   },
   dragHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#cbd5e1",
+    width: 44,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.slate300,
   },
   headerRow: {
     flexDirection: "row",
@@ -325,15 +321,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontFamily,
-    fontSize: 16,
+    fontFamily: titleFontFamily,
+    fontSize: 18,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: BENTO_COLORS.slateBg,
     justifyContent: "center",
     alignItems: "center",

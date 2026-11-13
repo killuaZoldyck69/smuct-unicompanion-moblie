@@ -15,7 +15,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "@/theme/colors";
-import { BENTO_COLORS, fontFamily } from "../../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../../constants";
 
 interface UgcGuidelinesModalProps {
   visible: boolean;
@@ -190,13 +190,13 @@ export const UgcGuidelinesModal = memo(function UgcGuidelinesModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    backgroundColor: colors.scrimDark,
     justifyContent: "flex-end",
   },
   inlineOverlay: {
     ...StyleSheet.absoluteFill,
     zIndex: 200,
-    elevation: 20,
+    elevation: 6,
   },
   sheet: {
     backgroundColor: BENTO_COLORS.white,
@@ -213,10 +213,10 @@ const styles = StyleSheet.create({
     ...BENTO_COLORS.heroShadow,
   },
   dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.slate200,
+    width: 44,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.slate300,
     alignSelf: "center",
     marginBottom: 14,
   },
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,

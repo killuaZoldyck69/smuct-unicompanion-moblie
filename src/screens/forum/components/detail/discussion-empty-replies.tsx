@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BENTO_COLORS, fontFamily } from "../../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../../constants";
 
 export const DiscussionEmptyReplies = memo(function DiscussionEmptyReplies() {
   return (
@@ -27,16 +27,16 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: BENTO_COLORS.cardBorder,
     ...BENTO_COLORS.shadow,
   },
   emptyIcon: {
     marginBottom: 8,
   },
   emptyTitle: {
-    fontFamily,
-    fontSize: 15,
-    fontWeight: "700",
+    fontFamily: titleFontFamily,
+    fontSize: 16,
+    fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
     marginBottom: 4,
   },

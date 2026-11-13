@@ -71,7 +71,7 @@ export function LFImageGallery({
           />
         )}
         <View style={styles.zoomPill}>
-          <Feather name="maximize-2" size={11} color="#ffffff" />
+          <Feather name="maximize-2" size={11} color={CAMPUS_HUB_COLORS.white} />
           <Text style={styles.zoomPillText} maxFontSizeMultiplier={1.25}>
             Tap to enlarge
           </Text>
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     width: "100%",
     aspectRatio: 4 / 3,
     maxHeight: 340,
-    borderRadius: 20,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     overflow: "hidden",
     backgroundColor: colors.slate200,
     borderWidth: 1,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 14,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
     includeFontPadding: false,
   },
   thumbScrollView: {

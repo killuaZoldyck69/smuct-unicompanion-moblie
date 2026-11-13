@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../constants";
 import type { FilterType, ForumCounts } from "../types";
 
 export interface ForumFilterModalProps {
@@ -59,7 +59,7 @@ export function ForumFilterModal({
       description: "Browse all questions and community posts",
       count: counts.total,
       iconName: "message-square",
-      iconBg: "#f1f5f9",
+      iconBg: BENTO_COLORS.slateBg,
       iconColor: BENTO_COLORS.deepNavy,
     },
     {
@@ -68,8 +68,8 @@ export function ForumFilterModal({
       description: "Open questions waiting for answers",
       count: counts.open,
       iconName: "help-circle",
-      iconBg: "#fffbeb",
-      iconColor: "#d97706",
+      iconBg: colors.semantic.amber.soft,
+      iconColor: colors.semantic.amber.deep,
     },
     {
       key: "RESOLVED",
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
   },
@@ -322,25 +322,30 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   resetHeaderBtn: {
+    minHeight: 38,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "#f1f5f9",
+    borderRadius: 10,
+    backgroundColor: BENTO_COLORS.slateBg,
+    justifyContent: "center",
+    alignItems: "center",
   },
   resetHeaderBtnText: {
     fontSize: 13,
+    lineHeight: 16,
     fontFamily,
     fontWeight: "700",
     color: BENTO_COLORS.subtleText,
+    includeFontPadding: false,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#f1f5f9",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: BENTO_COLORS.slateBg,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -443,7 +448,7 @@ const styles = StyleSheet.create({
     backgroundColor: BENTO_COLORS.deepNavy,
     minHeight: 48,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: BENTO_COLORS.pillRadius,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",

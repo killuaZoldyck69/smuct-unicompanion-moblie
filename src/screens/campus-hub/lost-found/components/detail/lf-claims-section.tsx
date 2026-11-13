@@ -5,6 +5,7 @@ import { colors } from "@/theme/colors";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  titleFontFamily,
 } from "@/screens/campus-hub/shared/design-tokens";
 import { LostFoundClaimsSkeleton } from "@/screens/campus-hub/shared/skeleton-loaders";
 import { ClaimListItem } from "@/screens/campus-hub/lost-found/components/claim-list-item";
@@ -129,29 +130,31 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerTitle: {
-    fontFamily,
-    fontSize: 15,
+    fontFamily: titleFontFamily,
+    fontSize: 16,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     fontVariant: ["tabular-nums"],
   },
   emptyCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 16,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 24,
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    ...CAMPUS_HUB_COLORS.shadow,
   },
   errorCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 16,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 24,
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
     borderColor: colors.semantic.red.border,
+    ...CAMPUS_HUB_COLORS.shadow,
   },
   retryBtn: {
     marginTop: 4,
@@ -168,12 +171,12 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   emptyTitle: {
-    fontFamily,
-    fontSize: 14,
-    fontWeight: "700",
+    fontFamily: titleFontFamily,
+    fontSize: 15,
+    fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
   emptySubtitle: {

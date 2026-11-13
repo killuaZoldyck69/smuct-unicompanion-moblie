@@ -52,14 +52,21 @@ export const CAMPUS_HUB_COLORS = {
   shadow: {
     ...shadows.level1,
     shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 16,
   },
   heroShadow: {
     shadowColor: colors.navyDeep,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.14,
+    shadowOpacity: 0.12,
     shadowRadius: 24,
-    elevation: 6,
+    elevation: 4,
+  },
+  footerShadow: {
+    shadowColor: colors.navyDeep,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   // Lost vs Found semantic tones
   lostRose: colors.semantic.rose.solid,

@@ -258,7 +258,7 @@ describe("production readiness regression guards", () => {
       path.resolve("src/screens/forum/components/ugc/ugc-report-modal.tsx"),
       "utf8",
     );
-    assert.ok(reportModalSrc.includes('behavior="padding"'));
+    assert.ok(reportModalSrc.includes("<ModalKeyboardAvoidingView"));
     assert.ok(reportModalSrc.includes("flexShrink: 1"));
 
     const composerSrc = fs.readFileSync(

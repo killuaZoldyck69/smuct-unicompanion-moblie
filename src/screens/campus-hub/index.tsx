@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -50,12 +50,19 @@ export function CampusHub({ initialSection }: CampusHubProps) {
     return initialSection || getCampusHubActiveSection();
   });
 
+  const prevInitialSectionRef = useRef<HubSection | undefined>(undefined);
+
   useEffect(() => {
-    if (initialSection && initialSection !== activeSection) {
-      setCampusHubActiveSection(initialSection);
-      setActiveSection(initialSection);
+    // Only sync when the route param itself changes so manual section tab
+    // switches aren't overwritten back to `initialSection` on re-render.
+    if (initialSection !== prevInitialSectionRef.current) {
+      prevInitialSectionRef.current = initialSection;
+      if (initialSection) {
+        setCampusHubActiveSection(initialSection);
+        setActiveSection(initialSection);
+      }
     }
-  }, [initialSection, activeSection]);
+  }, [initialSection]);
 
   useEffect(() => {
     return subscribeCampusHubSection((newSec) => {

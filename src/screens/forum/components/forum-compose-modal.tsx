@@ -4,12 +4,10 @@ import {
   View,
   Text,
   Modal,
-  KeyboardAvoidingView,
   ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Platform,
   StyleSheet,
   StatusBar,
   Keyboard,
@@ -22,11 +20,16 @@ import {
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
+import {
+  ModalKeyboardAvoidingView,
+  useSoftKeyboardOpen,
+} from "@/components/ui/modal-keyboard-avoider";
 import { colors } from "@/theme/colors";
 
 import {
   BENTO_COLORS,
   fontFamily,
+  titleFontFamily,
   MAX_TITLE_LENGTH,
   MAX_DESCRIPTION_LENGTH,
 } from "../constants";
@@ -46,6 +49,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
   onSuccess,
 }: ForumComposeModalProps) {
   const insets = useSafeAreaInsets();
+  const isKeyboardOpen = useSoftKeyboardOpen(visible);
 
   const {
     title,
@@ -109,12 +113,12 @@ export const ForumComposeModal = memo(function ForumComposeModal({
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#ffffff"
+        backgroundColor={BENTO_COLORS.white}
         translucent={true}
       />
       <SafeAreaView
         style={styles.fullScreenContainer}
-        edges={["top", "bottom"]}
+        edges={["top"]}
       >
         {/* ── Top Header Navigation Bar ── */}
         <View style={styles.topHeaderBar}>
@@ -143,8 +147,8 @@ export const ForumComposeModal = memo(function ForumComposeModal({
         </View>
 
         {/* ── Form Scrollable Content ── */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        <ModalKeyboardAvoidingView
+          enabled={visible}
           style={styles.keyboardAvoid}
         >
           <ScrollView
@@ -204,7 +208,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
                       <Feather
                         name="x-circle"
                         size={12}
-                        color="#64748b"
+                        color={BENTO_COLORS.subtleText}
                         style={{ marginRight: 4 }}
                       />
                       <Text style={styles.clearBtnText}>Clear</Text>
@@ -233,7 +237,12 @@ export const ForumComposeModal = memo(function ForumComposeModal({
           </ScrollView>
 
           {/* ── Bottom Docked Action Footer ── */}
-          <View style={styles.footerContainer}>
+          <View
+            style={[
+              styles.footerContainer,
+              { paddingBottom: isKeyboardOpen ? 12 : Math.max(insets.bottom, 16) },
+            ]}
+          >
             <TouchableOpacity
               style={[
                 styles.submitPostBtn,
@@ -270,7 +279,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
               )}
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </ModalKeyboardAvoidingView>
 
         {/* ── Community Guidelines Consent Gate (inline overlay avoids stacked RN Modals on iOS) ── */}
         <UgcGuidelinesModal
@@ -292,11 +301,11 @@ export const ForumComposeModal = memo(function ForumComposeModal({
 const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: BENTO_COLORS.white,
   },
   topHeaderBar: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.slate100,
+    borderBottomColor: BENTO_COLORS.cardBorder,
     backgroundColor: BENTO_COLORS.white,
   },
   topHeaderInner: {
@@ -306,23 +315,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     width: "100%",
-    maxWidth: 720,
+    maxWidth: BENTO_COLORS.contentMaxWidth,
     alignSelf: "center",
   },
   centeredContent: {
     width: "100%",
-    maxWidth: 720,
+    maxWidth: BENTO_COLORS.contentMaxWidth,
     alignSelf: "center",
   },
   headerTitleGroup: {
     alignItems: "flex-start",
   },
   headerTitle: {
-    fontFamily: Platform.select({
-      web: "'Bricolage Grotesque', sans-serif",
-      android: "BricolageGrotesque_800ExtraBold",
-      default: "BricolageGrotesque_800ExtraBold",
-    }),
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
@@ -358,14 +363,14 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: colors.slate50,
+    backgroundColor: BENTO_COLORS.background,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingTop: 18,
     paddingBottom: 24,
     width: "100%",
-    maxWidth: 720,
+    maxWidth: BENTO_COLORS.contentMaxWidth,
     alignSelf: "center",
   },
   formGroup: {
@@ -392,7 +397,7 @@ const styles = StyleSheet.create({
   requiredAsterisk: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#ef4444",
+    color: colors.semantic.red.accent,
   },
   labelRightGroup: {
     flexDirection: "row",
@@ -405,7 +410,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
   },
   clearBtnText: {
     fontFamily,
@@ -435,17 +440,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: BENTO_COLORS.neutralText,
-    borderWidth: 1.5,
-    borderColor: colors.slate300,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.cardBorder,
   },
   footerContainer: {
     backgroundColor: BENTO_COLORS.white,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 14 : 16,
+    paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.slate100,
-    ...BENTO_COLORS.shadow,
+    borderTopColor: BENTO_COLORS.cardBorder,
+    ...BENTO_COLORS.footerShadow,
   },
   submitPostBtn: {
     flexDirection: "row",
@@ -454,8 +459,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     backgroundColor: BENTO_COLORS.deepNavy,
     paddingVertical: 12,
-    borderRadius: 14,
-    ...BENTO_COLORS.heroShadow,
+    borderRadius: BENTO_COLORS.pillRadius,
+    ...BENTO_COLORS.shadow,
   },
   submitBtnDisabled: {
     backgroundColor: colors.slate200,

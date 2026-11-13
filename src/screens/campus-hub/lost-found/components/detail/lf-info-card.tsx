@@ -5,6 +5,7 @@ import { colors } from "@/theme/colors";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  titleFontFamily,
   timeAgo,
   formatDateTime,
   formatCampusUserSubtitle,
@@ -324,7 +325,7 @@ export function LFInfoCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 20,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 18,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
@@ -370,21 +371,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 20,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     lineHeight: 26,
+    letterSpacing: -0.3,
     marginBottom: 8,
   },
   metaCard: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
     gap: 7,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     marginBottom: 8,
   },
   locationRow: {
@@ -396,7 +398,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12.5,
     fontWeight: "700",
-    color: "#1e293b",
+    color: colors.slate800,
     flex: 1,
   },
   dateTimeRow: {
@@ -412,7 +414,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.04)",
+    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   editedPill: {
     flexDirection: "row",

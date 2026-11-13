@@ -235,19 +235,21 @@ export function getClaimStatusPresentation(status: LostFoundClaimStatus): {
 }
 
 export function resolveLostFoundBackDestination(params: {
-  canGoBack: boolean;
+  canGoBack?: boolean;
   userRole?: string | null;
-}):
-  | { action: "BACK" }
-  | { action: "REPLACE"; href: "/(tabs)/admin_campus_hubs" | "/(tabs)/forum" } {
-  if (params.canGoBack) {
-    return { action: "BACK" };
-  }
+}): {
+  action: "REPLACE";
+  href: "/(tabs)/admin_campus_hubs" | "/(tabs)/forum";
+  params: { section: "LOST_FOUND" };
+} {
+  // Root _layout uses <Slot />, so router.back() from outside (tabs) lands on
+  // the initial Home tab instead of returning to the Campus Hub Lost & Found section.
   return {
     action: "REPLACE",
     href:
       params.userRole === "ADMIN"
         ? "/(tabs)/admin_campus_hubs"
         : "/(tabs)/forum",
+    params: { section: "LOST_FOUND" },
   };
 }

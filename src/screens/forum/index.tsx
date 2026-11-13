@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 6,
     width: "100%",
-    maxWidth: 720,
+    maxWidth: BENTO_COLORS.contentMaxWidth,
     alignSelf: "center",
   },
   headerContainer: {
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 2,
     width: "100%",
-    maxWidth: 720,
+    maxWidth: BENTO_COLORS.contentMaxWidth,
     alignSelf: "center",
   },
   activeFilterRow: {
@@ -378,12 +378,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: BENTO_COLORS.skyBg,
-    borderRadius: 20,
+    borderRadius: BENTO_COLORS.pillRadius,
     paddingVertical: 5,
     paddingHorizontal: 12,
     gap: 6,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: colors.semantic.blue.border,
   },
   activeChipText: {
     fontSize: 12,

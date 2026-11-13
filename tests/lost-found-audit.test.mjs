@@ -203,18 +203,30 @@ describe("lost-found-logic claim validation & state helpers", () => {
 
     assert.deepEqual(
       resolveLostFoundBackDestination({ canGoBack: true, userRole: "STUDENT" }),
-      { action: "BACK" },
+      {
+        action: "REPLACE",
+        href: "/(tabs)/forum",
+        params: { section: "LOST_FOUND" },
+      },
     );
     assert.deepEqual(
       resolveLostFoundBackDestination({ canGoBack: false, userRole: "ADMIN" }),
-      { action: "REPLACE", href: "/(tabs)/admin_campus_hubs" },
+      {
+        action: "REPLACE",
+        href: "/(tabs)/admin_campus_hubs",
+        params: { section: "LOST_FOUND" },
+      },
     );
     assert.deepEqual(
       resolveLostFoundBackDestination({
         canGoBack: false,
         userRole: "STUDENT",
       }),
-      { action: "REPLACE", href: "/(tabs)/forum" },
+      {
+        action: "REPLACE",
+        href: "/(tabs)/forum",
+        params: { section: "LOST_FOUND" },
+      },
     );
   });
 });
@@ -343,5 +355,12 @@ describe("lost-found UI & media regression guards", () => {
       "utf8",
     );
     assert.match(acceptSheetSrc, /isLoading\s*\?\s*undefined\s*:\s*onClose/);
+
+    const hubSrc = fs.readFileSync(
+      path.join(ROOT, "src/screens/campus-hub/index.tsx"),
+      "utf8",
+    );
+    assert.match(hubSrc, /prevInitialSectionRef/);
+    assert.doesNotMatch(hubSrc, /\[initialSection,\s*activeSection\]/);
   });
 });

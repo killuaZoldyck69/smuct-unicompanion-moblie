@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     borderRadius: BENTO_COLORS.cardRadius,
     padding: 16,
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: BENTO_COLORS.cardBorder,
     gap: 10,
     ...BENTO_COLORS.shadow,
   },

@@ -13,6 +13,7 @@ import { colors } from "@/theme/colors";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  titleFontFamily,
 } from "@/screens/campus-hub/shared/design-tokens";
 import { LocationBadge } from "@/screens/campus-hub/lost-found/components/status-badge";
 
@@ -166,10 +167,10 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
               accessibilityLabel="Confirm delete listing"
             >
               {isDeleting ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.white} />
               ) : (
                 <View style={styles.btnContentRow}>
-                  <Feather name="trash-2" size={15} color="#ffffff" />
+                  <Feather name="trash-2" size={15} color={CAMPUS_HUB_COLORS.white} />
                   <Text style={styles.deleteBtnText}>Delete</Text>
                 </View>
               )}
@@ -191,19 +192,15 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: "100%",
-    maxWidth: 360,
+    maxWidth: 380,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingVertical: 24,
     alignItems: "center",
-    elevation: 4,
-    shadowColor: colors.navyDeep,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
     borderWidth: 1,
-    borderColor: colors.navyAlpha06,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    ...CAMPUS_HUB_COLORS.heroShadow,
   },
   haloOuter: {
     width: 60,
@@ -225,7 +222,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
@@ -357,7 +354,7 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 17,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
     includeFontPadding: false,
   },
 });

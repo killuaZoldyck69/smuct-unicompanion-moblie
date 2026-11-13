@@ -212,6 +212,11 @@ export function LFMyClaimCard({
             accessibilityLabel="Resubmit claim (1 retry available)"
           >
             <Feather name="refresh-cw" size={13} color="#ffffff" />
+            <Feather
+              name="refresh-cw"
+              size={13}
+              color={CAMPUS_HUB_COLORS.white}
+            />
             <Text style={styles.resubmitBtnText}>
               Resubmit Claim (1 retry left)
             </Text>
@@ -236,16 +241,16 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 18,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 16,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
     gap: 10,
   },
   cardAccepted: {
-    borderColor: "#10b981",
-    backgroundColor: "#f0fdf4",
+    borderColor: colors.semantic.emerald.solid,
+    backgroundColor: colors.semantic.emerald.tint,
   },
   topRow: {
     flexDirection: "row",
@@ -253,7 +258,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   statusPill: {
-    backgroundColor: "#fef3c7",
+    backgroundColor: colors.semantic.amber.soft,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
@@ -316,7 +321,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: "#0f172a",
+    backgroundColor: CAMPUS_HUB_COLORS.deepNavy,
   },
   proofTextCol: {
     flex: 1,
@@ -378,6 +383,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

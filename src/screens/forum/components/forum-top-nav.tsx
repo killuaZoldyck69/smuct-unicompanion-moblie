@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO_COLORS, titleFontFamily } from "../constants";
 import { NotificationBell } from "@/components/ui/notification-bell";
 
 interface ForumTopNavProps {
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   navBrandTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 16,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
@@ -77,6 +77,8 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: BENTO_COLORS.pillRadius,
     backgroundColor: BENTO_COLORS.white,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.cardBorder,
     justifyContent: "center",
     alignItems: "center",
     ...BENTO_COLORS.shadow,

@@ -8,8 +8,6 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
   Image,
   Switch,
   ScrollView,
@@ -19,6 +17,7 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
+import { ModalKeyboardAvoidingView } from "@/components/ui/modal-keyboard-avoider";
 
 import api from "@/services/api";
 import { colors } from "@/theme/colors";
@@ -401,8 +400,9 @@ export default function HubReviewsScreen() {
         presentationStyle="pageSheet"
       >
         <SafeAreaView style={styles.modalContainer} accessibilityViewIsModal={true}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          <ModalKeyboardAvoidingView
+            enabled={isSettingsModalVisible}
+            statusBarTranslucent={false}
             style={{ flex: 1 }}
           >
             <View style={styles.modalHeader}>
@@ -507,7 +507,7 @@ export default function HubReviewsScreen() {
                 <Text style={styles.addQuestionText}>Add Question</Text>
               </TouchableOpacity>
             </ScrollView>
-          </KeyboardAvoidingView>
+          </ModalKeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 
@@ -518,8 +518,9 @@ export default function HubReviewsScreen() {
         presentationStyle="pageSheet"
       >
         <SafeAreaView style={styles.modalContainer} accessibilityViewIsModal={true}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          <ModalKeyboardAvoidingView
+            enabled={isReviewModalVisible}
+            statusBarTranslucent={false}
             style={{ flex: 1 }}
           >
             <View style={styles.modalHeader}>
@@ -641,7 +642,7 @@ export default function HubReviewsScreen() {
                 />
               </View>
             </ScrollView>
-          </KeyboardAvoidingView>
+          </ModalKeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>

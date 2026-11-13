@@ -15,6 +15,7 @@ import type { LostFoundAuthor } from "@/services/lost-found-service";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  titleFontFamily,
   formatCampusUserSubtitle,
 } from "../../shared/design-tokens";
 
@@ -63,7 +64,11 @@ export const HandoverCard = React.memo(function HandoverCard({
       {/* Header Banner */}
       <View style={styles.header}>
         <View style={styles.iconCircle}>
-          <Feather name="shield" size={18} color="#047857" />
+          <Feather
+            name="shield"
+            size={18}
+            color={colors.semantic.emerald.darker}
+          />
         </View>
         <View style={styles.headerTextCol}>
           <Text style={styles.headerTitle}>Item Handover Ready</Text>
@@ -202,7 +207,7 @@ export const HandoverCard = React.memo(function HandoverCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.semantic.emerald.tint,
-    borderRadius: 22,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 18,
     borderWidth: 1.5,
     borderColor: colors.semantic.emerald.mintBorder,
@@ -227,7 +232,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 16,
     fontWeight: "800",
     color: colors.semantic.emerald.darker,
@@ -266,13 +271,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
   },
   avatarPlaceholder: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -319,7 +324,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
+    borderTopColor: colors.slate200,
     paddingTop: 10,
   },
   contactBtn: {

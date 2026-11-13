@@ -6,11 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ModalKeyboardAvoidingView } from "@/components/ui/modal-keyboard-avoider";
 import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
 import { spacing, rounded } from "@/theme/layout";
@@ -46,8 +45,9 @@ export default function AskQuestionModal({
         edges={["top"]}
         accessibilityViewIsModal={true}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        <ModalKeyboardAvoidingView
+          enabled={isVisible}
+          statusBarTranslucent={false}
           style={{ flex: 1 }}
         >
           <View style={styles.modalHeader}>
@@ -94,7 +94,7 @@ export default function AskQuestionModal({
               accessibilityLabel="Question Details"
             />
           </View>
-        </KeyboardAvoidingView>
+        </ModalKeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );

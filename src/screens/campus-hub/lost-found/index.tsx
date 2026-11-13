@@ -34,6 +34,7 @@ import type {
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  titleFontFamily,
   timeAgo,
 } from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
@@ -433,7 +434,7 @@ export function LostFoundSection({
             <Feather
               name="rotate-ccw"
               size={13}
-              color="#ffffff"
+              color={CAMPUS_HUB_COLORS.white}
               style={{ marginRight: 6 }}
             />
             <Text style={styles.resetEmptyBtnText}>Reset Filters & Search</Text>
@@ -524,7 +525,7 @@ export function LostFoundSection({
               size={18}
               color={
                 activeFilterCount > 0
-                  ? "#ffffff"
+                  ? CAMPUS_HUB_COLORS.white
                   : CAMPUS_HUB_COLORS.neutralText
               }
             />
@@ -911,7 +912,11 @@ const LostFoundCard = React.memo(function LostFoundCard({
             accessibilityRole="button"
             accessibilityLabel={`Delete listing: ${post.title}`}
           >
-            <Feather name="trash-2" size={11} color="#dc2626" />
+            <Feather
+              name="trash-2"
+              size={11}
+              color={colors.semantic.red.accent}
+            />
             <Text style={styles.adminDeleteBtnText}>Delete</Text>
           </Pressable>
         )}
@@ -922,7 +927,7 @@ const LostFoundCard = React.memo(function LostFoundCard({
 
 const styles = StyleSheet.create({
   scroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 0,
   },
   separator: {
@@ -932,7 +937,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
     alignSelf: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   offlineBanner: {
     flexDirection: "row",
@@ -987,7 +992,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.dangerText,
   },
   topSearchContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 8,
     width: "100%",
     maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
@@ -1047,14 +1052,14 @@ const styles = StyleSheet.create({
   },
   filterBadge: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: -2,
+    right: -2,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
     backgroundColor: CAMPUS_HUB_COLORS.dangerText,
     borderWidth: 1.5,
-    borderColor: "#ffffff",
+    borderColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 3,
@@ -1064,7 +1069,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 12,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
     includeFontPadding: false,
     fontVariant: ["tabular-nums"],
   },
@@ -1113,7 +1118,7 @@ const styles = StyleSheet.create({
   // Compact Modern Stats Bar
   statsBar: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 20,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
@@ -1181,8 +1186,8 @@ const styles = StyleSheet.create({
   // Cards
   card: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 20,
-    padding: 14,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
+    padding: 16,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
@@ -1195,7 +1200,7 @@ const styles = StyleSheet.create({
     ...CAMPUS_HUB_COLORS.shadow,
   },
   cardResolved: {
-    backgroundColor: "#fcfdfd",
+    backgroundColor: colors.slate50,
     borderColor: colors.slate200,
   },
   cardLeft: {
@@ -1220,13 +1225,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fee2e2",
+    backgroundColor: colors.semantic.red.softBorder,
     width: "100%",
     minHeight: 36,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#fecaca",
+    borderColor: colors.semantic.red.border,
     gap: 4,
     marginTop: 6,
     overflow: "hidden",
@@ -1235,15 +1240,16 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10.5,
     fontWeight: "700",
-    color: "#dc2626",
+    color: colors.semantic.red.accent,
     letterSpacing: 0.1,
   },
   cardTitle: {
-    fontFamily,
-    fontSize: 15,
+    fontFamily: titleFontFamily,
+    fontSize: 15.5,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
-    lineHeight: 20,
+    lineHeight: 21,
+    letterSpacing: -0.2,
   },
   cardTitleResolved: {
     color: CAMPUS_HUB_COLORS.mutedInk,
@@ -1340,9 +1346,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   stateTitle: {
-    fontFamily,
-    fontSize: 16,
-    fontWeight: "700",
+    fontFamily: titleFontFamily,
+    fontSize: 17,
+    fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     textAlign: "center",
   },
@@ -1383,7 +1389,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   footerLoader: {
     paddingVertical: 18,
@@ -1413,6 +1419,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

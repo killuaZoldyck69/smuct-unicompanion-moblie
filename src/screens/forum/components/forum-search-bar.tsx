@@ -69,7 +69,7 @@ export const ForumSearchBar = memo(function ForumSearchBar({
           <Feather
             name="sliders"
             size={18}
-            color={activeFilterCount > 0 ? "#ffffff" : BENTO_COLORS.neutralText}
+            color={activeFilterCount > 0 ? BENTO_COLORS.white : BENTO_COLORS.neutralText}
           />
           {activeFilterCount > 0 && (
             <View style={styles.filterBadge}>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 48,
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: BENTO_COLORS.cardBorder,
     ...BENTO_COLORS.shadow,
   },
   searchIcon: {
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: BENTO_COLORS.white,
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: BENTO_COLORS.cardBorder,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",

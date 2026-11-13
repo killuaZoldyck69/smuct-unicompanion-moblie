@@ -4,12 +4,10 @@ import {
   View,
   Text,
   Modal,
-  KeyboardAvoidingView,
   ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Platform,
   StyleSheet,
   StatusBar,
   Keyboard,
@@ -19,10 +17,16 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
+import {
+  ModalKeyboardAvoidingView,
+  useSoftKeyboardOpen,
+} from "@/components/ui/modal-keyboard-avoider";
+import { colors } from "@/theme/colors";
 
 import {
   BENTO_COLORS,
   fontFamily,
+  titleFontFamily,
   MAX_TITLE_LENGTH,
   MAX_DESCRIPTION_LENGTH,
 } from "../../constants";
@@ -48,6 +52,7 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
   isSaving,
 }: DiscussionEditModalProps) {
   const insets = useSafeAreaInsets();
+  const isKeyboardOpen = useSoftKeyboardOpen(visible);
 
   const [plainText, setPlainText] = useState(() =>
     (form.description || "")
@@ -133,7 +138,7 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
       />
       <SafeAreaView
         style={styles.fullScreenContainer}
-        edges={["top", "bottom"]}
+        edges={["top"]}
       >
         {/* ── Top Header Navigation Bar ── */}
         <View style={styles.topHeader}>
@@ -160,8 +165,8 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
         </View>
 
         {/* ── Form Scrollable Content ── */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        <ModalKeyboardAvoidingView
+          enabled={visible}
           style={styles.keyboardAvoid}
         >
           <ScrollView
@@ -250,7 +255,12 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
           </ScrollView>
 
           {/* ── Bottom Docked Action Footer ── */}
-          <View style={styles.footerContainer}>
+          <View
+            style={[
+              styles.footerContainer,
+              { paddingBottom: isKeyboardOpen ? 12 : Math.max(insets.bottom, 16) },
+            ]}
+          >
             <TouchableOpacity
               style={[
                 styles.saveEditBtn,
@@ -264,13 +274,13 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
               accessibilityLabel="Save question changes"
             >
               {isSaving ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <>
                   <Feather
                     name="check-circle"
                     size={16}
-                    color="#ffffff"
+                    color={colors.white}
                     style={styles.submitIcon}
                   />
                   <Text style={styles.saveEditBtnText}>Save Changes</Text>
@@ -278,7 +288,7 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
               )}
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </ModalKeyboardAvoidingView>
 
         {/* ── Toast Overlay Inside Modal ── */}
         <Toast
@@ -293,7 +303,7 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
 const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: BENTO_COLORS.white,
   },
   topHeader: {
     flexDirection: "row",
@@ -302,21 +312,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-    backgroundColor: "#ffffff",
+    borderBottomColor: BENTO_COLORS.cardBorder,
+    backgroundColor: BENTO_COLORS.white,
   },
   headerTitleGroup: {
     alignItems: "flex-start",
   },
   headerTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
     letterSpacing: -0.3,
   },
   forumBadge: {
-    backgroundColor: "#e0f2fe",
+    backgroundColor: BENTO_COLORS.skyBg,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -325,16 +335,18 @@ const styles = StyleSheet.create({
   },
   forumBadgeText: {
     fontFamily,
-    fontSize: 9.5,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
-    color: "#0369a1",
+    color: BENTO_COLORS.sky,
     letterSpacing: 0.6,
+    includeFontPadding: false,
   },
   circleBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: BENTO_COLORS.slateBg,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -343,12 +355,15 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: BENTO_COLORS.background,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingTop: 18,
     paddingBottom: 24,
+    width: "100%",
+    maxWidth: BENTO_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   formGroup: {
     marginBottom: 20,
@@ -374,7 +389,7 @@ const styles = StyleSheet.create({
   requiredAsterisk: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#ef4444",
+    color: colors.semantic.red.accent,
   },
   labelRightGroup: {
     flexDirection: "row",
@@ -387,13 +402,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
   },
   clearBtnText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: "#475569",
+    color: colors.slate600,
   },
   counterText: {
     fontFamily,
@@ -402,11 +417,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   counterWarning: {
-    color: "#f59e0b",
+    color: colors.semantic.amber.deep,
     fontWeight: "700",
   },
   titleInput: {
-    backgroundColor: "#ffffff",
+    backgroundColor: BENTO_COLORS.white,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -414,29 +429,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: BENTO_COLORS.neutralText,
-    borderWidth: 1.5,
-    borderColor: "#cbd5e1",
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.cardBorder,
   },
   footerContainer: {
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 16,
+    backgroundColor: BENTO_COLORS.white,
+    paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 14 : 16,
+    paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-    ...BENTO_COLORS.shadow,
+    borderTopColor: BENTO_COLORS.cardBorder,
+    ...BENTO_COLORS.footerShadow,
   },
   saveEditBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 48,
     backgroundColor: BENTO_COLORS.deepNavy,
-    paddingVertical: 14,
-    borderRadius: 14,
-    ...BENTO_COLORS.heroShadow,
+    paddingVertical: 12,
+    borderRadius: BENTO_COLORS.pillRadius,
+    width: "100%",
+    maxWidth: BENTO_COLORS.contentMaxWidth,
+    alignSelf: "center",
+    ...BENTO_COLORS.shadow,
   },
   saveBtnDisabled: {
-    backgroundColor: "#94a3b8",
+    backgroundColor: colors.slate300,
     opacity: 0.65,
     elevation: 0,
     shadowOpacity: 0,
@@ -448,6 +467,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 15,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.white,
   },
 });

@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
 } from "react-native";
@@ -19,8 +18,12 @@ import type {
   UgcReportReason,
   UgcReportTargetType,
 } from "@/services/ugc-service";
+import {
+  ModalKeyboardAvoidingView,
+  useSoftKeyboardOpen,
+} from "@/components/ui/modal-keyboard-avoider";
 import { colors } from "@/theme/colors";
-import { BENTO_COLORS, fontFamily } from "../../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../../constants";
 
 interface UgcReportModalProps {
   visible: boolean;
@@ -78,8 +81,9 @@ export const UgcReportModal = memo(function UgcReportModal({
   isSubmitting = false,
 }: UgcReportModalProps) {
   const insets = useSafeAreaInsets();
+  const isKeyboardOpen = useSoftKeyboardOpen(visible);
   const { height: windowHeight } = useWindowDimensions();
-  const bottomPadding = Math.max(insets.bottom, 20) + 12;
+  const bottomPadding = isKeyboardOpen ? 16 : Math.max(insets.bottom, 20) + 12;
   const [reason, setReason] = useState<UgcReportReason>("HARASSMENT");
   const [details, setDetails] = useState("");
 
@@ -107,7 +111,7 @@ export const UgcReportModal = memo(function UgcReportModal({
       animationType="slide"
       onRequestClose={() => !isSubmitting && onClose()}
     >
-      <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
+      <ModalKeyboardAvoidingView enabled={visible} style={styles.overlay}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -263,7 +267,7 @@ export const UgcReportModal = memo(function UgcReportModal({
             </Pressable>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </ModalKeyboardAvoidingView>
     </Modal>
   );
 });
@@ -289,10 +293,10 @@ const styles = StyleSheet.create({
     ...BENTO_COLORS.heroShadow,
   },
   dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.slate200,
+    width: 44,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.slate300,
     alignSelf: "center",
     marginBottom: 12,
   },
@@ -318,8 +322,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily,
-    fontSize: 17,
+    fontFamily: titleFontFamily,
+    fontSize: 18,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
   },

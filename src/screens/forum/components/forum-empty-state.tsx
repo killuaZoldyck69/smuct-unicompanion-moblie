@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../constants";
 import type { FilterType } from "../types";
 
 interface ForumEmptyStateProps {
@@ -68,19 +68,21 @@ const styles = StyleSheet.create({
     padding: 34,
     alignItems: "center",
     marginTop: 10,
+    borderWidth: 1,
+    borderColor: BENTO_COLORS.cardBorder,
     ...BENTO_COLORS.shadow,
   },
   emptyIconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: BENTO_COLORS.slateBg,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 14,
   },
   emptyTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
@@ -110,6 +112,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#ffffff",
+    color: BENTO_COLORS.white,
   },
 });

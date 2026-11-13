@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -21,6 +20,10 @@ import {
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
+import {
+  ModalKeyboardAvoidingView,
+  useSoftKeyboardOpen,
+} from "@/components/ui/modal-keyboard-avoider";
 import { colors } from "@/theme/colors";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useNetworkStatus } from "@/hooks/use-network-status";
@@ -52,7 +55,11 @@ import type {
   LostFoundType,
 } from "@/services/lost-found-service";
 import type { User } from "@/features/auth/types";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  titleFontFamily,
+} from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
 
 export interface LostFoundFormModalProps {
@@ -121,6 +128,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
   const canEditVerification = !isEdit || isAuthor;
 
   const insets = useSafeAreaInsets();
+  const isKeyboardOpen = useSoftKeyboardOpen(visible);
   const { user: fetchedUser } = useCurrentUser();
   const currentUser = currentUserProp ?? fetchedUser;
   const { isOffline } = useNetworkStatus();
@@ -426,14 +434,14 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#ffffff"
+        backgroundColor={CAMPUS_HUB_COLORS.white}
         translucent={true}
       />
       <SafeAreaView style={styles.fullScreenContainer} edges={["top"]}>
         <View style={styles.topHeader}>
           <View style={styles.topHeaderInner}>
             <View style={styles.headerTitleGroup}>
-              <Text style={styles.headerTitle} numberOfLines={1}>
+              <Text style={styles.headerTitle}>
                 {isEdit ? "Edit Listing" : "Lost & Found Post"}
               </Text>
               <View style={styles.hubBadge}>
@@ -468,8 +476,8 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
           </View>
         </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        <ModalKeyboardAvoidingView
+          enabled={visible}
           style={styles.keyboardAvoid}
         >
           <ScrollView
@@ -619,7 +627,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
                         <Feather
                           name="check"
                           size={12}
-                          color="#ffffff"
+                          color={CAMPUS_HUB_COLORS.white}
                           style={{ marginRight: 4 }}
                         />
                       )}
@@ -731,7 +739,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
           <View
             style={[
               styles.modalFooter,
-              { paddingBottom: Math.max(insets.bottom, 16) },
+              { paddingBottom: isKeyboardOpen ? 12 : Math.max(insets.bottom, 16) },
             ]}
           >
             <View style={styles.modalFooterInner}>
@@ -757,13 +765,16 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
                 }
               >
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
+                  <ActivityIndicator
+                    size="small"
+                    color={CAMPUS_HUB_COLORS.white}
+                  />
                 ) : (
                   <>
                     <Feather
                       name={isEdit ? "check" : "send"}
                       size={16}
-                      color="#ffffff"
+                      color={CAMPUS_HUB_COLORS.white}
                       style={{ marginRight: 8 }}
                     />
                     <Text style={styles.submitBtnText}>
@@ -774,7 +785,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
               </Pressable>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </ModalKeyboardAvoidingView>
 
         {!isEdit && (
           <UgcGuidelinesModal
@@ -796,12 +807,12 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
 const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   topHeader: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.slate100,
-    backgroundColor: "#ffffff",
+    borderBottomColor: CAMPUS_HUB_COLORS.cardBorder,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   topHeaderInner: {
     flexDirection: "row",
@@ -814,33 +825,32 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   headerTitleGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
     flex: 1,
-    marginRight: 8,
+    alignItems: "flex-start",
+    marginRight: 12,
   },
   headerTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: -0.3,
-    flexShrink: 1,
   },
   hubBadge: {
     backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 6,
+    marginTop: 4,
+    alignSelf: "flex-start",
   },
   hubBadgeText: {
     fontFamily,
-    fontSize: 9,
-    lineHeight: 12,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.lostFoundAccentText,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     includeFontPadding: false,
   },
   circleBtn: {
@@ -857,6 +867,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: CAMPUS_HUB_COLORS.background,
   },
   scroll: {
     padding: 20,
@@ -935,8 +946,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.neutralText,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   textArea: {
     minHeight: 100,
@@ -970,7 +981,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
   },
   chipTextSelected: {
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   verificationCard: {
     backgroundColor: CAMPUS_HUB_COLORS.skyTint,
@@ -1007,12 +1018,8 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: colors.slate200,
-    elevation: 2,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    borderTopColor: CAMPUS_HUB_COLORS.cardBorder,
+    ...CAMPUS_HUB_COLORS.footerShadow,
   },
   modalFooterInner: {
     width: "100%",
@@ -1030,7 +1037,7 @@ const styles = StyleSheet.create({
     ...CAMPUS_HUB_COLORS.shadow,
   },
   submitBtnDisabled: {
-    backgroundColor: "#cbd5e1",
+    backgroundColor: colors.slate300,
     opacity: 0.65,
     elevation: 0,
     shadowOpacity: 0,
@@ -1039,6 +1046,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

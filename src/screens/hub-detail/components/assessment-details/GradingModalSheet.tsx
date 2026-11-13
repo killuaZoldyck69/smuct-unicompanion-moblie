@@ -7,16 +7,15 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
-  KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import { ModalKeyboardAvoidingView } from "@/components/ui/modal-keyboard-avoider";
 import { GradingStudentTarget } from "./types";
-import { fontFamily, titleFontFamily } from "@/theme/typography";
+import { fontFamily } from "@/theme/typography";
 
 interface GradingModalSheetProps {
   target: GradingStudentTarget | null;
@@ -95,7 +94,8 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
       statusBarTranslucent={true}
       onRequestClose={onClose}
     >
-      <View
+      <ModalKeyboardAvoidingView
+        enabled={!!target}
         style={[
           styles.overlay,
           {
@@ -107,11 +107,7 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={StyleSheet.absoluteFill} />
         </TouchableWithoutFeedback>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.keyboardAvoid}
-          pointerEvents="box-none"
-        >
+        <View style={styles.keyboardAvoid} pointerEvents="box-none">
           <View style={styles.sheetContainer}>
               {/* Header */}
               <View style={styles.headerRow}>
@@ -192,8 +188,8 @@ export const GradingModalSheet: React.FC<GradingModalSheetProps> = ({
                 </TouchableOpacity>
               </View>
           </View>
-        </KeyboardAvoidingView>
-      </View>
+        </View>
+      </ModalKeyboardAvoidingView>
     </Modal>
   );
 };

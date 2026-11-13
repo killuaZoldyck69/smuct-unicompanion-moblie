@@ -35,7 +35,7 @@ import type {
 } from "@/services/ugc-service";
 import { AuthorDetailsModal } from "@/screens/campus-hub/shared/author-modal";
 import { colors } from "@/theme/colors";
-import { BENTO_COLORS, fontFamily } from "../../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../../constants";
 import { ModerationReportCard } from "./moderation-report-card";
 
 interface AdminModerationModalProps {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 19,
     lineHeight: 24,
     fontWeight: "800",

@@ -7,7 +7,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   StatusBar,
@@ -20,6 +19,10 @@ import {
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
+import {
+  ModalKeyboardAvoidingView,
+  useSoftKeyboardOpen,
+} from "@/components/ui/modal-keyboard-avoider";
 import { colors } from "@/theme/colors";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -45,7 +48,11 @@ import type {
   LostFoundPost,
   CreateClaimInput,
 } from "@/services/lost-found-service";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  titleFontFamily,
+} from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
 import { LocationBadge } from "./status-badge";
 
@@ -66,6 +73,7 @@ export const ClaimModal = React.memo(function ClaimModal({
   onSuccess,
 }: ClaimModalProps) {
   const insets = useSafeAreaInsets();
+  const isKeyboardOpen = useSoftKeyboardOpen(visible);
   const { user: currentUser } = useCurrentUser();
   const { isOffline } = useNetworkStatus();
   const [message, setMessage] = useState("");
@@ -245,7 +253,7 @@ export const ClaimModal = React.memo(function ClaimModal({
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#ffffff"
+        backgroundColor={CAMPUS_HUB_COLORS.white}
         translucent={true}
       />
       <SafeAreaView style={styles.fullScreenContainer} edges={["top"]}>
@@ -253,9 +261,7 @@ export const ClaimModal = React.memo(function ClaimModal({
         <View style={styles.topHeader}>
           <View style={styles.topHeaderInner}>
             <View style={styles.headerTitleGroup}>
-              <Text style={styles.headerTitle} numberOfLines={1}>
-                {claimActionTitle}
-              </Text>
+              <Text style={styles.headerTitle}>{claimActionTitle}</Text>
               <View style={styles.hubBadge}>
                 <Text
                   style={styles.hubBadgeText}
@@ -289,9 +295,9 @@ export const ClaimModal = React.memo(function ClaimModal({
           </View>
         </View>
 
-        <KeyboardAvoidingView
+        <ModalKeyboardAvoidingView
+          enabled={visible}
           style={styles.keyboardAvoid}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           {/* Scrollable form content */}
           <ScrollView
@@ -418,7 +424,7 @@ export const ClaimModal = React.memo(function ClaimModal({
           <View
             style={[
               styles.modalFooter,
-              { paddingBottom: Math.max(insets.bottom, 16) },
+              { paddingBottom: isKeyboardOpen ? 12 : Math.max(insets.bottom, 16) },
             ]}
           >
             <View style={styles.modalFooterInner}>
@@ -442,13 +448,16 @@ export const ClaimModal = React.memo(function ClaimModal({
                 accessibilityLabel="Submit claim"
               >
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
+                  <ActivityIndicator
+                    size="small"
+                    color={CAMPUS_HUB_COLORS.white}
+                  />
                 ) : (
                   <>
                     <Feather
                       name="send"
                       size={16}
-                      color="#ffffff"
+                      color={CAMPUS_HUB_COLORS.white}
                       style={{ marginRight: 8 }}
                     />
                     <Text style={styles.submitBtnText}>Submit Claim</Text>
@@ -457,7 +466,7 @@ export const ClaimModal = React.memo(function ClaimModal({
               </Pressable>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </ModalKeyboardAvoidingView>
 
         <UgcGuidelinesModal
           visible={ugcRetry.showGuidelines}
@@ -478,12 +487,12 @@ export const ClaimModal = React.memo(function ClaimModal({
 const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   topHeader: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.slate100,
-    backgroundColor: "#ffffff",
+    borderBottomColor: CAMPUS_HUB_COLORS.cardBorder,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   topHeaderInner: {
     flexDirection: "row",
@@ -496,33 +505,32 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   headerTitleGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
     flex: 1,
-    marginRight: 8,
+    alignItems: "flex-start",
+    marginRight: 12,
   },
   headerTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: -0.3,
-    flexShrink: 1,
   },
   hubBadge: {
     backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 6,
+    marginTop: 4,
+    alignSelf: "flex-start",
   },
   hubBadgeText: {
     fontFamily,
-    fontSize: 9,
-    lineHeight: 12,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.lostFoundAccentText,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     includeFontPadding: false,
   },
   circleBtn: {
@@ -539,6 +547,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: CAMPUS_HUB_COLORS.background,
   },
   scroll: {
     padding: 20,
@@ -676,12 +685,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: colors.slate200,
-    elevation: 2,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    borderTopColor: CAMPUS_HUB_COLORS.cardBorder,
+    ...CAMPUS_HUB_COLORS.footerShadow,
   },
   modalFooterInner: {
     width: "100%",
@@ -711,6 +716,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

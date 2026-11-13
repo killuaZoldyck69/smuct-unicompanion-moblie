@@ -7,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Keyboard,
@@ -22,6 +21,10 @@ import { Feather } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
+import {
+  ModalKeyboardAvoidingView,
+  useSoftKeyboardOpen,
+} from "@/components/ui/modal-keyboard-avoider";
 
 import { useCreateMarketplacePost } from "@/features/campus-hub/useMarketplace";
 import {
@@ -83,6 +86,7 @@ export const ComposeMarketplaceModal = React.memo(
     currentUser,
   }: ComposeMarketplaceModalProps) {
     const insets = useSafeAreaInsets();
+    const isKeyboardOpen = useSoftKeyboardOpen(visible);
 
     const initialPhone = useMemo(() => {
       if (currentUser?.phoneNumber) {
@@ -146,12 +150,6 @@ export const ComposeMarketplaceModal = React.memo(
       setForm((prev) => ({ ...prev, price: sanitized }));
     }, []);
 
-    const isPriceValid = useMemo(() => {
-      if (!form.price.trim()) return true;
-      const num = parseFloat(form.price);
-      return !isNaN(num) && num >= 0 && num <= 10000000;
-    }, [form.price]);
-
     const formattedPricePreview = useMemo(() => {
       if (!form.price.trim()) return "";
       const num = parseFloat(form.price);
@@ -203,13 +201,6 @@ export const ComposeMarketplaceModal = React.memo(
         onClose();
       }
     }, [hasContent, initialPhone, onClose, cleanupUploadedImages]);
-
-    const canSubmit =
-      form.title.trim().length >= 2 &&
-      form.description.trim().length >= 5 &&
-      isPriceValid &&
-      isPhoneValid &&
-      !isSubmitting;
 
     const handleSubmit = useCallback(async () => {
       if (isSubmitting) return;
@@ -404,8 +395,8 @@ export const ComposeMarketplaceModal = React.memo(
             </TouchableOpacity>
           </View>
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          <ModalKeyboardAvoidingView
+            enabled={visible}
             style={styles.keyboardAvoid}
           >
             <ScrollView
@@ -689,7 +680,7 @@ export const ComposeMarketplaceModal = React.memo(
             <View
               style={[
                 styles.footerBar,
-                { paddingBottom: Math.max(insets.bottom, 16) },
+                { paddingBottom: isKeyboardOpen ? 12 : Math.max(insets.bottom, 16) },
               ]}
             >
               <TouchableOpacity
@@ -731,7 +722,7 @@ export const ComposeMarketplaceModal = React.memo(
                 )}
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
+          </ModalKeyboardAvoidingView>
 
           {/* Embedded Toast Overlay for Modal Viewport */}
           <Toast

@@ -8,7 +8,8 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { colors } from "@/theme/colors";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../constants";
 
 interface ForumConfirmModalProps {
   visible: boolean;
@@ -122,7 +123,7 @@ export const ForumConfirmModal = memo(function ForumConfirmModal({
               accessibilityLabel={confirmLabel}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={BENTO_COLORS.white} />
               ) : (
                 <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
               )}
@@ -137,7 +138,7 @@ export const ForumConfirmModal = memo(function ForumConfirmModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    backgroundColor: colors.scrimDark,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
@@ -146,11 +147,11 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 380,
     backgroundColor: BENTO_COLORS.white,
-    borderRadius: 26,
+    borderRadius: 24,
     padding: 24,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: BENTO_COLORS.cardBorder,
     ...BENTO_COLORS.heroShadow,
   },
   haloOuter: {
@@ -168,14 +169,10 @@ const styles = StyleSheet.create({
     backgroundColor: BENTO_COLORS.white,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    ...BENTO_COLORS.shadow,
   },
   titleText: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 18,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
@@ -225,6 +222,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
-    color: "#ffffff",
+    color: BENTO_COLORS.white,
   },
 });

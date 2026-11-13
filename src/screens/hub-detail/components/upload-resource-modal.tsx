@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Switch,
 } from "react-native"; // 👈 Notice SafeAreaView is REMOVED from here
 import { SafeAreaView } from "react-native-safe-area-context"; // 👈 ADDED HERE
 import { Feather } from "@expo/vector-icons";
+import { ModalKeyboardAvoidingView } from "@/components/ui/modal-keyboard-avoider";
 import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
 import { spacing, rounded } from "@/theme/layout";
@@ -62,8 +62,9 @@ export default function UploadResourceModal({
 
   return (
     <Modal visible={isVisible} animationType="slide" transparent>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <ModalKeyboardAvoidingView
+        enabled={isVisible}
+        statusBarTranslucent={false}
         style={styles.modalOverlay}
       >
         <SafeAreaView
@@ -137,7 +138,7 @@ export default function UploadResourceModal({
             )}
           </TouchableOpacity>
         </SafeAreaView>
-      </KeyboardAvoidingView>
+      </ModalKeyboardAvoidingView>
     </Modal>
   );
 }

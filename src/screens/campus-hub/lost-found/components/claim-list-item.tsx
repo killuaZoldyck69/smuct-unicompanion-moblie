@@ -200,7 +200,7 @@ export const ClaimListItem = React.memo(function ClaimListItem({
               />
             )}
             <View style={styles.proofOverlay}>
-              <Feather name="maximize-2" size={12} color="#ffffff" />
+              <Feather name="maximize-2" size={12} color={CAMPUS_HUB_COLORS.white} />
             </View>
           </View>
           <View style={styles.proofTextCol}>
@@ -283,13 +283,16 @@ export const ClaimListItem = React.memo(function ClaimListItem({
               accessibilityLabel="Accept claim and verify owner"
             >
               {isAccepting ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator
+                  size="small"
+                  color={CAMPUS_HUB_COLORS.white}
+                />
               ) : (
                 <>
                   <Feather
                     name="check"
                     size={13}
-                    color="#ffffff"
+                    color={CAMPUS_HUB_COLORS.white}
                     style={{ marginRight: 4 }}
                   />
                   <Text style={styles.acceptBtnText}>Accept Claim</Text>
@@ -334,13 +337,13 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
   },
   avatarPlaceholder: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -424,7 +427,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "600",
-    color: "#0f172a",
+    color: CAMPUS_HUB_COLORS.deepNavy,
   },
   messageText: {
     fontFamily,
@@ -453,7 +456,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "#0f172a",
+    backgroundColor: CAMPUS_HUB_COLORS.deepNavy,
   },
   proofThumb: {
     width: "100%",
@@ -550,6 +553,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

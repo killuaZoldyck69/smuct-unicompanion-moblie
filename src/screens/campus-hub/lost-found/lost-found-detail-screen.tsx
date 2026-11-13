@@ -47,6 +47,7 @@ import type { UgcReportReason } from "@/services/ugc-service";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  titleFontFamily,
 } from "@/screens/campus-hub/shared/design-tokens";
 import {
   AuthorDetailsModal,
@@ -269,16 +270,11 @@ export function LostFoundDetailScreen() {
   const handleBack = useCallback(() => {
     setCampusHubActiveSection("LOST_FOUND");
     const destination = resolveLostFoundBackDestination({
-      canGoBack: router.canGoBack(),
       userRole: currentUserRole,
     });
-    if (destination.action === "BACK") {
-      router.back();
-      return;
-    }
     router.replace({
       pathname: destination.href as any,
-      params: { section: "LOST_FOUND" },
+      params: destination.params,
     });
   }, [currentUserRole, router]);
 
@@ -903,7 +899,10 @@ export function LostFoundDetailScreen() {
                     }
                   >
                     {isConfirmPending ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
+                      <ActivityIndicator
+                        size="small"
+                        color={CAMPUS_HUB_COLORS.white}
+                      />
                     ) : (
                       <Text style={styles.confirmActionText}>
                         {pendingConfirm?.confirmLabel ?? "Confirm"}
@@ -965,7 +964,7 @@ export function LostFoundDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: CAMPUS_HUB_COLORS.background,
   },
   center: {
     flex: 1,
@@ -1006,7 +1005,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   secondaryBackBtn: {
     paddingHorizontal: 22,
@@ -1025,7 +1024,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
   scroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
     gap: 14,
     width: "100%",
@@ -1042,14 +1041,10 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     paddingTop: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     borderTopWidth: 1,
-    borderTopColor: colors.slate200,
-    elevation: 2,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    borderTopColor: CAMPUS_HUB_COLORS.cardBorder,
+    ...CAMPUS_HUB_COLORS.footerShadow,
   },
   dockedFooterInner: {
     width: "100%",
@@ -1073,13 +1068,13 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 15,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   bannerOuter: {
     width: "100%",
     maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
     alignSelf: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   offlineBanner: {
     flexDirection: "row",
@@ -1120,8 +1115,8 @@ const styles = StyleSheet.create({
     ...CAMPUS_HUB_COLORS.heroShadow,
   },
   confirmTitle: {
-    fontFamily,
-    fontSize: 17,
+    fontFamily: titleFontFamily,
+    fontSize: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
@@ -1176,6 +1171,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13.5,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

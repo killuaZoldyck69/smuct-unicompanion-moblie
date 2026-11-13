@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
-import { BENTO_COLORS, fontFamily } from "../constants";
+import { BENTO_COLORS, fontFamily, titleFontFamily } from "../constants";
 import { RichTextSnippet } from "@/screens/campus-hub/shared/rich-text-snippet";
 import type { ForumPostItem } from "../types";
 import {
@@ -195,7 +195,7 @@ export const ForumCard = memo(function ForumCard({
             accessibilityRole="button"
             accessibilityLabel="Discussion options"
           >
-            <Feather name="more-vertical" size={18} color="#64748b" />
+            <Feather name="more-vertical" size={18} color={BENTO_COLORS.subtleText} />
           </TouchableOpacity>
         </View>
       )}
@@ -232,7 +232,7 @@ export const ForumCard = memo(function ForumCard({
                     }}
                     activeOpacity={0.65}
                   >
-                    <Feather name="check-circle" size={15} color="#16a34a" />
+                    <Feather name="check-circle" size={15} color={BENTO_COLORS.emerald} />
                     <Text style={styles.dropdownItemText}>Mark as Solved</Text>
                   </TouchableOpacity>
                   <View style={styles.dropdownDivider} />
@@ -265,7 +265,7 @@ export const ForumCard = memo(function ForumCard({
                   }}
                   activeOpacity={0.65}
                 >
-                  <Feather name="trash-2" size={15} color="#dc2626" />
+                  <Feather name="trash-2" size={15} color={BENTO_COLORS.danger} />
                   <Text style={[styles.dropdownItemText, styles.dropdownDeleteText]}>
                     Delete
                   </Text>
@@ -283,7 +283,7 @@ export const ForumCard = memo(function ForumCard({
                     }}
                     activeOpacity={0.65}
                   >
-                    <Feather name="flag" size={15} color="#dc2626" />
+                    <Feather name="flag" size={15} color={BENTO_COLORS.danger} />
                     <Text style={[styles.dropdownItemText, styles.dropdownDeleteText]}>
                       Report Post
                     </Text>
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     backgroundColor: BENTO_COLORS.white,
     borderRadius: BENTO_COLORS.cardRadius,
     borderWidth: 1,
-    borderColor: BENTO_COLORS.subtleBorder,
+    borderColor: BENTO_COLORS.cardBorder,
     ...BENTO_COLORS.shadow,
   },
   cardContainerResolved: {
@@ -359,11 +359,12 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   titleText: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
     lineHeight: 22,
+    letterSpacing: -0.2,
     marginBottom: 6,
   },
   moderationBanner: {
