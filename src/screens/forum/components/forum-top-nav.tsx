@@ -23,6 +23,7 @@ export const ForumTopNav = memo(function ForumTopNav({
           <TouchableOpacity
             style={styles.headerIconButton}
             onPress={onPressCompose}
+            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Ask a question"
@@ -51,6 +52,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     backgroundColor: BENTO_COLORS.background,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   topNavLeft: {
     flexDirection: "row",

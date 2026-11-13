@@ -1,75 +1,74 @@
-import { Platform } from "react-native";
+import { colors } from "@/theme/colors";
+import { rounded, shadows } from "@/theme/layout";
+import { fontFamily, titleFontFamily } from "@/theme/typography";
 import { getDepartmentShortName } from "@/data/programs";
 import { parseOrdinalParts } from "@/utils/academic-ordinal";
 
 export const CAMPUS_HUB_COLORS = {
-  background: "#f7f9fb",
-  deepNavy: "#131b2e",
-  white: "#ffffff",
-  neutralText: "#191c1d",
-  subtleText: "#64748b",
-  subtleBorder: "rgba(0, 0, 0, 0.05)",
+  background: colors.homeBackground,
+  deepNavy: colors.navyDeep,
+  white: colors.white,
+  neutralText: colors.onBackground,
+  subtleText: colors.slate500,
+  subtleBorder: colors.borderSubtle,
 
-  lostFoundAccent: "#f59e0b",
-  lostFoundAccentLight: "#fef3c7",
-  lostFoundAccentText: "#b45309",
+  lostFoundAccent: colors.semantic.amber.solid,
+  lostFoundAccentLight: colors.semantic.amber.soft,
+  lostFoundAccentText: colors.semantic.amber.deep,
 
-  marketplaceAccent: "#10b981",
-  marketplaceAccentLight: "#d1fae5",
-  marketplaceAccentText: "#047857",
+  marketplaceAccent: colors.semantic.emerald.solid,
+  marketplaceAccentLight: colors.semantic.emerald.border,
+  marketplaceAccentText: colors.semantic.emerald.darker,
 
-  forumAccent: "#1e3a8a",
-  forumAccentLight: "#dbeafe",
+  forumAccent: colors.semantic.blue.deep,
+  forumAccentLight: colors.semantic.blue.soft,
   forumAccentText: "#1e40af",
 
-  complaintAccent: "#8b5cf6",
+  complaintAccent: colors.semantic.violet.solid,
   complaintAccentLight: "#ede9fe",
-  complaintAccentText: "#6d28d9",
+  complaintAccentText: colors.semantic.violet.deep,
 
   memeAccent: "#ec4899",
   memeAccentLight: "#fdf2f8",
   memeAccentText: "#be185d",
 
-  dangerText: "#be123c",
-  dangerBg: "#ffe4e6",
+  dangerText: colors.semantic.rose.deep,
+  dangerBg: colors.semantic.rose.softBorder,
 
   cardRadius: 22,
-  pillRadius: 9999,
+  pillRadius: rounded.full,
 
   shadow: {
-    shadowColor: "#000",
+    ...shadows.level1,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 20,
-    elevation: 2,
   },
   heroShadow: {
-    shadowColor: "#131b2e",
+    shadowColor: colors.navyDeep,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.14,
     shadowRadius: 24,
     elevation: 6,
   },
   // Lost vs Found semantic tones
-  lostRose: "#e11d48",
-  lostRoseBg: "#fff1f2",
-  lostRoseText: "#be123c",
-  lostRoseBorder: "#fecdd3",
+  lostRose: colors.semantic.rose.solid,
+  lostRoseBg: colors.semantic.rose.tint,
+  lostRoseText: colors.semantic.rose.deep,
+  lostRoseBorder: colors.semantic.rose.border,
 
-  foundTeal: "#0d9488",
-  foundTealBg: "#f0fdfa",
+  foundTeal: colors.semantic.teal.solid,
+  foundTealBg: colors.semantic.teal.tint,
   foundTealText: "#0f766e",
   foundTealBorder: "#99f6e4",
 
-  resolvedGreen: "#10b981",
-  resolvedGreenBg: "#ecfdf5",
-  resolvedGreenText: "#047857",
-  resolvedGreenBorder: "#a7f3d0",
+  resolvedGreen: colors.semantic.emerald.solid,
+  resolvedGreenBg: colors.semantic.emerald.tint,
+  resolvedGreenText: colors.semantic.emerald.darker,
+  resolvedGreenBorder: colors.semantic.emerald.mintBorderStrong,
 
-  surfaceMuted: "#f1f5f9",
+  surfaceMuted: colors.slate100,
 } as const;
 
-import { fontFamily, titleFontFamily } from "@/theme/typography";
 export { fontFamily, titleFontFamily };
 
 export function timeAgo(dateString: string): string {

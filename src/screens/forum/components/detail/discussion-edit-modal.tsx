@@ -60,10 +60,15 @@ export const DiscussionEditModal = memo(function DiscussionEditModal({
   const initialTitleRef = useRef(form.title);
   const initialDescRef = useRef(form.description);
 
+  const visibleDescRef = useRef(form.description);
+  visibleDescRef.current = form.description;
+  const visibleTitleRef = useRef(form.title);
+  visibleTitleRef.current = form.title;
+
   useEffect(() => {
     if (visible) {
-      initialTitleRef.current = form.title;
-      initialDescRef.current = form.description;
+      initialTitleRef.current = visibleTitleRef.current;
+      initialDescRef.current = visibleDescRef.current;
     }
   }, [visible]);
 

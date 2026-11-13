@@ -99,9 +99,12 @@ const styles = StyleSheet.create({
   },
   emptyResetBtn: {
     backgroundColor: BENTO_COLORS.deepNavy,
-    paddingHorizontal: 22,
+    minHeight: 48,
+    paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: BENTO_COLORS.pillRadius,
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyResetBtnText: {
     fontFamily,

@@ -16,7 +16,6 @@ import { Feather } from "@expo/vector-icons";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
-  timeAgo,
   formatCampusUserSubtitle,
   formatCommentDateTime,
 } from "./design-tokens";
@@ -494,7 +493,9 @@ export const CommentInputBar = memo(function CommentInputBar({
   }, [isEditMode, replyTarget, inputRef]);
 
   const canSend = Boolean(text.trim()) && !isSubmitting;
-  const bottomPadding = isKeyboardVisible ? 6 : Math.max(insets.bottom, 8);
+  const idleBottomPadding =
+    insets.bottom + (Platform.OS === "ios" ? 14 : 16);
+  const bottomPadding = isKeyboardVisible ? 10 : idleBottomPadding;
 
   const placeholderText = isEditMode
     ? "Edit your comment..."
@@ -906,7 +907,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(0, 0, 0, 0.06)",
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.05,

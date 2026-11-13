@@ -6,11 +6,13 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   Platform,
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily } from "../constants";
 import type { FilterType, ForumCounts } from "../types";
 
@@ -139,7 +141,11 @@ export function ForumFilterModal({
                 <TouchableOpacity
                   style={styles.resetHeaderBtn}
                   onPress={handleReset}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   activeOpacity={0.7}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset filter"
                 >
                   <Text style={styles.resetHeaderBtnText}>Reset</Text>
                 </TouchableOpacity>
@@ -147,6 +153,7 @@ export function ForumFilterModal({
               <TouchableOpacity
                 style={styles.closeBtn}
                 onPress={onClose}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 activeOpacity={0.7}
                 accessible
                 accessibilityRole="button"
@@ -168,14 +175,15 @@ export function ForumFilterModal({
               {options.map((item) => {
                 const isSelected = selectedFilter === item.key;
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={item.key}
-                    style={[
+                    style={({ pressed }) => [
                       styles.optionCard,
                       isSelected && styles.optionCardSelected,
+                      pressed && Platform.OS === "ios" && { opacity: 0.85 },
                     ]}
+                    android_ripple={{ color: colors.navyAlpha08 }}
                     onPress={() => setSelectedFilter(item.key)}
-                    activeOpacity={0.8}
                     accessible
                     accessibilityRole="radio"
                     accessibilityState={{ checked: isSelected }}
@@ -230,10 +238,10 @@ export function ForumFilterModal({
                       ]}
                     >
                       {isSelected && (
-                        <Feather name="check" size={13} color="#ffffff" />
+                        <Feather name="check" size={13} color={colors.white} />
                       )}
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               })}
             </View>
@@ -241,10 +249,13 @@ export function ForumFilterModal({
 
           {/* Footer Actions */}
           <View style={[styles.footer, { paddingBottom: bottomPadding }]}>
-            <TouchableOpacity
-              style={styles.applyBtn}
+            <Pressable
+              style={({ pressed }) => [
+                styles.applyBtn,
+                pressed && Platform.OS === "ios" && { opacity: 0.85 },
+              ]}
+              android_ripple={{ color: colors.whiteAlpha20 }}
               onPress={handleApply}
-              activeOpacity={0.85}
               accessible
               accessibilityRole="button"
               accessibilityLabel="Apply selected filter"
@@ -254,7 +265,7 @@ export function ForumFilterModal({
                   ? "Apply Filter"
                   : "Show All Discussions"}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -273,12 +284,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     overflow: "hidden",
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
   },
   handle: {
     width: 44,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: "#cbd5e1",
+    backgroundColor: colors.slate300,
     alignSelf: "center",
     marginTop: 12,
     marginBottom: 6,
@@ -341,16 +355,17 @@ const styles = StyleSheet.create({
   optionCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
     borderRadius: 18,
     padding: 14,
     gap: 12,
+    overflow: "hidden",
   },
   optionCardSelected: {
-    backgroundColor: "#eff6ff",
-    borderColor: "#bfdbfe",
+    backgroundColor: colors.semantic.blue.tint,
+    borderColor: colors.semantic.blue.border,
   },
   iconCircle: {
     width: 40,
@@ -381,16 +396,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
   },
   countPillSelected: {
-    backgroundColor: "#dbeafe",
+    backgroundColor: colors.semantic.blue.soft,
   },
   countText: {
     fontSize: 11,
+    lineHeight: 14,
     fontFamily,
     fontWeight: "800",
     color: BENTO_COLORS.subtleText,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
   countTextSelected: {
     color: BENTO_COLORS.primaryBlue,
@@ -406,7 +424,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#cbd5e1",
+    borderColor: colors.slate300,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -423,15 +441,18 @@ const styles = StyleSheet.create({
   },
   applyBtn: {
     backgroundColor: BENTO_COLORS.deepNavy,
+    minHeight: 48,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   applyBtnText: {
     fontSize: 15,
     fontFamily,
     fontWeight: "800",
-    color: "#ffffff",
+    color: colors.white,
+    includeFontPadding: false,
   },
 });

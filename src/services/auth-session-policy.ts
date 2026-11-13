@@ -26,10 +26,11 @@ export function shouldHandleSessionInvalidation(
   if (status === 401) return true;
 
   if (status === 403 && responseData && typeof responseData === "object") {
-    const rawMsg =
-      (responseData as Record<string, unknown>).error ||
-      (responseData as Record<string, unknown>).message ||
-      "";
+    const dataRecord = responseData as Record<string, unknown>;
+    if (dataRecord.code === "UGC_TERMS_REQUIRED") {
+      return false;
+    }
+    const rawMsg = dataRecord.error || dataRecord.message || "";
     return typeof rawMsg === "string" && /restricted/i.test(rawMsg);
   }
 

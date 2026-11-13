@@ -3,22 +3,24 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
+  Pressable,
   StyleSheet,
   Modal,
   Dimensions,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily } from "../constants";
 import { RichTextSnippet } from "@/screens/campus-hub/shared/rich-text-snippet";
 import type { ForumPostItem } from "../types";
 import {
   timeAgo,
-  getUserAcademicSubtitle,
   getAuthorAcademicInfo,
   formatTimeOnly,
   isEdited,
 } from "../utils";
+import { ForumAuthorSubtitle, ForumAvatar } from "./forum-avatar";
 
 interface ForumCardProps {
   item: ForumPostItem;
@@ -27,6 +29,7 @@ interface ForumCardProps {
   currentUserId?: string;
   onResolve?: (id: string, title: string, isResolved: boolean) => void;
   onDelete?: (id: string, title: string) => void;
+  onReport?: (item: ForumPostItem) => void;
 }
 
 export const ForumCard = memo(function ForumCard({
@@ -36,13 +39,15 @@ export const ForumCard = memo(function ForumCard({
   currentUserId,
   onResolve,
   onDelete,
+  onReport,
 }: ForumCardProps) {
   const isResolved = item.isResolved;
   const isAuthor = Boolean(currentUserId && currentUserId === item.authorId);
   const canManage = isAdmin || isAuthor;
+  const canModerateOthers = !isAuthor && Boolean(onReport);
+  const showMenu = canManage || canModerateOthers;
   const replyCount = item._count?.responses || item.responses?.length || 0;
   const authorName = item.author?.name || "University Member";
-  const authorInitial = authorName.charAt(0).toUpperCase() || "U";
   const formattedTime = timeAgo(item.createdAt);
   const timeOnly = formatTimeOnly(item.createdAt);
   const academicInfo = getAuthorAcademicInfo(item.author);
@@ -59,7 +64,7 @@ export const ForumCard = memo(function ForumCard({
         const windowWidth = Dimensions.get("window").width;
         const windowHeight = Dimensions.get("window").height;
         const right = Math.max(16, windowWidth - (x + width));
-        // Dropdown menu height is ~95px. If too close to bottom, open upward
+        // Flip menu upward when near bottom viewport edge (~95px menu height)
         const top =
           y + height + 100 > windowHeight - 40 ? Math.max(40, y - 95) : y + height + 4;
         setMenuPosition({ top, right });
@@ -77,49 +82,50 @@ export const ForumCard = memo(function ForumCard({
         isResolved && styles.cardContainerResolved,
       ]}
     >
-      <TouchableOpacity
-        onPress={() => onPress(item.id)}
-        activeOpacity={0.8}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={`Discussion: ${item.title}. Asked by ${authorName}, ${academicSubtitle}. Posted ${formattedTime} at ${timeOnly}. Status: ${
-          isResolved ? "Resolved" : "Needs help"
-        }. ${replyCount} ${replyCount === 1 ? "reply" : "replies"}.`}
-      >
-        <View style={[styles.headerRow, canManage && styles.headerRowWithMenu]}>
+      <View style={styles.cardClip}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.cardPressable,
+            pressed && Platform.OS === "ios" && { opacity: 0.85 },
+          ]}
+          android_ripple={{ color: colors.navyAlpha06 }}
+          onPress={() => onPress(item.id)}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Discussion: ${item.title}. Asked by ${authorName}, ${academicSubtitle}. Posted ${formattedTime} at ${timeOnly}. Status: ${
+            isResolved ? "Resolved" : "Needs help"
+          }. ${replyCount} ${replyCount === 1 ? "reply" : "replies"}.`}
+        >
+        <View style={[styles.headerRow, showMenu && styles.headerRowWithMenu]}>
           <View style={styles.authorRow}>
-            {item.author?.image ? (
-              <Image
-                source={{ uri: item.author.image }}
-                style={styles.authorAvatar}
-                accessible={true}
-                accessibilityLabel={`${authorName}'s avatar`}
-              />
-            ) : (
-              <View style={styles.authorAvatarFallback}>
-                <Text style={styles.authorAvatarText}>{authorInitial}</Text>
-              </View>
-            )}
+            <ForumAvatar
+              uri={item.author?.image}
+              name={authorName}
+              size={36}
+              fontSize={14}
+              accessibilityLabel={`${authorName}'s avatar`}
+              style={styles.authorAvatarSpacing}
+            />
             <View style={styles.authorMeta}>
               <Text style={styles.authorName} numberOfLines={1}>
                 {authorName}
               </Text>
-              {academicInfo.isStudent && academicInfo.semesterNum ? (
-                <Text style={styles.authorSubtitle} numberOfLines={1}>
-                  {academicInfo.semesterNum}
-                  <Text style={styles.superscript}>
-                    {academicInfo.superSuffix}
-                  </Text>
-                  {` Semester • ${academicInfo.deptShort}`}
-                </Text>
-              ) : (
-                <Text style={styles.authorSubtitle} numberOfLines={1}>
-                  {academicSubtitle}
-                </Text>
-              )}
+              <ForumAuthorSubtitle
+                academicInfo={academicInfo}
+                style={styles.authorSubtitle}
+              />
             </View>
           </View>
         </View>
+
+        {item.isHiddenByModeration && (
+          <View style={styles.moderationBanner}>
+            <Feather name="shield" size={12} color={colors.semantic.amber.deep} />
+            <Text style={styles.moderationBannerText}>
+              Under moderator review — hidden from public feed
+            </Text>
+          </View>
+        )}
 
         <Text style={styles.titleText} numberOfLines={2}>
           {item.title}
@@ -143,29 +149,42 @@ export const ForumCard = memo(function ForumCard({
               color={BENTO_COLORS.primaryBlue}
               style={styles.replyIcon}
             />
-            <Text style={styles.replyPillText}>
+            <Text
+              style={styles.replyPillText}
+              maxFontSizeMultiplier={1.3}
+              numberOfLines={1}
+            >
               {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
             </Text>
           </View>
 
-          <View style={styles.activityBox}>
-            <Feather
-              name="clock"
-              size={11}
-              color={BENTO_COLORS.subtleText}
-              style={styles.clockIcon}
-            />
-            <Text style={styles.timeText}>
-              Posted {formattedTime} • {timeOnly}
-            </Text>
+          <View style={styles.footerMetaGroup}>
+            <View style={styles.activityBox}>
+              <Feather
+                name="clock"
+                size={11}
+                color={BENTO_COLORS.subtleText}
+                style={styles.clockIcon}
+              />
+              <Text
+                style={styles.timeText}
+                maxFontSizeMultiplier={1.3}
+                numberOfLines={1}
+              >
+                Posted {formattedTime} • {timeOnly}
+              </Text>
+            </View>
+            {postEdited && (
+              <Text style={styles.editedBadge} maxFontSizeMultiplier={1.3}>
+                ✎ Edited
+              </Text>
+            )}
           </View>
-          {postEdited && (
-            <Text style={styles.editedBadge}>✎ Edited</Text>
-          )}
         </View>
-      </TouchableOpacity>
+        </Pressable>
+      </View>
 
-      {canManage && (
+      {showMenu && (
         <View ref={buttonRef} collapsable={false} style={styles.moreBtnWrapper}>
           <TouchableOpacity
             style={styles.moreBtn}
@@ -181,8 +200,8 @@ export const ForumCard = memo(function ForumCard({
         </View>
       )}
 
-      {/* Popover Dropdown for Authors and Admins */}
-      {canManage && (
+      {/* Popover Dropdown for Authors, Admins & Community Safety Actions */}
+      {showMenu && (
         <Modal
           visible={menuVisible}
           transparent={true}
@@ -203,7 +222,7 @@ export const ForumCard = memo(function ForumCard({
                 { top: menuPosition.top, right: menuPosition.right },
               ]}
             >
-              {!isResolved ? (
+              {canManage && !isResolved && (
                 <>
                   <TouchableOpacity
                     style={styles.dropdownItem}
@@ -218,7 +237,9 @@ export const ForumCard = memo(function ForumCard({
                   </TouchableOpacity>
                   <View style={styles.dropdownDivider} />
                 </>
-              ) : (
+              )}
+
+              {canManage && isResolved && (
                 <>
                   <TouchableOpacity
                     style={styles.dropdownItem}
@@ -235,19 +256,40 @@ export const ForumCard = memo(function ForumCard({
                 </>
               )}
 
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setMenuVisible(false);
-                  onDelete?.(item.id, item.title);
-                }}
-                activeOpacity={0.65}
-              >
-                <Feather name="trash-2" size={15} color="#dc2626" />
-                <Text style={[styles.dropdownItemText, styles.dropdownDeleteText]}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
+              {canManage && (
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    onDelete?.(item.id, item.title);
+                  }}
+                  activeOpacity={0.65}
+                >
+                  <Feather name="trash-2" size={15} color="#dc2626" />
+                  <Text style={[styles.dropdownItemText, styles.dropdownDeleteText]}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {!isAuthor && onReport && (
+                <>
+                  {canManage && <View style={styles.dropdownDivider} />}
+                  <TouchableOpacity
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setMenuVisible(false);
+                      onReport(item);
+                    }}
+                    activeOpacity={0.65}
+                  >
+                    <Feather name="flag" size={15} color="#dc2626" />
+                    <Text style={[styles.dropdownItemText, styles.dropdownDeleteText]}>
+                      Report Post
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
         </Modal>
@@ -261,14 +303,22 @@ const styles = StyleSheet.create({
     position: "relative",
     backgroundColor: BENTO_COLORS.white,
     borderRadius: BENTO_COLORS.cardRadius,
-    padding: 16,
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
     ...BENTO_COLORS.shadow,
   },
   cardContainerResolved: {
-    backgroundColor: "#f0fdf4",
-    borderColor: "#bbf7d0",
+    backgroundColor: colors.semantic.emerald.softSurface,
+    borderColor: colors.semantic.emerald.mintBorder,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  cardClip: {
+    borderRadius: BENTO_COLORS.cardRadius - 1,
+    overflow: "hidden",
+  },
+  cardPressable: {
+    padding: 16,
   },
   headerRow: {
     flexDirection: "row",
@@ -289,27 +339,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  authorAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  authorAvatarSpacing: {
     marginRight: 10,
-    backgroundColor: BENTO_COLORS.slateBg,
-  },
-  authorAvatarFallback: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: BENTO_COLORS.slateBg,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  authorAvatarText: {
-    fontFamily,
-    fontSize: 14,
-    fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
   },
   authorMeta: {
     flex: 1,
@@ -327,13 +358,6 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
   },
-  superscript: {
-    fontFamily,
-    fontSize: 9,
-    lineHeight: 12,
-    fontWeight: "700",
-    color: BENTO_COLORS.subtleText,
-  },
   titleText: {
     fontFamily,
     fontSize: 16,
@@ -341,6 +365,25 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.deepNavy,
     lineHeight: 22,
     marginBottom: 6,
+  },
+  moderationBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.semantic.amber.soft,
+    borderColor: colors.semantic.amber.border,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 8,
+  },
+  moderationBannerText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.semantic.amber.deep,
+    flex: 1,
   },
   descriptionText: {
     fontFamily,
@@ -356,25 +399,35 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   dividerResolved: {
-    backgroundColor: "rgba(16, 185, 129, 0.16)",
+    backgroundColor: colors.semantic.emerald.alpha15,
   },
   footerRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
+    rowGap: 6,
+    columnGap: 8,
+  },
+  footerMetaGroup: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    flexShrink: 1,
+    gap: 6,
   },
   replyPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: BENTO_COLORS.pillRadius,
   },
   replyPillResolved: {
-    backgroundColor: "#ffffff",
+    backgroundColor: BENTO_COLORS.white,
     borderWidth: 1,
-    borderColor: "#dcfce7",
+    borderColor: colors.semantic.emerald.soft,
   },
   replyIcon: {
     marginRight: 5,
@@ -382,12 +435,16 @@ const styles = StyleSheet.create({
   replyPillText: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
   activityBox: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 1,
   },
   clockIcon: {
     marginRight: 4,
@@ -395,15 +452,20 @@ const styles = StyleSheet.create({
   timeText: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
+    flexShrink: 1,
   },
   editedBadge: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "600",
-    color: "#92400e",
-    marginLeft: 6,
+    color: colors.semantic.amber.darkText,
+    includeFontPadding: false,
   },
   moreBtn: {
     width: 32,
@@ -411,7 +473,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
   },
   menuBackdrop: {
     flex: 1,
@@ -420,12 +482,12 @@ const styles = StyleSheet.create({
   whatsappDropdown: {
     position: "absolute",
     minWidth: 175,
-    backgroundColor: "#ffffff",
+    backgroundColor: BENTO_COLORS.white,
     borderRadius: 10,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: "rgba(15, 23, 42, 0.08)",
-    shadowColor: "#000000",
+    borderColor: colors.inkAlpha08,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,
     shadowRadius: 12,
@@ -434,6 +496,7 @@ const styles = StyleSheet.create({
   dropdownItem: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 14,
     gap: 10,
@@ -442,14 +505,14 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13.5,
     fontWeight: "500",
-    color: "#1e293b",
+    color: colors.slate800,
   },
   dropdownDeleteText: {
-    color: "#dc2626",
+    color: colors.semantic.red.accent,
   },
   dropdownDivider: {
     height: 1,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     marginVertical: 2,
   },
 });

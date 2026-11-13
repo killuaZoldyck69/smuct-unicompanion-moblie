@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily, MAX_RESPONSE_LENGTH } from "../../constants";
 
 import type { ReplyTarget } from "../../types";
@@ -68,7 +69,9 @@ export const DiscussionComposer = memo(function DiscussionComposer({
   }, [isEditMode, replyTarget, inputRef]);
 
   const canSend = value.trim().length > 0 && !isSubmitting;
-  const bottomPadding = isKeyboardVisible ? 6 : Math.max(insets.bottom, 8);
+  const idleBottomPadding =
+    insets.bottom + (Platform.OS === "ios" ? 14 : 16);
+  const bottomPadding = isKeyboardVisible ? 10 : idleBottomPadding;
   const placeholderText = isEditMode
     ? "Edit your response..."
     : replyTarget
@@ -77,6 +80,7 @@ export const DiscussionComposer = memo(function DiscussionComposer({
 
   return (
     <View style={[styles.composerBar, { paddingBottom: bottomPadding }]}>
+      <View style={styles.composerInner}>
       {isResolved ? (
         <View style={styles.resolvedBanner}>
           <Feather
@@ -157,9 +161,11 @@ export const DiscussionComposer = memo(function DiscussionComposer({
               ]}
               onPress={onSubmit}
               disabled={!canSend}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
               activeOpacity={0.8}
               accessible={true}
               accessibilityRole="button"
+              accessibilityState={{ disabled: !canSend }}
               accessibilityLabel={isEditMode ? "Save edit" : "Send reply"}
             >
               {isSubmitting ? (
@@ -185,6 +191,7 @@ export const DiscussionComposer = memo(function DiscussionComposer({
           )}
         </View>
       )}
+      </View>
     </View>
   );
 });
@@ -194,9 +201,14 @@ const styles = StyleSheet.create({
     backgroundColor: BENTO_COLORS.white,
     borderTopWidth: 1,
     borderTopColor: BENTO_COLORS.subtleBorder,
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     ...BENTO_COLORS.shadow,
+  },
+  composerInner: {
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   resolvedBanner: {
     flexDirection: "row",
@@ -219,7 +231,7 @@ const styles = StyleSheet.create({
   editBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fef3c7",
+    backgroundColor: colors.semantic.amber.soft,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -232,7 +244,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
-    color: "#92400e",
+    color: colors.semantic.amber.darkText,
     flex: 1,
   },
   editCancelText: {
@@ -245,13 +257,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(30, 58, 138, 0.08)",
+    backgroundColor: colors.semantic.blue.alpha08,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: "rgba(30, 58, 138, 0.14)",
+    borderColor: colors.semantic.blue.alpha14,
   },
   replyingLeft: {
     flexDirection: "row",
@@ -296,9 +308,9 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: BENTO_COLORS.deepNavy,
     justifyContent: "center",
     alignItems: "center",
@@ -316,11 +328,13 @@ const styles = StyleSheet.create({
   },
   charCountText: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
     textAlign: "right",
     marginTop: 4,
-    marginRight: 52,
+    marginRight: 54,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
 });

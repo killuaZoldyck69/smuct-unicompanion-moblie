@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import {
   useQuery,
   useInfiniteQuery,
@@ -15,12 +16,18 @@ import {
   createForumResponseAPI,
   updateForumResponseAPI,
   deleteForumResponseAPI,
+  reactToForumResponseAPI,
   type GetForumPostsParams,
 } from "@/services/forum-service";
+import {
+  applyOptimisticReactionToThread,
+  patchReactionResultInThread,
+} from "./forum-logic";
 import type {
   CreateForumPostInput,
   CreateForumResponseInput,
   UpdateForumPostInput,
+  ForumResponseReactionType,
   ForumFeedResponse,
   ForumPostItem,
 } from "./types";
@@ -86,29 +93,32 @@ export const useCreateForumPost = () => {
   });
 };
 
+type UpdateForumPostParams =
+  | UpdateForumPostInput
+  | { id: string; data: UpdateForumPostInput };
+
+function unpackUpdatePostParams(
+  params: UpdateForumPostParams,
+  defaultId?: string,
+): { targetId: string | undefined; data: UpdateForumPostInput } {
+  if ("data" in params) {
+    return { targetId: params.id, data: params.data };
+  }
+  return { targetId: defaultId, data: params };
+}
+
 export const useUpdateForumPost = (defaultId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (
-      params:
-        | UpdateForumPostInput
-        | { id: string; data: UpdateForumPostInput },
-    ) => {
-      const targetId =
-        "id" in params && (params as any).id ? (params as any).id : defaultId;
-      const data =
-        "data" in params
-          ? (params as any).data
-          : (params as UpdateForumPostInput);
-
+    mutationFn: (params: UpdateForumPostParams) => {
+      const { targetId, data } = unpackUpdatePostParams(params, defaultId);
       if (!targetId) {
         throw new Error("Missing forum post ID for update");
       }
       return updateForumPostAPI(targetId, data);
     },
     onSuccess: (_, params) => {
-      const targetId =
-        "id" in params && (params as any).id ? (params as any).id : defaultId;
+      const { targetId } = unpackUpdatePostParams(params, defaultId);
       queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
       if (targetId) {
         queryClient.invalidateQueries({
@@ -187,6 +197,86 @@ export const useDeleteForumResponse = (postId: string) => {
       deleteForumResponseAPI(postId, responseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: forumQueryKeys.detail(postId) });
+    },
+  });
+};
+
+export const useReactForumResponse = (postId: string) => {
+  const queryClient = useQueryClient();
+  const latestSeqByResponseRef = useRef<Record<string, number>>({});
+  const queueByResponseRef = useRef<Record<string, Promise<unknown>>>({});
+
+  return useMutation({
+    mutationFn: ({
+      responseId,
+      type,
+    }: {
+      responseId: string;
+      type: ForumResponseReactionType;
+    }) => {
+      const previous =
+        queueByResponseRef.current[responseId] ?? Promise.resolve();
+      const next = previous
+        .catch(() => undefined)
+        .then(() => reactToForumResponseAPI(postId, responseId, type));
+      queueByResponseRef.current[responseId] = next;
+      return next.finally(() => {
+        if (queueByResponseRef.current[responseId] === next) {
+          delete queueByResponseRef.current[responseId];
+        }
+      });
+    },
+    onMutate: async ({ responseId, type }) => {
+      const seq = (latestSeqByResponseRef.current[responseId] ?? 0) + 1;
+      latestSeqByResponseRef.current[responseId] = seq;
+
+      const detailKey = forumQueryKeys.detail(postId);
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previous = queryClient.getQueryData<ForumPostItem>(detailKey);
+      if (previous) {
+        queryClient.setQueryData<ForumPostItem>(
+          detailKey,
+          applyOptimisticReactionToThread(previous, responseId, type),
+        );
+      }
+      return { previous, seq, responseId };
+    },
+    onError: (_err, _vars, context) => {
+      if (
+        !context ||
+        latestSeqByResponseRef.current[context.responseId] !== context.seq
+      ) {
+        return;
+      }
+      if (context.previous) {
+        queryClient.setQueryData(forumQueryKeys.detail(postId), context.previous);
+      }
+    },
+    onSuccess: (result, _vars, context) => {
+      if (
+        !result ||
+        !context ||
+        latestSeqByResponseRef.current[context.responseId] !== context.seq
+      ) {
+        return;
+      }
+      const detailKey = forumQueryKeys.detail(postId);
+      const current = queryClient.getQueryData<ForumPostItem>(detailKey);
+      if (current) {
+        queryClient.setQueryData<ForumPostItem>(
+          detailKey,
+          patchReactionResultInThread(current, result),
+        );
+      }
+    },
+    onSettled: (_data, _err, _vars, context) => {
+      if (
+        !context ||
+        latestSeqByResponseRef.current[context.responseId] !== context.seq
+      ) {
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: forumQueryKeys.detail(postId) });
     },
   });

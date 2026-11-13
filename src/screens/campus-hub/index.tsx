@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
 import { Forum } from "@/screens/forum";
 import { LostFoundSection } from "./lost-found";
@@ -10,7 +9,10 @@ import { MarketplaceSection } from "./marketplace";
 import { MemesSection } from "./memes";
 import { SectionTabBar, type HubSection } from "./shared/section-tab-bar";
 import { CAMPUS_HUB_COLORS, fontFamily, titleFontFamily } from "./shared/design-tokens";
+import { colors } from "@/theme/colors";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useAdminForumReports } from "@/features/ugc/useUgcModeration";
+import { AdminModerationModal } from "@/screens/forum/components/ugc/admin-moderation-modal";
 import {
   getCampusHubActiveSection,
   setCampusHubActiveSection,
@@ -28,7 +30,6 @@ interface CampusHubProps {
 }
 
 export function CampusHub({ initialSection }: CampusHubProps) {
-  const router = useRouter();
   const { user: currentUser } = useCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
   const [isForumComposeVisible, setIsForumComposeVisible] = useState(false);
@@ -37,6 +38,13 @@ export function CampusHub({ initialSection }: CampusHubProps) {
   const [isMarketplaceComposeVisible, setIsMarketplaceComposeVisible] =
     useState(false);
   const [isMemeComposeVisible, setIsMemeComposeVisible] = useState(false);
+  const [isModerationVisible, setIsModerationVisible] = useState(false);
+
+  const { data: moderationSummary } = useAdminForumReports(
+    { status: "PENDING", page: 1, limit: 1 },
+    isAdmin,
+  );
+  const pendingReportsCount = moderationSummary?.meta?.pendingCount ?? 0;
 
   const [activeSection, setActiveSection] = useState<HubSection>(() => {
     return initialSection || getCampusHubActiveSection();
@@ -90,9 +98,39 @@ export function CampusHub({ initialSection }: CampusHubProps) {
         </View>
 
         <View style={styles.topNavRight}>
+          {isAdmin && (
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setIsModerationVisible(true)}
+              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Moderation queue, ${pendingReportsCount} pending reports`}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name="shield"
+                size={18}
+                color={
+                  pendingReportsCount > 0
+                    ? colors.semantic.violet.accent
+                    : CAMPUS_HUB_COLORS.deepNavy
+                }
+              />
+              {pendingReportsCount > 0 && (
+                <View style={styles.pendingDot}>
+                  <Text style={styles.pendingDotText}>
+                    {pendingReportsCount > 9 ? "9+" : pendingReportsCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={handleComposePress}
+            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={
@@ -144,6 +182,13 @@ export function CampusHub({ initialSection }: CampusHubProps) {
           />
         )}
       </View>
+
+      {isAdmin && (
+        <AdminModerationModal
+          visible={isModerationVisible}
+          onClose={() => setIsModerationVisible(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -161,6 +206,9 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 12,
     backgroundColor: CAMPUS_HUB_COLORS.background,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   topNavLeftGroup: {
     flex: 1,
@@ -181,11 +229,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   adminBadgeText: {
-    fontFamily: Platform.select({
-      web: "'Onest', sans-serif",
-      android: "Onest_700Bold",
-      default: "Onest_700Bold",
-    }),
+    fontFamily,
     fontSize: 11,
     fontWeight: "800",
     color: "#1d4ed8",
@@ -198,11 +242,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   screenTitle: {
-    fontFamily: Platform.select({
-      web: "'Bricolage Grotesque', sans-serif",
-      android: "BricolageGrotesque_800ExtraBold",
-      default: "BricolageGrotesque_800ExtraBold",
-    }),
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
@@ -210,11 +250,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   navBrandTitle: {
-    fontFamily: Platform.select({
-      web: "'Bricolage Grotesque', sans-serif",
-      android: "BricolageGrotesque_800ExtraBold",
-      default: "BricolageGrotesque_800ExtraBold",
-    }),
+    fontFamily: titleFontFamily,
     fontSize: 24,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
@@ -222,11 +258,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   screenSubtitle: {
-    fontFamily: Platform.select({
-      web: "'Onest', sans-serif",
-      android: "Onest_500Medium",
-      default: "Onest_500Medium",
-    }),
+    fontFamily,
     fontSize: 13,
     color: "#64748b",
     marginTop: 4,
@@ -235,11 +267,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   navSubtitle: {
-    fontFamily: Platform.select({
-      web: "'Onest', sans-serif",
-      android: "Onest_500Medium",
-      default: "Onest_500Medium",
-    }),
+    fontFamily,
     fontSize: 13,
     color: "#64748b",
     marginTop: 4,
@@ -248,6 +276,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   iconBtn: {
+    position: "relative",
     width: 38,
     height: 38,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
@@ -255,6 +284,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     ...CAMPUS_HUB_COLORS.shadow,
+  },
+  pendingDot: {
+    position: "absolute",
+    top: -3,
+    right: -3,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: "#be123c",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
+  },
+  pendingDotText: {
+    fontFamily,
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: "800",
+    color: colors.white,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
   sectionContent: {
     flex: 1,

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ActivityIndicator,
   Alert,
@@ -56,11 +57,31 @@ export const CommentSheet = React.memo(function CommentSheet({
 }: CommentSheetProps) {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [replyTarget, setReplyTarget] = useState<{
     id: string;
     authorName: string;
   } | null>(null);
   const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setIsKeyboardVisible(true),
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setIsKeyboardVisible(false),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const inputBottomPadding = isKeyboardVisible
+    ? 10
+    : insets.bottom + (Platform.OS === "ios" ? 14 : 16);
 
   const handleSubmit = useCallback(() => {
     const trimmed = text.trim();
@@ -291,7 +312,7 @@ export const CommentSheet = React.memo(function CommentSheet({
             <View
               style={[
                 styles.inputContainer,
-                { paddingBottom: Math.max(insets.bottom, 12) },
+                { paddingBottom: inputBottomPadding },
               ]}
             >
               {replyTarget && (
@@ -582,7 +603,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 12,
   },
   replyBanner: {
     flexDirection: "row",

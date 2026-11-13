@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  View,
   Text,
   FlatList,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
+import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily } from "./constants";
 import type { ForumResponseItem, ForumAuthor } from "./types";
 import { useDiscussionDetail } from "./hooks/use-discussion-detail";
@@ -22,10 +23,12 @@ import { DiscussionQuestionCard } from "./components/detail/discussion-question-
 import { DiscussionReplyItem } from "./components/detail/discussion-reply-item";
 import { DiscussionEmptyReplies } from "./components/detail/discussion-empty-replies";
 import { DiscussionComposer } from "./components/detail/discussion-composer";
-import { DiscussionProfileModal } from "./components/detail/discussion-profile-modal";
 import { DiscussionEditModal } from "./components/detail/discussion-edit-modal";
 import { ForumOptionsModal } from "./components/forum-options-modal";
 import { ForumConfirmModal } from "./components/forum-confirm-modal";
+import { UgcGuidelinesModal } from "./components/ugc/ugc-guidelines-modal";
+import { UgcReportModal } from "./components/ugc/ugc-report-modal";
+import { AuthorDetailsModal } from "../campus-hub/shared/author-modal";
 import { ForumDiscussionDetailSkeleton } from "../campus-hub/shared/skeleton-loaders";
 
 export function DiscussionDetailScreen() {
@@ -57,6 +60,7 @@ export function DiscussionDetailScreen() {
     thread,
     isLoading,
     isError,
+    isOffline,
     refetch,
     isRefetching,
     isAuthor,
@@ -75,6 +79,7 @@ export function DiscussionDetailScreen() {
     handleEditResponseInline,
     handleCancelEdit,
     handleDeleteResponsePrompt,
+    handleReactResponse,
     isOptionsModalVisible,
     setIsOptionsModalVisible,
     handleOverflowPress,
@@ -89,6 +94,16 @@ export function DiscussionDetailScreen() {
     setSelectedProfile,
     confirmModal,
     setConfirmModal,
+    isGuidelinesModalVisible,
+    setIsGuidelinesModalVisible,
+    isAcceptingGuidelines,
+    handleAcceptGuidelines,
+    reportTarget,
+    setReportTarget,
+    handleOpenReportPost,
+    handleOpenReportResponse,
+    handleSubmitReport,
+    isSubmittingReport,
     handleShare,
     handleResolvePrompt,
     handleDeletePrompt,
@@ -129,6 +144,8 @@ export function DiscussionDetailScreen() {
         onStartReply={handleStartReply}
         onEditPress={handleEditResponseInline}
         onDeletePress={handleDeleteResponsePrompt}
+        onReactPress={handleReactResponse}
+        onReportPress={handleOpenReportResponse}
       />
     ),
     [
@@ -140,6 +157,8 @@ export function DiscussionDetailScreen() {
       handleStartReply,
       handleEditResponseInline,
       handleDeleteResponsePrompt,
+      handleReactResponse,
+      handleOpenReportResponse,
     ],
   );
 
@@ -178,6 +197,9 @@ export function DiscussionDetailScreen() {
           style={styles.retryBtn}
           onPress={() => refetch()}
           activeOpacity={0.8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading discussion"
         >
           <Text style={styles.retryBtnText}>Retry</Text>
         </TouchableOpacity>
@@ -197,6 +219,19 @@ export function DiscussionDetailScreen() {
           onOverflowPress={handleOverflowPress}
           onSharePress={handleShare}
         />
+
+        {isOffline && (
+          <View style={styles.offlineBanner}>
+            <Feather
+              name="wifi-off"
+              size={13}
+              color={colors.semantic.amber.deep}
+            />
+            <Text style={styles.offlineText}>
+              You&apos;re offline. Showing cached discussion.
+            </Text>
+          </View>
+        )}
 
         <FlatList
           data={thread.responses || []}
@@ -247,6 +282,7 @@ export function DiscussionDetailScreen() {
         onResolve={handleResolvePrompt}
         onDelete={handleDeletePrompt}
         onShare={handleShare}
+        onReport={handleOpenReportPost}
       />
 
       {confirmModal && (
@@ -268,11 +304,37 @@ export function DiscussionDetailScreen() {
         />
       )}
 
-      <DiscussionProfileModal
+      <AuthorDetailsModal
         visible={Boolean(selectedProfile)}
-        profile={selectedProfile}
+        author={selectedProfile}
         onClose={() => setSelectedProfile(null)}
+        isOwnProfile={Boolean(
+          currentUserId && selectedProfile?.id === currentUserId,
+        )}
+        onReportAuthor={() => {
+          setSelectedProfile(null);
+          handleOpenReportPost();
+        }}
       />
+
+      <UgcGuidelinesModal
+        visible={isGuidelinesModalVisible}
+        onClose={() => setIsGuidelinesModalVisible(false)}
+        onAccept={handleAcceptGuidelines}
+        isSubmitting={isAcceptingGuidelines}
+        isOffline={isOffline}
+      />
+
+      {reportTarget && (
+        <UgcReportModal
+          visible={Boolean(reportTarget)}
+          targetType={reportTarget.targetType}
+          targetTitle={reportTarget.targetTitle}
+          onClose={() => setReportTarget(null)}
+          onSubmit={handleSubmitReport}
+          isSubmitting={isSubmittingReport}
+        />
+      )}
 
       <DiscussionEditModal
         visible={isEditModalVisible}
@@ -313,19 +375,47 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    minHeight: 48,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: BENTO_COLORS.pillRadius,
     backgroundColor: BENTO_COLORS.deepNavy,
+    justifyContent: "center",
+    alignItems: "center",
   },
   retryBtnText: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.white,
   },
   listContainer: {
     paddingHorizontal: 20,
     paddingTop: 6,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: colors.semantic.amber.soft,
+    borderWidth: 1,
+    borderColor: colors.semantic.amber.border,
+    width: "90%",
+    maxWidth: 680,
+    alignSelf: "center",
+  },
+  offlineText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.semantic.amber.darkText,
   },
 });

@@ -16,12 +16,14 @@ export const DiscussionHeader = memo(function DiscussionHeader({
   onSharePress,
 }: DiscussionHeaderProps) {
   const router = useRouter();
+  const hasMenu = Boolean(canManage || onOverflowPress);
 
   return (
     <View style={styles.topHeader}>
       <TouchableOpacity
         onPress={() => router.back()}
         style={styles.headerBtn}
+        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel="Go back"
@@ -31,10 +33,11 @@ export const DiscussionHeader = memo(function DiscussionHeader({
 
       <Text style={styles.headerTitle}>Discussion</Text>
 
-      {canManage ? (
+      {hasMenu ? (
         <TouchableOpacity
           onPress={onOverflowPress}
           style={styles.headerBtn}
+          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
           accessible={true}
           accessibilityRole="button"
           accessibilityLabel="More discussion options"
@@ -49,6 +52,7 @@ export const DiscussionHeader = memo(function DiscussionHeader({
         <TouchableOpacity
           onPress={onSharePress}
           style={styles.headerBtn}
+          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
           accessible={true}
           accessibilityRole="button"
           accessibilityLabel="Share discussion"
@@ -71,17 +75,16 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
     backgroundColor: BENTO_COLORS.background,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   headerBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    // backgroundColor: BENTO_COLORS.white,
     justifyContent: "center",
     alignItems: "center",
-    // borderWidth: 1,
-    // borderColor: BENTO_COLORS.subtleBorder,
-    // ...BENTO_COLORS.shadow,
   },
   headerTitle: {
     fontFamily,

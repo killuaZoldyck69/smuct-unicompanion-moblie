@@ -67,7 +67,7 @@ export function useNotificationObserver() {
       Notifications.addNotificationResponseReceivedListener((response) => {
         const targetRoute = response.notification.request.content.data?.route;
         if (typeof targetRoute === "string" && targetRoute.startsWith("/")) {
-          if (isNavigationReady) {
+          if (isNavigationReady && isAuthenticated) {
             router.push(targetRoute as any);
           } else {
             pendingRouteRef.current = targetRoute;
@@ -85,11 +85,11 @@ export function useNotificationObserver() {
       responseSubscription.remove();
       receivedSubscription.remove();
     };
-  }, [isNavigationReady, queryClient, router]);
+  }, [isNavigationReady, isAuthenticated, queryClient, router]);
 
-  // 5. Safely flush pending cold-start navigation once navigation tree is ready
+  // 5. Safely flush pending cold-start navigation once navigation tree and session are ready
   useEffect(() => {
-    if (isNavigationReady && pendingRouteRef.current) {
+    if (isNavigationReady && isAuthenticated && pendingRouteRef.current) {
       const destination = pendingRouteRef.current;
       pendingRouteRef.current = null;
       // Slight delay ensures the root layout stack transition finishes completely
@@ -98,5 +98,5 @@ export function useNotificationObserver() {
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [isNavigationReady, router]);
+  }, [isNavigationReady, isAuthenticated, router]);
 }

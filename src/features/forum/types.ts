@@ -20,10 +20,20 @@ export interface TeacherProfile {
   department?: string | null;
   faculty?: string | null;
   officeRoom?: string | null;
+  officeDayOff?: string | null;
   consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | any | null;
   expertiseFields?: string[];
   linkedInUrl?: string | null;
   personalWebsiteUrl?: string | null;
+}
+
+export type ForumResponseReactionType = "LIKE" | "DISLIKE";
+
+export interface ForumResponseReactionResult {
+  responseId: string;
+  likesCount: number;
+  dislikesCount: number;
+  userReaction: ForumResponseReactionType | null;
 }
 
 export interface ForumAuthor {
@@ -43,9 +53,13 @@ export interface ForumResponseItem {
   responderId?: string;
   parentId?: string | null;
   content: string;
+  isHiddenByModeration?: boolean;
   createdAt: string;
   updatedAt?: string;
   responder: ForumAuthor;
+  likesCount?: number;
+  dislikesCount?: number;
+  userReaction?: ForumResponseReactionType | null;
   replies?: ForumResponseItem[];
 }
 
@@ -54,6 +68,7 @@ export interface ForumPostItem {
   title: string;
   description: string;
   isResolved: boolean;
+  isHiddenByModeration?: boolean;
   createdAt: string;
   updatedAt?: string;
   authorId: string;

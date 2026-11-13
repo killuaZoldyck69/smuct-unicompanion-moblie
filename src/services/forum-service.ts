@@ -4,6 +4,8 @@ import type {
   CreateForumPostInput,
   UpdateForumPostInput,
   CreateForumResponseInput,
+  ForumResponseReactionResult,
+  ForumResponseReactionType,
   ForumFeedResponse,
   ForumFeedMeta,
   ForumCounts,
@@ -14,6 +16,8 @@ export type {
   CreateForumPostInput,
   UpdateForumPostInput,
   CreateForumResponseInput,
+  ForumResponseReactionResult,
+  ForumResponseReactionType,
   ForumFeedResponse,
   ForumFeedMeta,
   ForumCounts,
@@ -104,3 +108,16 @@ export const deleteForumResponse = async (
   return res.data?.data;
 };
 export const deleteForumResponseAPI = deleteForumResponse;
+
+export const reactToForumResponse = async (
+  postId: string,
+  responseId: string,
+  type: ForumResponseReactionType,
+): Promise<ForumResponseReactionResult> => {
+  const res = await api.post(
+    `/forum/${postId}/responses/${responseId}/react`,
+    { type },
+  );
+  return res.data?.data;
+};
+export const reactToForumResponseAPI = reactToForumResponse;

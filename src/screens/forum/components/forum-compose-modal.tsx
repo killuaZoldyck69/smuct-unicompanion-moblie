@@ -22,6 +22,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
+import { colors } from "@/theme/colors";
 
 import {
   BENTO_COLORS,
@@ -31,6 +32,7 @@ import {
 } from "../constants";
 import { useComposePostForm } from "../hooks/use-compose-post-form";
 import { ForumWysiwygEditor } from "./forum-wysiwyg-editor";
+import { UgcGuidelinesModal } from "./ugc/ugc-guidelines-modal";
 
 interface ForumComposeModalProps {
   visible: boolean;
@@ -51,7 +53,12 @@ export const ForumComposeModal = memo(function ForumComposeModal({
     description,
     setDescription,
     plainText,
+    isOffline,
     isSubmitting,
+    isGuidelinesModalVisible,
+    setIsGuidelinesModalVisible,
+    isAcceptingGuidelines,
+    handleAcceptGuidelines,
     handleSubmit,
     resetForm,
   } = useComposePostForm({
@@ -110,32 +117,34 @@ export const ForumComposeModal = memo(function ForumComposeModal({
         edges={["top", "bottom"]}
       >
         {/* ── Top Header Navigation Bar ── */}
-        <View style={styles.topHeader}>
-          {/* Title & Forum Badge - Left Aligned */}
-          <View style={styles.headerTitleGroup}>
-            <Text style={styles.headerTitle}>Ask a Question</Text>
-            <View style={styles.forumBadge}>
-              <Text style={styles.forumBadgeText}>CAMPUS FORUM</Text>
+        <View style={styles.topHeaderBar}>
+          <View style={styles.topHeaderInner}>
+            {/* Title & Forum Badge - Left Aligned */}
+            <View style={styles.headerTitleGroup}>
+              <Text style={styles.headerTitle}>Ask a Question</Text>
+              <View style={styles.forumBadge}>
+                <Text style={styles.forumBadgeText}>CAMPUS FORUM</Text>
+              </View>
             </View>
-          </View>
 
-          {/* Close / Dismiss Button on Right (replaces top Post button) */}
-          <TouchableOpacity
-            onPress={handleClose}
-            style={styles.circleBtn}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Close compose question"
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
-          </TouchableOpacity>
+            {/* Close / Dismiss Button on Right (replaces top Post button) */}
+            <TouchableOpacity
+              onPress={handleClose}
+              style={styles.circleBtn}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Close compose question"
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="x" size={20} color={BENTO_COLORS.deepNavy} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ── Form Scrollable Content ── */}
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.keyboardAvoid}
         >
           <ScrollView
@@ -228,6 +237,7 @@ export const ForumComposeModal = memo(function ForumComposeModal({
             <TouchableOpacity
               style={[
                 styles.submitPostBtn,
+                styles.centeredContent,
                 (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
               ]}
               onPress={handleSubmit}
@@ -235,24 +245,42 @@ export const ForumComposeModal = memo(function ForumComposeModal({
               activeOpacity={0.8}
               accessible={true}
               accessibilityRole="button"
+              accessibilityState={{ disabled: !canSubmit || isSubmitting }}
               accessibilityLabel="Publish Question"
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <>
                   <Feather
                     name="send"
                     size={16}
-                    color="#ffffff"
+                    color={!canSubmit ? colors.slate600 : colors.white}
                     style={styles.submitIcon}
                   />
-                  <Text style={styles.submitPostBtnText}>Publish Question</Text>
+                  <Text
+                    style={[
+                      styles.submitPostBtnText,
+                      !canSubmit && styles.submitPostBtnTextDisabled,
+                    ]}
+                  >
+                    Publish Question
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+
+        {/* ── Community Guidelines Consent Gate (inline overlay avoids stacked RN Modals on iOS) ── */}
+        <UgcGuidelinesModal
+          visible={isGuidelinesModalVisible}
+          onClose={() => setIsGuidelinesModalVisible(false)}
+          onAccept={handleAcceptGuidelines}
+          isSubmitting={isAcceptingGuidelines}
+          isOffline={isOffline}
+          renderInline={true}
+        />
 
         {/* ── Toast Overlay Inside Modal (Ensures error toasts are visible in full-screen) ── */}
         <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
@@ -266,15 +294,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
-  topHeader: {
+  topHeaderBar: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate100,
+    backgroundColor: BENTO_COLORS.white,
+  },
+  topHeaderInner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-    backgroundColor: "#ffffff",
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
+  },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   headerTitleGroup: {
     alignItems: "flex-start",
@@ -291,7 +329,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   forumBadge: {
-    backgroundColor: "#e0f2fe",
+    backgroundColor: BENTO_COLORS.skyBg,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -300,16 +338,18 @@ const styles = StyleSheet.create({
   },
   forumBadgeText: {
     fontFamily,
-    fontSize: 9.5,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
-    color: "#0369a1",
+    color: BENTO_COLORS.sky,
     letterSpacing: 0.6,
+    includeFontPadding: false,
   },
   circleBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -318,12 +358,15 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 24,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   formGroup: {
     marginBottom: 20,
@@ -368,20 +411,23 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     fontWeight: "700",
-    color: "#475569",
+    color: colors.slate600,
+    includeFontPadding: false,
   },
   counterText: {
     fontFamily,
     fontSize: 11,
     color: BENTO_COLORS.subtleText,
     fontWeight: "600",
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
   counterWarning: {
-    color: "#f59e0b",
+    color: colors.semantic.amber.deep,
     fontWeight: "700",
   },
   titleInput: {
-    backgroundColor: "#ffffff",
+    backgroundColor: BENTO_COLORS.white,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -390,29 +436,31 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: BENTO_COLORS.neutralText,
     borderWidth: 1.5,
-    borderColor: "#cbd5e1",
+    borderColor: colors.slate300,
   },
   footerContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: BENTO_COLORS.white,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: Platform.OS === "ios" ? 14 : 16,
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    borderTopColor: colors.slate100,
     ...BENTO_COLORS.shadow,
   },
   submitPostBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 48,
     backgroundColor: BENTO_COLORS.deepNavy,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 14,
     ...BENTO_COLORS.heroShadow,
   },
   submitBtnDisabled: {
-    backgroundColor: "#94a3b8",
-    opacity: 0.65,
+    backgroundColor: colors.slate200,
+    borderWidth: 1,
+    borderColor: colors.slate300,
     elevation: 0,
     shadowOpacity: 0,
   },
@@ -423,6 +471,10 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 15,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.white,
+    includeFontPadding: false,
+  },
+  submitPostBtnTextDisabled: {
+    color: colors.slate600,
   },
 });

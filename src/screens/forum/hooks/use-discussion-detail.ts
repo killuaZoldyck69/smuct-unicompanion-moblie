@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import {
   useSingleForumPost,
   useResolveForumPost,
@@ -12,8 +13,27 @@ import {
   useCreateForumResponse,
   useUpdateForumResponse,
   useDeleteForumResponse,
+  useReactForumResponse,
 } from "@/features/forum/useForum";
-import type { ForumAuthor, ForumResponseItem } from "@/features/forum/types";
+import {
+  useUgcTermsStatus,
+  useAcceptUgcTerms,
+  useCreateForumReport,
+} from "@/features/ugc/useUgcModeration";
+import {
+  extractApiErrorInfo,
+  formatShareMessage,
+  sanitizeForumPost,
+} from "@/features/forum/forum-logic";
+import type {
+  ForumAuthor,
+  ForumResponseItem,
+  ForumResponseReactionType,
+} from "@/features/forum/types";
+import type {
+  UgcReportReason,
+  UgcReportTargetType,
+} from "@/services/ugc-service";
 import type { ReplyTarget } from "../types";
 
 export interface ConfirmModalConfig {
@@ -26,18 +46,25 @@ export interface ConfirmModalConfig {
   action: () => void;
 }
 
+export interface ReportModalTarget {
+  targetType: UgcReportTargetType;
+  targetId: string;
+  targetTitle?: string;
+}
+
 export function useDiscussionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const postId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
 
   const { user: currentUser, role: currentUserRole } = useCurrentUser();
+  const { isOffline } = useNetworkStatus();
   const currentUserId = currentUser?.id;
   const isAdmin = currentUserRole === "ADMIN";
 
-  // Composer state — shared between new reply and edit mode
   const [composerText, setComposerText] = useState("");
-  const [editingResponse, setEditingResponse] = useState<ForumResponseItem | null>(null);
+  const [editingResponse, setEditingResponse] =
+    useState<ForumResponseItem | null>(null);
   const isEditMode = editingResponse !== null;
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const composerInputRef = useRef<TextInput>(null);
@@ -45,8 +72,17 @@ export function useDiscussionDetail() {
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", description: "" });
-  const [selectedProfile, setSelectedProfile] = useState<ForumAuthor | null>(null);
-  const [confirmModal, setConfirmModal] = useState<ConfirmModalConfig | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<ForumAuthor | null>(
+    null,
+  );
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalConfig | null>(
+    null,
+  );
+  const [isGuidelinesModalVisible, setIsGuidelinesModalVisible] =
+    useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportModalTarget | null>(
+    null,
+  );
 
   const {
     data: thread,
@@ -55,6 +91,13 @@ export function useDiscussionDetail() {
     refetch,
     isRefetching,
   } = useSingleForumPost(postId);
+
+  const { data: ugcTermsStatus } = useUgcTermsStatus(
+    currentUserId,
+    Boolean(currentUserId),
+  );
+  const acceptTermsMutation = useAcceptUgcTerms(currentUserId);
+  const reportMutation = useCreateForumReport();
 
   const isAuthor = Boolean(currentUserId && currentUserId === thread?.authorId);
   const canManage = isAuthor || isAdmin;
@@ -65,15 +108,24 @@ export function useDiscussionDetail() {
   const replyMutation = useCreateForumResponse(postId);
   const updateResponseMutation = useUpdateForumResponse(postId);
   const deleteResponseMutation = useDeleteForumResponse(postId);
+  const reactMutation = useReactForumResponse(postId);
 
   const handleShare = useCallback(async () => {
     if (!thread) return;
     try {
       await Share.share({
-        message: `💬 SMUCT Campus Forum: "${thread.title}"\n\n${thread.description}\n\nJoin the discussion on SMUCT UniCompanion!`,
+        message: formatShareMessage(thread.title, thread.description),
       });
     } catch {}
   }, [thread]);
+
+  const navigateBackAfterRemoval = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/forum");
+    }
+  }, [router]);
 
   const handleResolvePrompt = useCallback(() => {
     const isReopening = Boolean(thread?.isResolved);
@@ -87,6 +139,15 @@ export function useDiscussionDetail() {
       confirmLabel: isReopening ? "Reopen Discussion" : "Mark Resolved",
       cancelLabel: isReopening ? "Keep Closed" : "Keep Open",
       action: () => {
+        if (isOffline) {
+          setConfirmModal(null);
+          Toast.show({
+            type: "error",
+            text1: "You're Offline",
+            text2: "Connect to the internet to update discussion status.",
+          });
+          return;
+        }
         resolveMutation.mutate(
           { id: postId, isResolved: !isReopening },
           {
@@ -100,19 +161,20 @@ export function useDiscussionDetail() {
                   : "This discussion has been closed with answers.",
               });
             },
-            onError: (err: any) => {
+            onError: (err: unknown) => {
               setConfirmModal(null);
+              const info = extractApiErrorInfo(err, "Please try again.");
               Toast.show({
                 type: "error",
                 text1: isReopening ? "Failed to reopen" : "Failed to resolve",
-                text2: err.message || "Please try again.",
+                text2: info.message,
               });
             },
           },
         );
       },
     });
-  }, [postId, thread?.isResolved, resolveMutation]);
+  }, [isOffline, postId, thread?.isResolved, resolveMutation]);
 
   const handleDeletePrompt = useCallback(() => {
     setConfirmModal({
@@ -124,6 +186,15 @@ export function useDiscussionDetail() {
       confirmLabel: "Delete Discussion",
       cancelLabel: "Cancel",
       action: () => {
+        if (isOffline) {
+          setConfirmModal(null);
+          Toast.show({
+            type: "error",
+            text1: "You're Offline",
+            text2: "Connect to the internet to delete this discussion.",
+          });
+          return;
+        }
         deleteMutation.mutate(postId, {
           onSuccess: () => {
             setConfirmModal(null);
@@ -131,20 +202,21 @@ export function useDiscussionDetail() {
               type: "info",
               text1: "Discussion Deleted",
             });
-            router.push("/(tabs)/forum");
+            navigateBackAfterRemoval();
           },
-          onError: (err: any) => {
+          onError: (err: unknown) => {
             setConfirmModal(null);
+            const info = extractApiErrorInfo(err, "Please try again.");
             Toast.show({
               type: "error",
               text1: "Failed to delete",
-              text2: err.message || "Please try again.",
+              text2: info.message,
             });
           },
         });
       },
     });
-  }, [postId, deleteMutation, router]);
+  }, [isOffline, postId, deleteMutation, navigateBackAfterRemoval]);
 
   const handleOpenEdit = useCallback(() => {
     if (!thread) return;
@@ -156,56 +228,28 @@ export function useDiscussionDetail() {
   }, [thread]);
 
   const handleSaveEdit = useCallback(() => {
-    const trimmedTitle = editForm.title.trim();
-    const trimmedDesc = editForm.description.trim();
-    const plainDesc = trimmedDesc
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (!trimmedTitle) {
+    if (isOffline) {
       Toast.show({
         type: "error",
-        text1: "Title Required",
-        text2: "Please enter a question title.",
-        visibilityTime: 4000,
+        text1: "You're Offline",
+        text2: "Connect to the internet before saving changes.",
       });
       return;
     }
 
-    if (trimmedTitle.length < 5) {
+    const validated = sanitizeForumPost(editForm);
+    if (validated.error) {
       Toast.show({
         type: "error",
-        text1: "Title Too Short",
-        text2: "Question title must be at least 5 characters.",
-        visibilityTime: 4000,
-      });
-      return;
-    }
-
-    if (!trimmedDesc || !plainDesc) {
-      Toast.show({
-        type: "error",
-        text1: "Details Required",
-        text2: "Please provide details and context for your question.",
-        visibilityTime: 4000,
-      });
-      return;
-    }
-
-    if (plainDesc.length < 10) {
-      Toast.show({
-        type: "error",
-        text1: "More Context Needed",
-        text2: "Please provide at least 10 characters of details.",
+        text1: "Check Question Details",
+        text2: validated.error,
         visibilityTime: 4000,
       });
       return;
     }
 
     editMutation.mutate(
-      { title: trimmedTitle, description: trimmedDesc },
+      { title: validated.title, description: validated.description },
       {
         onSuccess: () => {
           setIsEditModalVisible(false);
@@ -218,22 +262,26 @@ export function useDiscussionDetail() {
             });
           }, 350);
         },
-        onError: (err: any) => {
-          const errorMessage =
-            err.response?.data?.message ||
-            err.response?.data?.error ||
-            err.message ||
-            "Failed to save changes. Please try again.";
+        onError: (err: unknown) => {
+          const info = extractApiErrorInfo(
+            err,
+            "Failed to save changes. Please try again.",
+          );
+          if (info.code === "UGC_TERMS_REQUIRED") {
+            setIsEditModalVisible(false);
+            setIsGuidelinesModalVisible(true);
+            return;
+          }
           Toast.show({
             type: "error",
             text1: "Update Failed",
-            text2: errorMessage,
+            text2: info.message,
             visibilityTime: 4000,
           });
         },
       },
     );
-  }, [editForm, editMutation]);
+  }, [isOffline, editForm, editMutation]);
 
   const handleStartReply = useCallback(
     (targetId: string, authorName: string) => {
@@ -254,14 +302,42 @@ export function useDiscussionDetail() {
     setReplyTarget(null);
   }, []);
 
-  // Submit handler — routes to new reply or response update based on edit mode
-  const handleComposerSubmit = useCallback(() => {
-    const cleanContent = composerText.trim();
-    if (!cleanContent) return;
+  const submitReply = useCallback(
+    (cleanContent: string) => {
+      replyMutation.mutate(
+        { content: cleanContent, parentId: replyTarget?.id },
+        {
+          onSuccess: () => {
+            setComposerText("");
+            setReplyTarget(null);
+            Keyboard.dismiss();
+            Toast.show({
+              type: "success",
+              text1: "Reply Posted",
+            });
+          },
+          onError: (err: unknown) => {
+            const info = extractApiErrorInfo(err, "Please try again.");
+            if (info.code === "UGC_TERMS_REQUIRED") {
+              setIsGuidelinesModalVisible(true);
+              return;
+            }
+            Toast.show({
+              type: "error",
+              text1: "Failed to send",
+              text2: info.message,
+            });
+          },
+        },
+      );
+    },
+    [replyMutation, replyTarget],
+  );
 
-    if (isEditMode && editingResponse) {
+  const submitResponseUpdate = useCallback(
+    (responseId: string, cleanContent: string) => {
       updateResponseMutation.mutate(
-        { responseId: editingResponse.id, content: cleanContent },
+        { responseId, content: cleanContent },
         {
           onSuccess: () => {
             setComposerText("");
@@ -272,48 +348,197 @@ export function useDiscussionDetail() {
               text1: "Response Updated",
             });
           },
-          onError: (err: any) => {
+          onError: (err: unknown) => {
+            const info = extractApiErrorInfo(err, "Please try again.");
+            if (info.code === "UGC_TERMS_REQUIRED") {
+              setIsGuidelinesModalVisible(true);
+              return;
+            }
             Toast.show({
               type: "error",
               text1: "Failed to update",
-              text2: err.message || "Please try again.",
+              text2: info.message,
             });
           },
         },
       );
-    } else {
-      replyMutation.mutate(
-        { content: cleanContent, parentId: replyTarget?.id },
-        {
-          onSuccess: () => {
-            setComposerText("");
-            setReplyTarget(null);
-            Keyboard.dismiss();
-            Toast.show({
-              type: "success",
-              text1: replyTarget ? "Reply Posted" : "Reply Posted",
-            });
-          },
-          onError: (err: any) => {
-            Toast.show({
-              type: "error",
-              text1: "Failed to send",
-              text2: err.message || "Please try again.",
-            });
-          },
-        },
-      );
+    },
+    [updateResponseMutation],
+  );
+
+  const handleComposerSubmit = useCallback(() => {
+    const cleanContent = composerText.trim();
+    if (!cleanContent) return;
+
+    if (isOffline) {
+      Toast.show({
+        type: "error",
+        text1: "You're Offline",
+        text2: "Connect to the internet to submit your response.",
+      });
+      return;
     }
+
+    if (ugcTermsStatus && !ugcTermsStatus.accepted) {
+      setIsGuidelinesModalVisible(true);
+      return;
+    }
+
+    if (isEditMode && editingResponse) {
+      submitResponseUpdate(editingResponse.id, cleanContent);
+      return;
+    }
+
+    submitReply(cleanContent);
   }, [
+    composerText,
+    isOffline,
+    isEditMode,
+    editingResponse,
+    submitResponseUpdate,
+    ugcTermsStatus,
+    submitReply,
+  ]);
+
+  const handleAcceptGuidelines = useCallback(() => {
+    if (isOffline) {
+      Toast.show({
+        type: "error",
+        text1: "You're Offline",
+        text2: "Connect to the internet to accept guidelines.",
+      });
+      return;
+    }
+    acceptTermsMutation.mutate(undefined, {
+      onSuccess: () => {
+        setIsGuidelinesModalVisible(false);
+        const cleanContent = composerText.trim();
+        if (cleanContent && isEditMode && editingResponse) {
+          submitResponseUpdate(editingResponse.id, cleanContent);
+          return;
+        }
+        if (cleanContent && !isEditMode) {
+          submitReply(cleanContent);
+        }
+      },
+      onError: (err: unknown) => {
+        const info = extractApiErrorInfo(
+          err,
+          "Could not save guidelines agreement.",
+        );
+        Toast.show({
+          type: "error",
+          text1: "Agreement Failed",
+          text2: info.message,
+        });
+      },
+    });
+  }, [
+    isOffline,
+    acceptTermsMutation,
     composerText,
     isEditMode,
     editingResponse,
-    replyTarget,
-    updateResponseMutation,
-    replyMutation,
+    submitResponseUpdate,
+    submitReply,
   ]);
 
-  // Enter inline edit mode for a response
+  const handleReactResponse = useCallback(
+    (response: ForumResponseItem, type: ForumResponseReactionType) => {
+      if (isOffline) {
+        Toast.show({
+          type: "error",
+          text1: "You're Offline",
+          text2: "Connect to the internet to react to comments.",
+        });
+        return;
+      }
+      reactMutation.mutate(
+        { responseId: response.id, type },
+        {
+          onError: (err: unknown) => {
+            const info = extractApiErrorInfo(
+              err,
+              "Could not update reaction.",
+            );
+            Toast.show({
+              type: "error",
+              text1: "Reaction Failed",
+              text2: info.message,
+            });
+          },
+        },
+      );
+    },
+    [isOffline, reactMutation],
+  );
+
+  const handleOpenReportPost = useCallback(() => {
+    if (!thread) return;
+    setReportTarget({
+      targetType: "FORUM_POST",
+      targetId: thread.id,
+      targetTitle: thread.title,
+    });
+  }, [thread]);
+
+  const handleOpenReportResponse = useCallback((item: ForumResponseItem) => {
+    setReportTarget({
+      targetType: "FORUM_RESPONSE",
+      targetId: item.id,
+      targetTitle: item.content.slice(0, 60),
+    });
+  }, []);
+
+  const handleSubmitReport = useCallback(
+    ({ reason, details }: { reason: UgcReportReason; details?: string }) => {
+      if (!reportTarget) return;
+      if (isOffline) {
+        Toast.show({
+          type: "error",
+          text1: "You're Offline",
+          text2: "Connect to the internet to submit a report.",
+        });
+        return;
+      }
+
+      const currentTarget = reportTarget;
+      reportMutation.mutate(
+        {
+          targetType: currentTarget.targetType,
+          targetId: currentTarget.targetId,
+          reason,
+          ...(details ? { details } : {}),
+        },
+        {
+          onSuccess: () => {
+            setReportTarget(null);
+            Toast.show({
+              type: "success",
+              text1: "Report Submitted",
+              text2: "This content is now hidden from your view for review.",
+            });
+            if (currentTarget.targetType === "FORUM_POST") {
+              navigateBackAfterRemoval();
+            }
+          },
+          onError: (err: unknown) => {
+            const info = extractApiErrorInfo(
+              err,
+              "Could not submit your report.",
+            );
+            Toast.show({
+              type: "error",
+              text1: "Report Failed",
+              text2: info.message,
+            });
+          },
+        },
+      );
+    },
+    [reportTarget, isOffline, reportMutation, navigateBackAfterRemoval],
+  );
+
   const handleEditResponseInline = useCallback(
     (response: ForumResponseItem) => {
       if (thread?.isResolved) {
@@ -331,7 +556,6 @@ export function useDiscussionDetail() {
     [thread?.isResolved],
   );
 
-  // Cancel inline edit mode
   const handleCancelEdit = useCallback(() => {
     setEditingResponse(null);
     setComposerText("");
@@ -339,37 +563,48 @@ export function useDiscussionDetail() {
     Keyboard.dismiss();
   }, []);
 
-  // Prompt for response deletion via confirm modal
-  const handleDeleteResponsePrompt = useCallback((response: ForumResponseItem) => {
-    setConfirmModal({
-      type: "danger",
-      iconName: "trash-2",
-      title: "Delete Response?",
-      message:
-        "Are you sure you want to permanently delete this response? This action cannot be undone.",
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel",
-      action: () => {
-        deleteResponseMutation.mutate(response.id, {
-          onSuccess: () => {
-            setConfirmModal(null);
-            Toast.show({
-              type: "info",
-              text1: "Response Deleted",
-            });
-          },
-          onError: (err: any) => {
+  const handleDeleteResponsePrompt = useCallback(
+    (response: ForumResponseItem) => {
+      setConfirmModal({
+        type: "danger",
+        iconName: "trash-2",
+        title: "Delete Response?",
+        message:
+          "Are you sure you want to permanently delete this response? This action cannot be undone.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+        action: () => {
+          if (isOffline) {
             setConfirmModal(null);
             Toast.show({
               type: "error",
-              text1: "Failed to delete",
-              text2: err.message || "Please try again.",
+              text1: "You're Offline",
+              text2: "Connect to the internet to delete responses.",
             });
-          },
-        });
-      },
-    });
-  }, [deleteResponseMutation]);
+            return;
+          }
+          deleteResponseMutation.mutate(response.id, {
+            onSuccess: () => {
+              setConfirmModal(null);
+              Toast.show({
+                type: "info",
+                text1: "Response Deleted",
+              });
+            },
+            onError: (err: unknown) => {
+              setConfirmModal(null);
+              Toast.show({
+                type: "error",
+                text1: "Failed to delete",
+                text2: extractApiErrorInfo(err, "Please try again.").message,
+              });
+            },
+          });
+        },
+      });
+    },
+    [isOffline, deleteResponseMutation],
+  );
 
   const handleOverflowPress = useCallback(() => {
     setIsOptionsModalVisible(true);
@@ -384,6 +619,7 @@ export function useDiscussionDetail() {
     thread,
     isLoading,
     isError,
+    isOffline,
     refetch,
     isRefetching,
     isAuthor,
@@ -402,6 +638,7 @@ export function useDiscussionDetail() {
     handleEditResponseInline,
     handleCancelEdit,
     handleDeleteResponsePrompt,
+    handleReactResponse,
     isOptionsModalVisible,
     setIsOptionsModalVisible,
     handleOverflowPress,
@@ -416,6 +653,16 @@ export function useDiscussionDetail() {
     setSelectedProfile,
     confirmModal,
     setConfirmModal,
+    isGuidelinesModalVisible,
+    setIsGuidelinesModalVisible,
+    isAcceptingGuidelines: acceptTermsMutation.isPending,
+    handleAcceptGuidelines,
+    reportTarget,
+    setReportTarget,
+    handleOpenReportPost,
+    handleOpenReportResponse,
+    handleSubmitReport,
+    isSubmittingReport: reportMutation.isPending,
     handleShare,
     handleResolvePrompt,
     handleDeletePrompt,

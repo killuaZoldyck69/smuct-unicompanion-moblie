@@ -267,7 +267,7 @@ export function MarketplaceFilterModal({
           <View
             style={[
               styles.footer,
-              { paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 20 },
+              { paddingBottom: Math.max(insets.bottom + 16, 20) },
             ]}
           >
             <TouchableOpacity

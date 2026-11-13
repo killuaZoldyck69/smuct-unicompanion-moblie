@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily } from "../constants";
 
 interface ForumSearchBarProps {
@@ -42,6 +43,7 @@ export const ForumSearchBar = memo(function ForumSearchBar({
           <TouchableOpacity
             onPress={onClear}
             style={styles.clearBtn}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Clear search"
@@ -139,17 +141,20 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#ef4444",
+    backgroundColor: colors.semantic.red.solid,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
     borderWidth: 1.5,
-    borderColor: "#ffffff",
+    borderColor: BENTO_COLORS.white,
   },
   filterBadgeText: {
     fontSize: 10,
+    lineHeight: 12,
     fontFamily,
     fontWeight: "800",
-    color: "#ffffff",
+    color: BENTO_COLORS.white,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
 });

@@ -1,13 +1,24 @@
-import type { FilterType, ForumCounts, ForumPostItem } from "./types";
-import { MAX_TITLE_LENGTH, MAX_DESCRIPTION_LENGTH } from "./constants";
 import { getDepartmentShortName } from "@/data/programs";
 import { parseOrdinalParts } from "@/utils/academic-formatters";
+import type { ForumAuthor } from "@/features/forum/types";
+import {
+  stripHtmlToPlainText,
+  countTotalThreadResponses,
+  formatShareMessage,
+} from "@/features/forum/forum-logic";
+
+export { stripHtmlToPlainText, countTotalThreadResponses, formatShareMessage };
+
+function parseValidDate(dateString?: string): Date | null {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 
 export function timeAgo(dateString?: string): string {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const date = parseValidDate(dateString);
+  if (!date) return "";
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
 
   if (seconds < 60) return "Just now";
   const mins = Math.floor(seconds / 60);
@@ -21,26 +32,19 @@ export function timeAgo(dateString?: string): string {
 }
 
 export function formatPostedTime(dateString?: string): string {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "";
-  const timeStr = date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  const date = parseValidDate(dateString);
+  if (!date) return "";
   const dateStr = date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
-  return `${dateStr}, ${timeStr}`;
+  return `${dateStr}, ${formatTimeOnly(dateString)}`;
 }
 
 export function formatTimeOnly(dateString?: string): string {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "";
+  const date = parseValidDate(dateString);
+  if (!date) return "";
   return date.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -48,136 +52,12 @@ export function formatTimeOnly(dateString?: string): string {
   });
 }
 
-export function formatEditedTime(dateString?: string): string {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "";
-  const dateStr = date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-  const timeStr = date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return `${dateStr}, ${timeStr}`;
-}
-
 export function isEdited(createdAt?: string, updatedAt?: string): boolean {
-  if (!createdAt || !updatedAt) return false;
-  const created = new Date(createdAt).getTime();
-  const updated = new Date(updatedAt).getTime();
-  // Allow a 5-second grace window to ignore trivial DB differences
-  return updated - created > 5000;
-}
-
-export function sanitizeForumPost(input: {
-  title: string;
-  description: string;
-}): { title: string; description: string; plainText: string; error?: string } {
-  const cleanTitle = (input.title || "").trim().slice(0, MAX_TITLE_LENGTH);
-  const cleanDescription = (input.description || "").trim();
-  const plainText = cleanDescription
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!cleanTitle) {
-    return {
-      title: "",
-      description: cleanDescription,
-      plainText,
-      error: "Please enter a question title.",
-    };
-  }
-
-  if (cleanTitle.length < 5) {
-    return {
-      title: cleanTitle,
-      description: cleanDescription,
-      plainText,
-      error: "Question title must be at least 5 characters.",
-    };
-  }
-
-  if (!cleanDescription || !plainText) {
-    return {
-      title: cleanTitle,
-      description: "",
-      plainText: "",
-      error: "Please provide details and context for your question.",
-    };
-  }
-
-  if (plainText.length < 10) {
-    return {
-      title: cleanTitle,
-      description: cleanDescription,
-      plainText,
-      error: "Please provide at least 10 characters of details and context.",
-    };
-  }
-
-  return {
-    title: cleanTitle,
-    description: cleanDescription.slice(0, MAX_DESCRIPTION_LENGTH),
-    plainText,
-  };
-}
-
-export function computeForumFeed(
-  posts: ForumPostItem[] | undefined,
-  activeFilter: FilterType,
-  searchQuery: string,
-  currentUserId?: string,
-): { filteredPosts: ForumPostItem[]; counts: ForumCounts } {
-  const list = Array.isArray(posts) ? posts : [];
-
-  let open = 0;
-  let resolved = 0;
-  let myPosts = 0;
-
-  list.forEach((p) => {
-    if (p.isResolved) {
-      resolved++;
-    } else {
-      open++;
-    }
-    if (currentUserId && p.authorId === currentUserId) {
-      myPosts++;
-    }
-  });
-
-  let filtered = list;
-  if (activeFilter === "UNRESOLVED") {
-    filtered = filtered.filter((p) => !p.isResolved);
-  } else if (activeFilter === "RESOLVED") {
-    filtered = filtered.filter((p) => p.isResolved);
-  } else if (activeFilter === "MY_POSTS") {
-    filtered = filtered.filter((p) => p.authorId === currentUserId);
-  }
-
-  const cleanQuery = searchQuery.trim().toLowerCase();
-  if (cleanQuery) {
-    filtered = filtered.filter(
-      (p) =>
-        (p.title || "").toLowerCase().includes(cleanQuery) ||
-        (p.description || "").toLowerCase().includes(cleanQuery),
-    );
-  }
-
-  return {
-    filteredPosts: filtered,
-    counts: {
-      total: list.length,
-      open,
-      resolved,
-      myPosts,
-    },
-  };
+  const created = parseValidDate(createdAt);
+  const updated = parseValidDate(updatedAt);
+  if (!created || !updated) return false;
+  // Ignore sub-5s persistence timestamps between initial insert and post-hook writes
+  return updated.getTime() - created.getTime() > 5000;
 }
 
 export const ORDINAL_SUPERSCRIPTS: Record<string, string> = {
@@ -204,7 +84,9 @@ export interface AuthorAcademicInfo {
   fullText: string;
 }
 
-export function getAuthorAcademicInfo(author?: any): AuthorAcademicInfo {
+export function getAuthorAcademicInfo(
+  author?: Partial<ForumAuthor> | null,
+): AuthorAcademicInfo {
   if (!author) {
     return {
       isStudent: false,
@@ -234,8 +116,7 @@ export function getAuthorAcademicInfo(author?: any): AuthorAcademicInfo {
   if (author.studentProfile) {
     const rawDept = author.studentProfile.department;
     const deptShort = rawDept ? getDepartmentShortName(rawDept) : "";
-    const sem =
-      author.studentProfile.currentSemester ?? author.studentProfile.semester;
+    const sem = author.studentProfile.currentSemester;
 
     if (sem != null && String(sem).trim() !== "") {
       const { numberPart, suffix } = parseOrdinalParts(sem);
@@ -280,9 +161,5 @@ export function getAuthorAcademicInfo(author?: any): AuthorAcademicInfo {
     isAdmin: false,
     fullText: "University Member",
   };
-}
-
-export function getUserAcademicSubtitle(author?: any): string {
-  return getAuthorAcademicInfo(author).fullText;
 }
 

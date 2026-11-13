@@ -4,10 +4,13 @@ import {
   Text,
   Modal,
   TouchableOpacity,
+  Pressable,
+  Platform,
   StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily } from "../constants";
 
 interface ForumOptionsModalProps {
@@ -20,6 +23,7 @@ interface ForumOptionsModalProps {
   onResolve: () => void;
   onDelete: () => void;
   onShare?: () => void;
+  onReport?: () => void;
 }
 
 export const ForumOptionsModal = memo(function ForumOptionsModal({
@@ -32,6 +36,7 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
   onResolve,
   onDelete,
   onShare,
+  onReport,
 }: ForumOptionsModalProps) {
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, 20) + 12;
@@ -69,6 +74,7 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               activeOpacity={0.7}
               accessible={true}
               accessibilityRole="button"
@@ -80,13 +86,16 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
 
           <View style={styles.actionGroup}>
             {canEdit && (
-              <TouchableOpacity
-                style={styles.actionRow}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionRow,
+                  pressed && Platform.OS === "ios" && { opacity: 0.65 },
+                ]}
+                android_ripple={{ color: colors.navyAlpha08 }}
                 onPress={() => {
                   onClose();
                   onEdit();
                 }}
-                activeOpacity={0.65}
                 accessible={true}
                 accessibilityRole="button"
                 accessibilityLabel="Edit Question"
@@ -99,20 +108,27 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
                   />
                 </View>
                 <Text style={styles.actionText}>Edit Question</Text>
-                <Feather name="chevron-right" size={16} color="#cbd5e1" />
-              </TouchableOpacity>
+                <Feather
+                  name="chevron-right"
+                  size={16}
+                  color={colors.slate300}
+                />
+              </Pressable>
             )}
 
             {canManage && (
               <>
                 {canEdit && <View style={styles.rowDivider} />}
-                <TouchableOpacity
-                  style={styles.actionRow}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    pressed && Platform.OS === "ios" && { opacity: 0.65 },
+                  ]}
+                  android_ripple={{ color: colors.navyAlpha08 }}
                   onPress={() => {
                     onClose();
                     onResolve();
                   }}
-                  activeOpacity={0.65}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel={
@@ -138,21 +154,28 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
                   <Text style={styles.actionText}>
                     {isResolved ? "Reopen Discussion" : "Mark as Resolved"}
                   </Text>
-                  <Feather name="chevron-right" size={16} color="#cbd5e1" />
-                </TouchableOpacity>
+                  <Feather
+                    name="chevron-right"
+                    size={16}
+                    color={colors.slate300}
+                  />
+                </Pressable>
               </>
             )}
 
             {onShare && (
               <>
                 {(canEdit || canManage) && <View style={styles.rowDivider} />}
-                <TouchableOpacity
-                  style={styles.actionRow}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    pressed && Platform.OS === "ios" && { opacity: 0.65 },
+                  ]}
+                  android_ripple={{ color: colors.navyAlpha08 }}
                   onPress={() => {
                     onClose();
                     onShare();
                   }}
-                  activeOpacity={0.65}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Share Discussion"
@@ -165,21 +188,66 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
                     />
                   </View>
                   <Text style={styles.actionText}>Share Discussion</Text>
-                  <Feather name="chevron-right" size={16} color="#cbd5e1" />
-                </TouchableOpacity>
+                  <Feather
+                    name="chevron-right"
+                    size={16}
+                    color={colors.slate300}
+                  />
+                </Pressable>
+              </>
+            )}
+
+            {!isAuthor && onReport && (
+              <>
+                {(canEdit || canManage || Boolean(onShare)) && (
+                  <View style={styles.rowDivider} />
+                )}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    pressed && Platform.OS === "ios" && { opacity: 0.65 },
+                  ]}
+                  android_ripple={{ color: colors.semantic.rose.alpha14 }}
+                  onPress={() => {
+                    onClose();
+                    onReport();
+                  }}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Report Discussion"
+                >
+                  <View style={[styles.iconBox, styles.iconBoxDanger]}>
+                    <Feather
+                      name="flag"
+                      size={16}
+                      color={BENTO_COLORS.danger}
+                    />
+                  </View>
+                  <Text style={[styles.actionText, styles.actionTextDanger]}>
+                    Report Discussion
+                  </Text>
+                  <Feather
+                    name="chevron-right"
+                    size={16}
+                    color={colors.semantic.red.borderStrong}
+                  />
+                </Pressable>
               </>
             )}
 
             {canManage && (
               <>
                 <View style={styles.rowDivider} />
-                <TouchableOpacity
-                  style={styles.actionRow}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    pressed && Platform.OS === "ios" && { opacity: 0.65 },
+                  ]}
+                  android_ripple={{ color: colors.semantic.rose.alpha14 }}
                   onPress={() => {
                     onClose();
                     onDelete();
                   }}
-                  activeOpacity={0.65}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Delete Discussion"
@@ -194,8 +262,12 @@ export const ForumOptionsModal = memo(function ForumOptionsModal({
                   <Text style={[styles.actionText, styles.actionTextDanger]}>
                     Delete Discussion
                   </Text>
-                  <Feather name="chevron-right" size={16} color="#fca5a5" />
-                </TouchableOpacity>
+                  <Feather
+                    name="chevron-right"
+                    size={16}
+                    color={colors.semantic.red.borderStrong}
+                  />
+                </Pressable>
               </>
             )}
           </View>
@@ -267,7 +339,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   actionGroup: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: BENTO_COLORS.subtleBorder,
@@ -276,9 +348,10 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 52,
     paddingHorizontal: 16,
-    paddingVertical: 15,
-    backgroundColor: "#f8fafc",
+    paddingVertical: 14,
+    backgroundColor: colors.slate50,
   },
   rowDivider: {
     height: StyleSheet.hairlineWidth,

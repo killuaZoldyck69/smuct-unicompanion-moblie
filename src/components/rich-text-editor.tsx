@@ -201,9 +201,58 @@ const STATIC_EDITOR_HTML = `
       }
     }
 
+    function sanitizeEditorHtmlClient(rawHtml) {
+      if (!rawHtml) return '';
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(String(rawHtml), 'text/html');
+      var ALLOWED = {
+        P: true, B: true, I: true, U: true, STRONG: true, EM: true,
+        UL: true, OL: true, LI: true, BR: true, DIV: true, SPAN: true
+      };
+      var NON_TEXT = {
+        SCRIPT: true, STYLE: true, TEXTAREA: true, OPTION: true, NOSCRIPT: true,
+        IFRAME: true, OBJECT: true, EMBED: true, SVG: true, CANVAS: true,
+        FORM: true, BUTTON: true, INPUT: true, SELECT: true
+      };
+      function clean(node) {
+        var children = Array.prototype.slice.call(node.childNodes);
+        for (var i = 0; i < children.length; i++) {
+          var child = children[i];
+          if (child.nodeType === 1) {
+            var tag = child.tagName.toUpperCase();
+            if (NON_TEXT[tag]) {
+              node.removeChild(child);
+              continue;
+            }
+            if (!ALLOWED[tag]) {
+              var frag = doc.createDocumentFragment();
+              while (child.firstChild) frag.appendChild(child.firstChild);
+              node.replaceChild(frag, child);
+              clean(node);
+              return;
+            }
+            var attrs = Array.prototype.slice.call(child.attributes);
+            for (var a = 0; a < attrs.length; a++) {
+              var attrName = attrs[a].name.toLowerCase();
+              var attrVal = (attrs[a].value || '').trim();
+              var isSafeAlign = attrName === 'align' && /^(left|center|right|justify)$/i.test(attrVal);
+              var isSafeStyle = attrName === 'style' && /^text-align:\s*(left|center|right|justify);?$/i.test(attrVal);
+              if (!isSafeAlign && !isSafeStyle) {
+                child.removeAttribute(attrs[a].name);
+              }
+            }
+            clean(child);
+          }
+        }
+      }
+      clean(doc.body);
+      return doc.body.innerHTML;
+    }
+
     window.setEditorContent = function(html) {
-      if (editor.innerHTML !== (html || '')) {
-        editor.innerHTML = html || '';
+      var safeHtml = sanitizeEditorHtmlClient(html || '');
+      if (editor.innerHTML !== safeHtml) {
+        editor.innerHTML = safeHtml;
         checkFormatStatus();
       }
     };
@@ -657,6 +706,51 @@ function toggleInlineWeb(editor: any, cmd: string) {
   }
 }
 
+function sanitizeRichHtmlForWebDom(rawHtml?: string): string {
+  if (!rawHtml) return "";
+  if (typeof DOMParser === "undefined") {
+    return rawHtml.replace(/<[^>]+>/g, "");
+  }
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(rawHtml, "text/html");
+  const ALLOWED = new Set(["P", "B", "I", "U", "STRONG", "EM", "UL", "OL", "LI", "BR", "DIV", "SPAN"]);
+  const NON_TEXT = new Set([
+    "SCRIPT", "STYLE", "TEXTAREA", "OPTION", "NOSCRIPT", "IFRAME",
+    "OBJECT", "EMBED", "SVG", "CANVAS", "FORM", "BUTTON", "INPUT", "SELECT",
+  ]);
+  const clean = (node: Node) => {
+    for (const child of Array.from(node.childNodes)) {
+      if (child.nodeType === 1) {
+        const el = child as HTMLElement;
+        const tag = el.tagName.toUpperCase();
+        if (NON_TEXT.has(tag)) {
+          node.removeChild(el);
+          continue;
+        }
+        if (!ALLOWED.has(tag)) {
+          const frag = doc.createDocumentFragment();
+          while (el.firstChild) frag.appendChild(el.firstChild);
+          node.replaceChild(frag, el);
+          clean(node);
+          return;
+        }
+        for (const attr of Array.from(el.attributes)) {
+          const attrName = attr.name.toLowerCase();
+          const attrVal = attr.value.trim();
+          const isSafeAlign = attrName === "align" && /^(left|center|right|justify)$/i.test(attrVal);
+          const isSafeStyle = attrName === "style" && /^text-align:\s*(left|center|right|justify);?$/i.test(attrVal);
+          if (!isSafeAlign && !isSafeStyle) {
+            el.removeAttribute(attr.name);
+          }
+        }
+        clean(el);
+      }
+    }
+  };
+  clean(doc.body);
+  return doc.body.innerHTML;
+}
+
 export const RichTextEditor = React.memo(function RichTextEditor({
   initialValue = "",
   onChange,
@@ -768,10 +862,14 @@ export const RichTextEditor = React.memo(function RichTextEditor({
   // Sync external changes (e.g., reset form or edit another event)
   useEffect(() => {
     if (isWeb) {
-      if (webEditorRef.current && initialValue !== currentHtmlRef.current) {
-        currentHtmlRef.current = initialValue;
-        if (webEditorRef.current.innerHTML !== initialValue) {
-          webEditorRef.current.innerHTML = initialValue || "";
+      if (webEditorRef.current) {
+        const safeInitial = sanitizeRichHtmlForWebDom(initialValue || "");
+        if (
+          initialValue !== currentHtmlRef.current ||
+          webEditorRef.current.innerHTML !== safeInitial
+        ) {
+          currentHtmlRef.current = safeInitial;
+          webEditorRef.current.innerHTML = safeInitial;
         }
       }
       return;
@@ -899,9 +997,13 @@ export const RichTextEditor = React.memo(function RichTextEditor({
         ) : (
           <WebView
             ref={webViewRef}
-            originWhitelist={["*"]}
+            originWhitelist={["about:blank"]}
             source={STATIC_WEBVIEW_SOURCE}
             onMessage={handleMessage}
+            allowFileAccess={false}
+            allowUniversalAccessFromFileURLs={false}
+            javaScriptCanOpenWindowsAutomatically={false}
+            onShouldStartLoadWithRequest={(req) => req.url === "about:blank"}
             style={styles.webView}
             nestedScrollEnabled={true}
             scrollEnabled={true}

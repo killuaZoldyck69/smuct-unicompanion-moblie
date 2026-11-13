@@ -1,15 +1,20 @@
 import React, { memo, useState } from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily } from "../../constants";
-import type { ForumResponseItem, ForumAuthor } from "../../types";
+import type {
+  ForumAuthor,
+  ForumResponseItem,
+  ForumResponseReactionType,
+} from "../../types";
 import {
-  timeAgo,
-  getUserAcademicSubtitle,
-  getAuthorAcademicInfo,
   formatTimeOnly,
+  getAuthorAcademicInfo,
   isEdited,
+  timeAgo,
 } from "../../utils";
+import { ForumAuthorSubtitle, ForumAvatar } from "../forum-avatar";
 
 interface DiscussionReplyItemProps {
   item: ForumResponseItem;
@@ -21,7 +26,365 @@ interface DiscussionReplyItemProps {
   onStartReply?: (targetId: string, authorName: string) => void;
   onEditPress?: (item: ForumResponseItem) => void;
   onDeletePress?: (item: ForumResponseItem) => void;
+  onReactPress?: (
+    item: ForumResponseItem,
+    type: ForumResponseReactionType,
+  ) => void;
+  onReportPress?: (item: ForumResponseItem) => void;
 }
+
+interface ReactionPillGroupProps {
+  item: ForumResponseItem;
+  compact: boolean;
+  onReact: (item: ForumResponseItem, type: ForumResponseReactionType) => void;
+}
+
+const ReactionPillGroup = memo(function ReactionPillGroup({
+  item,
+  compact,
+  onReact,
+}: ReactionPillGroupProps) {
+  const likesCount = item.likesCount ?? 0;
+  const dislikesCount = item.dislikesCount ?? 0;
+  const userReaction = item.userReaction ?? null;
+  const iconSize = compact ? 11 : 12;
+  const subject = compact ? "reply" : "response";
+
+  return (
+    <View style={styles.reactionGroup}>
+      <TouchableOpacity
+        style={[
+          styles.reactionPill,
+          compact && styles.reactionPillSmall,
+          userReaction === "LIKE" && styles.reactionPillLiked,
+        ]}
+        onPress={() => onReact(item, "LIKE")}
+        activeOpacity={0.75}
+        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityState={{ selected: userReaction === "LIKE" }}
+        accessibilityLabel={`Like ${subject}, ${likesCount} likes`}
+      >
+        <Feather
+          name="thumbs-up"
+          size={iconSize}
+          color={
+            userReaction === "LIKE"
+              ? BENTO_COLORS.primaryBlue
+              : BENTO_COLORS.subtleText
+          }
+        />
+        {likesCount > 0 && (
+          <Text
+            style={[
+              styles.reactionCount,
+              userReaction === "LIKE" && styles.reactionCountLiked,
+            ]}
+          >
+            {likesCount}
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.reactionPill,
+          compact && styles.reactionPillSmall,
+          userReaction === "DISLIKE" && styles.reactionPillDisliked,
+        ]}
+        onPress={() => onReact(item, "DISLIKE")}
+        activeOpacity={0.75}
+        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityState={{ selected: userReaction === "DISLIKE" }}
+        accessibilityLabel={`Dislike ${subject}, ${dislikesCount} dislikes`}
+      >
+        <Feather
+          name="thumbs-down"
+          size={iconSize}
+          color={
+            userReaction === "DISLIKE"
+              ? BENTO_COLORS.danger
+              : BENTO_COLORS.subtleText
+          }
+        />
+        {dislikesCount > 0 && (
+          <Text
+            style={[
+              styles.reactionCount,
+              userReaction === "DISLIKE" && styles.reactionCountDisliked,
+            ]}
+          >
+            {dislikesCount}
+          </Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+interface ResponseRowContentProps {
+  entry: ForumResponseItem;
+  parentIdForReply: string;
+  compact: boolean;
+  threadAuthorId?: string;
+  currentUserId?: string;
+  isAdmin?: boolean;
+  isResolved?: boolean;
+  replyCount?: number;
+  isRepliesExpanded?: boolean;
+  onToggleReplies?: () => void;
+  onExpandReplies?: () => void;
+  onResponderPress: (responder: ForumAuthor) => void;
+  onStartReply?: (targetId: string, authorName: string) => void;
+  onEditPress?: (item: ForumResponseItem) => void;
+  onDeletePress?: (item: ForumResponseItem) => void;
+  onReactPress?: (
+    item: ForumResponseItem,
+    type: ForumResponseReactionType,
+  ) => void;
+  onReportPress?: (item: ForumResponseItem) => void;
+  children?: React.ReactNode;
+}
+
+const ResponseRowContent = memo(function ResponseRowContent({
+  entry,
+  parentIdForReply,
+  compact,
+  threadAuthorId,
+  currentUserId,
+  isAdmin,
+  isResolved,
+  replyCount = 0,
+  isRepliesExpanded = false,
+  onToggleReplies,
+  onExpandReplies,
+  onResponderPress,
+  onStartReply,
+  onEditPress,
+  onDeletePress,
+  onReactPress,
+  onReportPress,
+  children,
+}: ResponseRowContentProps) {
+  const responderName = entry.responder?.name || "University Member";
+  const academicInfo = getAuthorAcademicInfo(entry.responder);
+  const isThreadAuthor = Boolean(
+    threadAuthorId && entry.responderId === threadAuthorId,
+  );
+  const isMine = Boolean(currentUserId && entry.responderId === currentUserId);
+  const canEdit = isMine && !isResolved;
+  const canDelete = Boolean(isMine || isAdmin);
+  const canReport = !isMine && Boolean(onReportPress);
+  const hasRightActions = Boolean(
+    (canEdit && onEditPress) ||
+      (canDelete && onDeletePress) ||
+      (canReport && onReportPress),
+  );
+  const showActionsBar =
+    compact ||
+    Boolean(
+      onReactPress ||
+        (!isResolved && onStartReply) ||
+        replyCount > 0 ||
+        hasRightActions,
+    );
+  const noun = compact ? "reply" : "response";
+
+  return (
+    <View style={compact ? styles.replyRow : styles.replyCard}>
+      <TouchableOpacity
+        onPress={() => onResponderPress(entry.responder)}
+        activeOpacity={0.75}
+        hitSlop={
+          compact
+            ? { top: 11, bottom: 11, left: 11, right: 11 }
+            : { top: 8, bottom: 8, left: 8, right: 8 }
+        }
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`View profile of ${responderName}`}
+      >
+        <ForumAvatar
+          uri={entry.responder?.image}
+          name={responderName}
+          size={compact ? 26 : 32}
+          fontSize={compact ? 10 : 13}
+          style={compact ? styles.avatarMarginSmall : styles.avatarMarginRegular}
+        />
+      </TouchableOpacity>
+
+      <View style={styles.replyContent}>
+        <View style={styles.replyHeader}>
+          <View style={styles.replyMetaCol}>
+            <View style={styles.nameTagRow}>
+              <Text
+                style={compact ? styles.replyNameSmall : styles.replyName}
+                numberOfLines={1}
+              >
+                {responderName}
+              </Text>
+              {isThreadAuthor && (
+                <View style={styles.replyAuthorBadge}>
+                  <Text style={styles.replyAuthorBadgeText}>Author</Text>
+                </View>
+              )}
+            </View>
+            <ForumAuthorSubtitle
+              academicInfo={academicInfo}
+              style={styles.replySubtitle}
+              superscriptStyle={styles.superscript}
+            />
+          </View>
+        </View>
+
+        <Text style={compact ? styles.replyBodySmall : styles.replyBody}>
+          {entry.content}
+        </Text>
+
+        <View style={styles.commentTimeWrap}>
+          <Text
+            style={
+              compact ? styles.commentTimeTextSmall : styles.commentTimeText
+            }
+          >
+            {timeAgo(entry.createdAt)} • {formatTimeOnly(entry.createdAt)}
+            {isEdited(entry.createdAt, entry.updatedAt) && (
+              <Text style={compact ? styles.editedTextSmall : styles.editedText}>
+                {" "}
+                (Edited)
+              </Text>
+            )}
+          </Text>
+        </View>
+
+        {showActionsBar && (
+          <View style={styles.actionsRow}>
+            <View style={styles.leftActions}>
+              {onReactPress && (
+                <ReactionPillGroup
+                  item={entry}
+                  compact={compact}
+                  onReact={onReactPress}
+                />
+              )}
+
+              {!isResolved && onStartReply && (
+                <TouchableOpacity
+                  style={styles.actionReplyBtn}
+                  onPress={() => {
+                    onExpandReplies?.();
+                    onStartReply(parentIdForReply, responderName);
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                  activeOpacity={0.75}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Reply to ${responderName}`}
+                >
+                  <Feather
+                    name="corner-down-right"
+                    size={compact ? 11 : 12}
+                    color={BENTO_COLORS.primaryBlue}
+                  />
+                  <Text style={styles.actionReplyText}>Reply</Text>
+                </TouchableOpacity>
+              )}
+
+              {!compact && replyCount > 0 && onToggleReplies && (
+                <TouchableOpacity
+                  style={styles.toggleRepliesBtn}
+                  onPress={onToggleReplies}
+                  hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: isRepliesExpanded }}
+                  accessibilityLabel={
+                    isRepliesExpanded
+                      ? `Hide ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
+                      : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
+                  }
+                >
+                  <View style={styles.toggleRepliesLine} />
+                  <Feather
+                    name={isRepliesExpanded ? "chevron-up" : "chevron-down"}
+                    size={12}
+                    color={BENTO_COLORS.primaryBlue}
+                  />
+                  <Text style={styles.toggleRepliesText}>
+                    {isRepliesExpanded
+                      ? `Hide ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
+                      : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {hasRightActions && (
+              <View style={styles.rightActions}>
+                {canReport && onReportPress && (
+                  <TouchableOpacity
+                    style={styles.actionIconBtn}
+                    onPress={() => onReportPress(entry)}
+                    activeOpacity={0.75}
+                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Report ${noun}`}
+                  >
+                    <Feather
+                      name="flag"
+                      size={compact ? 11 : 12}
+                      color={BENTO_COLORS.subtleText}
+                    />
+                  </TouchableOpacity>
+                )}
+
+                {canEdit && onEditPress && (
+                  <TouchableOpacity
+                    style={styles.actionIconBtn}
+                    onPress={() => onEditPress(entry)}
+                    activeOpacity={0.75}
+                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${noun}`}
+                  >
+                    <Feather
+                      name="edit-2"
+                      size={compact ? 12 : 13}
+                      color={BENTO_COLORS.primaryBlue}
+                    />
+                  </TouchableOpacity>
+                )}
+
+                {canDelete && onDeletePress && (
+                  <TouchableOpacity
+                    style={[styles.actionIconBtn, styles.actionIconBtnDanger]}
+                    onPress={() => onDeletePress(entry)}
+                    activeOpacity={0.75}
+                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${noun}`}
+                  >
+                    <Feather
+                      name="trash-2"
+                      size={compact ? 12 : 13}
+                      color={BENTO_COLORS.danger}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
+        {children}
+      </View>
+    </View>
+  );
+});
 
 export const DiscussionReplyItem = memo(function DiscussionReplyItem({
   item,
@@ -33,348 +396,55 @@ export const DiscussionReplyItem = memo(function DiscussionReplyItem({
   onStartReply,
   onEditPress,
   onDeletePress,
+  onReactPress,
+  onReportPress,
 }: DiscussionReplyItemProps) {
   const [isRepliesExpanded, setIsRepliesExpanded] = useState(false);
   const replyCount = item.replies?.length ?? 0;
 
-  const responderName = item.responder?.name || "University Member";
-  const responderInitial = responderName.charAt(0).toUpperCase() || "U";
-  const responderAcademic = getAuthorAcademicInfo(item.responder);
-  const responderSubtitle = responderAcademic.fullText;
-  const isReplyAuthor = Boolean(threadAuthorId && item.responderId === threadAuthorId);
-  const isMyReply = Boolean(currentUserId && item.responderId === currentUserId);
-  const canEdit = isMyReply && !isResolved;
-  const canDelete = Boolean(isMyReply || isAdmin);
-  const canManageReply = canEdit || canDelete;
-
-  const replyTime = timeAgo(item.createdAt);
-  const replyTimeOnly = formatTimeOnly(item.createdAt);
-  const responseEdited = isEdited(item.createdAt, item.updatedAt);
-
   return (
-    <View style={styles.replyCard}>
-      <TouchableOpacity
-        onPress={() => onResponderPress(item.responder)}
-        activeOpacity={0.75}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={`Responder: ${responderName}`}
-      >
-        {item.responder?.image ? (
-          <Image
-            source={{ uri: item.responder.image }}
-            style={styles.replyAvatar}
-          />
-        ) : (
-          <View style={styles.replyAvatarFallback}>
-            <Text style={styles.replyAvatarText}>{responderInitial}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-
-      <View style={styles.replyContent}>
-        <View style={styles.replyHeader}>
-          <View style={styles.replyMetaCol}>
-            <View style={styles.nameTagRow}>
-              <Text style={styles.replyName} numberOfLines={1}>
-                {responderName}
-              </Text>
-              {isReplyAuthor && (
-                <View style={styles.replyAuthorBadge}>
-                  <Text style={styles.replyAuthorBadgeText}>Author</Text>
-                </View>
-              )}
-            </View>
-            {responderAcademic.isStudent && responderAcademic.semesterNum ? (
-              <Text style={styles.replySubtitle} numberOfLines={1}>
-                {responderAcademic.semesterNum}
-                <Text style={styles.superscript}>
-                  {responderAcademic.superSuffix}
-                </Text>
-                {` Semester • ${responderAcademic.deptShort}`}
-              </Text>
-            ) : (
-              <Text style={styles.replySubtitle} numberOfLines={1}>
-                {responderSubtitle}
-              </Text>
-            )}
-          </View>
+    <ResponseRowContent
+      entry={item}
+      parentIdForReply={item.id}
+      compact={false}
+      threadAuthorId={threadAuthorId}
+      currentUserId={currentUserId}
+      isAdmin={isAdmin}
+      isResolved={isResolved}
+      replyCount={replyCount}
+      isRepliesExpanded={isRepliesExpanded}
+      onToggleReplies={() => setIsRepliesExpanded((v) => !v)}
+      onExpandReplies={() => setIsRepliesExpanded(true)}
+      onResponderPress={onResponderPress}
+      onStartReply={onStartReply}
+      onEditPress={onEditPress}
+      onDeletePress={onDeletePress}
+      onReactPress={onReactPress}
+      onReportPress={onReportPress}
+    >
+      {replyCount > 0 && isRepliesExpanded && (
+        <View style={styles.repliesBlock}>
+          {(item.replies || []).map((reply) => (
+            <ResponseRowContent
+              key={reply.id}
+              entry={reply}
+              parentIdForReply={item.id}
+              compact={true}
+              threadAuthorId={threadAuthorId}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+              isResolved={isResolved}
+              onResponderPress={onResponderPress}
+              onStartReply={onStartReply}
+              onEditPress={onEditPress}
+              onDeletePress={onDeletePress}
+              onReactPress={onReactPress}
+              onReportPress={onReportPress}
+            />
+          ))}
         </View>
-
-        <Text style={styles.replyBody}>{item.content}</Text>
-
-        {/* Comment Date & Time bottom right side of comments with italic (Edited) */}
-        <View style={styles.commentTimeWrap}>
-          <Text style={styles.commentTimeText}>
-            {replyTime} • {replyTimeOnly}
-            {responseEdited && (
-              <Text style={styles.editedText}> (Edited)</Text>
-            )}
-          </Text>
-        </View>
-
-        {/* Action Row */}
-        {((!isResolved && onStartReply) ||
-          replyCount > 0 ||
-          (canManageReply && (canEdit || canDelete))) && (
-          <View style={styles.actionsRow}>
-            <View style={styles.leftActions}>
-              {/* 3. Reply with icon and text */}
-              {!isResolved && onStartReply && (
-                <TouchableOpacity
-                  style={styles.actionReplyBtn}
-                  onPress={() => {
-                    setIsRepliesExpanded(true);
-                    onStartReply(item.id, responderName);
-                  }}
-                  activeOpacity={0.75}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Reply to ${responderName}`}
-                >
-                  <Feather
-                    name="corner-down-right"
-                    size={12}
-                    color={BENTO_COLORS.primaryBlue}
-                  />
-                  <Text style={styles.actionReplyText}>Reply</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* 4. View replies with icon, text and count number */}
-              {replyCount > 0 && (
-                <TouchableOpacity
-                  style={styles.toggleRepliesBtn}
-                  onPress={() => setIsRepliesExpanded((v) => !v)}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isRepliesExpanded
-                      ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
-                      : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
-                  }
-                >
-                  <View style={styles.toggleRepliesLine} />
-                  <Feather
-                    name={isRepliesExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={12}
-                    color={BENTO_COLORS.primaryBlue}
-                  />
-                  <Text style={styles.toggleRepliesText}>
-                    {isRepliesExpanded
-                      ? `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
-                      : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Right: Owner Actions */}
-            {canManageReply && (
-              <View style={styles.rightActions}>
-                {/* 1. Edit (just icon) */}
-                {canEdit && onEditPress && (
-                  <TouchableOpacity
-                    style={styles.actionIconBtn}
-                    onPress={() => onEditPress(item)}
-                    activeOpacity={0.75}
-                    accessibilityRole="button"
-                    accessibilityLabel="Edit response"
-                  >
-                    <Feather
-                      name="edit-2"
-                      size={13}
-                      color={BENTO_COLORS.primaryBlue}
-                    />
-                  </TouchableOpacity>
-                )}
-
-                {/* 2. Delete (just icon) */}
-                {canDelete && onDeletePress && (
-                  <TouchableOpacity
-                    style={[styles.actionIconBtn, styles.actionIconBtnDanger]}
-                    onPress={() => onDeletePress(item)}
-                    activeOpacity={0.75}
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete response"
-                  >
-                    <Feather
-                      name="trash-2"
-                      size={13}
-                      color={BENTO_COLORS.danger}
-                    />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Collapsable Nested Replies */}
-        {replyCount > 0 && isRepliesExpanded && (
-          <View style={styles.repliesBlock}>
-            {(item.replies || []).map((reply) => {
-              const replyResponderName =
-                reply.responder?.name || "University Member";
-              const replyResponderInitial =
-                replyResponderName.charAt(0).toUpperCase() || "U";
-              const nestedResponderAcademic = getAuthorAcademicInfo(
-                reply.responder
-              );
-              const replyResponderSubtitle = nestedResponderAcademic.fullText;
-              const isReplyFromThreadAuthor = Boolean(
-                threadAuthorId && reply.responderId === threadAuthorId
-              );
-              const isMyNestedReply = Boolean(
-                currentUserId && reply.responderId === currentUserId
-              );
-              const canEditReply = isMyNestedReply && !isResolved;
-              const canDeleteReply = Boolean(isMyNestedReply || isAdmin);
-              const replyEdited = isEdited(reply.createdAt, reply.updatedAt);
-              const nestedReplyTime = timeAgo(reply.createdAt);
-              const nestedReplyTimeOnly = formatTimeOnly(reply.createdAt);
-
-              return (
-                <View key={reply.id} style={styles.replyRow}>
-                  <TouchableOpacity
-                    onPress={() => onResponderPress(reply.responder)}
-                    activeOpacity={0.75}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Responder: ${replyResponderName}`}
-                  >
-                    {reply.responder?.image ? (
-                      <Image
-                        source={{ uri: reply.responder.image }}
-                        style={styles.replyAvatarSmall}
-                      />
-                    ) : (
-                      <View style={styles.replyAvatarFallbackSmall}>
-                        <Text style={styles.replyAvatarTextSmall}>
-                          {replyResponderInitial}
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  <View style={styles.replyContentSmall}>
-                    <View style={styles.replyHeader}>
-                      <View style={styles.replyMetaCol}>
-                        <View style={styles.nameTagRow}>
-                          <Text style={styles.replyNameSmall} numberOfLines={1}>
-                            {replyResponderName}
-                          </Text>
-                          {isReplyFromThreadAuthor && (
-                            <View style={styles.replyAuthorBadge}>
-                              <Text style={styles.replyAuthorBadgeText}>
-                                Author
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        {nestedResponderAcademic.isStudent &&
-                        nestedResponderAcademic.semesterNum ? (
-                          <Text style={styles.replySubtitle} numberOfLines={1}>
-                            {nestedResponderAcademic.semesterNum}
-                            <Text style={styles.superscript}>
-                              {nestedResponderAcademic.superSuffix}
-                            </Text>
-                            {` Semester • ${nestedResponderAcademic.deptShort}`}
-                          </Text>
-                        ) : (
-                          <Text style={styles.replySubtitle} numberOfLines={1}>
-                            {replyResponderSubtitle}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-
-                    <Text style={styles.replyBodySmall}>{reply.content}</Text>
-
-                    {/* Nested Comment Date & Time on the bottom right side of comments */}
-                    <View style={styles.commentTimeWrap}>
-                      <Text style={styles.commentTimeTextSmall}>
-                        {nestedReplyTime} • {nestedReplyTimeOnly}
-                        {replyEdited && (
-                          <Text style={styles.editedTextSmall}> (Edited)</Text>
-                        )}
-                      </Text>
-                    </View>
-
-                    <View style={styles.actionsRow}>
-                      <View style={styles.leftActions}>
-                        {/* 3. Reply with icon and text */}
-                        {!isResolved && onStartReply && (
-                          <TouchableOpacity
-                            style={styles.actionReplyBtn}
-                            onPress={() =>
-                              onStartReply(item.id, replyResponderName)
-                            }
-                            activeOpacity={0.75}
-                            accessible={true}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Reply to ${replyResponderName}`}
-                          >
-                            <Feather
-                              name="corner-down-right"
-                              size={11}
-                              color={BENTO_COLORS.primaryBlue}
-                            />
-                            <Text style={styles.actionReplyText}>Reply</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-
-                      {(canEditReply || canDeleteReply) && (
-                        <View style={styles.rightActions}>
-                          {/* 1. Edit (just icon) */}
-                          {canEditReply && onEditPress && (
-                            <TouchableOpacity
-                              style={styles.actionIconBtn}
-                              onPress={() => onEditPress(reply)}
-                              activeOpacity={0.75}
-                              accessibilityRole="button"
-                              accessibilityLabel="Edit reply"
-                            >
-                              <Feather
-                                name="edit-2"
-                                size={12}
-                                color={BENTO_COLORS.primaryBlue}
-                              />
-                            </TouchableOpacity>
-                          )}
-
-                          {/* 2. Delete (just icon) */}
-                          {canDeleteReply && onDeletePress && (
-                            <TouchableOpacity
-                              style={[
-                                styles.actionIconBtn,
-                                styles.actionIconBtnDanger,
-                              ]}
-                              onPress={() => onDeletePress(reply)}
-                              activeOpacity={0.75}
-                              accessibilityRole="button"
-                              accessibilityLabel="Delete reply"
-                            >
-                              <Feather
-                                name="trash-2"
-                                size={12}
-                                color={BENTO_COLORS.danger}
-                              />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </View>
-    </View>
+      )}
+    </ResponseRowContent>
   );
 });
 
@@ -389,27 +459,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     ...BENTO_COLORS.shadow,
   },
-  replyAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: BENTO_COLORS.slateBg,
+  avatarMarginRegular: {
     marginRight: 10,
   },
-  replyAvatarFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: BENTO_COLORS.slateBg,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  replyAvatarText: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
+  avatarMarginSmall: {
+    marginRight: 8,
   },
   replyContent: {
     flex: 1,
@@ -434,22 +488,30 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: BENTO_COLORS.deepNavy,
   },
+  replyNameSmall: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: BENTO_COLORS.deepNavy,
+  },
   replyAuthorBadge: {
     marginLeft: 6,
-    backgroundColor: "rgba(30, 58, 138, 0.08)",
+    backgroundColor: colors.semantic.blue.alpha08,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: BENTO_COLORS.pillRadius,
   },
   replyAuthorBadgeText: {
     fontFamily,
-    fontSize: 9,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "700",
     color: BENTO_COLORS.primaryBlue,
+    includeFontPadding: false,
   },
   replySubtitle: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
@@ -461,6 +523,13 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.neutralText,
     lineHeight: 19,
   },
+  replyBodySmall: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "400",
+    color: BENTO_COLORS.neutralText,
+    lineHeight: 18,
+  },
   commentTimeWrap: {
     alignSelf: "flex-end",
     marginTop: 4,
@@ -471,6 +540,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
   editedText: {
     fontFamily,
@@ -484,6 +555,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "500",
     color: BENTO_COLORS.subtleText,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
   editedTextSmall: {
     fontFamily,
@@ -498,59 +571,60 @@ const styles = StyleSheet.create({
     lineHeight: 11,
     fontWeight: "700",
     color: BENTO_COLORS.subtleText,
+    includeFontPadding: false,
   },
   actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: BENTO_COLORS.subtleBorder,
   },
   leftActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     flex: 1,
   },
   rightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     marginLeft: 8,
   },
   actionReplyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
-    backgroundColor: 'rgba(30, 58, 138, 0.05)',
+    backgroundColor: "rgba(30, 58, 138, 0.05)",
     borderRadius: BENTO_COLORS.pillRadius,
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: 'rgba(30, 58, 138, 0.1)',
+    borderColor: "rgba(30, 58, 138, 0.1)",
   },
   actionReplyText: {
     fontFamily,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     color: BENTO_COLORS.primaryBlue,
   },
   actionIconBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(30, 58, 138, 0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(30, 58, 138, 0.05)",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: 'rgba(30, 58, 138, 0.08)',
+    borderColor: "rgba(30, 58, 138, 0.08)",
   },
   actionIconBtnDanger: {
     backgroundColor: BENTO_COLORS.dangerBg,
-    borderColor: 'rgba(190, 18, 60, 0.12)',
+    borderColor: "rgba(190, 18, 60, 0.12)",
   },
   toggleRepliesBtn: {
     flexDirection: "row",
@@ -582,42 +656,47 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     borderLeftColor: "rgba(30, 58, 138, 0.15)",
   },
-  replyAvatarSmall: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: BENTO_COLORS.slateBg,
-    marginRight: 8,
-  },
-  replyAvatarFallbackSmall: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: BENTO_COLORS.slateBg,
-    justifyContent: "center",
+  reactionGroup: {
+    flexDirection: "row",
     alignItems: "center",
-    marginRight: 8,
+    gap: 6,
   },
-  replyAvatarTextSmall: {
+  reactionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: BENTO_COLORS.slateBg,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  reactionPillSmall: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  reactionPillLiked: {
+    backgroundColor: colors.semantic.blue.tint,
+    borderColor: colors.semantic.blue.border,
+  },
+  reactionPillDisliked: {
+    backgroundColor: BENTO_COLORS.dangerBg,
+    borderColor: colors.semantic.rose.border,
+  },
+  reactionCount: {
     fontFamily,
-    fontSize: 10,
+    fontSize: 11.5,
+    lineHeight: 14,
     fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
+    color: BENTO_COLORS.subtleText,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
-  replyContentSmall: {
-    flex: 1,
+  reactionCountLiked: {
+    color: BENTO_COLORS.primaryBlue,
   },
-  replyNameSmall: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
-  },
-  replyBodySmall: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: "400",
-    color: BENTO_COLORS.neutralText,
-    lineHeight: 18,
+  reactionCountDisliked: {
+    color: BENTO_COLORS.danger,
   },
 });

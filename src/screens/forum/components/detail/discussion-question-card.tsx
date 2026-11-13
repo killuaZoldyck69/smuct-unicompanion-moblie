@@ -1,15 +1,17 @@
 import React, { memo } from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily } from "../../constants";
 import { RichNoticeText } from "@/screens/notices/components/rich-notice-text";
 import type { ForumPostItem, ForumAuthor } from "../../types";
 import {
-  getUserAcademicSubtitle,
   getAuthorAcademicInfo,
   formatPostedTime,
   isEdited,
+  countTotalThreadResponses,
 } from "../../utils";
+import { ForumAuthorSubtitle, ForumAvatar } from "../forum-avatar";
 
 interface DiscussionQuestionCardProps {
   thread: ForumPostItem;
@@ -28,16 +30,30 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
 }: DiscussionQuestionCardProps) {
   const canManage = isAuthor || isAdmin;
   const authorName = thread.author?.name || "University Member";
-  const authorInitial = authorName.charAt(0).toUpperCase() || "U";
   const authorAcademic = getAuthorAcademicInfo(thread.author);
-  const authorSubtitle = authorAcademic.fullText;
   const fullPostedTime = formatPostedTime(thread.createdAt);
   const threadEdited = isEdited(thread.createdAt, thread.updatedAt);
-  const responsesCount = thread.responses?.length || 0;
+  const responsesCount =
+    countTotalThreadResponses(thread.responses) ||
+    thread._count?.responses ||
+    0;
 
   return (
     <View style={styles.container}>
       <View style={[styles.card, thread.isResolved && styles.cardResolved]}>
+        {thread.isHiddenByModeration && (
+          <View style={styles.moderationBanner}>
+            <Feather
+              name="shield"
+              size={13}
+              color={colors.semantic.amber.deep}
+            />
+            <Text style={styles.moderationBannerText}>
+              This post is currently under moderator review and hidden from public feeds.
+            </Text>
+          </View>
+        )}
+
         <Text style={styles.title}>{thread.title}</Text>
 
         <TouchableOpacity
@@ -46,20 +62,16 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
           activeOpacity={0.75}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel={`Author: ${authorName}, ${authorSubtitle}`}
+          accessibilityLabel={`Author: ${authorName}, ${authorAcademic.fullText}`}
         >
-          {thread.author?.image ? (
-            <Image
-              source={{ uri: thread.author.image }}
-              style={styles.avatar}
-              accessible={true}
-              accessibilityLabel={`${authorName}'s avatar`}
-            />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>{authorInitial}</Text>
-            </View>
-          )}
+          <ForumAvatar
+            uri={thread.author?.image}
+            name={authorName}
+            size={48}
+            fontSize={18}
+            accessibilityLabel={`${authorName}'s avatar`}
+            style={styles.avatarSpacing}
+          />
           <View style={styles.authorMeta}>
             <View style={styles.nameRow}>
               <Text style={styles.authorName} numberOfLines={1}>
@@ -69,19 +81,10 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
                 <Text style={styles.authorTagText}>Author</Text>
               </View>
             </View>
-            {authorAcademic.isStudent && authorAcademic.semesterNum ? (
-              <Text style={styles.authorSubtitle} numberOfLines={1}>
-                {authorAcademic.semesterNum}
-                <Text style={styles.superscript}>
-                  {authorAcademic.superSuffix}
-                </Text>
-                {` Semester • ${authorAcademic.deptShort}`}
-              </Text>
-            ) : (
-              <Text style={styles.authorSubtitle} numberOfLines={1}>
-                {authorSubtitle}
-              </Text>
-            )}
+            <ForumAuthorSubtitle
+              academicInfo={authorAcademic}
+              style={styles.authorSubtitle}
+            />
             <Text style={styles.timestampText}>
               Posted on {fullPostedTime}
               {threadEdited && (
@@ -133,6 +136,7 @@ export const DiscussionQuestionCard = memo(function DiscussionQuestionCard({
               <TouchableOpacity
                 style={styles.reopenBtn}
                 onPress={onResolvePress}
+                hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
                 activeOpacity={0.7}
                 accessible={true}
                 accessibilityRole="button"
@@ -177,8 +181,10 @@ const styles = StyleSheet.create({
     ...BENTO_COLORS.shadow,
   },
   cardResolved: {
-    backgroundColor: "#f0fdf4",
-    borderColor: "#bbf7d0",
+    backgroundColor: colors.semantic.emerald.softSurface,
+    borderColor: colors.semantic.emerald.mintBorder,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   title: {
     fontFamily,
@@ -188,32 +194,33 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 14,
   },
+  moderationBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.semantic.amber.soft,
+    borderColor: colors.semantic.amber.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  moderationBannerText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.semantic.amber.deep,
+    flex: 1,
+    lineHeight: 17,
+  },
   authorRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 14,
   },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: BENTO_COLORS.slateBg,
+  avatarSpacing: {
     marginRight: 12,
-  },
-  avatarFallback: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: BENTO_COLORS.slateBg,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  avatarText: {
-    fontFamily,
-    fontSize: 18,
-    fontWeight: "700",
-    color: BENTO_COLORS.deepNavy,
   },
   authorMeta: {
     flex: 1,
@@ -230,16 +237,18 @@ const styles = StyleSheet.create({
   },
   authorTag: {
     marginLeft: 6,
-    backgroundColor: "rgba(30, 58, 138, 0.08)",
-    paddingHorizontal: 6,
+    backgroundColor: colors.semantic.blue.alpha08,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: BENTO_COLORS.pillRadius,
   },
   authorTagText: {
     fontFamily,
-    fontSize: 9,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "700",
     color: BENTO_COLORS.primaryBlue,
+    includeFontPadding: false,
   },
   authorSubtitle: {
     fontFamily,
@@ -248,19 +257,13 @@ const styles = StyleSheet.create({
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
   },
-  superscript: {
-    fontFamily,
-    fontSize: 9,
-    lineHeight: 12,
-    fontWeight: "700",
-    color: BENTO_COLORS.subtleText,
-  },
   timestampText: {
     fontFamily,
     fontSize: 11,
     fontWeight: "400",
     color: BENTO_COLORS.subtleText,
     marginTop: 1,
+    fontVariant: ["tabular-nums"],
   },
   editedInline: {
     fontFamily,
@@ -275,7 +278,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   dividerResolved: {
-    backgroundColor: "rgba(16, 185, 129, 0.16)",
+    backgroundColor: colors.semantic.emerald.alpha15,
   },
   body: {
     fontFamily,
@@ -291,7 +294,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: BENTO_COLORS.emerald,
     borderRadius: BENTO_COLORS.pillRadius,
-    paddingVertical: 10,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginTop: 4,
   },
   resolveIcon: {
@@ -299,21 +304,24 @@ const styles = StyleSheet.create({
   },
   markResolvedBtnText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.white,
+    includeFontPadding: false,
   },
   resolvedStatusRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
     marginTop: 4,
     paddingTop: 8,
   },
   resolvedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    backgroundColor: colors.semantic.emerald.alpha15,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: BENTO_COLORS.pillRadius,
@@ -324,15 +332,17 @@ const styles = StyleSheet.create({
   resolvedBadgeText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 15,
     fontWeight: "700",
     color: BENTO_COLORS.emerald,
+    includeFontPadding: false,
   },
   reopenBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 58, 138, 0.08)",
+    backgroundColor: colors.semantic.blue.alpha08,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: BENTO_COLORS.pillRadius,
   },
   reopenIcon: {
@@ -341,13 +351,17 @@ const styles = StyleSheet.create({
   reopenBtnText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 15,
     fontWeight: "700",
     color: BENTO_COLORS.primaryBlue,
+    includeFontPadding: false,
   },
   responsesHeaderRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "baseline",
+    gap: 8,
     marginBottom: 12,
     paddingHorizontal: 4,
   },
@@ -356,6 +370,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: BENTO_COLORS.deepNavy,
+    fontVariant: ["tabular-nums"],
   },
   responsesSubtitle: {
     fontFamily,

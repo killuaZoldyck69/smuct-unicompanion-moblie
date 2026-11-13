@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 
 import { BENTO_COLORS, fontFamily } from "./constants";
+import { colors } from "@/theme/colors";
 import type { ForumProps, ForumPostItem, FilterType } from "./types";
 import { useForumFeed } from "./hooks/use-forum-feed";
 import { ForumTopNav } from "./components/forum-top-nav";
@@ -24,8 +25,7 @@ import { ForumSkeleton } from "./components/forum-skeleton";
 import { ForumEmptyState } from "./components/forum-empty-state";
 import { ForumComposeModal } from "./components/forum-compose-modal";
 import { ForumConfirmModal } from "./components/forum-confirm-modal";
-import { useResolveForumPost, useDeleteForumPost } from "@/features/forum/useForum";
-import Toast from "react-native-toast-message";
+import { UgcReportModal } from "./components/ugc/ugc-report-modal";
 
 export type { ForumProps };
 
@@ -52,16 +52,6 @@ export function Forum({
   const insets = useSafeAreaInsets();
   const [internalIsComposeVisible, setInternalIsComposeVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<{
-    type: "danger" | "success";
-    title: string;
-    message: string;
-    confirmLabel: string;
-    action: () => void;
-  } | null>(null);
-
-  const resolveMutation = useResolveForumPost();
-  const deleteMutation = useDeleteForumPost();
 
   const isComposeVisible =
     externalIsComposeVisible !== undefined
@@ -86,6 +76,7 @@ export function Forum({
 
   const {
     currentUser,
+    isOffline,
     activeFilter,
     setActiveFilter,
     searchQuery,
@@ -94,10 +85,21 @@ export function Forum({
     isRefreshing,
     onRefresh,
     isLoading,
+    isError,
     filteredPosts,
     counts,
     loadMore,
     isFetchingNextPage,
+    confirmModal,
+    setConfirmModal,
+    isConfirmLoading,
+    handleResolve,
+    handleDelete,
+    reportTargetPost,
+    setReportTargetPost,
+    isSubmittingReport,
+    handleReportPost,
+    handleSubmitReport,
   } = useForumFeed();
 
   const handleCardPress = useCallback(
@@ -111,78 +113,6 @@ export function Forum({
     setActiveFilter("ALL");
   }, [setActiveFilter]);
 
-  const handleResolve = useCallback(
-    (id: string, title: string, currentlyResolved: boolean = false) => {
-      const isReopening = currentlyResolved;
-      setConfirmModal({
-        type: "success",
-        title: isReopening ? "Reopen Discussion" : "Mark as Solved",
-        message: isReopening
-          ? `Reopen "${title}" for new answers and community replies?`
-          : `Mark "${title}" as solved?`,
-        confirmLabel: isReopening ? "Reopen" : "Mark Solved",
-        action: () => {
-          resolveMutation.mutate(
-            { id, isResolved: !isReopening },
-            {
-              onSuccess: () => {
-                setConfirmModal(null);
-                Toast.show({
-                  type: "success",
-                  text1: isReopening ? "Discussion Reopened" : "Discussion Resolved",
-                  text2: isReopening
-                    ? "This discussion is open for new replies."
-                    : "Marked as solved successfully.",
-                });
-              },
-              onError: (err: any) => {
-                setConfirmModal(null);
-                Toast.show({
-                  type: "error",
-                  text1: "Error",
-                  text2: err?.message || "Failed to update discussion status.",
-                });
-              },
-            },
-          );
-        },
-      });
-    },
-    [resolveMutation],
-  );
-
-  const handleDelete = useCallback(
-    (id: string, title: string) => {
-      setConfirmModal({
-        type: "danger",
-        title: "Delete Discussion",
-        message: `Are you sure you want to permanently delete "${title}"? This action cannot be undone.`,
-        confirmLabel: "Delete",
-        action: () => {
-          deleteMutation.mutate(id, {
-            onSuccess: () => {
-              setConfirmModal(null);
-              Toast.show({
-                type: "success",
-                text1: "Discussion Deleted",
-                text2: "Discussion was permanently removed.",
-              });
-            },
-            onError: (err: any) => {
-              setConfirmModal(null);
-              Toast.show({
-                type: "error",
-                text1: "Error",
-                text2: err?.message || "Failed to delete discussion.",
-              });
-            },
-          });
-        },
-      });
-    },
-    [deleteMutation],
-  );
-
   const renderItem = useCallback(
     ({ item }: { item: ForumPostItem }) => (
       <ForumCard
@@ -192,9 +122,17 @@ export function Forum({
         currentUserId={currentUser?.id}
         onResolve={handleResolve}
         onDelete={handleDelete}
+        onReport={handleReportPost}
       />
     ),
-    [handleCardPress, currentUser?.role, currentUser?.id, handleResolve, handleDelete],
+    [
+      handleCardPress,
+      currentUser?.role,
+      currentUser?.id,
+      handleResolve,
+      handleDelete,
+      handleReportPost,
+    ],
   );
 
   const renderFooter = useCallback(() => {
@@ -210,6 +148,38 @@ export function Forum({
     if (isLoading) {
       return <ForumSkeleton />;
     }
+    if (isError) {
+      return (
+        <View style={styles.errorStateBox}>
+          <View style={styles.errorIconHalo}>
+            <Feather
+              name={isOffline ? "wifi-off" : "alert-circle"}
+              size={24}
+              color={BENTO_COLORS.danger}
+            />
+          </View>
+          <Text style={styles.errorTitle}>
+            {isOffline ? "You're Offline" : "Unable to Load Discussions"}
+          </Text>
+          <Text style={styles.errorSubtitle}>
+            {isOffline
+              ? "Check your internet connection and tap Retry."
+              : "Something went wrong while fetching forum posts."}
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={onRefresh}
+            activeOpacity={0.8}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading forum discussions"
+          >
+            <Feather name="refresh-cw" size={14} color="#ffffff" />
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     return (
       <ForumEmptyState
         searchQuery={searchQuery}
@@ -217,7 +187,15 @@ export function Forum({
         onResetFilter={handleResetFilter}
       />
     );
-  }, [isLoading, searchQuery, activeFilter, handleResetFilter]);
+  }, [
+    isLoading,
+    isError,
+    isOffline,
+    onRefresh,
+    searchQuery,
+    activeFilter,
+    handleResetFilter,
+  ]);
 
   const keyExtractor = useCallback((item: ForumPostItem) => item.id, []);
 
@@ -226,16 +204,11 @@ export function Forum({
     [],
   );
 
-  const ContainerComponent = embedded ? View : SafeAreaView;
-  const containerProps = embedded
-    ? { style: styles.safeContainer }
-    : { style: styles.safeContainer, edges: ["top" as const] };
-
   const bottomPadding = insets.bottom > 0 ? insets.bottom + 110 : 124;
   const activeFilterCount = activeFilter !== "ALL" ? 1 : 0;
 
-  return (
-    <ContainerComponent {...(containerProps as any)}>
+  const content = (
+    <>
       {!embedded && (
         <ForumTopNav
           user={currentUser}
@@ -243,7 +216,15 @@ export function Forum({
         />
       )}
 
-      {/* Stable Search Bar & Filter Modal Trigger */}
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <Feather name="wifi-off" size={13} color={colors.semantic.amber.deep} />
+          <Text style={styles.offlineBannerText}>
+            You&apos;re offline. Showing cached discussions.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.headerContainer}>
         <ForumSearchBar
           value={searchQuery}
@@ -253,7 +234,6 @@ export function Forum({
           activeFilterCount={activeFilterCount}
         />
 
-        {/* Active Filter Chip Strip */}
         {activeFilter !== "ALL" && (
           <View style={styles.activeFilterRow}>
             <TouchableOpacity
@@ -273,6 +253,7 @@ export function Forum({
             <TouchableOpacity
               style={styles.clearFilterBtn}
               onPress={handleResetFilter}
+              hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
               activeOpacity={0.7}
               accessible
               accessibilityRole="button"
@@ -337,10 +318,32 @@ export function Forum({
           message={confirmModal.message}
           confirmLabel={confirmModal.confirmLabel}
           type={confirmModal.type}
-          isLoading={resolveMutation.isPending || deleteMutation.isPending}
+          iconName={confirmModal.iconName}
+          isLoading={isConfirmLoading}
         />
       )}
-    </ContainerComponent>
+
+      {reportTargetPost && (
+        <UgcReportModal
+          visible={Boolean(reportTargetPost)}
+          targetType="FORUM_POST"
+          targetTitle={reportTargetPost.title}
+          onClose={() => setReportTargetPost(null)}
+          onSubmit={handleSubmitReport}
+          isSubmitting={isSubmittingReport}
+        />
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <View style={styles.safeContainer}>{content}</View>;
+  }
+
+  return (
+    <SafeAreaView style={styles.safeContainer} edges={["top"]}>
+      {content}
+    </SafeAreaView>
   );
 }
 
@@ -352,11 +355,17 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 6,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   headerContainer: {
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 2,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   activeFilterRow: {
     flexDirection: "row",
@@ -399,5 +408,76 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: colors.semantic.amber.soft,
+    borderWidth: 1,
+    borderColor: colors.semantic.amber.border,
+    width: "90%",
+    maxWidth: 680,
+    alignSelf: "center",
+  },
+  offlineBannerText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.semantic.amber.darkText,
+  },
+  errorStateBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    paddingVertical: 48,
+    gap: 8,
+  },
+  errorIconHalo: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: BENTO_COLORS.dangerBg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  errorTitle: {
+    fontFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    color: BENTO_COLORS.deepNavy,
+    textAlign: "center",
+  },
+  errorSubtitle: {
+    fontFamily,
+    fontSize: 13,
+    color: BENTO_COLORS.subtleText,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  retryBtn: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 48,
+    backgroundColor: BENTO_COLORS.primaryBlue,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ffffff",
   },
 });
