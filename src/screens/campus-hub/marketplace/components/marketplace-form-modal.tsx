@@ -45,6 +45,8 @@ import {
 import {
   MARKETPLACE_LIMITS,
   extractMarketplacePlainText,
+  formatBangladeshiPhone,
+  isValidBangladeshiPhone,
   validateMarketplaceForm,
   type SanitizedMarketplaceForm,
 } from "@/features/campus-hub/marketplace-logic";
@@ -68,11 +70,7 @@ import {
   titleFontFamily,
 } from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
-import {
-  CONDITIONS,
-  formatBangladeshiPhone,
-  isValidBangladeshiPhone,
-} from "../marketplace-constants";
+import { CONDITIONS } from "../marketplace-constants";
 import { MarketplaceCategoryPicker } from "./marketplace-category-picker";
 import { MarketplaceRichEditor } from "./marketplace-rich-editor";
 

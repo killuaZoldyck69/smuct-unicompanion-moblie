@@ -1,105 +1,13 @@
 import React from "react";
 import { Text, View, StyleSheet } from "react-native";
 import { CAMPUS_HUB_COLORS } from "../../shared/design-tokens";
+import {
+  decodeHtml,
+  parseInlineRichTokens,
+  stripRemainingHtml,
+  type InlineToken,
+} from "../../shared/rich-text-snippet";
 import { fontFamily } from "@/theme/typography";
-
-const HTML_ENTITIES: Record<string, string> = {
-  amp: "&",
-  nbsp: " ",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  bull: "•",
-  ndash: "–",
-  mdash: "—",
-};
-
-function decodeHtml(raw?: string | null): string {
-  if (!raw) return "";
-  return raw
-    .replace(/&#(\d+);/g, (match, dec) => {
-      const code = parseInt(dec, 10);
-      return !isNaN(code) ? String.fromCharCode(code) : match;
-    })
-    .replace(
-      /&([a-zA-Z0-9]+);/g,
-      (match, entity) => HTML_ENTITIES[entity] ?? match,
-    );
-}
-
-function stripRemainingHtml(text: string): string {
-  return text.replace(/<[^>]+>/g, "");
-}
-
-interface InlineToken {
-  text: string;
-  bold?: boolean;
-  italic?: boolean;
-  underline?: boolean;
-}
-
-const INLINE_TAGS = [
-  { regex: /\*\*\*([\s\S]+?)\*\*\*/, bold: true, italic: true },
-  { regex: /\*\*([\s\S]+?)\*\*/, bold: true },
-  { regex: /<b(?:\s+[^>]*)?>([\s\S]+?)<\/b>/i, bold: true },
-  { regex: /<strong(?:\s+[^>]*)?>([\s\S]+?)<\/strong>/i, bold: true },
-  {
-    regex: /<span[^>]*style="[^"]*font-weight:\s*(?:bold|[789]00)[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
-    bold: true,
-  },
-  { regex: /__([\s\S]+?)__/, underline: true },
-  { regex: /<u(?:\s+[^>]*)?>([\s\S]+?)<\/u>/i, underline: true },
-  { regex: /<ins(?:\s+[^>]*)?>([\s\S]+?)<\/ins>/i, underline: true },
-  {
-    regex: /<span[^>]*style="[^"]*text-decoration:\s*underline[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
-    underline: true,
-  },
-  { regex: /\*([\s\S]+?)\*/, italic: true },
-  { regex: /_([\s\S]+?)_/, italic: true },
-  { regex: /<i(?:\s+[^>]*)?>([\s\S]+?)<\/i>/i, italic: true },
-  { regex: /<em(?:\s+[^>]*)?>([\s\S]+?)<\/em>/i, italic: true },
-  {
-    regex: /<span[^>]*style="[^"]*font-style:\s*italic[^"]*"[^>]*>([\s\S]+?)<\/span>/i,
-    italic: true,
-  },
-  { regex: /<span(?:\s+[^>]*)?>([\s\S]+?)<\/span>/i },
-  { regex: /<font(?:\s+[^>]*)?>([\s\S]+?)<\/font>/i },
-  { regex: /<div(?:\s+[^>]*)?>([\s\S]+?)<\/div>/i },
-];
-
-function parseTokens(
-  raw: string,
-  flags: { bold?: boolean; italic?: boolean; underline?: boolean } = {},
-): InlineToken[] {
-  if (!raw) return [];
-
-  for (const tag of INLINE_TAGS) {
-    const match = tag.regex.exec(raw);
-    if (!match) continue;
-
-    const before = raw.slice(0, match.index);
-    const after = raw.slice(match.index + match[0].length);
-    const tokens: InlineToken[] = [];
-    if (before) {
-      const cleanedBefore = stripRemainingHtml(decodeHtml(before));
-      if (cleanedBefore) tokens.push({ text: cleanedBefore, ...flags });
-    }
-
-    tokens.push(
-      ...parseTokens(match[1], {
-        bold: flags.bold || !!tag.bold,
-        italic: flags.italic || !!tag.italic,
-        underline: flags.underline || !!tag.underline,
-      }),
-    );
-    if (after) tokens.push(...parseTokens(after, flags));
-    return tokens;
-  }
-
-  const cleanedRaw = stripRemainingHtml(decodeHtml(raw));
-  return cleanedRaw ? [{ text: cleanedRaw, ...flags }] : [];
-}
 
 type RichBlock =
   | { type: "heading"; content: string }
@@ -162,12 +70,12 @@ function parseRichBlocks(text: string): RichBlock[] {
       const content = isHtmlBullet
         ? trimmed.slice("###BULLET:".length, -3).trim()
         : trimmed.replace(/^([•\-*]|\d+\.)\s+/, "");
-      const tokens = parseTokens(content);
+      const tokens = parseInlineRichTokens(content).filter((t) => t.text);
       if (tokens.length) blocks.push({ type: "bullet", tokens });
       continue;
     }
 
-    const tokens = parseTokens(trimmed);
+    const tokens = parseInlineRichTokens(trimmed).filter((t) => t.text);
     if (tokens.length) blocks.push({ type: "paragraph", tokens });
   }
 

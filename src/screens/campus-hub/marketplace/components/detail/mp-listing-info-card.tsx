@@ -14,26 +14,14 @@ import {
 } from "@/screens/campus-hub/shared/design-tokens";
 import type { MarketplacePost } from "@/services/marketplace-service";
 import type { AuthorProfileModalData } from "@/screens/campus-hub/shared/author-modal";
-import { MARKETPLACE_CATEGORY_LABELS } from "../../marketplace-constants";
+import {
+  MARKETPLACE_CATEGORY_LABELS,
+  MARKETPLACE_CONDITION_LABELS,
+} from "../../marketplace-constants";
 import { MarketplaceRichTextDisplay } from "../marketplace-rich-editor";
-
-// ---------------------------------------------------------------------------
-// Label maps — defined once, shared across the component
-// ---------------------------------------------------------------------------
-const CONDITION_LABELS: Readonly<Record<string, string>> = {
-  NEW: "Brand New",
-  LIKE_NEW: "Like New",
-  GOOD: "Good Condition",
-  FAIR: "Fair Condition",
-};
-
-const CATEGORY_LABELS = MARKETPLACE_CATEGORY_LABELS;
 
 const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 interface MPListingInfoCardProps {
   post: MarketplacePost;
   isAuthor: boolean;
@@ -52,9 +40,6 @@ interface MPListingInfoCardProps {
   onDelete: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 export function MPListingInfoCard({
   post,
   isAuthor,
@@ -151,14 +136,14 @@ export function MPListingInfoCard({
 
         <View style={styles.categoryBadge}>
           <Text style={styles.categoryBadgeText}>
-            {CATEGORY_LABELS[post.category] ?? post.category}
+            {MARKETPLACE_CATEGORY_LABELS[post.category] ?? post.category}
           </Text>
         </View>
 
         {post.condition && (
           <View style={styles.conditionBadge}>
             <Text style={styles.conditionBadgeText}>
-              {CONDITION_LABELS[post.condition] ?? post.condition}
+              {MARKETPLACE_CONDITION_LABELS[post.condition] ?? post.condition}
             </Text>
           </View>
         )}

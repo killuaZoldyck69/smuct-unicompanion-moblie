@@ -22,7 +22,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -68,7 +68,7 @@ import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guideline
 import { UgcReportModal } from "@/screens/forum/components/ugc/ugc-report-modal";
 import { MarketplaceDeleteModal } from "@/screens/campus-hub/marketplace/components/marketplace-delete-modal";
 import { MarketplaceSoldModal } from "@/screens/campus-hub/marketplace/components/marketplace-sold-modal";
-import { EditMarketplaceModal } from "@/screens/campus-hub/marketplace/edit-modal";
+import { MarketplaceFormModal } from "@/screens/campus-hub/marketplace/components/marketplace-form-modal";
 import { MarketplaceDetailSkeleton } from "../shared/skeleton-loaders";
 import { setCampusHubActiveSection } from "@/screens/campus-hub";
 import { colors } from "@/theme/colors";
@@ -144,6 +144,7 @@ export function MarketplaceDetailScreen() {
   const isEditMode = editingComment !== null;
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Dynamic keyboard avoiding behavior to prevent stale offset on Android dismiss
   const [keyboardBehavior, setKeyboardBehavior] = useState<
@@ -166,6 +167,9 @@ export function MarketplaceDetailScreen() {
     return () => {
       showSub.remove();
       hideSub.remove();
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+      }
     };
   }, []);
 
@@ -248,18 +252,15 @@ export function MarketplaceDetailScreen() {
     [post?.comments],
   );
 
-  // ---------------------------------------------------------------------------
-  // Navigation
-  // ---------------------------------------------------------------------------
   const handleBack = useCallback(() => {
     setCampusHubActiveSection("MARKETPLACE");
     const destination = resolveMarketplaceBackDestination({
       userRole: currentUserRole,
     });
     router.replace({
-      pathname: destination.href as any,
+      pathname: destination.href,
       params: destination.params,
-    });
+    } as Href);
   }, [currentUserRole, router]);
 
   const handleCancelEdit = useCallback(() => {
@@ -488,27 +489,36 @@ export function MarketplaceDetailScreen() {
     [isOffline, deleteCommentMutation],
   );
 
+  const scheduleScrollToEnd = useCallback(() => {
+    if (scrollTimerRef.current) {
+      clearTimeout(scrollTimerRef.current);
+    }
+    scrollTimerRef.current = setTimeout(() => {
+      scrollTimerRef.current = null;
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  }, []);
+
   const handleStartReply = useCallback(
     (targetId: string, authorName: string) => {
       setEditingComment(null);
       setReplyTarget({ id: targetId, authorName });
       inputRef.current?.focus();
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 150);
+      scheduleScrollToEnd();
     },
-    [],
+    [scheduleScrollToEnd],
   );
 
-  const handleStartEdit = useCallback((comment: Comment) => {
-    setReplyTarget(null);
-    setEditingComment(comment);
-    setCommentText(comment.content);
-    inputRef.current?.focus();
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 150);
-  }, []);
+  const handleStartEdit = useCallback(
+    (comment: Comment) => {
+      setReplyTarget(null);
+      setEditingComment(comment);
+      setCommentText(comment.content);
+      inputRef.current?.focus();
+      scheduleScrollToEnd();
+    },
+    [scheduleScrollToEnd],
+  );
 
   const handleSendComment = useCallback(() => {
     if (!requireOnline(isOffline, "Reconnect to post your comment.")) return;
@@ -843,7 +853,8 @@ export function MarketplaceDetailScreen() {
         onClose={() => closeModal("sold")}
       />
 
-      <EditMarketplaceModal
+      <MarketplaceFormModal
+        mode="edit"
         visible={modals.edit}
         onClose={() => closeModal("edit")}
         post={post}

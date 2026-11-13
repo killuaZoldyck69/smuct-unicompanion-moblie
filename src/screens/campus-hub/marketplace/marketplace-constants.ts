@@ -92,21 +92,9 @@ export const MARKETPLACE_CATEGORIES: CategoryItem[] = [
   },
 ];
 
-export const MARKETPLACE_CATEGORY_LABELS: Record<MarketplaceCategory, string> = {
-  TEXTBOOKS: "Textbooks & Notes",
-  ELECTRONICS: "Electronics & Gadgets",
-  CALCULATORS: "Scientific Calculators",
-  COMPUTERS_ACCESSORIES: "Laptops & PC Parts",
-  LAB_DRAWING_TOOLS: "Lab & Drawing Tools",
-  STATIONERY: "Stationery & Supplies",
-  MOBILE_ACCESSORIES: "Phones & Accessories",
-  CYCLES_VEHICLES: "Cycles & Transport",
-  ROOM_HOSTEL_ESSENTIALS: "Hostel & Room Essentials",
-  FURNITURE: "Furniture & Desks",
-  SPORTS_FITNESS: "Sports & Fitness",
-  CLOTHING: "Clothing & Uniforms",
-  OTHER: "Other Campus Items",
-};
+export const MARKETPLACE_CATEGORY_LABELS = Object.fromEntries(
+  MARKETPLACE_CATEGORIES.map((category) => [category.key, category.label]),
+) as Record<MarketplaceCategory, string>;
 
 export const CONDITIONS: { key: ItemCondition; label: string; desc: string }[] = [
   { key: "NEW", label: "Brand New", desc: "Never used, in original packaging" },
@@ -115,41 +103,6 @@ export const CONDITIONS: { key: ItemCondition; label: string; desc: string }[] =
   { key: "FAIR", label: "Fair Condition", desc: "Functional with visible signs of wear" },
 ];
 
-/**
- * Normalizes input string to a valid Bangladeshi phone number starting with +880
- * Example: "01956014045" -> "+8801956014045"
- *          "1956014045"  -> "+8801956014045"
- *          "+8801956014045" -> "+8801956014045"
- */
-export function formatBangladeshiPhone(input: string): string {
-  if (!input) return "+880";
-
-  let cleaned = input.trim();
-
-  // If user cleared everything, keep prefix
-  if (cleaned.length === 0 || cleaned === "+") {
-    return "+880";
-  }
-
-  // Strip non-digits
-  let digits = cleaned.replace(/\D/g, "");
-
-  // If starts with 880, strip the country code
-  if (digits.startsWith("880")) {
-    digits = digits.slice(3);
-  }
-
-  // If starts with 0 (e.g. 017..., 019...), strip the leading 0
-  if (digits.startsWith("0")) {
-    digits = digits.slice(1);
-  }
-
-  // Cap at 10 digits (the 1 + 9 digits of a BD mobile number)
-  return `+880${digits.slice(0, 10)}`;
-}
-
-export function isValidBangladeshiPhone(phone: string): boolean {
-  if (!phone || phone.length !== 14) return false;
-  // +880 followed by 1, then operator digit 3-9, then 8 digits
-  return /^\+8801[3-9]\d{8}$/.test(phone);
-}
+export const MARKETPLACE_CONDITION_LABELS = Object.fromEntries(
+  CONDITIONS.map((condition) => [condition.key, condition.label]),
+) as Record<ItemCondition, string>;

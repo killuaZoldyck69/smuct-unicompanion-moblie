@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -45,7 +45,7 @@ import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
 import { MARKETPLACE_CATEGORY_LABELS } from "./marketplace-constants";
-import { ComposeMarketplaceModal } from "./compose-modal";
+import { MarketplaceFormModal } from "./components/marketplace-form-modal";
 import { MarketplaceHero } from "./components/marketplace-hero";
 import {
   MarketplaceFilterModal,
@@ -234,11 +234,10 @@ export function MarketplaceSection({
     }
   }, [hasNextPage, isFetchingNextPage, isOffline, fetchNextPage]);
 
-  // --- Navigation ---
   const navigateToDetail = useCallback(
     (id: string) => {
       setCampusHubActiveSection("MARKETPLACE");
-      router.push(`/campus-hub/marketplace/${id}` as any);
+      router.push(`/campus-hub/marketplace/${id}` as Href);
     },
     [router],
   );
@@ -663,7 +662,8 @@ export function MarketplaceSection({
         initialNumToRender={8}
       />
 
-      <ComposeMarketplaceModal
+      <MarketplaceFormModal
+        mode="create"
         visible={isComposeVisible}
         onClose={handleCloseCompose}
         currentUser={currentUser}

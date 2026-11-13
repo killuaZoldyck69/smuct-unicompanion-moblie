@@ -40,21 +40,27 @@ export function extractMarketplacePlainText(
     .trim();
 }
 
+export function formatBangladeshiPhone(input: string): string {
+  const cleaned = (input ?? "").trim();
+  if (!cleaned || cleaned === "+") return "+880";
+
+  let digits = cleaned.replace(/\D/g, "");
+  if (digits.startsWith("880")) digits = digits.slice(3);
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  return `+880${digits.slice(0, 10)}`;
+}
+
+export function isValidBangladeshiPhone(phone: string): boolean {
+  return Boolean(phone && phone.length === 14 && BD_PHONE_REGEX.test(phone));
+}
+
 export function normalizeBangladeshiPhoneInput(raw: string): string {
   const digits = (raw ?? "").replace(/[^\d+]/g, "");
   if (!digits) return "";
-  if (digits.startsWith("+880")) {
-    return digits.slice(0, 14);
-  }
-  if (digits.startsWith("880")) {
-    return `+${digits}`.slice(0, 14);
-  }
-  if (digits.startsWith("0")) {
-    return `+88${digits}`.slice(0, 14);
-  }
-  if (digits.startsWith("1")) {
-    return `+880${digits}`.slice(0, 14);
-  }
+  if (digits.startsWith("+880")) return digits.slice(0, 14);
+  if (digits.startsWith("880")) return `+${digits}`.slice(0, 14);
+  if (digits.startsWith("0")) return `+88${digits}`.slice(0, 14);
+  if (digits.startsWith("1")) return `+880${digits}`.slice(0, 14);
   return digits.slice(0, 14);
 }
 
@@ -211,14 +217,19 @@ export function resolveMarketplaceBackDestination(params: {
   };
 }
 
+interface HttpErrorLike {
+  response?: { status?: number };
+  code?: string;
+}
+
 export function resolveMarketplaceErrorState(params: {
   err: unknown;
   isOffline: boolean;
 }): "offline" | "notFound" | "generic" {
-  const e = params.err as {
-    response?: { status?: number };
-    code?: string;
-  } | null;
+  const e =
+    typeof params.err === "object" && params.err !== null
+      ? (params.err as HttpErrorLike)
+      : null;
   const status = e?.response?.status;
   if (status === 404) return "notFound";
   if (params.isOffline || !status || e?.code === "ECONNABORTED") {

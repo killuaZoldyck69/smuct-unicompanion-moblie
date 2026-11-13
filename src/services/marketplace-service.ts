@@ -48,7 +48,8 @@ export interface MarketplaceAuthor {
     dayOff?: string | null;
     consultationSlots?:
       | Array<{ day: string; startTime: string; endTime: string }>
-      | any
+      | string
+      | Record<string, unknown>[]
       | null;
     expertiseFields?: string[];
     linkedInUrl?: string | null;
@@ -137,9 +138,13 @@ export interface CreateCommentInput {
   parentId?: string | null;
 }
 
-// ---------------------------------------------------------------------------
-// API functions
-// ---------------------------------------------------------------------------
+function unwrapApiData<T>(data: T | undefined, action: string): T {
+  if (data === undefined) {
+    throw new Error(`Unexpected empty response payload when ${action}`);
+  }
+  return data;
+}
+
 export const getMarketplaceFeed = async (
   params?: FeedQueryParams
 ): Promise<PaginatedFeedResponse> => {
@@ -158,14 +163,14 @@ export const getMarketplacePostById = async (
   id: string
 ): Promise<MarketplacePost> => {
   const res = await api.get(`/marketplace/${id}`);
-  return res.data?.data;
+  return unwrapApiData(res.data?.data, "loading listing");
 };
 
 export const createMarketplacePost = async (
   data: CreateMarketplaceInput
 ): Promise<MarketplacePost> => {
   const res = await api.post("/marketplace", data, { timeout: 45000 });
-  return res.data?.data;
+  return unwrapApiData(res.data?.data, "creating listing");
 };
 
 export const updateMarketplacePost = async (
@@ -173,7 +178,7 @@ export const updateMarketplacePost = async (
   data: Partial<CreateMarketplaceInput>
 ): Promise<MarketplacePost> => {
   const res = await api.patch(`/marketplace/${id}`, data, { timeout: 45000 });
-  return res.data?.data;
+  return unwrapApiData(res.data?.data, "updating listing");
 };
 
 export const deleteMarketplacePost = async (id: string): Promise<void> => {
@@ -184,7 +189,7 @@ export const markMarketplaceSold = async (
   id: string
 ): Promise<MarketplacePost> => {
   const res = await api.patch(`/marketplace/${id}/sold`);
-  return res.data?.data;
+  return unwrapApiData(res.data?.data, "marking listing as sold");
 };
 
 export const updateMarketplaceStatus = async (
@@ -192,7 +197,7 @@ export const updateMarketplaceStatus = async (
   status: ListingStatus
 ): Promise<MarketplacePost> => {
   const res = await api.patch(`/marketplace/${id}/status`, { status });
-  return res.data?.data;
+  return unwrapApiData(res.data?.data, "updating listing status");
 };
 
 export const addMarketplaceComment = async (
@@ -200,7 +205,7 @@ export const addMarketplaceComment = async (
   data: CreateCommentInput
 ): Promise<MarketplaceComment> => {
   const res = await api.post(`/marketplace/${postId}/comments`, data);
-  return res.data?.data;
+  return unwrapApiData(res.data?.data, "posting comment");
 };
 
 export const updateMarketplaceComment = async (
@@ -211,7 +216,7 @@ export const updateMarketplaceComment = async (
   const res = await api.patch(`/marketplace/${postId}/comments/${commentId}`, {
     content,
   });
-  return res.data?.data;
+  return unwrapApiData(res.data?.data, "updating comment");
 };
 
 export const deleteMarketplaceComment = async (
@@ -225,5 +230,5 @@ export const reportMarketplaceContent = async (
   input: CreateMarketplaceReportInput
 ): Promise<CreateUgcReportResult> => {
   const res = await api.post("/marketplace/reports", input);
-  return res.data?.data;
+  return unwrapApiData(res.data?.data, "submitting report");
 };

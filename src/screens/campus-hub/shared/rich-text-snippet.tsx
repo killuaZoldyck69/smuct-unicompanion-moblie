@@ -8,7 +8,7 @@ export interface RichTextSnippetProps {
   ellipsizeMode?: "head" | "middle" | "tail" | "clip";
 }
 
-interface InlineToken {
+export interface InlineToken {
   text: string;
   bold?: boolean;
   italic?: boolean;
@@ -48,7 +48,7 @@ export function decodeHtml(raw?: string | null): string {
     .replace(/&([a-zA-Z0-9]+);/g, (match, entity) => HTML_ENTITIES[entity] ?? match);
 }
 
-function stripRemainingHtml(text: string): string {
+export function stripRemainingHtml(text: string): string {
   return text.replace(/<[^>]+>/g, "");
 }
 
@@ -82,7 +82,7 @@ const INLINE_TAGS = [
   { regex: /<div(?:\s+[^>]*)?>([\s\S]+?)<\/div>/i },
 ];
 
-function parseTokens(
+export function parseInlineRichTokens(
   raw: string,
   flags: { bold?: boolean; italic?: boolean; underline?: boolean } = {}
 ): InlineToken[] {
@@ -106,9 +106,9 @@ function parseTokens(
         underline: flags.underline || !!tag.underline,
       };
 
-      tokens.push(...parseTokens(inner, newFlags));
+      tokens.push(...parseInlineRichTokens(inner, newFlags));
       if (after) {
-        tokens.push(...parseTokens(after, flags));
+        tokens.push(...parseInlineRichTokens(after, flags));
       }
       return tokens;
     }
@@ -116,6 +116,8 @@ function parseTokens(
 
   return [{ text: stripRemainingHtml(decodeHtml(raw)), ...flags }];
 }
+
+const parseTokens = parseInlineRichTokens;
 
 /**
  * Preprocesses markdown and HTML into a clean single-line inline string with inline formatting markers.

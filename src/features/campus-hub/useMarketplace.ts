@@ -26,9 +26,6 @@ import {
   type MarketplacePost,
 } from "@/services/marketplace-service";
 
-// ---------------------------------------------------------------------------
-// Query key factory — centralised to keep cache operations consistent
-// ---------------------------------------------------------------------------
 export const marketplaceKeys = {
   all: ["marketplace"] as const,
   feed: (params?: Omit<FeedQueryParams, "cursor" | "limit">) =>
@@ -36,9 +33,6 @@ export const marketplaceKeys = {
   post: (id: string) => [...marketplaceKeys.all, "post", id] as const,
 };
 
-// ---------------------------------------------------------------------------
-// Feed — infinite scroll with cursor-based pagination
-// ---------------------------------------------------------------------------
 const FEED_PAGE_LIMIT = 20;
 
 export const useMarketplaceFeed = (
@@ -54,33 +48,24 @@ export const useMarketplaceFeed = (
       }),
     initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    // Cache feed data for 2 minutes before marking stale
     staleTime: 2 * 60 * 1000,
-    // Keep unused cache for 5 minutes
     gcTime: 5 * 60 * 1000,
   });
 
-// ---------------------------------------------------------------------------
-// Single post
-// ---------------------------------------------------------------------------
 export const useMarketplacePost = (id: string) =>
   useQuery({
     queryKey: marketplaceKeys.post(id),
     queryFn: () => getMarketplacePostById(id),
     enabled: !!id,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
 
-// ---------------------------------------------------------------------------
-// Mutations
-// ---------------------------------------------------------------------------
 export const useCreateMarketplacePost = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateMarketplaceInput) => createMarketplacePost(data),
     onSuccess: () => {
-      // Invalidate all feed variants so the new post appears everywhere
       qc.invalidateQueries({ queryKey: marketplaceKeys.all });
     },
   });
@@ -103,11 +88,8 @@ export const useDeleteMarketplacePost = () => {
   return useMutation({
     mutationFn: (id: string) => deleteMarketplacePost(id),
     onSuccess: (_data, id) => {
-      // 1. Immediately cancel and remove active queries for the deleted post
       qc.cancelQueries({ queryKey: marketplaceKeys.post(id) });
       qc.removeQueries({ queryKey: marketplaceKeys.post(id) });
-
-      // 2. Invalidate all feed variants cleanly
       qc.invalidateQueries({ queryKey: marketplaceKeys.all });
     },
   });

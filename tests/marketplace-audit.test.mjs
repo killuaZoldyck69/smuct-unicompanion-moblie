@@ -185,11 +185,22 @@ describe("marketplace mobile audit regressions", () => {
     const formSrc = readSrc(
       "src/screens/campus-hub/marketplace/components/marketplace-form-modal.tsx",
     );
-    const composeSrc = readSrc(
-      "src/screens/campus-hub/marketplace/compose-modal.tsx",
+    const indexSrc = readSrc("src/screens/campus-hub/marketplace/index.tsx");
+    const detailSrc = readSrc(
+      "src/screens/campus-hub/marketplace/marketplace-detail-screen.tsx",
     );
-    const editSrc = readSrc(
-      "src/screens/campus-hub/marketplace/edit-modal.tsx",
+
+    assert.equal(
+      fs.existsSync(
+        path.join(ROOT, "src/screens/campus-hub/marketplace/compose-modal.tsx"),
+      ),
+      false,
+    );
+    assert.equal(
+      fs.existsSync(
+        path.join(ROOT, "src/screens/campus-hub/marketplace/edit-modal.tsx"),
+      ),
+      false,
     );
 
     assert.match(
@@ -212,8 +223,8 @@ describe("marketplace mobile audit regressions", () => {
       );
     }
 
-    assert.match(composeSrc, /<MarketplaceFormModal[\s\S]*mode="create"/);
-    assert.match(editSrc, /<MarketplaceFormModal[\s\S]*mode="edit"/);
+    assert.match(indexSrc, /<MarketplaceFormModal[\s\S]*mode="create"/);
+    assert.match(detailSrc, /<MarketplaceFormModal[\s\S]*mode="edit"/);
     assert.match(formSrc, /initializedKeyRef/);
     assert.match(formSrc, /draftIdempotencyKeyRef/);
     assert.match(formSrc, /useUgcTermsStatus/);
