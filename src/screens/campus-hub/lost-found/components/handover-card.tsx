@@ -54,7 +54,8 @@ export const HandoverCard = React.memo(function HandoverCard({
 
   const handleCall = () => {
     if (!counterpart.phoneNumber) return;
-    Linking.openURL(`tel:${counterpart.phoneNumber}`).catch(() =>
+    const sanitizedPhone = counterpart.phoneNumber.replace(/\s+/g, "");
+    Linking.openURL(`tel:${sanitizedPhone}`).catch(() =>
       Toast.show({ type: "error", text1: "Could not initiate call." }),
     );
   };

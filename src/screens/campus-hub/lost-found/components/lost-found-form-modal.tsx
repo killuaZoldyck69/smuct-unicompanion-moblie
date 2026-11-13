@@ -227,11 +227,14 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
       form.verificationQuestion !==
         initialFormRef.current.verificationQuestion ||
       form.verificationAnswer !== initialFormRef.current.verificationAnswer
-    : form.title.trim().length > 0 ||
+    : form.type !== EMPTY_FORM.type ||
+      form.category !== EMPTY_FORM.category ||
+      form.title.trim().length > 0 ||
       form.description.trim().length > 0 ||
       form.location.trim().length > 0 ||
       form.images.length > 0 ||
-      form.verificationQuestion.trim().length > 0;
+      form.verificationQuestion.trim().length > 0 ||
+      form.verificationAnswer.trim().length > 0;
 
   const handleClose = useCallback(() => {
     if (isSubmitting) return;

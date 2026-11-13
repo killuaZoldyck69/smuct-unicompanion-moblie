@@ -164,10 +164,7 @@ export const useRejectLostFoundClaim = (postId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (claimId: string) => rejectLostFoundClaim(postId, claimId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(postId) });
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.claims(postId) });
-    },
+    onSuccess: () => invalidatePostAndFeeds(queryClient, postId),
   });
 };
 

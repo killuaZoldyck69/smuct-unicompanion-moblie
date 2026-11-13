@@ -195,7 +195,7 @@ export const ClaimModal = React.memo(function ClaimModal({
       if (uploadedProofMap[uri]) {
         proofImageUrl = uploadedProofMap[uri];
       } else {
-        const sizeError = await validateLocalImageSizes([uri]);
+        const sizeError = await validateLocalImageSizes([uri], "Proof photo");
         if (sizeError) {
           return Toast.show({
             type: "error",

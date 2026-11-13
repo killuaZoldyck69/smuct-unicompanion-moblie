@@ -211,7 +211,6 @@ export function LFMyClaimCard({
             accessibilityRole="button"
             accessibilityLabel="Resubmit claim (1 retry available)"
           >
-            <Feather name="refresh-cw" size={13} color="#ffffff" />
             <Feather
               name="refresh-cw"
               size={13}

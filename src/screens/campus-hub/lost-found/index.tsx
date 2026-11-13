@@ -811,7 +811,7 @@ const LostFoundCard = React.memo(function LostFoundCard({
       android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
       accessible
       accessibilityRole="button"
-      accessibilityLabel={`${post.type === "LOST" ? "Lost" : "Found"} item (${post.status.toLowerCase()}): ${post.title}.${post.category ? ` Category: ${CATEGORY_LABELS[post.category] || post.category}.` : ""} Location: ${post.location}.`}
+      accessibilityLabel={`${post.type === "LOST" ? "Lost" : "Found"} item (${post.status.toLowerCase()}): ${post.title}.${post.category ? ` Category: ${CATEGORY_LABELS[post.category] || post.category}.` : ""}${post.location ? ` Location: ${post.location}.` : ""}`}
     >
       <View style={styles.cardLeft}>
         {/* Semantic Badges Row */}

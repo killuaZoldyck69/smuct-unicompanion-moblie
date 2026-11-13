@@ -151,9 +151,10 @@ export function LostFoundDetailScreen() {
   const { isOffline } = useNetworkStatus();
   const isAdmin = currentUserRole === "ADMIN";
 
-  // Image gallery
+  // Image gallery & fullscreen viewer
   const [selectedImage, setSelectedImage] = useState(0);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
 
   // Author modal
   const [selectedAuthor, setSelectedAuthor] =
@@ -227,6 +228,10 @@ export function LostFoundDetailScreen() {
   const rejectClaimMutation = useRejectLostFoundClaim(id);
   const withdrawClaimMutation = useWithdrawLostFoundClaim(id);
   const reportMutation = useReportLostFoundPost(id);
+  const isConfirmPending =
+    rejectClaimMutation.isPending ||
+    withdrawClaimMutation.isPending ||
+    statusMutation.isPending;
 
   // ---------------------------------------------------------------------------
   // Derived values
@@ -290,11 +295,15 @@ export function LostFoundDetailScreen() {
         return true;
       }
       if (pendingConfirm) {
-        setPendingConfirm(null);
+        if (!isConfirmPending) {
+          setPendingConfirm(null);
+        }
         return true;
       }
       if (modals.report) {
-        closeModal("report");
+        if (!reportMutation.isPending) {
+          closeModal("report");
+        }
         return true;
       }
       if (modals.claim) {
@@ -306,11 +315,16 @@ export function LostFoundDetailScreen() {
         return true;
       }
       if (modals.delete) {
-        closeModal("delete");
+        if (!deleteMutation.isPending) {
+          closeModal("delete");
+        }
         return true;
       }
       if (modals.acceptSheet) {
-        closeModal("acceptSheet");
+        if (!acceptClaimMutation.isPending) {
+          closeModal("acceptSheet");
+          setClaimToAccept(null);
+        }
         return true;
       }
       handleBack();
@@ -318,7 +332,17 @@ export function LostFoundDetailScreen() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [modals, selectedAuthor, pendingConfirm, handleBack, closeModal]);
+  }, [
+    modals,
+    selectedAuthor,
+    pendingConfirm,
+    isConfirmPending,
+    reportMutation.isPending,
+    deleteMutation.isPending,
+    acceptClaimMutation.isPending,
+    handleBack,
+    closeModal,
+  ]);
 
   // ---------------------------------------------------------------------------
   // Image viewer helpers
@@ -326,7 +350,7 @@ export function LostFoundDetailScreen() {
   const openProofImageViewer = useCallback(
     (url: string) => {
       setViewerImages([url]);
-      setSelectedImage(0);
+      setViewerInitialIndex(0);
       openModal("imageViewer");
     },
     [openModal],
@@ -336,7 +360,7 @@ export function LostFoundDetailScreen() {
     (idx: number) => {
       if (!post?.images?.length) return;
       setViewerImages(post.images);
-      setSelectedImage(idx);
+      setViewerInitialIndex(idx);
       openModal("imageViewer");
     },
     [post?.images, openModal],
@@ -433,7 +457,8 @@ export function LostFoundDetailScreen() {
       kind: "WITHDRAW_CLAIM",
       claimId,
       title: "Withdraw Claim?",
-      message: "Are you sure you want to withdraw your submitted claim?",
+      message:
+        "Are you sure you want to withdraw your submitted claim? You can submit at most 2 claims total per listing.",
       confirmLabel: "Withdraw",
       tone: "danger",
     });
@@ -477,11 +502,6 @@ export function LostFoundDetailScreen() {
     },
     [],
   );
-
-  const isConfirmPending =
-    rejectClaimMutation.isPending ||
-    withdrawClaimMutation.isPending ||
-    statusMutation.isPending;
 
   const handleExecutePendingConfirm = useCallback(() => {
     if (!pendingConfirm || isConfirmPending) return;
@@ -945,7 +965,7 @@ export function LostFoundDetailScreen() {
       <ImageViewerModal
         visible={modals.imageViewer}
         images={viewerImages}
-        initialIndex={selectedImage}
+        initialIndex={viewerInitialIndex}
         onClose={() => closeModal("imageViewer")}
       />
 

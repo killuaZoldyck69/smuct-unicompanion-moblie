@@ -8,6 +8,7 @@ import { deleteFileFromCloudinaryApi } from "@/services/cloudinary-service";
 
 export async function validateLocalImageSizes(
   uris: string[],
+  singlePhotoLabel = "Photo",
 ): Promise<string | null> {
   const localUris = uris.filter(
     (uri) => !uri.startsWith("http://") && !uri.startsWith("https://"),
@@ -23,7 +24,7 @@ export async function validateLocalImageSizes(
         info.size > LOST_FOUND_LIMITS.MAX_IMAGE_BYTES
       ) {
         return localUris.length === 1
-          ? "Proof photo exceeds 5MB limit. Please choose a smaller photo."
+          ? `${singlePhotoLabel} exceeds 5MB limit. Please choose a smaller photo.`
           : `Photo ${i + 1} exceeds the 5MB size limit. Please choose a smaller photo.`;
       }
     } catch (err) {
