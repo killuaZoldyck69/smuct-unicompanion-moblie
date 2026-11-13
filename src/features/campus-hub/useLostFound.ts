@@ -4,12 +4,11 @@ import {
   useQueryClient,
   useInfiniteQuery,
   keepPreviousData,
+  type QueryClient,
 } from "@tanstack/react-query";
 import {
-  getLostFoundFeed,
   getLostFoundFeedPaginated,
   getLostFoundPostById,
-  getPossibleMatches,
   createLostFoundPost,
   updateLostFoundPost,
   deleteLostFoundPost,
@@ -19,28 +18,37 @@ import {
   acceptLostFoundClaim,
   rejectLostFoundClaim,
   withdrawLostFoundClaim,
+  reportLostFoundPost,
+  type LostFoundPost,
   type CreateLostFoundInput,
   type LostFoundStatus,
   type CreateClaimInput,
   type GetLostFoundFeedParams,
 } from "@/services/lost-found-service";
+import type { UgcReportReason } from "@/services/ugc-service";
 
 export const lostFoundKeys = {
   all: ["lostFound"] as const,
-  feed: (params?: GetLostFoundFeedParams) => ["lostFound", "feed", params] as const,
-  infiniteFeed: (params?: GetLostFoundFeedParams) => ["lostFound", "infiniteFeed", params] as const,
+  infiniteFeedRoot: ["lostFound", "infiniteFeed"] as const,
+  infiniteFeed: (params?: GetLostFoundFeedParams) =>
+    ["lostFound", "infiniteFeed", params] as const,
   detail: (id: string) => ["lostFound", "detail", id] as const,
-  matches: (postId: string) => ["lostFound", "matches", postId] as const,
   claims: (postId: string) => ["lostFound", "claims", postId] as const,
 };
 
-export const useInfiniteLostFoundFeed = (params?: GetLostFoundFeedParams) => {
-  return useInfiniteQuery({
+const invalidatePostAndFeeds = (queryClient: QueryClient, postId: string) => {
+  queryClient.invalidateQueries({ queryKey: lostFoundKeys.infiniteFeedRoot });
+  queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(postId) });
+  queryClient.invalidateQueries({ queryKey: lostFoundKeys.claims(postId) });
+};
+
+export const useInfiniteLostFoundFeed = (params?: GetLostFoundFeedParams) =>
+  useInfiniteQuery({
     queryKey: lostFoundKeys.infiniteFeed(params),
     queryFn: ({ pageParam = 1, signal }) =>
       getLostFoundFeedPaginated(
         { ...params, page: pageParam as number, limit: 15 },
-        signal
+        signal,
       ),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
@@ -51,44 +59,24 @@ export const useInfiniteLostFoundFeed = (params?: GetLostFoundFeedParams) => {
     gcTime: 1000 * 60 * 10,
     placeholderData: keepPreviousData,
   });
-};
 
-export const useLostFoundFeed = (params?: GetLostFoundFeedParams) => {
-  return useQuery({
-    queryKey: lostFoundKeys.feed(params),
-    queryFn: ({ signal }) => getLostFoundFeed(params, signal),
-    staleTime: 1000 * 60 * 2,
-    gcTime: 1000 * 60 * 10,
-    placeholderData: keepPreviousData,
-  });
-};
-
-export const usePossibleMatches = (postId: string) => {
-  return useQuery({
-    queryKey: lostFoundKeys.matches(postId),
-    queryFn: () => getPossibleMatches(postId),
-    enabled: Boolean(postId),
-    staleTime: 1000 * 60 * 2,
-    gcTime: 1000 * 60 * 10,
-  });
-};
-
-export const useLostFoundPost = (id: string) => {
-  return useQuery({
+export const useLostFoundPost = (id: string) =>
+  useQuery({
     queryKey: lostFoundKeys.detail(id),
     queryFn: () => getLostFoundPostById(id),
     enabled: Boolean(id),
-    staleTime: 1000 * 60 * 1,
+    staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
   });
-};
 
 export const useCreateLostFoundPost = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateLostFoundInput) => createLostFoundPost(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: lostFoundKeys.infiniteFeedRoot,
+      });
     },
   });
 };
@@ -103,15 +91,18 @@ export const useUpdateLostFoundPost = () => {
       id: string;
       data: Partial<CreateLostFoundInput>;
     }) => updateLostFoundPost(id, data),
-    onSuccess: (updatedPost, variables) => {
+    onSuccess: (updatedPost, { id }) => {
       if (updatedPost) {
-        queryClient.setQueryData(
-          lostFoundKeys.detail(variables.id),
-          (old: any) => (old ? { ...old, ...updatedPost } : updatedPost)
+        queryClient.setQueryData<LostFoundPost>(
+          lostFoundKeys.detail(id),
+          (previous) =>
+            previous ? { ...previous, ...updatedPost } : updatedPost,
         );
       }
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: lostFoundKeys.infiniteFeedRoot,
+      });
+      queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(id) });
     },
   });
 };
@@ -121,18 +112,16 @@ export const useDeleteLostFoundPost = () => {
   return useMutation({
     mutationFn: (id: string) => deleteLostFoundPost(id),
     onSuccess: (_data, id) => {
-      // 1. Immediately cancel and remove queries for the deleted post so TanStack Query doesn't refetch a deleted entity
-      queryClient.cancelQueries({ queryKey: lostFoundKeys.detail(id) });
-      queryClient.cancelQueries({ queryKey: lostFoundKeys.claims(id) });
-      queryClient.cancelQueries({ queryKey: lostFoundKeys.matches(id) });
-
-      queryClient.removeQueries({ queryKey: lostFoundKeys.detail(id) });
-      queryClient.removeQueries({ queryKey: lostFoundKeys.claims(id) });
-      queryClient.removeQueries({ queryKey: lostFoundKeys.matches(id) });
-
-      // 2. Invalidate only feed queries so the listing list updates cleanly
-      queryClient.invalidateQueries({ queryKey: ["lostFound", "feed"] });
-      queryClient.invalidateQueries({ queryKey: ["lostFound", "infiniteFeed"] });
+      for (const queryKey of [
+        lostFoundKeys.detail(id),
+        lostFoundKeys.claims(id),
+      ]) {
+        queryClient.cancelQueries({ queryKey });
+        queryClient.removeQueries({ queryKey });
+      }
+      queryClient.invalidateQueries({
+        queryKey: lostFoundKeys.infiniteFeedRoot,
+      });
     },
   });
 };
@@ -142,32 +131,24 @@ export const useUpdateLostFoundStatus = () => {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: LostFoundStatus }) =>
       updateLostFoundStatus(id, status),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(variables.id) });
-    },
+    onSuccess: (_data, { id }) => invalidatePostAndFeeds(queryClient, id),
   });
 };
 
-export const useLostFoundClaims = (postId: string) => {
-  return useQuery({
+export const useLostFoundClaims = (postId: string, enabled = true) =>
+  useQuery({
     queryKey: lostFoundKeys.claims(postId),
     queryFn: () => getLostFoundClaims(postId),
-    enabled: Boolean(postId),
+    enabled: Boolean(postId) && enabled,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 5,
   });
-};
 
 export const useSubmitLostFoundClaim = (postId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateClaimInput) => submitLostFoundClaim(postId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(postId) });
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.claims(postId) });
-    },
+    onSuccess: () => invalidatePostAndFeeds(queryClient, postId),
   });
 };
 
@@ -175,11 +156,7 @@ export const useAcceptLostFoundClaim = (postId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (claimId: string) => acceptLostFoundClaim(postId, claimId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(postId) });
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.claims(postId) });
-    },
+    onSuccess: () => invalidatePostAndFeeds(queryClient, postId),
   });
 };
 
@@ -198,10 +175,21 @@ export const useWithdrawLostFoundClaim = (postId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (claimId: string) => withdrawLostFoundClaim(postId, claimId),
+    onSuccess: () => invalidatePostAndFeeds(queryClient, postId),
+  });
+};
+
+export const useReportLostFoundPost = (postId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { reason: UgcReportReason; details?: string }) =>
+      reportLostFoundPost(postId, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: lostFoundKeys.infiniteFeedRoot,
+      });
       queryClient.invalidateQueries({ queryKey: lostFoundKeys.detail(postId) });
-      queryClient.invalidateQueries({ queryKey: lostFoundKeys.claims(postId) });
+      queryClient.invalidateQueries({ queryKey: ["adminForumReports"] });
     },
   });
 };

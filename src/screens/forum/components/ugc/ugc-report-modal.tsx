@@ -54,7 +54,8 @@ const REPORT_REASONS: Array<{
   {
     value: "INAPPROPRIATE",
     label: "Inappropriate Content",
-    description: "Explicit, offensive, or unsafe university community material.",
+    description:
+      "Explicit, offensive, or unsafe university community material.",
   },
   {
     value: "ACADEMIC_MISCONDUCT",
@@ -106,10 +107,7 @@ export const UgcReportModal = memo(function UgcReportModal({
       animationType="slide"
       onRequestClose={() => !isSubmitting && onClose()}
     >
-      <KeyboardAvoidingView
-        behavior="padding"
-        style={styles.overlay}
-      >
+      <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -136,7 +134,11 @@ export const UgcReportModal = memo(function UgcReportModal({
               <View>
                 <Text style={styles.title}>
                   Report{" "}
-                  {targetType === "FORUM_POST" ? "Discussion" : "Response"}
+                  {targetType === "FORUM_POST"
+                    ? "Discussion"
+                    : targetType === "LOST_FOUND_POST"
+                      ? "Lost & Found Post"
+                      : "Response"}
                 </Text>
                 {targetTitle ? (
                   <Text style={styles.targetPreview} numberOfLines={1}>

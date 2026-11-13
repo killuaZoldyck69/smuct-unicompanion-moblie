@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
@@ -14,7 +15,10 @@ import {
   StatusBadge,
   CategoryBadge,
 } from "@/screens/campus-hub/lost-found/components/status-badge";
-import type { LostFoundPost } from "@/services/lost-found-service";
+import type {
+  LostFoundPost,
+  LostFoundStatus,
+} from "@/services/lost-found-service";
 import type { AuthorProfileModalData } from "@/screens/campus-hub/shared/author-modal";
 
 interface LFInfoCardProps {
@@ -22,9 +26,11 @@ interface LFInfoCardProps {
   isAuthor: boolean;
   isAdmin?: boolean;
   isEdited: boolean;
+  isUpdatingStatus?: boolean;
   onViewAuthor: (author: AuthorProfileModalData) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onChangeStatus?: (status: LostFoundStatus) => void;
 }
 
 export function LFInfoCard({
@@ -32,20 +38,37 @@ export function LFInfoCard({
   isAuthor,
   isAdmin = false,
   isEdited,
+  isUpdatingStatus = false,
   onViewAuthor,
   onEdit,
   onDelete,
+  onChangeStatus,
 }: LFInfoCardProps) {
   const isResolved = post.status === "RESOLVED" || post.status === "CLAIMED";
+  const isClosed = post.status === "CLOSED";
   const canManage = isAuthor || isAdmin;
 
   return (
     <View style={styles.card}>
-      {/* Resolved banner */}
+      {/* Resolved or Closed banner */}
       {isResolved && (
         <View style={styles.resolvedBanner}>
           <Feather name="check-circle" size={16} color="#047857" />
-          <Text style={styles.resolvedBannerText}>Item Successfully Handed Over</Text>
+          <Text style={styles.resolvedBannerText}>
+            Item Successfully Handed Over
+          </Text>
+        </View>
+      )}
+      {isClosed && (
+        <View style={styles.closedBanner}>
+          <Feather
+            name="slash"
+            size={16}
+            color={CAMPUS_HUB_COLORS.subtleText}
+          />
+          <Text style={styles.closedBannerText}>
+            Listing Closed — Claims Disabled
+          </Text>
         </View>
       )}
 
@@ -74,8 +97,14 @@ export function LFInfoCard({
         {/* Date & Time Row */}
         <View style={styles.dateTimeRow}>
           <View style={styles.factItem}>
-            <Feather name="calendar" size={12} color={CAMPUS_HUB_COLORS.subtleText} />
-            <Text style={styles.factText}>{formatDateTime(post.createdAt)}</Text>
+            <Feather
+              name="calendar"
+              size={12}
+              color={CAMPUS_HUB_COLORS.subtleText}
+            />
+            <Text style={styles.factText}>
+              {formatDateTime(post.createdAt)}
+            </Text>
           </View>
           <Text style={styles.factDot}>•</Text>
           <Text style={styles.factText}>{timeAgo(post.createdAt)}</Text>
@@ -89,10 +118,13 @@ export function LFInfoCard({
                 size={9.5}
                 color={CAMPUS_HUB_COLORS.lostFoundAccentText}
               />
-              <Text style={styles.editedPillText}>EDITED</Text>
+              <Text style={styles.editedPillText} maxFontSizeMultiplier={1.25}>
+                EDITED
+              </Text>
             </View>
             <Text style={styles.editedDate}>
-              Last edited {formatDateTime(post.updatedAt)} ({timeAgo(post.updatedAt)})
+              Last edited {formatDateTime(post.updatedAt)} (
+              {timeAgo(post.updatedAt)})
             </Text>
           </View>
         )}
@@ -122,15 +154,25 @@ export function LFInfoCard({
       {!!post.verificationQuestion && (
         <View style={styles.verificationCard}>
           <View style={styles.verificationHeader}>
-            <Feather name="shield" size={14} color="#0284c7" />
+            <Feather
+              name="shield"
+              size={14}
+              color={CAMPUS_HUB_COLORS.skyAccentInk}
+            />
             <Text style={styles.verificationLabel}>
-              {isAuthor ? "YOUR VERIFICATION QUESTION" : "OWNERSHIP VERIFICATION QUESTION"}
+              {isAuthor
+                ? "YOUR VERIFICATION QUESTION"
+                : "OWNERSHIP VERIFICATION QUESTION"}
             </Text>
           </View>
-          <Text style={styles.verificationQuestion}>{post.verificationQuestion}</Text>
+          <Text style={styles.verificationQuestion}>
+            {post.verificationQuestion}
+          </Text>
           {isAuthor && !!post.verificationAnswer && (
             <View style={styles.secretAnswerBox}>
-              <Text style={styles.secretAnswerLabel}>EXPECTED ANSWER (PRIVATE TO YOU):</Text>
+              <Text style={styles.secretAnswerLabel}>
+                EXPECTED ANSWER (PRIVATE TO YOU):
+              </Text>
               <Text style={styles.secretAnswer}>{post.verificationAnswer}</Text>
             </View>
           )}
@@ -143,37 +185,136 @@ export function LFInfoCard({
           {isAdmin && !isAuthor && (
             <View style={styles.adminIndicator}>
               <Feather name="shield" size={12} color="#4338ca" />
-              <Text style={styles.adminIndicatorText}>ADMIN MODERATION CONTROLS</Text>
+              <Text
+                style={styles.adminIndicatorText}
+                maxFontSizeMultiplier={1.25}
+              >
+                ADMIN MODERATION CONTROLS
+              </Text>
             </View>
           )}
 
           <View style={styles.ownerActions}>
-            {!isResolved && (
-              <TouchableOpacity
-                style={styles.editBtn}
+            {post.status === "ACTIVE" && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.editBtn,
+                  pressed && { opacity: 0.8 },
+                ]}
                 onPress={onEdit}
-                activeOpacity={0.8}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Edit listing"
               >
-                <Feather name="edit-3" size={14} color={CAMPUS_HUB_COLORS.deepNavy} />
+                <Feather
+                  name="edit-3"
+                  size={14}
+                  color={CAMPUS_HUB_COLORS.deepNavy}
+                />
                 <Text style={styles.editBtnText}>Edit</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
 
-            <TouchableOpacity
-              style={styles.deleteBtn}
+            <Pressable
+              style={({ pressed }) => [
+                styles.deleteBtn,
+                pressed && { opacity: 0.8 },
+              ]}
               onPress={onDelete}
-              activeOpacity={0.8}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
               accessible
               accessibilityRole="button"
               accessibilityLabel="Delete listing"
             >
-              <Feather name="trash-2" size={14} color={CAMPUS_HUB_COLORS.dangerText} />
+              <Feather
+                name="trash-2"
+                size={14}
+                color={CAMPUS_HUB_COLORS.dangerText}
+              />
               <Text style={styles.deleteBtnText}>Delete</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
+
+          {!!onChangeStatus && (
+            <View style={styles.ownerActions}>
+              {post.status === "ACTIVE" ? (
+                <>
+                  {isAuthor && (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.statusActionBtn,
+                        styles.resolveActionBtn,
+                        isUpdatingStatus && styles.actionDisabled,
+                        pressed && !isUpdatingStatus && { opacity: 0.8 },
+                      ]}
+                      onPress={() => onChangeStatus("RESOLVED")}
+                      disabled={isUpdatingStatus}
+                      android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                      accessible
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: isUpdatingStatus }}
+                      accessibilityLabel="Mark listing resolved"
+                    >
+                      <Feather
+                        name="check-circle"
+                        size={14}
+                        color={CAMPUS_HUB_COLORS.emeraldFill}
+                      />
+                      <Text style={styles.resolveActionText}>
+                        Mark Resolved
+                      </Text>
+                    </Pressable>
+                  )}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.statusActionBtn,
+                      styles.closeActionBtn,
+                      isUpdatingStatus && styles.actionDisabled,
+                      pressed && !isUpdatingStatus && { opacity: 0.8 },
+                    ]}
+                    onPress={() => onChangeStatus("CLOSED")}
+                    disabled={isUpdatingStatus}
+                    android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: isUpdatingStatus }}
+                    accessibilityLabel="Close listing"
+                  >
+                    <Feather
+                      name="slash"
+                      size={14}
+                      color={CAMPUS_HUB_COLORS.neutralText}
+                    />
+                    <Text style={styles.closeActionText}>Close Listing</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.statusActionBtn,
+                    styles.reopenActionBtn,
+                    isUpdatingStatus && styles.actionDisabled,
+                    pressed && !isUpdatingStatus && { opacity: 0.8 },
+                  ]}
+                  onPress={() => onChangeStatus("ACTIVE")}
+                  disabled={isUpdatingStatus}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: isUpdatingStatus }}
+                  accessibilityLabel="Reopen listing"
+                >
+                  <Feather
+                    name="refresh-cw"
+                    size={14}
+                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+                  />
+                  <Text style={styles.reopenActionText}>Reopen Listing</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -186,14 +327,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   resolvedBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#d1fae5",
+    backgroundColor: colors.semantic.emerald.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
@@ -203,7 +344,23 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "800",
-    color: "#047857",
+    color: colors.semantic.emerald.darker,
+  },
+  closedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  closedBannerText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.neutralText,
   },
   badgeRow: {
     flexDirection: "row",
@@ -269,9 +426,11 @@ const styles = StyleSheet.create({
   editedPillText: {
     fontFamily,
     fontSize: 9.5,
+    lineHeight: 12,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.lostFoundAccentText,
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   editedDate: {
     fontFamily,
@@ -315,12 +474,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   verificationCard: {
-    backgroundColor: "#f0f9ff",
+    backgroundColor: CAMPUS_HUB_COLORS.skyTint,
     borderRadius: 14,
     padding: 14,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#bae6fd",
+    borderColor: CAMPUS_HUB_COLORS.skyBorder,
     gap: 6,
   },
   verificationHeader: {
@@ -332,14 +491,14 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10,
     fontWeight: "800",
-    color: "#0284c7",
+    color: CAMPUS_HUB_COLORS.skyAccentInk,
     letterSpacing: 0.5,
   },
   verificationQuestion: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#0f172a",
+    color: CAMPUS_HUB_COLORS.deepNavy,
     lineHeight: 18,
   },
   secretAnswerBox: {
@@ -348,20 +507,20 @@ const styles = StyleSheet.create({
     padding: 10,
     marginTop: 4,
     borderWidth: 1,
-    borderColor: "#e0f2fe",
+    borderColor: CAMPUS_HUB_COLORS.skyBorder,
   },
   secretAnswerLabel: {
     fontFamily,
     fontSize: 9,
     fontWeight: "800",
-    color: "#64748b",
+    color: CAMPUS_HUB_COLORS.mutedInk,
     marginBottom: 2,
   },
   secretAnswer: {
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#0369a1",
+    color: CAMPUS_HUB_COLORS.skyAccentInk,
   },
   managementContainer: {
     marginTop: 14,
@@ -380,35 +539,45 @@ const styles = StyleSheet.create({
   adminIndicatorText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: "#4338ca",
     letterSpacing: 0.5,
+    includeFontPadding: false,
   },
   ownerActions: {
     flexDirection: "row",
-    gap: 8,
+    flexWrap: "wrap",
+    rowGap: 8,
+    columnGap: 8,
     marginTop: 2,
   },
   editBtn: {
     flex: 1,
+    minWidth: 120,
+    minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
     paddingVertical: 11,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    overflow: "hidden",
   },
   editBtnText: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   deleteBtn: {
     flex: 1,
+    minWidth: 120,
+    minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -417,12 +586,63 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(225, 29, 72, 0.15)",
+    borderColor: colors.semantic.rose.border,
+    overflow: "hidden",
   },
   deleteBtnText: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.dangerText,
+    includeFontPadding: false,
+  },
+  statusActionBtn: {
+    flex: 1,
+    minWidth: 130,
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  actionDisabled: {
+    opacity: 0.6,
+  },
+  resolveActionBtn: {
+    backgroundColor: colors.semantic.emerald.tint,
+    borderColor: colors.semantic.emerald.border,
+  },
+  resolveActionText: {
+    fontFamily,
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.emeraldFill,
+    includeFontPadding: false,
+  },
+  closeActionBtn: {
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+  },
+  closeActionText: {
+    fontFamily,
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
+  },
+  reopenActionBtn: {
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
+    borderColor: colors.semantic.amber.border,
+  },
+  reopenActionText: {
+    fontFamily,
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
+    includeFontPadding: false,
   },
 });

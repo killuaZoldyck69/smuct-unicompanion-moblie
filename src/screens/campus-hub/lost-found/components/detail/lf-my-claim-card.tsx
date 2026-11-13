@@ -1,46 +1,117 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
-import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "@/screens/campus-hub/shared/design-tokens";
-import type { LostFoundClaim } from "@/services/lost-found-service";
+import { colors } from "@/theme/colors";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  timeAgo,
+} from "@/screens/campus-hub/shared/design-tokens";
+import {
+  canResubmitRejectedClaim,
+  getClaimStatusPresentation,
+} from "@/features/campus-hub/lost-found-logic";
+import type {
+  LostFoundClaim,
+  LostFoundStatus,
+} from "@/services/lost-found-service";
 
 interface LFMyClaimCardProps {
   claim: LostFoundClaim;
   isResolved: boolean;
+  postStatus?: LostFoundStatus;
   isWithdrawing: boolean;
   onOpenProof: (url: string) => void;
   onWithdraw: (claimId: string) => void;
+  onResubmit?: () => void;
 }
+
+const CLAIM_TONE_STYLES = {
+  amber: {
+    pillBg: colors.semantic.amber.soft,
+    pillText: CAMPUS_HUB_COLORS.lostFoundAccentText,
+    cardBg: CAMPUS_HUB_COLORS.white,
+    cardBorder: CAMPUS_HUB_COLORS.cardBorder,
+  },
+  emerald: {
+    pillBg: colors.semantic.emerald.border,
+    pillText: colors.semantic.emerald.darker,
+    cardBg: colors.semantic.emerald.tint,
+    cardBorder: colors.semantic.emerald.accent,
+  },
+  rose: {
+    pillBg: colors.semantic.rose.softBorder,
+    pillText: colors.semantic.rose.deep,
+    cardBg: colors.semantic.rose.tint,
+    cardBorder: colors.semantic.rose.border,
+  },
+  slate: {
+    pillBg: colors.slate100,
+    pillText: CAMPUS_HUB_COLORS.mutedInk,
+    cardBg: CAMPUS_HUB_COLORS.white,
+    cardBorder: CAMPUS_HUB_COLORS.cardBorder,
+  },
+} as const;
 
 export function LFMyClaimCard({
   claim,
   isResolved,
+  postStatus,
   isWithdrawing,
   onOpenProof,
   onWithdraw,
+  onResubmit,
 }: LFMyClaimCardProps) {
+  const [proofError, setProofError] = useState(false);
+
+  useEffect(() => {
+    setProofError(false);
+  }, [claim.proofImage]);
+
+  const statusInfo = getClaimStatusPresentation(claim.status);
+  const toneStyle = CLAIM_TONE_STYLES[statusInfo.tone];
+  const resolvedPostStatus: LostFoundStatus =
+    postStatus ?? (isResolved ? "RESOLVED" : "ACTIVE");
+  const canResubmit = canResubmitRejectedClaim({
+    claimStatus: claim.status,
+    attemptCount: claim.attemptCount,
+    postStatus: resolvedPostStatus,
+  });
+
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>YOUR SUBMITTED CLAIM</Text>
       <View
         style={[
           styles.card,
-          claim.status === "ACCEPTED" && styles.cardAccepted,
+          {
+            backgroundColor: toneStyle.cardBg,
+            borderColor: toneStyle.cardBorder,
+          },
         ]}
       >
         <View style={styles.topRow}>
-          <View style={styles.statusPill}>
-            <Text style={styles.statusText}>STATUS: {claim.status}</Text>
+          <View
+            style={[styles.statusPill, { backgroundColor: toneStyle.pillBg }]}
+          >
+            <Text
+              style={[styles.statusText, { color: toneStyle.pillText }]}
+              maxFontSizeMultiplier={1.25}
+            >
+              STATUS: {claim.status}
+            </Text>
           </View>
           <Text style={styles.time}>{timeAgo(claim.createdAt)}</Text>
         </View>
+
+        <Text style={styles.statusHint}>{statusInfo.description}</Text>
 
         {!!claim.answer && (
           <View style={styles.answerBox}>
@@ -52,40 +123,99 @@ export function LFMyClaimCard({
         <Text style={styles.message}>{claim.message}</Text>
 
         {!!claim.proofImage && (
-          <TouchableOpacity
-            style={styles.proofBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.proofBtn,
+              pressed && { opacity: 0.85 },
+            ]}
             onPress={() => onOpenProof(claim.proofImage!)}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
             accessible
             accessibilityRole="button"
             accessibilityLabel="View your attached proof photo"
           >
-            <Image source={{ uri: claim.proofImage }} style={styles.proofImg} />
+            {proofError ? (
+              <View style={[styles.proofImg, styles.proofFallback]}>
+                <Feather
+                  name="image"
+                  size={16}
+                  color={CAMPUS_HUB_COLORS.subtleText}
+                />
+              </View>
+            ) : (
+              <Image
+                source={{ uri: claim.proofImage }}
+                style={styles.proofImg}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                onError={() => setProofError(true)}
+              />
+            )}
             <View style={styles.proofTextCol}>
               <Text style={styles.proofTitle}>Attached Proof Photo</Text>
               <Text style={styles.proofSub}>Tap to view in fullscreen</Text>
             </View>
-            <Feather name="maximize-2" size={16} color={CAMPUS_HUB_COLORS.subtleText} />
-          </TouchableOpacity>
+            <Feather
+              name="maximize-2"
+              size={16}
+              color={CAMPUS_HUB_COLORS.mutedInk}
+            />
+          </Pressable>
         )}
 
-        {claim.status === "PENDING" && !isResolved && (
-          <TouchableOpacity
-            style={styles.withdrawBtn}
+        {claim.status === "PENDING" && resolvedPostStatus === "ACTIVE" && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.withdrawBtn,
+              isWithdrawing && { opacity: 0.65 },
+              pressed && !isWithdrawing && { opacity: 0.85 },
+            ]}
             onPress={() => onWithdraw(claim.id)}
             disabled={isWithdrawing}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
             accessible
             accessibilityRole="button"
+            accessibilityState={{
+              disabled: isWithdrawing,
+              busy: isWithdrawing,
+            }}
             accessibilityLabel="Withdraw claim"
           >
             {isWithdrawing ? (
-              <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.dangerText} />
+              <ActivityIndicator
+                size="small"
+                color={CAMPUS_HUB_COLORS.dangerText}
+              />
             ) : (
               <>
-                <Feather name="x-circle" size={13} color={CAMPUS_HUB_COLORS.dangerText} />
+                <Feather
+                  name="x-circle"
+                  size={13}
+                  color={CAMPUS_HUB_COLORS.dangerText}
+                />
                 <Text style={styles.withdrawBtnText}>Withdraw Claim</Text>
               </>
             )}
-          </TouchableOpacity>
+          </Pressable>
+        )}
+
+        {canResubmit && !!onResubmit && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.resubmitBtn,
+              pressed && { opacity: 0.88 },
+            ]}
+            onPress={onResubmit}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Resubmit claim (1 retry available)"
+          >
+            <Feather name="refresh-cw" size={13} color="#ffffff" />
+            <Text style={styles.resubmitBtnText}>
+              Resubmit Claim (1 retry left)
+            </Text>
+          </Pressable>
         )}
       </View>
     </View>
@@ -131,8 +261,10 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
-    color: "#b45309",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
+    includeFontPadding: false,
   },
   time: {
     fontFamily,
@@ -140,24 +272,24 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
   },
   answerBox: {
-    backgroundColor: "#f0f9ff",
+    backgroundColor: CAMPUS_HUB_COLORS.skyTint,
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
-    borderColor: "#bae6fd",
+    borderColor: CAMPUS_HUB_COLORS.skyBorder,
     gap: 2,
   },
   answerLabel: {
     fontFamily,
     fontSize: 9,
     fontWeight: "800",
-    color: "#0284c7",
+    color: CAMPUS_HUB_COLORS.skyAccentInk,
   },
   answerText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#0f172a",
+    color: CAMPUS_HUB_COLORS.deepNavy,
   },
   message: {
     fontFamily,
@@ -171,12 +303,14 @@ const styles = StyleSheet.create({
   proofBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: 12,
     padding: 8,
     gap: 10,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
+    minHeight: 56,
+    overflow: "hidden",
   },
   proofImg: {
     width: 44,
@@ -196,22 +330,54 @@ const styles = StyleSheet.create({
   proofSub: {
     fontFamily,
     fontSize: 10,
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   withdrawBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    paddingVertical: 10,
+    gap: 6,
+    minHeight: 46,
+    paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     marginTop: 4,
+    overflow: "hidden",
   },
   withdrawBtnText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.dangerText,
+  },
+  statusHint: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.mutedInk,
+    lineHeight: 16,
+  },
+  proofFallback: {
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resubmitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 46,
+    paddingVertical: 11,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentFill,
+    marginTop: 4,
+    overflow: "hidden",
+  },
+  resubmitBtnText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#ffffff",
   },
 });

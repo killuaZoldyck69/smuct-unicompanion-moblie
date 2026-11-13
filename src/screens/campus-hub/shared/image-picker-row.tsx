@@ -1,13 +1,8 @@
-import React, { useCallback } from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-} from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
 import { Feather } from "@expo/vector-icons";
@@ -34,6 +29,8 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
   label,
   hint,
 }: ImagePickerRowProps) {
+  const [failedUris, setFailedUris] = useState<Record<string, boolean>>({});
+
   const pickImage = useCallback(async () => {
     if (images.length >= maxImages) {
       Toast.show({
@@ -48,7 +45,7 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
     if (!permission.granted) {
       Alert.alert(
         "Permission required",
-        "Please allow photo library access to upload images."
+        "Please allow photo library access to upload images.",
       );
       return;
     }
@@ -65,12 +62,36 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
       let oversizedCount = 0;
 
       for (const asset of result.assets) {
+        let candidateUri = asset.uri;
         let size = asset.fileSize;
-        if (size == null && asset.uri) {
+
+        try {
+          const actions: ImageManipulator.Action[] =
+            asset.width && asset.width > 1280
+              ? [{ resize: { width: 1280 } }]
+              : [];
+          const manipulated = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            actions,
+            {
+              compress: 0.75,
+              format: ImageManipulator.SaveFormat.JPEG,
+            },
+          );
+          candidateUri = manipulated.uri;
+          size = undefined;
+        } catch {
+          candidateUri = asset.uri;
+        }
+
+        if (size == null && candidateUri) {
           try {
-            const info = await FileSystem.getInfoAsync(asset.uri);
-            if (info.exists && typeof (info as any).size === "number") {
-              size = (info as any).size;
+            const info = await FileSystem.getInfoAsync(candidateUri);
+            if (
+              info.exists &&
+              typeof (info as { size?: number }).size === "number"
+            ) {
+              size = (info as { size: number }).size;
             }
           } catch {}
         }
@@ -78,7 +99,7 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
         if (size != null && size > maxSizeBytes) {
           oversizedCount++;
         } else {
-          validUris.push(asset.uri);
+          validUris.push(candidateUri);
         }
       }
 
@@ -101,7 +122,7 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
     (index: number) => {
       onImagesChange(images.filter((_, i) => i !== index));
     },
-    [images, onImagesChange]
+    [images, onImagesChange],
   );
 
   const limitMb = (maxSizeBytes / (1024 * 1024)).toFixed(0);
@@ -109,10 +130,10 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.label}>
+        <Text style={styles.label} maxFontSizeMultiplier={1.25}>
           {label ?? `PHOTOS (${images.length}/${maxImages})`}
         </Text>
-        <Text style={styles.hintText}>
+        <Text style={styles.hintText} maxFontSizeMultiplier={1.25}>
           {hint ??
             (maxImages === 1
               ? `Max 1 photo • Up to ${limitMb}MB`
@@ -123,30 +144,66 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
       <View style={styles.row}>
         {images.map((uri, index) => (
           <View key={uri} style={styles.slot}>
-            <Image source={{ uri }} style={styles.thumbnail} />
-            <TouchableOpacity
-              style={styles.removeBtn}
+            {failedUris[uri] ? (
+              <View style={styles.thumbnailFallback}>
+                <Feather
+                  name="image"
+                  size={18}
+                  color={CAMPUS_HUB_COLORS.subtleText}
+                />
+              </View>
+            ) : (
+              <Image
+                source={{ uri }}
+                style={styles.thumbnail}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={150}
+                onError={() =>
+                  setFailedUris((prev) => ({ ...prev, [uri]: true }))
+                }
+              />
+            )}
+            <Pressable
+              style={({ pressed }) => [
+                styles.removeBtn,
+                pressed && { opacity: 0.8 },
+              ]}
               onPress={() => removeImage(index)}
+              hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
+              android_ripple={{
+                color: CAMPUS_HUB_COLORS.androidRippleLight,
+                borderless: true,
+              }}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={`Remove photo ${index + 1}`}
             >
-              <Feather name="x" size={10} color="#ffffff" />
-            </TouchableOpacity>
+              <Feather name="x" size={12} color="#ffffff" />
+            </Pressable>
           </View>
         ))}
         {images.length < maxImages && (
-          <TouchableOpacity
-            style={[styles.addSlot, { borderColor: accent }]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.addSlot,
+              { borderColor: accent },
+              pressed && { opacity: 0.78 },
+            ]}
             onPress={pickImage}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Add photo"
-            activeOpacity={0.7}
           >
             <Feather name="camera" size={20} color={accent} />
-            <Text style={[styles.addText, { color: accent }]}>Add</Text>
-          </TouchableOpacity>
+            <Text
+              style={[styles.addText, { color: accent }]}
+              maxFontSizeMultiplier={1.25}
+            >
+              Add
+            </Text>
+          </Pressable>
         )}
       </View>
     </View>
@@ -169,17 +226,21 @@ const styles = StyleSheet.create({
   label: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.subtleText,
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   hintText: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
     flexShrink: 1,
     textAlign: "right",
+    includeFontPadding: false,
   },
   row: {
     flexDirection: "row",
@@ -195,16 +256,23 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: SLOT_SIZE,
     height: SLOT_SIZE,
-    resizeMode: "cover",
+    backgroundColor: CAMPUS_HUB_COLORS.background,
+  },
+  thumbnailFallback: {
+    width: SLOT_SIZE,
+    height: SLOT_SIZE,
+    backgroundColor: CAMPUS_HUB_COLORS.background,
+    alignItems: "center",
+    justifyContent: "center",
   },
   removeBtn: {
     position: "absolute",
     top: 4,
     right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(0,0,0,0.62)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -217,11 +285,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: CAMPUS_HUB_COLORS.background,
+    overflow: "hidden",
     gap: 4,
   },
   addText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "700",
+    includeFontPadding: false,
   },
 });

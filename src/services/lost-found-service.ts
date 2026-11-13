@@ -1,4 +1,5 @@
 import api from "./api";
+import type { CreateUgcReportResult, UgcReportReason } from "./ugc-service";
 
 export type LostFoundType = "LOST" | "FOUND";
 export type LostFoundStatus = "ACTIVE" | "CLAIMED" | "RESOLVED" | "CLOSED";
@@ -23,6 +24,12 @@ export type LostFoundCategory =
   | "BOTTLE"
   | "OTHER";
 
+export interface ConsultationSlot {
+  day: string;
+  startTime: string;
+  endTime: string;
+}
+
 export interface LostFoundAuthor {
   id: string;
   name: string;
@@ -42,7 +49,7 @@ export interface LostFoundAuthor {
     department?: string | null;
     designation?: string | null;
     officeRoom?: string | null;
-    consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | any | null;
+    consultationSlots?: ConsultationSlot[] | null;
   } | null;
 }
 
@@ -51,6 +58,7 @@ export interface LostFoundClaim {
   postId: string;
   claimantId: string;
   status: LostFoundClaimStatus;
+  attemptCount?: number;
   message: string;
   answer?: string | null;
   proofImage?: string | null;
@@ -76,6 +84,7 @@ export interface LostFoundPost {
   verificationQuestion?: string | null;
   verificationAnswer?: string | null;
   resolvedClaimId?: string | null;
+  isHiddenByModeration?: boolean;
   authorId: string;
   author: LostFoundAuthor;
   createdAt: string;
@@ -132,43 +141,27 @@ export interface GetLostFoundFeedParams {
 
 export const getLostFoundFeedPaginated = async (
   params?: GetLostFoundFeedParams,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<LostFoundFeedResponse> => {
   const res = await api.get("/lost-found", { params, signal });
+  if (!res.data?.meta) {
+    throw new Error("Malformed Lost & Found feed response: missing pagination meta");
+  }
   return {
     data: res.data?.data ?? [],
-    meta: res.data?.meta ?? {
-      page: 1,
-      limit: 20,
-      total: res.data?.data?.length ?? 0,
-      totalPages: 1,
-      hasMore: false,
-    },
+    meta: res.data.meta,
   };
 };
 
-export const getLostFoundFeed = async (
-  params?: GetLostFoundFeedParams,
-  signal?: AbortSignal
-): Promise<LostFoundPost[]> => {
-  const res = await getLostFoundFeedPaginated(params, signal);
-  return res.data;
-};
-
-export const getPossibleMatches = async (
-  postId: string
-): Promise<LostFoundPost[]> => {
-  const res = await api.get(`/lost-found/${postId}/matches`);
-  return res.data?.data ?? [];
-};
-
-export const getLostFoundPostById = async (id: string): Promise<LostFoundPost> => {
+export const getLostFoundPostById = async (
+  id: string,
+): Promise<LostFoundPost> => {
   const res = await api.get(`/lost-found/${id}`);
   return res.data?.data;
 };
 
 export const createLostFoundPost = async (
-  data: CreateLostFoundInput
+  data: CreateLostFoundInput,
 ): Promise<LostFoundPost> => {
   const res = await api.post("/lost-found", data);
   return res.data?.data;
@@ -176,7 +169,7 @@ export const createLostFoundPost = async (
 
 export const updateLostFoundPost = async (
   id: string,
-  data: Partial<CreateLostFoundInput>
+  data: Partial<CreateLostFoundInput>,
 ): Promise<LostFoundPost> => {
   const res = await api.patch(`/lost-found/${id}`, data);
   return res.data?.data;
@@ -188,14 +181,14 @@ export const deleteLostFoundPost = async (id: string): Promise<void> => {
 
 export const updateLostFoundStatus = async (
   id: string,
-  status: LostFoundStatus
+  status: LostFoundStatus,
 ): Promise<LostFoundPost> => {
   const res = await api.patch(`/lost-found/${id}/status`, { status });
   return res.data?.data;
 };
 
 export const getLostFoundClaims = async (
-  postId: string
+  postId: string,
 ): Promise<LostFoundClaim[]> => {
   const res = await api.get(`/lost-found/${postId}/claims`);
   return res.data?.data ?? [];
@@ -203,7 +196,7 @@ export const getLostFoundClaims = async (
 
 export const submitLostFoundClaim = async (
   postId: string,
-  data: CreateClaimInput
+  data: CreateClaimInput,
 ): Promise<LostFoundClaim> => {
   const res = await api.post(`/lost-found/${postId}/claims`, data);
   return res.data?.data;
@@ -211,7 +204,7 @@ export const submitLostFoundClaim = async (
 
 export const acceptLostFoundClaim = async (
   postId: string,
-  claimId: string
+  claimId: string,
 ): Promise<{ post: LostFoundPost; acceptedClaim: LostFoundClaim }> => {
   const res = await api.patch(`/lost-found/${postId}/claims/${claimId}/accept`);
   return res.data?.data;
@@ -219,7 +212,7 @@ export const acceptLostFoundClaim = async (
 
 export const rejectLostFoundClaim = async (
   postId: string,
-  claimId: string
+  claimId: string,
 ): Promise<LostFoundClaim> => {
   const res = await api.patch(`/lost-found/${postId}/claims/${claimId}/reject`);
   return res.data?.data;
@@ -227,8 +220,15 @@ export const rejectLostFoundClaim = async (
 
 export const withdrawLostFoundClaim = async (
   postId: string,
-  claimId: string
+  claimId: string,
 ): Promise<void> => {
   await api.delete(`/lost-found/${postId}/claims/${claimId}`);
 };
 
+export const reportLostFoundPost = async (
+  postId: string,
+  input: { reason: UgcReportReason; details?: string },
+): Promise<CreateUgcReportResult> => {
+  const res = await api.post(`/lost-found/${postId}/reports`, input);
+  return res.data?.data;
+};

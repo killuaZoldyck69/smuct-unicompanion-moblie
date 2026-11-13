@@ -1,5 +1,6 @@
-import React from "react";
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
 
@@ -20,13 +21,22 @@ export const AvatarChip = React.memo(function AvatarChip({
 }: AvatarChipProps) {
   const initial = (name ?? "U").charAt(0).toUpperCase();
   const halfSize = size / 2;
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [image]);
 
   const content = (
     <View style={styles.row}>
-      {image ? (
+      {image && !hasError ? (
         <Image
           source={{ uri: image }}
           style={[styles.avatar, { width: size, height: size, borderRadius: halfSize }]}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
+          onError={() => setHasError(true)}
           accessible={true}
           accessibilityLabel={`${name}'s avatar`}
         />
@@ -82,7 +92,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatar: {
-    resizeMode: "cover",
+    backgroundColor: "#e2e8f0",
   },
   fallback: {
     backgroundColor: "#e2e8f0",

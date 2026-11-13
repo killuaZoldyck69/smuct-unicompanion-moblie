@@ -1,19 +1,17 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Modal,
-  TouchableOpacity,
-  Image,
-  Dimensions,
+  Pressable,
+  useWindowDimensions,
   StatusBar,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { fontFamily } from "./design-tokens";
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface ImageViewerModalProps {
   visible: boolean;
@@ -29,24 +27,29 @@ export const ImageViewerModal = React.memo(function ImageViewerModal({
   onClose,
 }: ImageViewerModalProps) {
   const insets = useSafeAreaInsets();
-  const [currentIndex, setCurrentIndex] = React.useState(initialIndex);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [failedUris, setFailedUris] = useState<Record<string, boolean>>({});
 
-  React.useEffect(() => {
-    setCurrentIndex(initialIndex);
-  }, [initialIndex, visible]);
+  useEffect(() => {
+    const safeMax = Math.max(0, images.length - 1);
+    setCurrentIndex(Math.min(Math.max(0, initialIndex), safeMax));
+  }, [initialIndex, visible, images.length]);
 
   if (!images || images.length === 0) return null;
 
-  const currentUri = images[currentIndex] || images[0];
+  const safeIndex = Math.min(Math.max(0, currentIndex), images.length - 1);
+  const currentUri = images[safeIndex] || images[0];
+  const hasCurrentError = Boolean(failedUris[currentUri]);
 
   const handleNext = () => {
-    if (currentIndex < images.length - 1) {
+    if (safeIndex < images.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     }
   };
 
   const handlePrev = () => {
-    if (currentIndex > 0) {
+    if (safeIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
     }
   };
@@ -64,20 +67,28 @@ export const ImageViewerModal = React.memo(function ImageViewerModal({
 
         {/* Top Header */}
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
-          <TouchableOpacity
-            style={styles.closeBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.closeBtn,
+              pressed && { opacity: 0.78 },
+            ]}
             onPress={onClose}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            android_ripple={{
+              color: "rgba(255,255,255,0.28)",
+              borderless: true,
+            }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Close image viewer"
           >
             <Feather name="x" size={22} color="#ffffff" />
-          </TouchableOpacity>
+          </Pressable>
 
           {images.length > 1 && (
             <View style={styles.counterPill}>
-              <Text style={styles.counterText}>
-                {currentIndex + 1} / {images.length}
+              <Text style={styles.counterText} maxFontSizeMultiplier={1.25}>
+                {safeIndex + 1} / {images.length}
               </Text>
             </View>
           )}
@@ -87,51 +98,98 @@ export const ImageViewerModal = React.memo(function ImageViewerModal({
 
         {/* Full Image with Contain */}
         <View style={styles.imageWrapper}>
-          <Image
-            source={{ uri: currentUri }}
-            style={styles.image}
-            resizeMode="contain"
-          />
+          {hasCurrentError ? (
+            <View
+              style={[
+                styles.errorFallback,
+                { width: screenWidth, height: screenHeight * 0.75 },
+              ]}
+            >
+              <Feather name="image" size={44} color="#94a3b8" />
+              <Text style={styles.errorText}>Unable to load image</Text>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: currentUri }}
+              style={{ width: screenWidth, height: screenHeight * 0.75 }}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={150}
+              onError={() =>
+                setFailedUris((prev) => ({ ...prev, [currentUri]: true }))
+              }
+            />
+          )}
 
-          {images.length > 1 && currentIndex > 0 && (
-            <TouchableOpacity
-              style={[styles.navArrow, styles.leftArrow]}
+          {images.length > 1 && safeIndex > 0 && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.navArrow,
+                styles.leftArrow,
+                pressed && { opacity: 0.78 },
+              ]}
               onPress={handlePrev}
+              android_ripple={{
+                color: "rgba(255,255,255,0.28)",
+                borderless: true,
+              }}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Previous image"
             >
               <Feather name="chevron-left" size={28} color="#ffffff" />
-            </TouchableOpacity>
+            </Pressable>
           )}
 
-          {images.length > 1 && currentIndex < images.length - 1 && (
-            <TouchableOpacity
-              style={[styles.navArrow, styles.rightArrow]}
+          {images.length > 1 && safeIndex < images.length - 1 && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.navArrow,
+                styles.rightArrow,
+                pressed && { opacity: 0.78 },
+              ]}
               onPress={handleNext}
+              android_ripple={{
+                color: "rgba(255,255,255,0.28)",
+                borderless: true,
+              }}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Next image"
             >
               <Feather name="chevron-right" size={28} color="#ffffff" />
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
         {/* Thumbnail Selector if multiple */}
         {images.length > 1 && (
-          <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+          <View
+            style={[
+              styles.bottomBar,
+              { paddingBottom: Math.max(insets.bottom, 20) },
+            ]}
+          >
             {images.map((img, idx) => (
-              <TouchableOpacity
+              <Pressable
                 key={img + idx}
                 onPress={() => setCurrentIndex(idx)}
                 style={[
                   styles.thumbItem,
-                  currentIndex === idx && styles.thumbItemActive,
+                  safeIndex === idx && styles.thumbItemActive,
                 ]}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityState={{ selected: safeIndex === idx }}
+                accessibilityLabel={`Select photo ${idx + 1} of ${images.length}`}
               >
-                <Image source={{ uri: img }} style={styles.thumbImage} resizeMode="cover" />
-              </TouchableOpacity>
+                <Image
+                  source={{ uri: img }}
+                  style={styles.thumbImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              </Pressable>
             ))}
           </View>
         )}
@@ -170,8 +228,11 @@ const styles = StyleSheet.create({
   counterText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 16,
     fontWeight: "700",
     color: "#ffffff",
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
   imageWrapper: {
     flex: 1,
@@ -179,9 +240,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
   },
-  image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.75,
+  errorFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  errorText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#94a3b8",
   },
   navArrow: {
     position: "absolute",

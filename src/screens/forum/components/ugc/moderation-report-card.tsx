@@ -12,6 +12,7 @@ import type { ForumAuthor } from "@/features/forum/types";
 import type {
   AdminForumReportItem,
   AdminModerationAction,
+  UgcReportTargetType,
 } from "@/services/ugc-service";
 import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily } from "../../constants";
@@ -25,7 +26,7 @@ interface ModerationReportCardProps {
   isSubmitting: boolean;
   onChangeNote: (reportId: string, note: string) => void;
   onSelectAuthor: (author: ForumAuthor) => void;
-  onOpenPost: (postId: string) => void;
+  onOpenPost: (postId: string, targetType: UgcReportTargetType) => void;
   onExecuteAction: (
     report: AdminForumReportItem,
     action: AdminModerationAction,
@@ -55,13 +56,15 @@ export const ModerationReportCard = memo(function ModerationReportCard({
   const previewBody = live?.contentPreview || snapshot?.contentPreview || "";
   const isDeleted = report.targetExists === false;
   const resolvedPostId =
-    report.postId || live?.postId || snapshot?.postId || null;
+    report.targetType === "LOST_FOUND_POST"
+      ? report.targetId || live?.id || null
+      : report.postId || live?.postId || snapshot?.postId || null;
   const canOpenThread = Boolean(resolvedPostId && !isDeleted);
   const canRestrictAuthor = Boolean(
     author &&
-      author.role !== "ADMIN" &&
-      !author.isRestricted &&
-      author.id !== currentUserId,
+    author.role !== "ADMIN" &&
+    !author.isRestricted &&
+    author.id !== currentUserId,
   );
   const multiReportCount = report.uniquePendingReportCount ?? 0;
   const hideDisabled = isSubmitting || isDeleted;
@@ -79,7 +82,11 @@ export const ModerationReportCard = memo(function ModerationReportCard({
           </View>
           <View style={styles.typePill}>
             <Text style={styles.typePillText} maxFontSizeMultiplier={1.25}>
-              {report.targetType === "FORUM_POST" ? "POST" : "RESPONSE"}
+              {report.targetType === "FORUM_POST"
+                ? "POST"
+                : report.targetType === "LOST_FOUND_POST"
+                  ? "LOST & FOUND"
+                  : "RESPONSE"}
             </Text>
           </View>
           {multiReportCount > 1 && (
@@ -197,10 +204,14 @@ export const ModerationReportCard = memo(function ModerationReportCard({
               ]}
               android_ripple={{ color: colors.semantic.blue.alpha14 }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              onPress={() => onOpenPost(resolvedPostId)}
+              onPress={() => onOpenPost(resolvedPostId, report.targetType)}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Open reported thread"
+              accessibilityLabel={
+                report.targetType === "LOST_FOUND_POST"
+                  ? "Open reported listing"
+                  : "Open reported thread"
+              }
             >
               <Feather
                 name="external-link"
@@ -208,7 +219,9 @@ export const ModerationReportCard = memo(function ModerationReportCard({
                 color={BENTO_COLORS.primaryBlue}
               />
               <Text style={styles.viewThreadText} maxFontSizeMultiplier={1.25}>
-                Open Thread
+                {report.targetType === "LOST_FOUND_POST"
+                  ? "Open Listing"
+                  : "Open Thread"}
               </Text>
             </Pressable>
           )}

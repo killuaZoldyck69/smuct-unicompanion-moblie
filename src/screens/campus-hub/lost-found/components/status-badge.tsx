@@ -1,28 +1,18 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import {
+  CATEGORY_LABELS,
+} from "@/features/campus-hub/lost-found-logic";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import { colors } from "@/theme/colors";
 import type {
   LostFoundType,
   LostFoundStatus,
   LostFoundCategory,
 } from "@/services/lost-found-service";
 
-export const CATEGORY_LABELS: Record<LostFoundCategory, string> = {
-  ID_CARD: "ID Card",
-  ELECTRONICS: "Electronics",
-  KEYS: "Keys",
-  WALLET: "Wallet & Purse",
-  BAGS: "Bags & Backpacks",
-  BOOKS: "Books & Notes",
-  DOCUMENTS: "Documents",
-  ACCESSORIES: "Accessories",
-  CLOTHING: "Clothing",
-  STATIONERY: "Stationery",
-  UMBRELLA: "Umbrella",
-  BOTTLE: "Water Bottle",
-  OTHER: "Other Item",
-};
+export { CATEGORY_LABELS };
 
 export const CATEGORY_ICONS: Record<LostFoundCategory, keyof typeof Feather.glyphMap> = {
   ID_CARD: "credit-card",
@@ -78,6 +68,7 @@ export const TypeBadge = React.memo(function TypeBadge({
           size === "medium" && styles.badgeTextMedium,
           { color },
         ]}
+        maxFontSizeMultiplier={1.25}
       >
         {isLost ? "LOST" : "FOUND"}
       </Text>
@@ -97,9 +88,13 @@ export const StatusBadge = React.memo(function StatusBadge({
   if (status === "ACTIVE") return null;
 
   const isResolved = status === "RESOLVED" || status === "CLAIMED";
-  const bg = isResolved ? CAMPUS_HUB_COLORS.resolvedGreenBg : "#f1f5f9";
-  const color = isResolved ? CAMPUS_HUB_COLORS.resolvedGreenText : "#64748b";
-  const border = isResolved ? CAMPUS_HUB_COLORS.resolvedGreenBorder : "#e2e8f0";
+  const bg = isResolved ? CAMPUS_HUB_COLORS.resolvedGreenBg : colors.slate100;
+  const color = isResolved
+    ? CAMPUS_HUB_COLORS.resolvedGreenText
+    : CAMPUS_HUB_COLORS.mutedInk;
+  const border = isResolved
+    ? CAMPUS_HUB_COLORS.resolvedGreenBorder
+    : colors.slate200;
   const label = isResolved ? "RESOLVED" : status;
   const icon = isResolved ? "check" : "info";
 
@@ -126,6 +121,7 @@ export const StatusBadge = React.memo(function StatusBadge({
           size === "medium" && styles.badgeTextMedium,
           { color },
         ]}
+        maxFontSizeMultiplier={1.25}
       >
         {label}
       </Text>
@@ -158,7 +154,7 @@ export const CategoryBadge = React.memo(function CategoryBadge({
       <Feather
         name={icon}
         size={size === "medium" ? 12 : 10}
-        color={CAMPUS_HUB_COLORS.subtleText}
+        color={CAMPUS_HUB_COLORS.mutedInk}
         style={{ marginRight: 4 }}
       />
       <Text
@@ -166,6 +162,7 @@ export const CategoryBadge = React.memo(function CategoryBadge({
           styles.categoryBadgeText,
           size === "medium" && styles.categoryBadgeTextMedium,
         ]}
+        maxFontSizeMultiplier={1.25}
       >
         {label}
       </Text>
@@ -197,7 +194,7 @@ export const LocationBadge = React.memo(function LocationBadge({
       <Feather
         name="map-pin"
         size={size === "medium" ? 11 : 10}
-        color="#dc2626"
+        color={colors.semantic.red.accent}
         style={{ marginRight: 4 }}
       />
       <Text
@@ -206,6 +203,8 @@ export const LocationBadge = React.memo(function LocationBadge({
           size === "medium" && styles.locationBadgeTextMedium,
         ]}
         numberOfLines={1}
+        ellipsizeMode="tail"
+        maxFontSizeMultiplier={1.25}
       >
         {location}
       </Text>
@@ -218,55 +217,61 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 3.5,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     borderWidth: 1,
   },
   badgeMedium: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 4.5,
   },
   badgeText: {
     fontFamily,
-    fontSize: 9,
+    fontSize: 9.5,
+    lineHeight: 12,
     fontWeight: "800",
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   badgeTextMedium: {
-    fontSize: 10,
+    fontSize: 10.5,
+    lineHeight: 13,
   },
   categoryBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  categoryBadgeMedium: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  categoryBadgeText: {
-    fontFamily,
-    fontSize: 9,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
-  categoryBadgeTextMedium: {
-    fontSize: 10,
-  },
-  locationBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate100,
     paddingHorizontal: 8,
     paddingVertical: 3.5,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
+  },
+  categoryBadgeMedium: {
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+  },
+  categoryBadgeText: {
+    fontFamily,
+    fontSize: 9.5,
+    lineHeight: 12,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.mutedInk,
+    includeFontPadding: false,
+  },
+  categoryBadgeTextMedium: {
+    fontSize: 10.5,
+    lineHeight: 13,
+  },
+  locationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.slate50,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    borderWidth: 1,
+    borderColor: colors.slate200,
     alignSelf: "flex-start",
     maxWidth: "100%",
   },
@@ -277,12 +282,15 @@ const styles = StyleSheet.create({
   locationBadgeText: {
     fontFamily,
     fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "700",
-    color: "#1e293b",
+    color: colors.slate800,
     letterSpacing: -0.1,
     flexShrink: 1,
+    includeFontPadding: false,
   },
   locationBadgeTextMedium: {
     fontSize: 11.5,
+    lineHeight: 15,
   },
 });

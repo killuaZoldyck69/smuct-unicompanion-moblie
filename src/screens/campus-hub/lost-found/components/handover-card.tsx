@@ -1,14 +1,15 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Image,
+  Pressable,
   Linking,
 } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import { colors } from "@/theme/colors";
 
 import type { LostFoundAuthor } from "@/services/lost-found-service";
 import {
@@ -29,24 +30,31 @@ export const HandoverCard = React.memo(function HandoverCard({
   onViewProfile,
 }: HandoverCardProps) {
   const isAuthor = role === "AUTHOR";
+  const [avatarError, setAvatarError] = useState(false);
 
-  const counterpartRoleLabel = isAuthor ? "Verified Owner" : "Finder / Post Author";
+  useEffect(() => {
+    setAvatarError(false);
+  }, [counterpart?.image]);
+
+  const counterpartRoleLabel = isAuthor
+    ? "Verified Owner"
+    : "Finder / Post Author";
   const counterpartSubtitle = formatCampusUserSubtitle(
     counterpart,
-    "SMUCT Community Member"
+    "SMUCT Community Member",
   );
 
   const handleEmail = () => {
     if (!counterpart.email) return;
     Linking.openURL(`mailto:${counterpart.email}`).catch(() =>
-      Toast.show({ type: "error", text1: "Could not open mail app." })
+      Toast.show({ type: "error", text1: "Could not open mail app." }),
     );
   };
 
   const handleCall = () => {
     if (!counterpart.phoneNumber) return;
     Linking.openURL(`tel:${counterpart.phoneNumber}`).catch(() =>
-      Toast.show({ type: "error", text1: "Could not initiate call." })
+      Toast.show({ type: "error", text1: "Could not initiate call." }),
     );
   };
 
@@ -70,23 +78,39 @@ export const HandoverCard = React.memo(function HandoverCard({
       {/* Counterpart Contact Card */}
       <View style={styles.contactBox}>
         <View style={styles.personRow}>
-          <TouchableOpacity
-            style={styles.personLeft}
+          <Pressable
+            style={({ pressed }) => [
+              styles.personLeft,
+              pressed && { opacity: 0.8 },
+            ]}
             onPress={onViewProfile}
-            activeOpacity={0.8}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`View profile for ${counterpart.name}, ${counterpartRoleLabel}`}
           >
-            {counterpart?.image ? (
-              <Image source={{ uri: counterpart.image }} style={styles.avatar} />
+            {counterpart?.image && !avatarError ? (
+              <Image
+                source={{ uri: counterpart.image }}
+                style={styles.avatar}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                onError={() => setAvatarError(true)}
+              />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitial}>
-                  {counterpart?.name ? counterpart.name.charAt(0).toUpperCase() : "?"}
+                  {counterpart?.name
+                    ? counterpart.name.charAt(0).toUpperCase()
+                    : "?"}
                 </Text>
               </View>
             )}
             <View style={styles.nameCol}>
               <View style={styles.roleBadge}>
-                <Text style={styles.roleBadgeText}>{counterpartRoleLabel}</Text>
+                <Text style={styles.roleBadgeText} maxFontSizeMultiplier={1.25}>
+                  {counterpartRoleLabel}
+                </Text>
               </View>
               <Text style={styles.personName} numberOfLines={1}>
                 {counterpart.name}
@@ -95,27 +119,57 @@ export const HandoverCard = React.memo(function HandoverCard({
                 {counterpartSubtitle}
               </Text>
             </View>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Contact Actions */}
         <View style={styles.contactActions}>
           {!!counterpart.email && (
-            <TouchableOpacity style={styles.contactBtn} onPress={handleEmail}>
-              <Feather name="mail" size={14} color="#0284c7" />
+            <Pressable
+              style={({ pressed }) => [
+                styles.contactBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={handleEmail}
+              hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={`Email ${counterpart.name} at ${counterpart.email}`}
+            >
+              <Feather
+                name="mail"
+                size={14}
+                color={CAMPUS_HUB_COLORS.skyAccentInk}
+              />
               <Text style={styles.contactBtnText} numberOfLines={1}>
                 {counterpart.email}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
 
           {!!counterpart.phoneNumber && (
-            <TouchableOpacity style={styles.contactBtn} onPress={handleCall}>
-              <Feather name="phone" size={14} color="#10b981" />
+            <Pressable
+              style={({ pressed }) => [
+                styles.contactBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={handleCall}
+              hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={`Call ${counterpart.name} at ${counterpart.phoneNumber}`}
+            >
+              <Feather
+                name="phone"
+                size={14}
+                color={CAMPUS_HUB_COLORS.emeraldFill}
+              />
               <Text style={styles.contactBtnText} numberOfLines={1}>
                 {counterpart.phoneNumber}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       </View>
@@ -123,11 +177,16 @@ export const HandoverCard = React.memo(function HandoverCard({
       {/* Safety Protocol Reminder */}
       <View style={styles.safetyBox}>
         <View style={styles.safetyHeader}>
-          <Feather name="alert-triangle" size={13} color="#b45309" />
+          <Feather
+            name="alert-triangle"
+            size={13}
+            color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+          />
           <Text style={styles.safetyTitle}>SAFE CAMPUS HANDOVER TIPS</Text>
         </View>
         <Text style={styles.safetyItem}>
-          • Meet in open campus areas (e.g. SMUCT Central Library or Dept Office).
+          • Meet in open campus areas (e.g. SMUCT Central Library or Dept
+          Office).
         </Text>
         <Text style={styles.safetyItem}>
           • Inspect the item in person before completing the exchange.
@@ -142,11 +201,11 @@ export const HandoverCard = React.memo(function HandoverCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#f0fdf4",
+    backgroundColor: colors.semantic.emerald.tint,
     borderRadius: 22,
     padding: 18,
     borderWidth: 1.5,
-    borderColor: "#bbf7d0",
+    borderColor: colors.semantic.emerald.mintBorder,
     ...CAMPUS_HUB_COLORS.shadow,
     gap: 14,
     marginVertical: 12,
@@ -160,7 +219,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#d1fae5",
+    backgroundColor: colors.semantic.emerald.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -171,13 +230,13 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 16,
     fontWeight: "800",
-    color: "#065f46",
+    color: colors.semantic.emerald.darker,
   },
   headerSubtitle: {
     fontFamily,
     fontSize: 12,
     fontWeight: "500",
-    color: "#047857",
+    color: CAMPUS_HUB_COLORS.emeraldFill,
     marginTop: 2,
     lineHeight: 17,
   },
@@ -186,7 +245,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#a7f3d0",
+    borderColor: colors.semantic.emerald.border,
     gap: 12,
   },
   personRow: {
@@ -199,6 +258,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    overflow: "hidden",
   },
   avatar: {
     width: 44,
@@ -224,7 +286,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   roleBadge: {
-    backgroundColor: "#d1fae5",
+    backgroundColor: colors.semantic.emerald.border,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
@@ -234,9 +296,11 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     fontFamily,
     fontSize: 9,
+    lineHeight: 12,
     fontWeight: "800",
-    color: "#047857",
+    color: colors.semantic.emerald.darker,
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   personName: {
     fontFamily,
@@ -262,13 +326,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: colors.slate50,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
     maxWidth: "100%",
+    overflow: "hidden",
   },
   contactBtnText: {
     fontFamily,
@@ -277,11 +343,11 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
   },
   safetyBox: {
-    backgroundColor: "#fffbeb",
+    backgroundColor: colors.semantic.amber.tint,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#fde68a",
+    borderColor: colors.semantic.amber.border,
     gap: 4,
   },
   safetyHeader: {
@@ -294,14 +360,14 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10,
     fontWeight: "800",
-    color: "#b45309",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
     letterSpacing: 0.5,
   },
   safetyItem: {
     fontFamily,
     fontSize: 11,
     fontWeight: "500",
-    color: "#92400e",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentInk,
     lineHeight: 16,
   },
 });

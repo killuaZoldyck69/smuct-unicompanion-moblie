@@ -8,7 +8,8 @@ export interface UgcTermsStatus {
   ugcTermsAcceptedAt: string | null;
 }
 
-export type UgcReportTargetType = "FORUM_POST" | "FORUM_RESPONSE";
+export type UgcReportTargetType =
+  "FORUM_POST" | "FORUM_RESPONSE" | "LOST_FOUND_POST";
 
 export type UgcReportReason =
   | "SPAM"
@@ -31,21 +32,13 @@ export interface CreateUgcReportResult {
 }
 
 export type AdminReportStatusFilter =
-  | "PENDING"
-  | "DISMISSED"
-  | "ACTIONED"
-  | "ALL";
+  "PENDING" | "DISMISSED" | "ACTIONED" | "ALL";
 
 export type AdminReportTargetFilter =
-  | "ALL"
-  | "FORUM_POST"
-  | "FORUM_RESPONSE";
+  "ALL" | "FORUM_POST" | "FORUM_RESPONSE" | "LOST_FOUND_POST";
 
 export type AdminModerationAction =
-  | "DISMISS"
-  | "HIDE_CONTENT"
-  | "DELETE_CONTENT"
-  | "RESTRICT_USER";
+  "DISMISS" | "HIDE_CONTENT" | "DELETE_CONTENT" | "RESTRICT_USER";
 
 export interface AdminForumReportTargetLive {
   id: string;

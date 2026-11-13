@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { forumQueryKeys } from "@/features/forum/useForum";
+import { lostFoundKeys } from "@/features/campus-hub/useLostFound";
 import {
   acceptUgcTerms,
   createForumReport,
@@ -122,6 +123,7 @@ export const useReviewAdminForumReport = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminForumReports"] });
       queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
     },
   });
 };

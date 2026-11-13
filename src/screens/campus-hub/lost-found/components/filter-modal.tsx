@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Platform,
   useWindowDimensions,
 } from "react-native";
@@ -13,15 +13,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
+import { colors } from "@/theme/colors";
 import type {
   LostFoundType,
   LostFoundCategory,
 } from "@/services/lost-found-service";
+import { LOST_FOUND_CATEGORY_OPTIONS } from "@/features/campus-hub/lost-found-logic";
 import type { User } from "@/features/auth/types";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 
 export type TypeFilter = "ALL" | LostFoundType;
-export type StatusFilter = "ALL" | "ACTIVE" | "RESOLVED";
+export type StatusFilter = "ALL" | "ACTIVE" | "RESOLVED" | "CLOSED";
 
 export interface FilterModalProps {
   visible: boolean;
@@ -40,7 +42,11 @@ export interface FilterModalProps {
   currentUser: User | null;
 }
 
-const TYPE_OPTIONS: { key: TypeFilter; label: string; icon?: keyof typeof Feather.glyphMap }[] = [
+const TYPE_OPTIONS: {
+  key: TypeFilter;
+  label: string;
+  icon?: keyof typeof Feather.glyphMap;
+}[] = [
   { key: "ALL", label: "All Items" },
   { key: "LOST", label: "Lost Items", icon: "search" },
   { key: "FOUND", label: "Found Items", icon: "gift" },
@@ -50,26 +56,16 @@ const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
   { key: "ALL", label: "All Status" },
   { key: "ACTIVE", label: "Active Only" },
   { key: "RESOLVED", label: "Resolved" },
+  { key: "CLOSED", label: "Closed" },
 ];
 
 const CATEGORY_OPTIONS: { key: "ALL" | LostFoundCategory; label: string }[] = [
   { key: "ALL", label: "All Categories" },
-  { key: "ID_CARD", label: "ID Card" },
-  { key: "ELECTRONICS", label: "Electronics" },
-  { key: "KEYS", label: "Keys" },
-  { key: "WALLET", label: "Wallet" },
-  { key: "BAGS", label: "Bags" },
-  { key: "BOOKS", label: "Books" },
-  { key: "DOCUMENTS", label: "Documents" },
-  { key: "ACCESSORIES", label: "Accessories" },
-  { key: "CLOTHING", label: "Clothing" },
-  { key: "STATIONERY", label: "Stationery" },
-  { key: "UMBRELLA", label: "Umbrella" },
-  { key: "BOTTLE", label: "Bottle" },
-  { key: "OTHER", label: "Other" },
+  ...LOST_FOUND_CATEGORY_OPTIONS,
 ];
 
-const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
+const ACCENT_FILL = CAMPUS_HUB_COLORS.lostFoundAccentFill;
+const ACCENT_TEXT = CAMPUS_HUB_COLORS.lostFoundAccentText;
 
 export function FilterModal({
   visible,
@@ -87,7 +83,9 @@ export function FilterModal({
 
   const [localType, setLocalType] = useState<TypeFilter>(typeFilter);
   const [localStatus, setLocalStatus] = useState<StatusFilter>(statusFilter);
-  const [localCategory, setLocalCategory] = useState<"ALL" | LostFoundCategory>(categoryFilter);
+  const [localCategory, setLocalCategory] = useState<"ALL" | LostFoundCategory>(
+    categoryFilter,
+  );
   const [localMyPosts, setLocalMyPosts] = useState<boolean>(myPostsOnly);
 
   useEffect(() => {
@@ -140,9 +138,8 @@ export function FilterModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <TouchableOpacity
+        <Pressable
           style={StyleSheet.absoluteFill}
-          activeOpacity={1}
           onPress={onClose}
           accessible={false}
         />
@@ -157,30 +154,50 @@ export function FilterModal({
 
           {/* Header */}
           <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>Filter Listings</Text>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.title} numberOfLines={1}>
+                Filter Listings
+              </Text>
               <Text style={styles.subtitle}>Refine lost and found posts</Text>
             </View>
             <View style={styles.headerActions}>
               {activeCount > 0 && (
-                <TouchableOpacity
-                  style={styles.resetHeaderBtn}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.resetHeaderBtn,
+                    pressed && { opacity: 0.78 },
+                  ]}
                   onPress={handleReset}
-                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset selected filters"
                 >
                   <Text style={styles.resetHeaderBtnText}>Reset</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
-              <TouchableOpacity
-                style={styles.closeBtn}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.closeBtn,
+                  pressed && { opacity: 0.78 },
+                ]}
                 onPress={onClose}
-                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                android_ripple={{
+                  color: CAMPUS_HUB_COLORS.androidRipple,
+                  borderless: true,
+                }}
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Close filter options"
               >
-                <Feather name="x" size={20} color={CAMPUS_HUB_COLORS.neutralText} />
-              </TouchableOpacity>
+                <Feather
+                  name="x"
+                  size={20}
+                  color={CAMPUS_HUB_COLORS.neutralText}
+                />
+              </Pressable>
             </View>
           </View>
 
@@ -198,20 +215,33 @@ export function FilterModal({
                 {TYPE_OPTIONS.map((item) => {
                   const isSelected = localType === item.key;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={item.key}
-                      style={[
+                      style={({ pressed }) => [
                         styles.choicePill,
                         isSelected && styles.choicePillSelected,
+                        pressed && { opacity: 0.85 },
                       ]}
                       onPress={() => setLocalType(item.key)}
-                      activeOpacity={0.8}
+                      android_ripple={{
+                        color: isSelected
+                          ? CAMPUS_HUB_COLORS.androidRippleLight
+                          : CAMPUS_HUB_COLORS.androidRipple,
+                      }}
+                      accessible
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Item type: ${item.label}`}
                     >
                       {item.icon && (
                         <Feather
                           name={item.icon}
                           size={13}
-                          color={isSelected ? "#ffffff" : CAMPUS_HUB_COLORS.subtleText}
+                          color={
+                            isSelected
+                              ? "#ffffff"
+                              : CAMPUS_HUB_COLORS.subtleText
+                          }
                           style={{ marginRight: 6 }}
                         />
                       )}
@@ -220,10 +250,11 @@ export function FilterModal({
                           styles.choicePillText,
                           isSelected && styles.choicePillTextSelected,
                         ]}
+                        maxFontSizeMultiplier={1.25}
                       >
                         {item.label}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -236,24 +267,34 @@ export function FilterModal({
                 {STATUS_OPTIONS.map((item) => {
                   const isSelected = localStatus === item.key;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={item.key}
-                      style={[
+                      style={({ pressed }) => [
                         styles.choicePill,
                         isSelected && styles.choicePillSelected,
+                        pressed && { opacity: 0.85 },
                       ]}
                       onPress={() => setLocalStatus(item.key)}
-                      activeOpacity={0.8}
+                      android_ripple={{
+                        color: isSelected
+                          ? CAMPUS_HUB_COLORS.androidRippleLight
+                          : CAMPUS_HUB_COLORS.androidRipple,
+                      }}
+                      accessible
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Listing status: ${item.label}`}
                     >
                       <Text
                         style={[
                           styles.choicePillText,
                           isSelected && styles.choicePillTextSelected,
                         ]}
+                        maxFontSizeMultiplier={1.25}
                       >
                         {item.label}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -266,24 +307,34 @@ export function FilterModal({
                 {CATEGORY_OPTIONS.map((item) => {
                   const isSelected = localCategory === item.key;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={item.key}
-                      style={[
+                      style={({ pressed }) => [
                         styles.categoryPill,
                         isSelected && styles.categoryPillSelected,
+                        pressed && { opacity: 0.85 },
                       ]}
                       onPress={() => setLocalCategory(item.key)}
-                      activeOpacity={0.8}
+                      android_ripple={{
+                        color: isSelected
+                          ? CAMPUS_HUB_COLORS.androidRippleLight
+                          : CAMPUS_HUB_COLORS.androidRipple,
+                      }}
+                      accessible
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Category: ${item.label}`}
                     >
                       <Text
                         style={[
                           styles.categoryPillText,
                           isSelected && styles.categoryPillTextSelected,
                         ]}
+                        maxFontSizeMultiplier={1.25}
                       >
                         {item.label}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -291,25 +342,34 @@ export function FilterModal({
 
             {/* Section 4: My Posts Only */}
             <View style={styles.section}>
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({ pressed }) => [
                   styles.toggleCard,
                   localMyPosts && styles.toggleCardActive,
+                  pressed && { opacity: 0.88 },
                 ]}
                 onPress={toggleMyPosts}
-                activeOpacity={0.8}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                accessible
+                accessibilityRole="switch"
+                accessibilityState={{ checked: localMyPosts }}
+                accessibilityLabel="My Posts Only. Filter only items created by your account"
               >
                 <View style={styles.toggleCardLeft}>
                   <View
                     style={[
                       styles.toggleIconContainer,
-                      localMyPosts && { backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight },
+                      localMyPosts && {
+                        backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
+                      },
                     ]}
                   >
                     <Feather
                       name="user"
                       size={16}
-                      color={localMyPosts ? ACCENT : CAMPUS_HUB_COLORS.subtleText}
+                      color={
+                        localMyPosts ? ACCENT_TEXT : CAMPUS_HUB_COLORS.subtleText
+                      }
                     />
                   </View>
                   <View style={{ flex: 1 }}>
@@ -329,7 +389,7 @@ export function FilterModal({
                     <Feather name="check" size={14} color="#ffffff" />
                   )}
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </ScrollView>
 
@@ -346,34 +406,38 @@ export function FilterModal({
           >
             <View style={styles.footerButtonsRow}>
               {activeCount > 0 && (
-                <TouchableOpacity
-                  style={styles.resetFooterBtn}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.resetFooterBtn,
+                    pressed && { opacity: 0.8 },
+                  ]}
                   onPress={handleReset}
-                  activeOpacity={0.7}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel="Reset all filters"
                 >
                   <Text style={styles.resetFooterBtnText}>Reset</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({ pressed }) => [
                   styles.applyBtn,
                   activeCount > 0 && styles.applyBtnFlex,
+                  pressed && { opacity: 0.88 },
                 ]}
                 onPress={handleApply}
-                activeOpacity={0.85}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Apply filters"
               >
-                <Text style={styles.applyBtnText}>
+                <Text style={styles.applyBtnText} maxFontSizeMultiplier={1.25}>
                   {activeCount > 0
                     ? `Apply Filters (${activeCount})`
                     : "Show Results"}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -389,6 +453,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheetContainer: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -398,7 +465,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: "#cbd5e1",
+    backgroundColor: colors.slate300,
     alignSelf: "center",
     marginTop: 12,
     marginBottom: 6,
@@ -428,27 +495,34 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   resetHeaderBtn: {
+    minHeight: 38,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "#f1f5f9",
+    borderRadius: 10,
+    backgroundColor: colors.slate100,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
   },
   resetHeaderBtnText: {
     fontSize: 13,
+    lineHeight: 16,
     fontFamily,
     fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
+    includeFontPadding: false,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#f1f5f9",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.slate100,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -469,29 +543,35 @@ const styles = StyleSheet.create({
   },
   pillsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   choicePill: {
-    flex: 1,
+    minWidth: "47%",
+    flexGrow: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderRadius: 14,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
+    overflow: "hidden",
   },
   choicePillSelected: {
-    backgroundColor: ACCENT,
-    borderColor: ACCENT,
+    backgroundColor: ACCENT_FILL,
+    borderColor: ACCENT_FILL,
   },
   choicePillText: {
     fontSize: 13,
+    lineHeight: 17,
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
   },
   choicePillTextSelected: {
     color: "#ffffff",
@@ -503,22 +583,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   categoryPill: {
+    minHeight: 40,
     paddingVertical: 9,
     paddingHorizontal: 15,
     borderRadius: 20,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
+    justifyContent: "center",
+    overflow: "hidden",
   },
   categoryPillSelected: {
-    backgroundColor: ACCENT,
-    borderColor: ACCENT,
+    backgroundColor: ACCENT_FILL,
+    borderColor: ACCENT_FILL,
   },
   categoryPillText: {
     fontSize: 12,
+    lineHeight: 16,
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
   },
   categoryPillTextSelected: {
     color: "#ffffff",
@@ -530,25 +615,27 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
     borderRadius: 16,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
+    overflow: "hidden",
   },
   toggleCardActive: {
-    backgroundColor: "#fffbeb",
-    borderColor: "#fde68a",
+    backgroundColor: colors.semantic.amber.tint,
+    borderColor: colors.semantic.amber.border,
   },
   toggleCardLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     flex: 1,
+    marginRight: 8,
   },
   toggleIconContainer: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -559,7 +646,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
   },
   toggleCardDesc: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontFamily,
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.subtleText,
@@ -570,13 +657,13 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#cbd5e1",
+    borderColor: colors.slate300,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxCircleActive: {
-    backgroundColor: ACCENT,
-    borderColor: ACCENT,
+    backgroundColor: ACCENT_FILL,
+    borderColor: ACCENT_FILL,
   },
   footer: {
     paddingHorizontal: 20,
@@ -591,36 +678,45 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   resetFooterBtn: {
-    paddingVertical: 14,
+    minHeight: 48,
+    paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 14,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   resetFooterBtnText: {
     fontSize: 14,
+    lineHeight: 18,
     fontFamily,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
   },
   applyBtn: {
     flex: 1,
-    backgroundColor: ACCENT,
-    paddingVertical: 14,
+    minHeight: 48,
+    backgroundColor: ACCENT_FILL,
+    paddingVertical: 13,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   applyBtnFlex: {
     flex: 2,
   },
   applyBtnText: {
     fontSize: 15,
+    lineHeight: 19,
     fontFamily,
     fontWeight: "800",
     color: "#ffffff",
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
 });

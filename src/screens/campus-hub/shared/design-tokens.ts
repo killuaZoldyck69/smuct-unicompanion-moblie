@@ -14,7 +14,18 @@ export const CAMPUS_HUB_COLORS = {
 
   lostFoundAccent: colors.semantic.amber.solid,
   lostFoundAccentLight: colors.semantic.amber.soft,
+  lostFoundAccentFill: colors.semantic.amber.deep,
   lostFoundAccentText: colors.semantic.amber.deep,
+  lostFoundAccentInk: colors.semantic.amber.darkText,
+  skyTint: colors.semantic.sky.tint,
+  skyBorder: colors.semantic.sky.border,
+  skyAccentInk: colors.semantic.sky.deep,
+  emeraldFill: colors.semantic.emerald.darker,
+  mutedInk: colors.slate600,
+  cardBorder: colors.slate200,
+  contentMaxWidth: 720,
+  androidRipple: "rgba(15, 23, 42, 0.08)",
+  androidRippleLight: "rgba(255, 255, 255, 0.24)",
 
   marketplaceAccent: colors.semantic.emerald.solid,
   marketplaceAccentLight: colors.semantic.emerald.border,

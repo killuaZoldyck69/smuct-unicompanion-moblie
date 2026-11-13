@@ -9,8 +9,12 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
-  Alert,
+  Pressable,
+  Modal,
+  TouchableWithoutFeedback,
+  ActivityIndicator,
+  RefreshControl,
+  StatusBar,
   BackHandler,
   Platform,
   StyleSheet,
@@ -22,16 +26,24 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
+import { colors } from "@/theme/colors";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useNetworkStatus } from "@/hooks/use-network-status";
+import { extractApiErrorInfo } from "@/features/forum/forum-logic";
+import { resolveLostFoundBackDestination } from "@/features/campus-hub/lost-found-logic";
 import {
   useLostFoundPost,
   useDeleteLostFoundPost,
+  useUpdateLostFoundStatus,
   useLostFoundClaims,
   useAcceptLostFoundClaim,
   useRejectLostFoundClaim,
   useWithdrawLostFoundClaim,
+  useReportLostFoundPost,
 } from "@/features/campus-hub/useLostFound";
+import { UgcReportModal } from "@/screens/forum/components/ugc/ugc-report-modal";
+import type { UgcReportReason } from "@/services/ugc-service";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
@@ -48,7 +60,10 @@ import { AcceptConfirmationSheet } from "@/screens/campus-hub/lost-found/compone
 import { EditLostFoundModal } from "./edit-modal";
 import { LostFoundDeleteModal } from "./components/lost-found-delete-modal";
 import { LostFoundDetailSkeleton } from "../shared/skeleton-loaders";
-import type { LostFoundClaim } from "@/services/lost-found-service";
+import type {
+  LostFoundClaim,
+  LostFoundStatus,
+} from "@/services/lost-found-service";
 
 // Detail sub-components
 import { LFDetailHeader } from "./components/detail/lf-detail-header";
@@ -71,6 +86,7 @@ type ModalState = {
   edit: boolean;
   delete: boolean;
   acceptSheet: boolean;
+  report: boolean;
 };
 
 type ModalAction =
@@ -83,7 +99,34 @@ const initialModalState: ModalState = {
   edit: false,
   delete: false,
   acceptSheet: false,
+  report: false,
 };
+
+type PendingActionConfirm =
+  | {
+      kind: "REJECT_CLAIM";
+      claimId: string;
+      title: string;
+      message: string;
+      confirmLabel: string;
+      tone: "danger" | "primary";
+    }
+  | {
+      kind: "WITHDRAW_CLAIM";
+      claimId: string;
+      title: string;
+      message: string;
+      confirmLabel: string;
+      tone: "danger" | "primary";
+    }
+  | {
+      kind: "CHANGE_STATUS";
+      status: LostFoundStatus;
+      title: string;
+      message: string;
+      confirmLabel: string;
+      tone: "danger" | "primary";
+    };
 
 function modalReducer(state: ModalState, action: ModalAction): ModalState {
   switch (action.type) {
@@ -104,6 +147,7 @@ export function LostFoundDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user: currentUser, role: currentUserRole } = useCurrentUser();
+  const { isOffline } = useNetworkStatus();
   const isAdmin = currentUserRole === "ADMIN";
 
   // Image gallery
@@ -113,11 +157,14 @@ export function LostFoundDetailScreen() {
   // Author modal
   const [selectedAuthor, setSelectedAuthor] =
     useState<AuthorProfileModalData | null>(null);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
   // Claim being acted on
   const [claimToAccept, setClaimToAccept] = useState<LostFoundClaim | null>(
     null,
   );
+  const [pendingConfirm, setPendingConfirm] =
+    useState<PendingActionConfirm | null>(null);
 
   // Modal state
   const [modals, dispatchModal] = useReducer(modalReducer, initialModalState);
@@ -133,23 +180,56 @@ export function LostFoundDetailScreen() {
   // ---------------------------------------------------------------------------
   // Queries & mutations
   // ---------------------------------------------------------------------------
-  const { data: post, isLoading, isError, refetch } = useLostFoundPost(id);
-  const { data: claimsData, isLoading: isClaimsLoading } =
-    useLostFoundClaims(id);
+  const {
+    data: post,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useLostFoundPost(id);
 
-  const deleteMutation = useDeleteLostFoundPost();
-  const acceptClaimMutation = useAcceptLostFoundClaim(id);
-  const rejectClaimMutation = useRejectLostFoundClaim(id);
-  const withdrawClaimMutation = useWithdrawLostFoundClaim(id);
-
-  // ---------------------------------------------------------------------------
-  // Derived values
-  // ---------------------------------------------------------------------------
   const isAuthor = useMemo(
     () => Boolean(currentUser?.id && currentUser.id === post?.authorId),
     [currentUser?.id, post?.authorId],
   );
   const canViewClaims = isAuthor || isAdmin;
+
+  const {
+    data: claimsData,
+    isLoading: isClaimsLoading,
+    isError: isClaimsError,
+    refetch: refetchClaims,
+  } = useLostFoundClaims(id, canViewClaims);
+
+  const handleManualRefresh = useCallback(async () => {
+    setIsManualRefreshing(true);
+    try {
+      const results = await Promise.all([
+        refetch(),
+        canViewClaims ? refetchClaims() : Promise.resolve(null),
+      ]);
+      if (results[0]?.isError && !isOffline) {
+        Toast.show({
+          type: "error",
+          text1: "Refresh failed",
+          text2: "Could not refresh listing details.",
+        });
+      }
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  }, [refetch, canViewClaims, refetchClaims, isOffline]);
+
+  const deleteMutation = useDeleteLostFoundPost();
+  const statusMutation = useUpdateLostFoundStatus();
+  const acceptClaimMutation = useAcceptLostFoundClaim(id);
+  const rejectClaimMutation = useRejectLostFoundClaim(id);
+  const withdrawClaimMutation = useWithdrawLostFoundClaim(id);
+  const reportMutation = useReportLostFoundPost(id);
+
+  // ---------------------------------------------------------------------------
+  // Derived values
+  // ---------------------------------------------------------------------------
 
   const isEdited = useMemo(
     () =>
@@ -173,17 +253,34 @@ export function LostFoundDetailScreen() {
   const isResolved = post?.status === "RESOLVED" || post?.status === "CLAIMED";
   const claimButtonLabel = isLost ? "I Found This Item" : "This Item Is Mine";
 
+  // Clamp selected gallery index if post images array shrinks after edit
+  useEffect(() => {
+    const len = post?.images?.length ?? 0;
+    if (len === 0 && selectedImage !== 0) {
+      setSelectedImage(0);
+    } else if (len > 0 && selectedImage >= len) {
+      setSelectedImage(len - 1);
+    }
+  }, [post?.images?.length, selectedImage]);
+
   // ---------------------------------------------------------------------------
   // Navigation & Status Handlers
   // ---------------------------------------------------------------------------
   const handleBack = useCallback(() => {
     setCampusHubActiveSection("LOST_FOUND");
-    const targetRoute = isAdmin ? "/(tabs)/admin_campus_hubs" : "/(tabs)/forum";
+    const destination = resolveLostFoundBackDestination({
+      canGoBack: router.canGoBack(),
+      userRole: currentUserRole,
+    });
+    if (destination.action === "BACK") {
+      router.back();
+      return;
+    }
     router.replace({
-      pathname: targetRoute as any,
+      pathname: destination.href as any,
       params: { section: "LOST_FOUND" },
     });
-  }, [isAdmin, router]);
+  }, [currentUserRole, router]);
 
   // Android back-press — dismiss modals in priority order
   useEffect(() => {
@@ -194,6 +291,14 @@ export function LostFoundDetailScreen() {
       }
       if (selectedAuthor) {
         setSelectedAuthor(null);
+        return true;
+      }
+      if (pendingConfirm) {
+        setPendingConfirm(null);
+        return true;
+      }
+      if (modals.report) {
+        closeModal("report");
         return true;
       }
       if (modals.claim) {
@@ -217,7 +322,7 @@ export function LostFoundDetailScreen() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [modals, selectedAuthor, handleBack, closeModal]);
+  }, [modals, selectedAuthor, pendingConfirm, handleBack, closeModal]);
 
   // ---------------------------------------------------------------------------
   // Image viewer helpers
@@ -253,21 +358,31 @@ export function LostFoundDetailScreen() {
   }, [openModal]);
 
   const handleConfirmDelete = useCallback(() => {
+    if (isOffline) {
+      Toast.show({
+        type: "error",
+        text1: "You're Offline",
+        text2: "Reconnect to the internet before deleting this listing.",
+      });
+      return;
+    }
+    if (deleteMutation.isPending) return;
     deleteMutation.mutate(id, {
       onSuccess: () => {
         closeModal("delete");
         Toast.show({ type: "info", text1: "Listing deleted" });
         handleBack();
       },
-      onError: (err: Error) => {
+      onError: (err) => {
+        const info = extractApiErrorInfo(err, "Please try again.");
         Toast.show({
           type: "error",
           text1: "Failed to delete post",
-          text2: err.message || "Please try again.",
+          text2: info.message,
         });
       },
     });
-  }, [id, deleteMutation, handleBack, closeModal]);
+  }, [id, isOffline, deleteMutation, handleBack, closeModal]);
 
   const handleOpenAcceptSheet = useCallback(
     (claim: LostFoundClaim) => {
@@ -283,7 +398,7 @@ export function LostFoundDetailScreen() {
   }, [closeModal]);
 
   const handleConfirmAcceptClaim = useCallback(() => {
-    if (!claimToAccept) return;
+    if (!claimToAccept || acceptClaimMutation.isPending) return;
     acceptClaimMutation.mutate(claimToAccept.id, {
       onSuccess: () => {
         handleCloseAcceptSheet();
@@ -293,94 +408,202 @@ export function LostFoundDetailScreen() {
           text2:
             "Item marked resolved. Mutual contact details are now revealed.",
         });
-        refetch();
       },
-      onError: (
-        err: Error & { response?: { data?: { message?: string } } },
-      ) => {
+      onError: (err) => {
+        const info = extractApiErrorInfo(err, "Could not accept claim.");
         Toast.show({
           type: "error",
           text1: "Action failed",
-          text2: err.response?.data?.message ?? err.message,
+          text2: info.message,
         });
       },
     });
-  }, [claimToAccept, acceptClaimMutation, handleCloseAcceptSheet, refetch]);
+  }, [claimToAccept, acceptClaimMutation, handleCloseAcceptSheet]);
 
-  const handleRejectClaim = useCallback(
-    (claimId: string) => {
-      Alert.alert(
-        "Decline Claim",
-        "Are you sure you want to decline this claim?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Decline",
-            style: "destructive",
-            onPress: () => {
-              rejectClaimMutation.mutate(claimId, {
-                onSuccess: () => {
-                  Toast.show({ type: "info", text1: "Claim declined" });
-                  refetch();
-                },
-                onError: (
-                  err: Error & { response?: { data?: { message?: string } } },
-                ) => {
-                  Toast.show({
-                    type: "error",
-                    text1: "Failed to decline claim",
-                    text2: err.response?.data?.message ?? err.message,
-                  });
-                },
-              });
-            },
-          },
-        ],
-      );
+  const handleRejectClaim = useCallback((claimId: string) => {
+    setPendingConfirm({
+      kind: "REJECT_CLAIM",
+      claimId,
+      title: "Decline Claim?",
+      message:
+        "Are you sure you want to decline this claim? The claimant will be notified.",
+      confirmLabel: "Decline Claim",
+      tone: "danger",
+    });
+  }, []);
+
+  const handleWithdrawClaim = useCallback((claimId: string) => {
+    setPendingConfirm({
+      kind: "WITHDRAW_CLAIM",
+      claimId,
+      title: "Withdraw Claim?",
+      message: "Are you sure you want to withdraw your submitted claim?",
+      confirmLabel: "Withdraw",
+      tone: "danger",
+    });
+  }, []);
+
+  const handleRequestStatusChange = useCallback(
+    (nextStatus: LostFoundStatus) => {
+      if (nextStatus === "CLOSED") {
+        setPendingConfirm({
+          kind: "CHANGE_STATUS",
+          status: "CLOSED",
+          title: "Close Listing?",
+          message:
+            "Closing this listing will hide claim actions. Pending claims remain visible to you, and you can reopen it later.",
+          confirmLabel: "Close Listing",
+          tone: "danger",
+        });
+        return;
+      }
+      if (nextStatus === "RESOLVED") {
+        setPendingConfirm({
+          kind: "CHANGE_STATUS",
+          status: "RESOLVED",
+          title: "Mark as Resolved?",
+          message:
+            "Mark this item as resolved / reunited so no further claims are accepted?",
+          confirmLabel: "Mark Resolved",
+          tone: "primary",
+        });
+        return;
+      }
+      setPendingConfirm({
+        kind: "CHANGE_STATUS",
+        status: "ACTIVE",
+        title: "Reopen Listing?",
+        message:
+          "Reopening restores this post to active status and revokes any prior accepted handover.",
+        confirmLabel: "Reopen Listing",
+        tone: "primary",
+      });
     },
-    [rejectClaimMutation, refetch],
+    [],
   );
 
-  const handleWithdrawClaim = useCallback(
-    (claimId: string) => {
-      Alert.alert(
-        "Withdraw Claim",
-        "Are you sure you want to withdraw your claim?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Withdraw",
-            style: "destructive",
-            onPress: () => {
-              withdrawClaimMutation.mutate(claimId, {
-                onSuccess: () => {
-                  Toast.show({ type: "info", text1: "Claim withdrawn" });
-                  refetch();
-                },
-                onError: (
-                  err: Error & { response?: { data?: { message?: string } } },
-                ) => {
-                  Toast.show({
-                    type: "error",
-                    text1: "Withdraw failed",
-                    text2: err.response?.data?.message ?? err.message,
-                  });
-                },
-              });
-            },
-          },
-        ],
-      );
-    },
-    [withdrawClaimMutation, refetch],
-  );
+  const isConfirmPending =
+    rejectClaimMutation.isPending ||
+    withdrawClaimMutation.isPending ||
+    statusMutation.isPending;
+
+  const handleExecutePendingConfirm = useCallback(() => {
+    if (!pendingConfirm || isConfirmPending) return;
+    if (pendingConfirm.kind === "REJECT_CLAIM") {
+      rejectClaimMutation.mutate(pendingConfirm.claimId, {
+        onSuccess: () => {
+          setPendingConfirm(null);
+          Toast.show({ type: "info", text1: "Claim declined" });
+        },
+        onError: (err) => {
+          const info = extractApiErrorInfo(err, "Failed to decline claim.");
+          Toast.show({
+            type: "error",
+            text1: "Failed to decline claim",
+            text2: info.message,
+          });
+        },
+      });
+      return;
+    }
+
+    if (pendingConfirm.kind === "WITHDRAW_CLAIM") {
+      withdrawClaimMutation.mutate(pendingConfirm.claimId, {
+        onSuccess: () => {
+          setPendingConfirm(null);
+          Toast.show({ type: "info", text1: "Claim withdrawn" });
+        },
+        onError: (err) => {
+          const info = extractApiErrorInfo(err, "Withdraw failed.");
+          Toast.show({
+            type: "error",
+            text1: "Withdraw failed",
+            text2: info.message,
+          });
+        },
+      });
+      return;
+    }
+
+    statusMutation.mutate(
+      { id, status: pendingConfirm.status },
+      {
+        onSuccess: () => {
+          const applied = pendingConfirm.status;
+          setPendingConfirm(null);
+          Toast.show({
+            type: "success",
+            text1:
+              applied === "ACTIVE"
+                ? "Listing Reopened"
+                : applied === "CLOSED"
+                  ? "Listing Closed"
+                  : "Listing Resolved",
+          });
+        },
+        onError: (err) => {
+          const info = extractApiErrorInfo(err, "Could not update status.");
+          Toast.show({
+            type: "error",
+            text1: "Status Update Failed",
+            text2: info.message,
+          });
+        },
+      },
+    );
+  }, [
+    id,
+    pendingConfirm,
+    isConfirmPending,
+    rejectClaimMutation,
+    withdrawClaimMutation,
+    statusMutation,
+  ]);
 
   const handleClaimPress = useCallback(() => {
     if (!currentUser) {
       return Toast.show({ type: "error", text1: "Please log in first" });
     }
+    if (isOffline) {
+      return Toast.show({
+        type: "error",
+        text1: "You're Offline",
+        text2: "Reconnect to the internet to submit a claim.",
+      });
+    }
     openModal("claim");
+  }, [currentUser, isOffline, openModal]);
+
+  const handleOpenReport = useCallback(() => {
+    if (!currentUser) {
+      return Toast.show({ type: "error", text1: "Please log in first" });
+    }
+    openModal("report");
   }, [currentUser, openModal]);
+
+  const handleSubmitReport = useCallback(
+    (payload: { reason: UgcReportReason; details?: string }) => {
+      reportMutation.mutate(payload, {
+        onSuccess: () => {
+          closeModal("report");
+          Toast.show({
+            type: "success",
+            text1: "Report Submitted",
+            text2: "Thank you. Moderators will review this listing.",
+          });
+        },
+        onError: (err) => {
+          const info = extractApiErrorInfo(err, "Could not submit report.");
+          Toast.show({
+            type: "error",
+            text1: "Report Failed",
+            text2: info.message,
+          });
+        },
+      });
+    },
+    [reportMutation, closeModal],
+  );
 
   const handleViewAuthor = useCallback((author: AuthorProfileModalData) => {
     setSelectedAuthor(author);
@@ -394,17 +617,65 @@ export function LostFoundDetailScreen() {
   }
 
   if (isError || !post) {
+    const errorInfo = error
+      ? extractApiErrorInfo(error, "Unable to load this listing.")
+      : null;
+    const isNotFound = !isError || errorInfo?.status === 404;
+
     return (
-      <SafeAreaView style={styles.center} edges={["top"]}>
+      <SafeAreaView style={styles.center} edges={["top", "bottom"]}>
+        <StatusBar barStyle="dark-content" />
         <Feather
           name="alert-circle"
           size={36}
           color={CAMPUS_HUB_COLORS.dangerText}
         />
-        <Text style={styles.errorText}>Post not found</Text>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>Go Back</Text>
-        </TouchableOpacity>
+        <Text style={styles.errorText}>
+          {isNotFound ? "Post not found" : "Could not load listing"}
+        </Text>
+        {!isNotFound && errorInfo?.message ? (
+          <Text style={styles.errorSubtext}>{errorInfo.message}</Text>
+        ) : null}
+        <View style={styles.errorActionsRow}>
+          {!isNotFound && (
+            <Pressable
+              onPress={() => refetch()}
+              style={({ pressed }) => [
+                styles.backBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading post"
+            >
+              <Text style={styles.backBtnText}>Retry</Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={handleBack}
+            style={({ pressed }) => [
+              isNotFound ? styles.backBtn : styles.secondaryBackBtn,
+              pressed && { opacity: 0.85 },
+            ]}
+            android_ripple={{
+              color: isNotFound
+                ? CAMPUS_HUB_COLORS.androidRippleLight
+                : CAMPUS_HUB_COLORS.androidRipple,
+            }}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Text
+              style={
+                isNotFound ? styles.backBtnText : styles.secondaryBackBtnText
+              }
+            >
+              Go Back
+            </Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
@@ -412,16 +683,49 @@ export function LostFoundDetailScreen() {
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
+  const showDockedFooter = !isAuthor && !myClaim && post.status === "ACTIVE";
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <LFDetailHeader isLost={isLost} onBack={handleBack} />
+    <SafeAreaView
+      style={styles.container}
+      edges={showDockedFooter ? ["top"] : ["top", "bottom"]}
+    >
+      <StatusBar barStyle="dark-content" />
+      <LFDetailHeader
+        isLost={isLost}
+        onBack={handleBack}
+        onReport={!isAuthor ? handleOpenReport : undefined}
+      />
+
+      {isOffline && (
+        <View style={styles.bannerOuter}>
+          <View style={styles.offlineBanner}>
+            <Feather
+              name="wifi-off"
+              size={13}
+              color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+            />
+            <Text style={styles.offlineBannerText}>
+              You&apos;re offline — showing cached listing details
+            </Text>
+          </View>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: insets.bottom + 110 },
+          { paddingBottom: insets.bottom + (showDockedFooter ? 104 : 28) },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isManualRefreshing}
+            onRefresh={handleManualRefresh}
+            colors={[CAMPUS_HUB_COLORS.lostFoundAccentFill]}
+            tintColor={CAMPUS_HUB_COLORS.lostFoundAccentFill}
+          />
+        }
       >
         <LFImageGallery
           images={post.images}
@@ -435,9 +739,11 @@ export function LostFoundDetailScreen() {
           isAuthor={isAuthor}
           isAdmin={isAdmin}
           isEdited={isEdited}
+          isUpdatingStatus={statusMutation.isPending}
           onViewAuthor={handleViewAuthor}
           onEdit={handleEditPress}
           onDelete={handleDeletePress}
+          onChangeStatus={handleRequestStatusChange}
         />
 
         {isResolved && post.handoverData && (
@@ -458,14 +764,17 @@ export function LostFoundDetailScreen() {
           <LFClaimsSection
             claims={claims}
             isLoading={isClaimsLoading}
+            isError={isClaimsError}
+            onRetry={() => refetchClaims()}
             claimToAcceptId={claimToAccept?.id}
             isAccepting={acceptClaimMutation.isPending}
             isRejecting={rejectClaimMutation.isPending}
             onAccept={handleOpenAcceptSheet}
             onReject={handleRejectClaim}
             onImagePress={openProofImageViewer}
-            onViewClaimant={handleViewAuthor as any}
+            onViewClaimant={handleViewAuthor}
             isAuthor={isAuthor}
+            postStatus={post.status}
           />
         )}
 
@@ -473,15 +782,17 @@ export function LostFoundDetailScreen() {
           <LFMyClaimCard
             claim={myClaim}
             isResolved={isResolved}
+            postStatus={post.status}
             isWithdrawing={withdrawClaimMutation.isPending}
             onOpenProof={openProofImageViewer}
             onWithdraw={handleWithdrawClaim}
+            onResubmit={handleClaimPress}
           />
         )}
       </ScrollView>
 
-      {/* Docked claim CTA */}
-      {!isAuthor && !myClaim && !isResolved && (
+      {/* Docked claim CTA — only for active listings with no submitted claim */}
+      {showDockedFooter && (
         <View
           style={[
             styles.dockedFooter,
@@ -490,22 +801,27 @@ export function LostFoundDetailScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-            style={styles.claimCtaBtn}
-            onPress={handleClaimPress}
-            activeOpacity={0.85}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={claimButtonLabel}
-          >
-            <Feather
-              name={isLost ? "check-square" : "user-check"}
-              size={18}
-              color="#ffffff"
-              style={styles.claimCtaIcon}
-            />
-            <Text style={styles.claimCtaBtnText}>{claimButtonLabel}</Text>
-          </TouchableOpacity>
+          <View style={styles.dockedFooterInner}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.claimCtaBtn,
+                pressed && { opacity: 0.88 },
+              ]}
+              onPress={handleClaimPress}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={claimButtonLabel}
+            >
+              <Feather
+                name={isLost ? "check-square" : "user-check"}
+                size={18}
+                color="#ffffff"
+                style={styles.claimCtaIcon}
+              />
+              <Text style={styles.claimCtaBtnText}>{claimButtonLabel}</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -513,11 +829,93 @@ export function LostFoundDetailScreen() {
       <EditLostFoundModal
         visible={modals.edit}
         onClose={() => closeModal("edit")}
-        onSuccess={() => {
-          refetch();
-        }}
         post={post}
+        isAuthor={isAuthor}
       />
+
+      <UgcReportModal
+        visible={modals.report}
+        targetType="LOST_FOUND_POST"
+        targetTitle={post.title}
+        onClose={() => closeModal("report")}
+        onSubmit={handleSubmitReport}
+        isSubmitting={reportMutation.isPending}
+      />
+
+      <Modal
+        visible={Boolean(pendingConfirm)}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => !isConfirmPending && setPendingConfirm(null)}
+      >
+        <TouchableWithoutFeedback
+          onPress={() => !isConfirmPending && setPendingConfirm(null)}
+        >
+          <View style={styles.confirmBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={styles.confirmCard}>
+                <Text style={styles.confirmTitle}>
+                  {pendingConfirm?.title ?? ""}
+                </Text>
+                <Text style={styles.confirmMessage}>
+                  {pendingConfirm?.message ?? ""}
+                </Text>
+                <View style={styles.confirmActions}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.confirmCancelBtn,
+                      isConfirmPending && { opacity: 0.6 },
+                      pressed && !isConfirmPending && { opacity: 0.85 },
+                    ]}
+                    disabled={isConfirmPending}
+                    onPress={() => setPendingConfirm(null)}
+                    android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: isConfirmPending }}
+                    accessibilityLabel="Cancel confirmation"
+                  >
+                    <Text style={styles.confirmCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.confirmActionBtn,
+                      pendingConfirm?.tone === "danger"
+                        ? styles.confirmDangerBtn
+                        : styles.confirmPrimaryBtn,
+                      isConfirmPending && styles.confirmActionBtnDisabled,
+                      pressed && !isConfirmPending && { opacity: 0.88 },
+                    ]}
+                    disabled={isConfirmPending}
+                    onPress={handleExecutePendingConfirm}
+                    android_ripple={{
+                      color: CAMPUS_HUB_COLORS.androidRippleLight,
+                    }}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      disabled: isConfirmPending,
+                      busy: isConfirmPending,
+                    }}
+                    accessibilityLabel={
+                      pendingConfirm?.confirmLabel ?? "Confirm action"
+                    }
+                  >
+                    {isConfirmPending ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text style={styles.confirmActionText}>
+                        {pendingConfirm?.confirmLabel ?? "Confirm"}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       <LostFoundDeleteModal
         visible={modals.delete}
@@ -582,11 +980,27 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
+  errorSubtext: {
+    fontFamily,
+    fontSize: 13,
+    color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+    maxWidth: 280,
+  },
+  errorActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   backBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccent,
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentFill,
+    overflow: "hidden",
   },
   backBtnText: {
     fontFamily,
@@ -594,10 +1008,29 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#ffffff",
   },
+  secondaryBackBtn: {
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    overflow: "hidden",
+  },
+  secondaryBackBtnText: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
   scroll: {
     paddingHorizontal: 16,
     paddingTop: 12,
     gap: 14,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   handoverSection: {
     marginTop: 4,
@@ -611,16 +1044,26 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
-    ...CAMPUS_HUB_COLORS.heroShadow,
+    borderTopColor: colors.slate200,
+    elevation: 2,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+  },
+  dockedFooterInner: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   claimCtaBtn: {
-    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccent,
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentFill,
     height: 50,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
     ...CAMPUS_HUB_COLORS.shadow,
   },
   claimCtaIcon: {
@@ -629,6 +1072,109 @@ const styles = StyleSheet.create({
   claimCtaBtnText: {
     fontFamily,
     fontSize: 15,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  bannerOuter: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.semantic.amber.soft,
+    borderWidth: 1,
+    borderColor: colors.semantic.amber.border,
+  },
+  offlineBannerText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
+    flex: 1,
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: colors.scrimDark,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  confirmCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: 22,
+    padding: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    ...CAMPUS_HUB_COLORS.heroShadow,
+  },
+  confirmTitle: {
+    fontFamily,
+    fontSize: 17,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  confirmMessage: {
+    fontFamily,
+    fontSize: 13.5,
+    color: CAMPUS_HUB_COLORS.neutralText,
+    lineHeight: 20,
+  },
+  confirmActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    minHeight: 48,
+    paddingVertical: 12,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  confirmCancelText: {
+    fontFamily,
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.neutralText,
+  },
+  confirmActionBtn: {
+    flex: 1,
+    minHeight: 48,
+    paddingVertical: 12,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  confirmActionBtnDisabled: {
+    opacity: 0.6,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  confirmDangerBtn: {
+    backgroundColor: CAMPUS_HUB_COLORS.dangerText,
+  },
+  confirmPrimaryBtn: {
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentFill,
+  },
+  confirmActionText: {
+    fontFamily,
+    fontSize: 13.5,
     fontWeight: "800",
     color: "#ffffff",
   },

@@ -60,31 +60,27 @@ export function SkeletonBox({
 // ---------------------------------------------------------------------------
 export function LostFoundDetailSkeleton() {
   return (
-    <SafeAreaView style={styles.screenContainer} edges={["top"]}>
+    <SafeAreaView style={styles.screenContainer} edges={["top", "bottom"]}>
       {/* Top Navigation Bar */}
-      <View style={styles.topHeader}>
-        <SkeletonBox width={40} height={40} borderRadius={20} />
-        <SkeletonBox width={130} height={20} borderRadius={6} />
-        <SkeletonBox width={40} height={40} borderRadius={20} />
+      <View style={[styles.topHeader, styles.constrainedBlock]}>
+        <SkeletonBox width={38} height={38} borderRadius={19} />
+        <SkeletonBox width={140} height={20} borderRadius={6} />
+        <SkeletonBox width={38} height={38} borderRadius={19} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, styles.constrainedBlock]}
       >
         {/* Hero Image Box (4:3) */}
-        <SkeletonBox
-          width="100%"
-          height={260}
-          borderRadius={18}
-          style={styles.heroBox}
-        />
+        <View style={styles.lfHeroWrapper}>
+          <SkeletonBox width="100%" height={240} borderRadius={20} />
+        </View>
 
         {/* Badges Row */}
         <View style={styles.rowGap8}>
-          <SkeletonBox width={75} height={26} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
-          <SkeletonBox width={105} height={26} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
-          <SkeletonBox width={65} height={26} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+          <SkeletonBox width={68} height={24} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+          <SkeletonBox width={104} height={24} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
         </View>
 
         {/* Title */}
@@ -95,7 +91,7 @@ export function LostFoundDetailSkeleton() {
 
         {/* Author Info Card */}
         <View style={styles.authorCard}>
-          <SkeletonBox width={46} height={46} borderRadius={23} />
+          <SkeletonBox width={40} height={40} borderRadius={20} />
           <View style={styles.authorMeta}>
             <SkeletonBox width={130} height={15} borderRadius={4} />
             <SkeletonBox width={180} height={12} borderRadius={4} />
@@ -114,7 +110,6 @@ export function LostFoundDetailSkeleton() {
           <View style={styles.colGap8}>
             <SkeletonBox width="100%" height={14} borderRadius={4} />
             <SkeletonBox width="96%" height={14} borderRadius={4} />
-            <SkeletonBox width="92%" height={14} borderRadius={4} />
             <SkeletonBox width="65%" height={14} borderRadius={4} />
           </View>
         </View>
@@ -123,7 +118,7 @@ export function LostFoundDetailSkeleton() {
         <SkeletonBox
           width="100%"
           height={50}
-          borderRadius={14}
+          borderRadius={CAMPUS_HUB_COLORS.pillRadius}
           style={{ marginTop: 20 }}
         />
       </ScrollView>
@@ -132,36 +127,64 @@ export function LostFoundDetailSkeleton() {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Lost & Found Feed Skeleton (Card Grid / List)
+// 2. Lost & Found Feed Skeleton (Matches Horizontal Card Layout)
 // ---------------------------------------------------------------------------
 export function LostFoundFeedSkeleton() {
   return (
-    <View style={styles.feedContainer}>
-      {[1, 2, 3].map((key) => (
-        <View key={key} style={styles.feedCard}>
-          <View style={styles.feedCardTop}>
-            <SkeletonBox width={40} height={40} borderRadius={20} />
-            <View style={{ flex: 1, gap: 5, marginLeft: 10 }}>
-              <SkeletonBox width={120} height={14} borderRadius={4} />
-              <SkeletonBox width={80} height={11} borderRadius={4} />
+    <View style={[styles.lfFeedContainer, styles.constrainedBlock]}>
+      {[1, 2, 3, 4].map((key) => (
+        <View key={key} style={styles.lfFeedCard}>
+          <View style={styles.lfFeedLeft}>
+            <View style={styles.rowGap8}>
+              <SkeletonBox width={56} height={20} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+              <SkeletonBox width={88} height={20} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
             </View>
-            <SkeletonBox width={65} height={22} borderRadius={11} />
+            <SkeletonBox width="92%" height={17} borderRadius={5} />
+            <SkeletonBox width="68%" height={17} borderRadius={5} />
+            <SkeletonBox width="85%" height={13} borderRadius={4} />
+            <SkeletonBox
+              width={126}
+              height={22}
+              borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+              style={{ marginTop: 2 }}
+            />
           </View>
+          <View style={styles.lfFeedRight}>
+            <SkeletonBox width={84} height={84} borderRadius={16} />
+            <SkeletonBox width={52} height={11} borderRadius={4} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
-          {/* Title */}
-          <SkeletonBox width="85%" height={18} borderRadius={5} style={{ marginVertical: 10 }} />
-
-          {/* Description line */}
-          <SkeletonBox width="95%" height={13} borderRadius={4} style={{ marginBottom: 6 }} />
-          <SkeletonBox width="60%" height={13} borderRadius={4} style={{ marginBottom: 12 }} />
-
-          {/* Image placeholder */}
-          <SkeletonBox width="100%" height={180} borderRadius={14} style={{ marginBottom: 12 }} />
-
-          {/* Footer chips */}
+// ---------------------------------------------------------------------------
+// 2b. Lost & Found Claims Skeleton
+// ---------------------------------------------------------------------------
+export function LostFoundClaimsSkeleton() {
+  return (
+    <View style={styles.lfClaimsList}>
+      {[1, 2].map((key) => (
+        <View key={key} style={styles.lfClaimCard}>
           <View style={styles.rowBetween}>
-            <SkeletonBox width={110} height={20} borderRadius={6} />
-            <SkeletonBox width={70} height={20} borderRadius={6} />
+            <View style={styles.rowCenter}>
+              <SkeletonBox width={38} height={38} borderRadius={19} />
+              <View style={{ marginLeft: 10, gap: 5 }}>
+                <SkeletonBox width={118} height={14} borderRadius={4} />
+                <SkeletonBox width={86} height={11} borderRadius={4} />
+              </View>
+            </View>
+            <SkeletonBox width={68} height={22} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+          </View>
+          <SkeletonBox width="100%" height={13} borderRadius={4} />
+          <SkeletonBox width="78%" height={13} borderRadius={4} />
+          <View style={styles.rowBetween}>
+            <SkeletonBox width={92} height={12} borderRadius={4} />
+            <View style={styles.rowGap8}>
+              <SkeletonBox width={74} height={36} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+              <SkeletonBox width={108} height={36} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+            </View>
           </View>
         </View>
       ))}
@@ -437,6 +460,49 @@ const styles = StyleSheet.create({
   },
 
   // Feed Cards
+  constrainedBlock: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+  },
+  lfHeroWrapper: {
+    marginVertical: 12,
+  },
+  lfFeedContainer: {
+    gap: 12,
+  },
+  lfFeedCard: {
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: 20,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    ...CAMPUS_HUB_COLORS.shadow,
+  },
+  lfFeedLeft: {
+    flex: 1,
+    gap: 6,
+  },
+  lfFeedRight: {
+    width: 84,
+    alignItems: "center",
+    gap: 6,
+  },
+  lfClaimsList: {
+    gap: 12,
+  },
+  lfClaimCard: {
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    ...CAMPUS_HUB_COLORS.shadow,
+  },
   feedContainer: {
     paddingHorizontal: 16,
     paddingTop: 10,

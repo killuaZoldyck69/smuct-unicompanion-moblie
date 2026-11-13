@@ -1,15 +1,21 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Image,
+  Pressable,
   ActivityIndicator,
 } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 
-import type { LostFoundClaim, LostFoundAuthor } from "@/services/lost-found-service";
+import type {
+  LostFoundClaim,
+  LostFoundAuthor,
+  LostFoundStatus,
+} from "@/services/lost-found-service";
+import { canAuthorReviewClaim } from "@/features/campus-hub/lost-found-logic";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
@@ -26,6 +32,7 @@ interface ClaimListItemProps {
   isAccepting?: boolean;
   isRejecting?: boolean;
   isAuthor?: boolean;
+  postStatus?: LostFoundStatus;
 }
 
 export const ClaimListItem = React.memo(function ClaimListItem({
@@ -37,11 +44,27 @@ export const ClaimListItem = React.memo(function ClaimListItem({
   isAccepting = false,
   isRejecting = false,
   isAuthor = true,
+  postStatus = "ACTIVE",
 }: ClaimListItemProps) {
   const claimant = claim.claimant;
   const isPending = claim.status === "PENDING";
   const isAccepted = claim.status === "ACCEPTED";
   const isRejected = claim.status === "REJECTED";
+  const canReview = canAuthorReviewClaim({
+    isAuthor,
+    claimStatus: claim.status,
+    postStatus,
+  });
+  const [avatarError, setAvatarError] = useState(false);
+  const [proofError, setProofError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [claimant?.image]);
+
+  useEffect(() => {
+    setProofError(false);
+  }, [claim.proofImage]);
 
   const claimantSubtitle = formatCampusUserSubtitle(claimant, "SMUCT Member");
 
@@ -49,16 +72,25 @@ export const ClaimListItem = React.memo(function ClaimListItem({
     <View style={[styles.card, isAccepted && styles.cardAccepted]}>
       {/* Claimant Header */}
       <View style={styles.topRow}>
-        <TouchableOpacity
-          style={styles.claimantInfo}
+        <Pressable
+          style={({ pressed }) => [
+            styles.claimantInfo,
+            pressed && { opacity: 0.78 },
+          ]}
           onPress={() => onViewClaimant(claimant)}
-          activeOpacity={0.8}
+          android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
           accessible
           accessibilityRole="button"
           accessibilityLabel={`View profile of ${claimant?.name ?? "claimant"}`}
         >
-          {claimant?.image ? (
-            <Image source={{ uri: claimant.image }} style={styles.avatar} />
+          {claimant?.image && !avatarError ? (
+            <Image
+              source={{ uri: claimant.image }}
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              onError={() => setAvatarError(true)}
+            />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarInitial}>
@@ -74,7 +106,7 @@ export const ClaimListItem = React.memo(function ClaimListItem({
               {claimantSubtitle}
             </Text>
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
         {/* Status Pill */}
         <View
@@ -85,12 +117,21 @@ export const ClaimListItem = React.memo(function ClaimListItem({
             isRejected && styles.badgeRejected,
           ]}
           accessible
+          accessibilityRole="text"
           accessibilityLabel={`Claim status: ${claim.status}`}
         >
           <Feather
-            name={isAccepted ? "check-circle" : isRejected ? "x-circle" : "clock"}
+            name={
+              isAccepted ? "check-circle" : isRejected ? "x-circle" : "clock"
+            }
             size={11}
-            color={isAccepted ? "#047857" : isRejected ? "#64748b" : "#b45309"}
+            color={
+              isAccepted
+                ? colors.semantic.emerald.darker
+                : isRejected
+                  ? CAMPUS_HUB_COLORS.mutedInk
+                  : colors.semantic.amber.deep
+            }
             style={{ marginRight: 3 }}
           />
           <Text
@@ -100,6 +141,7 @@ export const ClaimListItem = React.memo(function ClaimListItem({
               isAccepted && styles.textAccepted,
               isRejected && styles.textRejected,
             ]}
+            maxFontSizeMultiplier={1.25}
           >
             {claim.status}
           </Text>
@@ -110,8 +152,14 @@ export const ClaimListItem = React.memo(function ClaimListItem({
       {!!claim.answer && (
         <View style={styles.answerBox}>
           <View style={styles.answerLabelRow}>
-            <Feather name="shield" size={12} color="#0284c7" />
-            <Text style={styles.answerLabel}>VERIFICATION ANSWER GIVEN:</Text>
+            <Feather
+              name="shield"
+              size={12}
+              color={CAMPUS_HUB_COLORS.skyAccentInk}
+            />
+            <Text style={styles.answerLabel} maxFontSizeMultiplier={1.25}>
+              VERIFICATION ANSWER GIVEN:
+            </Text>
           </View>
           <Text style={styles.answerText}>{claim.answer}</Text>
         </View>
@@ -120,75 +168,134 @@ export const ClaimListItem = React.memo(function ClaimListItem({
       {/* Message Content */}
       <Text style={styles.messageText}>{claim.message}</Text>
 
-      {/* Attached Proof Image Box: framed attachment style to avoid fake in-app UI confusion */}
+      {/* Attached Proof Image Box */}
       {!!claim.proofImage && (
-        <TouchableOpacity
-          style={styles.proofAttachmentCard}
+        <Pressable
+          style={({ pressed }) => [
+            styles.proofAttachmentCard,
+            pressed && { opacity: 0.85 },
+          ]}
           onPress={() => onImagePress(claim.proofImage!)}
-          activeOpacity={0.85}
+          android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
           accessible
           accessibilityRole="button"
           accessibilityLabel="View attached proof photo in fullscreen"
         >
           <View style={styles.proofThumbWrapper}>
-            <Image source={{ uri: claim.proofImage }} style={styles.proofThumb} />
+            {proofError ? (
+              <View style={styles.proofFallback}>
+                <Feather
+                  name="image"
+                  size={16}
+                  color={CAMPUS_HUB_COLORS.subtleText}
+                />
+              </View>
+            ) : (
+              <Image
+                source={{ uri: claim.proofImage }}
+                style={styles.proofThumb}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                onError={() => setProofError(true)}
+              />
+            )}
             <View style={styles.proofOverlay}>
               <Feather name="maximize-2" size={12} color="#ffffff" />
             </View>
           </View>
           <View style={styles.proofTextCol}>
             <View style={styles.proofBadgeRow}>
-              <Feather name="image" size={12} color="#0284c7" />
-              <Text style={styles.proofBadgeTitle}>PROOF ATTACHMENT</Text>
+              <Feather
+                name="image"
+                size={12}
+                color={CAMPUS_HUB_COLORS.skyAccentInk}
+              />
+              <Text style={styles.proofBadgeTitle} maxFontSizeMultiplier={1.25}>
+                PROOF ATTACHMENT
+              </Text>
             </View>
-            <Text style={styles.proofInstructionText}>Tap to open full proof image</Text>
+            <Text style={styles.proofInstructionText}>
+              Tap to open full proof image
+            </Text>
           </View>
-          <Feather name="chevron-right" size={16} color={CAMPUS_HUB_COLORS.subtleText} />
-        </TouchableOpacity>
+          <Feather
+            name="chevron-right"
+            size={16}
+            color={CAMPUS_HUB_COLORS.subtleText}
+          />
+        </Pressable>
       )}
 
       {/* Time & Action Footer */}
       <View style={styles.footerRow}>
-        <Text style={styles.timeText}>Submitted {timeAgo(claim.createdAt)}</Text>
+        <Text style={styles.timeText}>
+          Submitted {timeAgo(claim.createdAt)}
+        </Text>
 
-        {isPending && (
+        {canReview && (
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.rejectBtn, isRejecting && { opacity: 0.6 }]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                styles.rejectBtn,
+                (isAccepting || isRejecting) && styles.actionBtnDisabled,
+                pressed && !isAccepting && !isRejecting && { opacity: 0.8 },
+              ]}
               onPress={() => onReject(claim.id)}
               disabled={isAccepting || isRejecting}
+              hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
               accessible
               accessibilityRole="button"
+              accessibilityState={{
+                disabled: isAccepting || isRejecting,
+                busy: isRejecting,
+              }}
               accessibilityLabel="Decline claim"
             >
               {isRejecting ? (
-                <ActivityIndicator size="small" color="#64748b" />
+                <ActivityIndicator
+                  size="small"
+                  color={CAMPUS_HUB_COLORS.mutedInk}
+                />
               ) : (
-                <Text style={styles.rejectBtnText}>
-                  {isAuthor ? "Decline" : "Decline Claim"}
-                </Text>
+                <Text style={styles.rejectBtnText}>Decline</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
-            {isAuthor && (
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.acceptBtn, isAccepting && { opacity: 0.6 }]}
-                onPress={() => onAccept(claim)}
-                disabled={isAccepting || isRejecting}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Accept claim and verify owner"
-              >
-                {isAccepting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
-                    <Feather name="check" size={13} color="#ffffff" style={{ marginRight: 4 }} />
-                    <Text style={styles.acceptBtnText}>Accept Claim</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                styles.acceptBtn,
+                (isAccepting || isRejecting) && styles.actionBtnDisabled,
+                pressed && !isAccepting && !isRejecting && { opacity: 0.88 },
+              ]}
+              onPress={() => onAccept(claim)}
+              disabled={isAccepting || isRejecting}
+              hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+              accessible
+              accessibilityRole="button"
+              accessibilityState={{
+                disabled: isAccepting || isRejecting,
+                busy: isAccepting,
+              }}
+              accessibilityLabel="Accept claim and verify owner"
+            >
+              {isAccepting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Feather
+                    name="check"
+                    size={13}
+                    color="#ffffff"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.acceptBtnText}>Accept Claim</Text>
+                </>
+              )}
+            </Pressable>
           </View>
         )}
       </View>
@@ -203,13 +310,13 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
     gap: 12,
   },
   cardAccepted: {
-    borderColor: "#10b981",
-    backgroundColor: "#f0fdf4",
+    borderColor: colors.semantic.emerald.accent,
+    backgroundColor: colors.semantic.emerald.tint,
   },
   topRow: {
     flexDirection: "row",
@@ -265,37 +372,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    overflow: "hidden",
   },
   badgePending: {
-    backgroundColor: "#fef3c7",
+    backgroundColor: colors.semantic.amber.soft,
   },
   textPending: {
-    color: "#b45309",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentText,
   },
   badgeAccepted: {
-    backgroundColor: "#d1fae5",
+    backgroundColor: colors.semantic.emerald.border,
   },
   textAccepted: {
-    color: "#047857",
+    color: colors.semantic.emerald.darker,
   },
   badgeRejected: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
   },
   textRejected: {
-    color: "#64748b",
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   statusText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   answerBox: {
-    backgroundColor: "#f0f9ff",
+    backgroundColor: CAMPUS_HUB_COLORS.skyTint,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#bae6fd",
+    borderColor: CAMPUS_HUB_COLORS.skyBorder,
     gap: 4,
   },
   answerLabelRow: {
@@ -307,7 +417,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10,
     fontWeight: "800",
-    color: "#0284c7",
+    color: CAMPUS_HUB_COLORS.skyAccentInk,
     letterSpacing: 0.4,
   },
   answerText: {
@@ -329,12 +439,13 @@ const styles = StyleSheet.create({
   proofAttachmentCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
     padding: 10,
     gap: 12,
+    overflow: "hidden",
   },
   proofThumbWrapper: {
     position: "relative",
@@ -347,7 +458,13 @@ const styles = StyleSheet.create({
   proofThumb: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
+  },
+  proofFallback: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
   },
   proofOverlay: {
     position: "absolute",
@@ -370,7 +487,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10,
     fontWeight: "800",
-    color: "#0284c7",
+    color: CAMPUS_HUB_COLORS.skyAccentInk,
     letterSpacing: 0.5,
   },
   proofInstructionText: {
@@ -381,8 +498,11 @@ const styles = StyleSheet.create({
   },
   footerRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
+    rowGap: 8,
+    columnGap: 10,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
@@ -395,16 +515,23 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   actionBtn: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 36,
+    minHeight: 44,
+    overflow: "hidden",
+  },
+  actionBtnDisabled: {
+    opacity: 0.6,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   rejectBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
@@ -413,10 +540,10 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "700",
-    color: "#64748b",
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   acceptBtn: {
-    backgroundColor: "#059669",
+    backgroundColor: CAMPUS_HUB_COLORS.emeraldFill,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   acceptBtnText: {

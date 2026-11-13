@@ -1,17 +1,19 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   View,
   Text,
-  Image,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
-  TouchableWithoutFeedback,
 } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
+import { colors } from "@/theme/colors";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+} from "@/screens/campus-hub/shared/design-tokens";
 import { LocationBadge } from "@/screens/campus-hub/lost-found/components/status-badge";
 
 interface LostFoundDeleteModalProps {
@@ -35,8 +37,12 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
   onConfirm,
   onClose,
 }: LostFoundDeleteModalProps) {
-  const insets = useSafeAreaInsets();
   const isLost = postType === "LOST";
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [postImage]);
 
   if (!visible) return null;
 
@@ -48,127 +54,129 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
       onRequestClose={isDeleting ? undefined : onClose}
       statusBarTranslucent
     >
-      <TouchableWithoutFeedback onPress={isDeleting ? undefined : onClose}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <View
-              style={[
-                styles.modalCard,
-                { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 24 },
-              ]}
-            >
-              {/* Warning Halo Circle */}
-              <View style={styles.haloOuter}>
-                <View style={styles.haloInner}>
+      <View style={styles.backdrop}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={isDeleting ? undefined : onClose}
+          accessible={false}
+        />
+        <View style={styles.modalCard}>
+          {/* Warning Halo Circle */}
+          <View style={styles.haloOuter}>
+            <View style={styles.haloInner}>
+              <Feather
+                name="trash-2"
+                size={22}
+                color={CAMPUS_HUB_COLORS.dangerText}
+              />
+            </View>
+          </View>
+
+          {/* Title & Description */}
+          <Text style={styles.title}>Delete Listing?</Text>
+          <Text style={styles.description}>
+            Are you sure you want to permanently delete this listing? All
+            attached claims and information will be removed. This action cannot
+            be undone.
+          </Text>
+
+          {/* Inset Post Preview Card */}
+          <View style={styles.previewCard}>
+            <View style={styles.previewThumbContainer}>
+              {postImage && !imgError ? (
+                <Image
+                  source={{ uri: postImage }}
+                  style={styles.previewThumb}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <View style={styles.previewPlaceholder}>
                   <Feather
-                    name="trash-2"
-                    size={22}
-                    color={CAMPUS_HUB_COLORS.dangerText}
+                    name={isLost ? "search" : "gift"}
+                    size={18}
+                    color={CAMPUS_HUB_COLORS.subtleText}
                   />
                 </View>
-              </View>
+              )}
+            </View>
 
-              {/* Title & Description */}
-              <Text style={styles.title}>Delete Listing?</Text>
-              <Text style={styles.description}>
-                Are you sure you want to permanently delete this listing? All
-                attached claims and information will be removed. This action
-                cannot be undone.
+            <View style={styles.previewMeta}>
+              <Text style={styles.previewTitle} numberOfLines={1}>
+                {postTitle}
               </Text>
-
-              {/* Inset Post Preview Card */}
-              <View style={styles.previewCard}>
-                <View style={styles.previewThumbContainer}>
-                  {postImage ? (
-                    <Image
-                      source={{ uri: postImage }}
-                      style={styles.previewThumb}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.previewPlaceholder}>
-                      <Feather
-                        name={isLost ? "search" : "gift"}
-                        size={18}
-                        color={CAMPUS_HUB_COLORS.subtleText}
-                      />
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.previewMeta}>
-                  <Text style={styles.previewTitle} numberOfLines={1}>
-                    {postTitle}
-                  </Text>
-                  <View style={styles.previewBadgeRow}>
-                    <View
-                      style={[
-                        styles.typeBadge,
-                        isLost ? styles.typeBadgeLost : styles.typeBadgeFound,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.typeBadgeText,
-                          isLost
-                            ? styles.typeBadgeTextLost
-                            : styles.typeBadgeTextFound,
-                        ]}
-                      >
-                        {isLost ? "LOST ITEM" : "FOUND ITEM"}
-                      </Text>
-                    </View>
-
-                    {!!postLocation && (
-                      <View style={{ marginTop: 4 }}>
-                        <LocationBadge location={postLocation} />
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-
-              {/* Actions Button Row */}
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.btn, styles.cancelBtn]}
-                  onPress={onClose}
-                  disabled={isDeleting}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel listing deletion"
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
+              <View style={styles.previewBadgeRow}>
+                <View
                   style={[
-                    styles.btn,
-                    styles.deleteBtn,
-                    isDeleting && styles.deleteBtnDisabled,
+                    styles.typeBadge,
+                    isLost ? styles.typeBadgeLost : styles.typeBadgeFound,
                   ]}
-                  onPress={onConfirm}
-                  disabled={isDeleting}
-                  activeOpacity={0.8}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Confirm delete listing"
                 >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <View style={styles.btnContentRow}>
-                      <Feather name="trash-2" size={15} color="#ffffff" />
-                      <Text style={styles.deleteBtnText}>Delete</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.typeBadgeText,
+                      isLost
+                        ? styles.typeBadgeTextLost
+                        : styles.typeBadgeTextFound,
+                    ]}
+                    maxFontSizeMultiplier={1.25}
+                  >
+                    {isLost ? "LOST ITEM" : "FOUND ITEM"}
+                  </Text>
+                </View>
+
+                {!!postLocation && <LocationBadge location={postLocation} />}
               </View>
             </View>
-          </TouchableWithoutFeedback>
+          </View>
+
+          {/* Actions Button Row */}
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.btn,
+                styles.cancelBtn,
+                pressed && !isDeleting && { opacity: 0.8 },
+              ]}
+              onPress={onClose}
+              disabled={isDeleting}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isDeleting }}
+              accessibilityLabel="Cancel listing deletion"
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.btn,
+                styles.deleteBtn,
+                isDeleting && styles.deleteBtnDisabled,
+                pressed && !isDeleting && { opacity: 0.88 },
+              ]}
+              onPress={onConfirm}
+              disabled={isDeleting}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
+              accessibilityLabel="Confirm delete listing"
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <View style={styles.btnContentRow}>
+                  <Feather name="trash-2" size={15} color="#ffffff" />
+                  <Text style={styles.deleteBtnText}>Delete</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 });
@@ -176,7 +184,7 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(10, 15, 29, 0.65)",
+    backgroundColor: colors.scrimDark,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 22,
@@ -187,28 +195,32 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 24,
     paddingHorizontal: 22,
-    paddingTop: 24,
+    paddingVertical: 24,
     alignItems: "center",
-    ...CAMPUS_HUB_COLORS.heroShadow,
+    elevation: 4,
+    shadowColor: colors.navyDeep,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.06)",
+    borderColor: colors.navyAlpha06,
   },
   haloOuter: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#fff1f2",
+    backgroundColor: colors.semantic.rose.tint,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#fecdd3",
+    borderColor: colors.semantic.rose.border,
   },
   haloInner: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#ffe4e6",
+    backgroundColor: colors.semantic.rose.softBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -232,9 +244,9 @@ const styles = StyleSheet.create({
   previewCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
     borderRadius: 14,
     padding: 10,
     gap: 12,
@@ -254,13 +266,13 @@ const styles = StyleSheet.create({
   previewPlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
     alignItems: "center",
     justifyContent: "center",
   },
   previewMeta: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   previewTitle: {
     fontFamily,
@@ -271,11 +283,12 @@ const styles = StyleSheet.create({
   previewBadgeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    flexWrap: "wrap",
+    gap: 6,
   },
   typeBadge: {
     paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingVertical: 2.5,
     borderRadius: 6,
     borderWidth: 1,
   },
@@ -290,26 +303,16 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontFamily,
     fontSize: 9.5,
+    lineHeight: 12,
     fontWeight: "800",
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   typeBadgeTextLost: {
     color: CAMPUS_HUB_COLORS.lostRoseText,
   },
   typeBadgeTextFound: {
     color: CAMPUS_HUB_COLORS.foundTealText,
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    flex: 1,
-  },
-  locationText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "500",
-    color: CAMPUS_HUB_COLORS.subtleText,
   },
   buttonRow: {
     flexDirection: "row",
@@ -318,19 +321,22 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 46,
+    minHeight: 48,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   cancelBtn: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.slate100,
   },
   cancelBtnText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
   },
   deleteBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.dangerText,
@@ -338,6 +344,8 @@ const styles = StyleSheet.create({
   },
   deleteBtnDisabled: {
     opacity: 0.6,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   btnContentRow: {
     flexDirection: "row",
@@ -346,8 +354,10 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
+    lineHeight: 17,
     fontWeight: "800",
     color: "#ffffff",
+    includeFontPadding: false,
   },
 });

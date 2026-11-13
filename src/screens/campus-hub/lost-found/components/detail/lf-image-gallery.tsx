@@ -1,16 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
-  Image,
-  TouchableOpacity,
+  Text,
+  Pressable,
   ScrollView,
   StyleSheet,
 } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
-import { Text } from "react-native";
-import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
+import { colors } from "@/theme/colors";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+} from "@/screens/campus-hub/shared/design-tokens";
 
-const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
+const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccentFill;
 
 interface LFImageGalleryProps {
   images: string[];
@@ -25,28 +29,54 @@ export function LFImageGallery({
   onSelectIndex,
   onOpenViewer,
 }: LFImageGalleryProps) {
+  const [failedUris, setFailedUris] = useState<Record<string, boolean>>({});
+
   if (!images.length) return null;
+
+  const safeIndex = Math.min(Math.max(0, selectedIndex), images.length - 1);
+  const currentUri = images[safeIndex];
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => onOpenViewer(selectedIndex)}
-        style={styles.mainWrapper}
+      <Pressable
+        onPress={() => onOpenViewer(safeIndex)}
+        style={({ pressed }) => [
+          styles.mainWrapper,
+          pressed && { opacity: 0.94 },
+        ]}
+        android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
         accessible
         accessibilityRole="imagebutton"
-        accessibilityLabel="View photo in fullscreen"
+        accessibilityLabel={`View photo ${safeIndex + 1} of ${images.length} in fullscreen`}
       >
-        <Image
-          source={{ uri: images[selectedIndex] }}
-          style={styles.mainImage}
-          resizeMode="cover"
-        />
+        {failedUris[currentUri] ? (
+          <View style={styles.fallbackBox}>
+            <Feather
+              name="image"
+              size={32}
+              color={CAMPUS_HUB_COLORS.subtleText}
+            />
+            <Text style={styles.fallbackText}>Photo unavailable</Text>
+          </View>
+        ) : (
+          <Image
+            source={{ uri: currentUri }}
+            style={styles.mainImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+            onError={() =>
+              setFailedUris((prev) => ({ ...prev, [currentUri]: true }))
+            }
+          />
+        )}
         <View style={styles.zoomPill}>
           <Feather name="maximize-2" size={11} color="#ffffff" />
-          <Text style={styles.zoomPillText}>Tap to enlarge</Text>
+          <Text style={styles.zoomPillText} maxFontSizeMultiplier={1.25}>
+            Tap to enlarge
+          </Text>
         </View>
-      </TouchableOpacity>
+      </Pressable>
 
       {images.length > 1 && (
         <ScrollView
@@ -56,13 +86,40 @@ export function LFImageGallery({
           contentContainerStyle={styles.thumbnailRow}
         >
           {images.map((img, idx) => (
-            <TouchableOpacity
+            <Pressable
               key={img}
               onPress={() => onSelectIndex(idx)}
-              style={[styles.thumbBtn, selectedIndex === idx && styles.thumbBtnActive]}
+              style={({ pressed }) => [
+                styles.thumbBtn,
+                safeIndex === idx && styles.thumbBtnActive,
+                pressed && { opacity: 0.85 },
+              ]}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+              accessible
+              accessibilityRole="button"
+              accessibilityState={{ selected: safeIndex === idx }}
+              accessibilityLabel={`Select photo ${idx + 1} of ${images.length}`}
             >
-              <Image source={{ uri: img }} style={styles.thumbImage} />
-            </TouchableOpacity>
+              {failedUris[img] ? (
+                <View style={styles.thumbFallback}>
+                  <Feather
+                    name="image"
+                    size={14}
+                    color={CAMPUS_HUB_COLORS.subtleText}
+                  />
+                </View>
+              ) : (
+                <Image
+                  source={{ uri: img }}
+                  style={styles.thumbImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  onError={() =>
+                    setFailedUris((prev) => ({ ...prev, [img]: true }))
+                  }
+                />
+              )}
+            </Pressable>
           ))}
         </ScrollView>
       )}
@@ -76,17 +133,39 @@ const styles = StyleSheet.create({
   },
   mainWrapper: {
     width: "100%",
-    height: 220,
+    aspectRatio: 4 / 3,
+    maxHeight: 340,
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   mainImage: {
     width: "100%",
     height: "100%",
+  },
+  fallbackBox: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+  },
+  fallbackText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.mutedInk,
+  },
+  thumbFallback: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   zoomPill: {
     position: "absolute",
@@ -95,7 +174,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    backgroundColor: "rgba(15, 23, 42, 0.78)",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
@@ -103,8 +182,10 @@ const styles = StyleSheet.create({
   zoomPillText: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "700",
     color: "#ffffff",
+    includeFontPadding: false,
   },
   thumbScrollView: {
     width: "100%",
@@ -120,11 +201,13 @@ const styles = StyleSheet.create({
   thumbBtn: {
     width: 52,
     height: 52,
+    minWidth: 52,
+    minHeight: 52,
     borderRadius: 12,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "transparent",
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
   },
   thumbBtnActive: {
     borderColor: ACCENT,

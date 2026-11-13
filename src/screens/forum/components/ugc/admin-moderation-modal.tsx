@@ -31,6 +31,7 @@ import type {
   AdminForumReportItem,
   AdminModerationAction,
   AdminReportStatusFilter,
+  UgcReportTargetType,
 } from "@/services/ugc-service";
 import { AuthorDetailsModal } from "@/screens/campus-hub/shared/author-modal";
 import { colors } from "@/theme/colors";
@@ -74,8 +75,12 @@ export const AdminModerationModal = memo(function AdminModerationModal({
   const totalPages = data?.meta?.totalPages ?? 1;
 
   const handleOpenPost = useCallback(
-    (postId: string) => {
+    (postId: string, targetType: UgcReportTargetType) => {
       onClose();
+      if (targetType === "LOST_FOUND_POST") {
+        router.push(`/campus-hub/lost-found/${postId}`);
+        return;
+      }
       router.push(`/(tabs)/forum/${postId}`);
     },
     [onClose, router],
@@ -111,13 +116,17 @@ export const AdminModerationModal = memo(function AdminModerationModal({
               });
             },
             onError: (err) => {
-              const info = extractApiErrorInfo(err, "Moderation action failed.");
+              const info = extractApiErrorInfo(
+                err,
+                "Moderation action failed.",
+              );
               if (info.status === 409) {
                 void refetch();
               }
               Toast.show({
                 type: "error",
-                text1: info.status === 409 ? "Already Reviewed" : "Action Failed",
+                text1:
+                  info.status === 409 ? "Already Reviewed" : "Action Failed",
                 text2: info.message,
               });
             },
@@ -264,10 +273,7 @@ export const AdminModerationModal = memo(function AdminModerationModal({
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[
-                styles.listContent,
-                styles.centeredWidth,
-              ]}
+              contentContainerStyle={[styles.listContent, styles.centeredWidth]}
               ListEmptyComponent={
                 <View style={styles.centerBox}>
                   <Feather

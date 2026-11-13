@@ -5,18 +5,23 @@ import {
   StyleSheet,
   FlatList,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   RefreshControl,
-  Image,
   ActivityIndicator,
+  Platform,
+  Keyboard,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
+import { colors } from "@/theme/colors";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useNetworkStatus } from "@/hooks/use-network-status";
+import { extractApiErrorInfo } from "@/features/forum/forum-logic";
 import {
   useInfiniteLostFoundFeed,
   useDeleteLostFoundPost,
@@ -49,6 +54,8 @@ import {
 } from "./components/filter-modal";
 
 const ACCENT = CAMPUS_HUB_COLORS.lostFoundAccent;
+const ACCENT_FILL = CAMPUS_HUB_COLORS.lostFoundAccentFill;
+const ACCENT_TEXT = CAMPUS_HUB_COLORS.lostFoundAccentText;
 
 export interface LostFoundSectionProps {
   isComposeVisible?: boolean;
@@ -62,6 +69,7 @@ export function LostFoundSection({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user: currentUser } = useCurrentUser();
+  const { isOffline } = useNetworkStatus();
 
   // Filters state
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
@@ -76,7 +84,6 @@ export function LostFoundSection({
   const [internalComposeVisible, setInternalComposeVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
 
-  // Admin / Owner delete state
   const deleteMutation = useDeleteLostFoundPost();
   const [postToDelete, setPostToDelete] = useState<{
     id: string;
@@ -85,7 +92,6 @@ export function LostFoundSection({
     location?: string | null;
     image?: string | null;
   } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback((post: LostFoundPost) => {
     setPostToDelete({
@@ -98,11 +104,17 @@ export function LostFoundSection({
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
-    if (!postToDelete) return;
-    setIsDeleting(true);
+    if (!postToDelete || deleteMutation.isPending) return;
+    if (isOffline) {
+      Toast.show({
+        type: "error",
+        text1: "You're Offline",
+        text2: "Reconnect to the internet before deleting this listing.",
+      });
+      return;
+    }
     deleteMutation.mutate(postToDelete.id, {
       onSuccess: () => {
-        setIsDeleting(false);
         setPostToDelete(null);
         Toast.show({
           type: "success",
@@ -110,17 +122,17 @@ export function LostFoundSection({
           text2: "Lost & Found post has been removed.",
         });
       },
-      onError: (err: any) => {
-        setIsDeleting(false);
+      onError: (err: unknown) => {
         setPostToDelete(null);
+        const info = extractApiErrorInfo(err, "Failed to delete post.");
         Toast.show({
           type: "error",
           text1: "Delete Failed",
-          text2: err?.message || "Failed to delete post.",
+          text2: info.message,
         });
       },
     });
-  }, [postToDelete, deleteMutation]);
+  }, [postToDelete, isOffline, deleteMutation]);
 
   const activeFilterCount = useMemo(() => {
     return (
@@ -165,8 +177,11 @@ export function LostFoundSection({
     externalIsComposeVisible !== undefined
       ? externalIsComposeVisible
       : internalComposeVisible;
-  const handleCloseCompose =
-    externalOnCloseCompose || (() => setInternalComposeVisible(false));
+  const closeInternalCompose = useCallback(
+    () => setInternalComposeVisible(false),
+    [],
+  );
+  const handleCloseCompose = externalOnCloseCompose ?? closeInternalCompose;
 
   // Construct query parameters for server-side filtering & search
   const queryParams = useMemo<GetLostFoundFeedParams>(() => {
@@ -224,11 +239,18 @@ export function LostFoundSection({
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await refetch();
+      const result = await refetch();
+      if (result.isError && !isOffline) {
+        Toast.show({
+          type: "error",
+          text1: "Refresh failed",
+          text2: "Could not update listings. Showing cached data.",
+        });
+      }
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetch]);
+  }, [refetch, isOffline]);
 
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -251,7 +273,7 @@ export function LostFoundSection({
         <View style={styles.statsBar}>
           <View style={styles.statsBarHeader}>
             <View style={styles.statsBarTag}>
-              <Feather name="shield" size={12} color={ACCENT} />
+              <Feather name="shield" size={12} color={ACCENT_TEXT} />
               <Text style={styles.statsBarTagText}>
                 CAMPUS HUB LOST & FOUND
               </Text>
@@ -265,7 +287,9 @@ export function LostFoundSection({
                   { backgroundColor: CAMPUS_HUB_COLORS.lostRose },
                 ]}
               />
-              <Text style={styles.statCount}>{stats.activeLost}</Text>
+              <Text style={styles.statCount} maxFontSizeMultiplier={1.25}>
+                {stats.activeLost}
+              </Text>
               <Text style={styles.statTitle}>Active Lost</Text>
             </View>
 
@@ -278,7 +302,9 @@ export function LostFoundSection({
                   { backgroundColor: CAMPUS_HUB_COLORS.foundTeal },
                 ]}
               />
-              <Text style={styles.statCount}>{stats.activeFound}</Text>
+              <Text style={styles.statCount} maxFontSizeMultiplier={1.25}>
+                {stats.activeFound}
+              </Text>
               <Text style={styles.statTitle}>Active Found</Text>
             </View>
 
@@ -291,7 +317,9 @@ export function LostFoundSection({
                   { backgroundColor: CAMPUS_HUB_COLORS.resolvedGreen },
                 ]}
               />
-              <Text style={styles.statCount}>{stats.resolved}</Text>
+              <Text style={styles.statCount} maxFontSizeMultiplier={1.25}>
+                {stats.resolved}
+              </Text>
               <Text style={styles.statTitle}>Reunited</Text>
             </View>
           </View>
@@ -333,11 +361,50 @@ export function LostFoundSection({
     return null;
   }, [isFetchingNextPage, posts.length, hasNextPage]);
 
+  const renderSeparator = useCallback(
+    () => <View style={styles.separator} />,
+    [],
+  );
+
   const renderEmpty = useCallback(() => {
     if (isLoading) {
       return <LostFoundFeedSkeleton />;
     }
-    const hasActiveFiltersOrSearch = activeFilterCount > 0 || debouncedSearch.length > 0;
+    if (isError) {
+      return (
+        <View style={styles.centerState}>
+          <Feather
+            name={isOffline ? "wifi-off" : "alert-circle"}
+            size={36}
+            color={CAMPUS_HUB_COLORS.dangerText}
+          />
+          <Text style={styles.stateTitle}>
+            {isOffline ? "You're offline" : "Could not load posts"}
+          </Text>
+          <Text style={styles.stateSubtitle}>
+            {isOffline
+              ? "Reconnect to the internet to fetch the latest listings."
+              : "Something went wrong while fetching listings."}
+          </Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.retryBtn,
+              { backgroundColor: ACCENT_FILL },
+              pressed && { opacity: 0.85 },
+            ]}
+            onPress={() => refetch()}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading lost and found posts"
+          >
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    const hasActiveFiltersOrSearch =
+      activeFilterCount > 0 || debouncedSearch.length > 0;
 
     return (
       <View style={styles.emptyCard}>
@@ -349,46 +416,40 @@ export function LostFoundSection({
             : "No items match your active filters. Try adjusting them or post a new item."}
         </Text>
         {hasActiveFiltersOrSearch && (
-          <TouchableOpacity
-            style={styles.resetEmptyBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.resetEmptyBtn,
+              pressed && { opacity: 0.85 },
+            ]}
             onPress={() => {
               resetAllFilters();
               setSearchQuery("");
             }}
-            activeOpacity={0.8}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
             accessible
             accessibilityRole="button"
             accessibilityLabel="Reset all filters and search"
           >
-            <Feather name="rotate-ccw" size={13} color="#ffffff" style={{ marginRight: 6 }} />
+            <Feather
+              name="rotate-ccw"
+              size={13}
+              color="#ffffff"
+              style={{ marginRight: 6 }}
+            />
             <Text style={styles.resetEmptyBtnText}>Reset Filters & Search</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
     );
-  }, [isLoading, debouncedSearch, activeFilterCount, resetAllFilters]);
-
-  if (isError) {
-    return (
-      <View style={styles.centerState}>
-        <Feather
-          name="alert-circle"
-          size={36}
-          color={CAMPUS_HUB_COLORS.dangerText}
-        />
-        <Text style={styles.stateTitle}>Could not load posts</Text>
-        <TouchableOpacity
-          style={[styles.retryBtn, { backgroundColor: ACCENT }]}
-          onPress={() => refetch()}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel="Retry loading lost and found posts"
-        >
-          <Text style={styles.retryBtnText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  }, [
+    isLoading,
+    isError,
+    isOffline,
+    refetch,
+    debouncedSearch,
+    activeFilterCount,
+    resetAllFilters,
+  ]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -405,9 +466,10 @@ export function LostFoundSection({
             <TextInput
               style={styles.searchInput}
               placeholder="Search lost & found by title or location..."
-              placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
+              placeholderTextColor={CAMPUS_HUB_COLORS.mutedInk}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              onSubmitEditing={() => Keyboard.dismiss()}
               accessible
               accessibilityLabel="Search lost and found"
               returnKeyType="search"
@@ -415,30 +477,44 @@ export function LostFoundSection({
               autoCorrect={false}
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity
+              <Pressable
                 onPress={() => setSearchQuery("")}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                android_ripple={{
+                  color: CAMPUS_HUB_COLORS.androidRipple,
+                  borderless: true,
+                }}
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Clear search query"
-                style={styles.clearSearchBtn}
+                style={({ pressed }) => [
+                  styles.clearSearchBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
               >
                 <Feather
                   name="x-circle"
                   size={16}
-                  color={CAMPUS_HUB_COLORS.subtleText}
+                  color={CAMPUS_HUB_COLORS.mutedInk}
                 />
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
 
           {/* Filter Modal Trigger Button */}
-          <TouchableOpacity
-            style={[
+          <Pressable
+            style={({ pressed }) => [
               styles.filterIconButton,
               activeFilterCount > 0 && styles.filterIconButtonActive,
+              pressed && { opacity: 0.85 },
             ]}
             onPress={() => setIsFilterModalVisible(true)}
-            activeOpacity={0.8}
+            android_ripple={{
+              color:
+                activeFilterCount > 0
+                  ? CAMPUS_HUB_COLORS.androidRippleLight
+                  : CAMPUS_HUB_COLORS.androidRipple,
+            }}
             accessible
             accessibilityRole="button"
             accessibilityLabel={`Filter listings. ${activeFilterCount} active filters`}
@@ -454,10 +530,15 @@ export function LostFoundSection({
             />
             {activeFilterCount > 0 && (
               <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                <Text
+                  style={styles.filterBadgeText}
+                  maxFontSizeMultiplier={1.25}
+                >
+                  {activeFilterCount}
+                </Text>
               </View>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Active Filter Chips Strip */}
@@ -470,10 +551,17 @@ export function LostFoundSection({
               keyboardShouldPersistTaps="handled"
             >
               {typeFilter !== "ALL" && (
-                <TouchableOpacity
-                  style={styles.activeChip}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.activeChip,
+                    pressed && { opacity: 0.75 },
+                  ]}
                   onPress={() => setTypeFilter("ALL")}
-                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${typeFilter === "LOST" ? "Lost" : "Found"} filter`}
                 >
                   <Text style={styles.activeChipText}>
                     {typeFilter === "LOST" ? "Lost" : "Found"}
@@ -483,29 +571,47 @@ export function LostFoundSection({
                     size={12}
                     color={CAMPUS_HUB_COLORS.lostFoundAccentText}
                   />
-                </TouchableOpacity>
+                </Pressable>
               )}
               {statusFilter !== "ALL" && (
-                <TouchableOpacity
-                  style={styles.activeChip}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.activeChip,
+                    pressed && { opacity: 0.75 },
+                  ]}
                   onPress={() => setStatusFilter("ALL")}
-                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${statusFilter.toLowerCase()} status filter`}
                 >
                   <Text style={styles.activeChipText}>
-                    {statusFilter === "ACTIVE" ? "Active" : "Resolved"}
+                    {statusFilter === "ACTIVE"
+                      ? "Active"
+                      : statusFilter === "CLOSED"
+                        ? "Closed"
+                        : "Resolved"}
                   </Text>
                   <Feather
                     name="x"
                     size={12}
                     color={CAMPUS_HUB_COLORS.lostFoundAccentText}
                   />
-                </TouchableOpacity>
+                </Pressable>
               )}
               {categoryFilter !== "ALL" && (
-                <TouchableOpacity
-                  style={styles.activeChip}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.activeChip,
+                    pressed && { opacity: 0.75 },
+                  ]}
                   onPress={() => setCategoryFilter("ALL")}
-                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${CATEGORY_LABELS[categoryFilter] || categoryFilter} category filter`}
                 >
                   <Text style={styles.activeChipText}>
                     {CATEGORY_LABELS[categoryFilter] || categoryFilter}
@@ -515,13 +621,20 @@ export function LostFoundSection({
                     size={12}
                     color={CAMPUS_HUB_COLORS.lostFoundAccentText}
                   />
-                </TouchableOpacity>
+                </Pressable>
               )}
               {myPostsOnly && (
-                <TouchableOpacity
-                  style={styles.activeChip}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.activeChip,
+                    pressed && { opacity: 0.75 },
+                  ]}
                   onPress={() => setMyPostsOnly(false)}
-                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove My Posts filter"
                 >
                   <Text style={styles.activeChipText}>My Posts</Text>
                   <Feather
@@ -529,19 +642,66 @@ export function LostFoundSection({
                     size={12}
                     color={CAMPUS_HUB_COLORS.lostFoundAccentText}
                   />
-                </TouchableOpacity>
+                </Pressable>
               )}
-              <TouchableOpacity
-                style={styles.clearAllBtn}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.clearAllBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
                 onPress={resetAllFilters}
-                activeOpacity={0.7}
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Clear all active filters"
               >
                 <Text style={styles.clearAllText}>Clear All</Text>
-              </TouchableOpacity>
+              </Pressable>
             </ScrollView>
           </View>
         )}
       </View>
+
+      {isOffline && (
+        <View style={styles.bannerOuter}>
+          <View style={styles.offlineBanner}>
+            <Feather name="wifi-off" size={13} color={ACCENT_TEXT} />
+            <Text style={styles.offlineBannerText}>
+              You&apos;re offline — showing cached listings
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {isError && !isOffline && posts.length > 0 && (
+        <View style={styles.bannerOuter}>
+          <View style={styles.refreshErrorBanner}>
+            <Feather
+              name="alert-triangle"
+              size={13}
+              color={CAMPUS_HUB_COLORS.dangerText}
+            />
+            <Text style={styles.refreshErrorText}>
+              Could not refresh listings — showing cached items
+            </Text>
+            <Pressable
+              onPress={() => refetch()}
+              hitSlop={8}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Retry refreshing listings"
+              style={({ pressed }) => [
+                styles.refreshErrorRetryBtn,
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <Text style={styles.refreshErrorRetryText}>Retry</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       <FlatList
         data={posts}
@@ -554,19 +714,22 @@ export function LostFoundSection({
         keyboardDismissMode="on-drag"
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.4}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        ItemSeparatorComponent={renderSeparator}
         contentContainerStyle={[
           styles.scroll,
           { paddingBottom: insets.bottom + 110 },
         ]}
         showsVerticalScrollIndicator={false}
-        removeClippedSubviews={false}
+        removeClippedSubviews={Platform.OS === "android"}
+        windowSize={7}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            colors={[ACCENT]}
-            tintColor={ACCENT}
+            colors={[ACCENT_FILL]}
+            tintColor={ACCENT_FILL}
           />
         }
       />
@@ -591,11 +754,10 @@ export function LostFoundSection({
         currentUser={currentUser}
       />
 
-      {/* Delete Confirmation Modal for Admin / Owner */}
       {postToDelete && (
         <LostFoundDeleteModal
           visible={Boolean(postToDelete)}
-          isDeleting={isDeleting}
+          isDeleting={deleteMutation.isPending}
           postTitle={postToDelete.title}
           postType={postToDelete.type}
           postLocation={postToDelete.location}
@@ -625,17 +787,30 @@ const LostFoundCard = React.memo(function LostFoundCard({
 }: LostFoundCardProps) {
   const isOwner = currentUserId === post.authorId;
   const isResolved = post.status === "RESOLVED" || post.status === "CLAIMED";
+  const isClosed = post.status === "CLOSED";
+  const isInactive = isResolved || isClosed;
   const claimCount = post._count?.claims ?? 0;
-  const hasImage = Boolean(post.images?.[0]);
+  const imageUri = post.images?.[0];
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [imageUri]);
+
+  const hasImage = Boolean(imageUri && !imgError);
 
   return (
-    <TouchableOpacity
-      style={[styles.card, isResolved && styles.cardResolved]}
+    <Pressable
+      style={({ pressed }) => [
+        styles.card,
+        isInactive && styles.cardResolved,
+        pressed && { opacity: 0.92 },
+      ]}
       onPress={onPress}
-      activeOpacity={0.85}
+      android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
       accessible
       accessibilityRole="button"
-      accessibilityLabel={`${post.type === "LOST" ? "Lost" : "Found"} item: ${post.title}. Location: ${post.location}.`}
+      accessibilityLabel={`${post.type === "LOST" ? "Lost" : "Found"} item (${post.status.toLowerCase()}): ${post.title}.${post.category ? ` Category: ${CATEGORY_LABELS[post.category] || post.category}.` : ""} Location: ${post.location}.`}
     >
       <View style={styles.cardLeft}>
         {/* Semantic Badges Row */}
@@ -643,13 +818,13 @@ const LostFoundCard = React.memo(function LostFoundCard({
           <View style={styles.badgeGroup}>
             <TypeBadge type={post.type} />
             {post.category && <CategoryBadge category={post.category} />}
-            {isResolved && <StatusBadge status="RESOLVED" />}
+            {isInactive && <StatusBadge status={post.status} />}
           </View>
         </View>
 
         {/* Title & Description */}
         <Text
-          style={[styles.cardTitle, isResolved && styles.cardTitleResolved]}
+          style={[styles.cardTitle, isInactive && styles.cardTitleResolved]}
           numberOfLines={2}
         >
           {post.title}
@@ -669,10 +844,14 @@ const LostFoundCard = React.memo(function LostFoundCard({
         )}
 
         {/* Owner-only Claim notification badge */}
-        {isOwner && claimCount > 0 && !isResolved && (
+        {isOwner && claimCount > 0 && !isInactive && (
           <View style={styles.claimBadge}>
-            <Feather name="inbox" size={11} color="#0284c7" />
-            <Text style={styles.claimBadgeText}>
+            <Feather
+              name="inbox"
+              size={11}
+              color={CAMPUS_HUB_COLORS.skyAccentInk}
+            />
+            <Text style={styles.claimBadgeText} maxFontSizeMultiplier={1.25}>
               {claimCount}{" "}
               {claimCount === 1 ? "claim received" : "claims received"}
             </Text>
@@ -684,7 +863,14 @@ const LostFoundCard = React.memo(function LostFoundCard({
       <View style={styles.cardRightCol}>
         <View style={styles.thumbWrapper}>
           {hasImage ? (
-            <Image source={{ uri: post.images[0] }} style={styles.cardThumb} />
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.cardThumb}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+              onError={() => setImgError(true)}
+            />
           ) : (
             <View style={styles.thumbPlaceholder}>
               <Feather
@@ -701,7 +887,7 @@ const LostFoundCard = React.memo(function LostFoundCard({
           <Feather
             name="clock"
             size={10}
-            color={CAMPUS_HUB_COLORS.subtleText}
+            color={CAMPUS_HUB_COLORS.mutedInk}
           />
           <Text style={styles.imageTimeText} numberOfLines={1}>
             {timeAgo(post.createdAt)}
@@ -710,13 +896,16 @@ const LostFoundCard = React.memo(function LostFoundCard({
 
         {/* Admin Delete Action Button moved under the thumbnail image */}
         {isAdmin && (
-          <TouchableOpacity
-            style={styles.adminDeleteBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.adminDeleteBtn,
+              pressed && { opacity: 0.78 },
+            ]}
             onPress={(e) => {
               e.stopPropagation?.();
               onDelete?.(post);
             }}
-            activeOpacity={0.7}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessible
             accessibilityRole="button"
@@ -724,10 +913,10 @@ const LostFoundCard = React.memo(function LostFoundCard({
           >
             <Feather name="trash-2" size={11} color="#dc2626" />
             <Text style={styles.adminDeleteBtnText}>Delete</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -736,12 +925,79 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 0,
   },
+  separator: {
+    height: 12,
+  },
+  bannerOuter: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.semantic.amber.soft,
+    borderWidth: 1,
+    borderColor: colors.semantic.amber.border,
+  },
+  offlineBannerText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    color: ACCENT_TEXT,
+    flex: 1,
+  },
+  refreshErrorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
+    borderWidth: 1,
+    borderColor: colors.semantic.rose.border,
+  },
+  refreshErrorText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.dangerText,
+    flex: 1,
+  },
+  refreshErrorRetryBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderWidth: 1,
+    borderColor: colors.semantic.rose.border,
+  },
+  refreshErrorRetryText: {
+    fontFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    color: CAMPUS_HUB_COLORS.dangerText,
+  },
   topSearchContainer: {
     paddingHorizontal: 16,
     paddingTop: 8,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   statsBarContainer: {
     marginBottom: 12,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   searchFilterRow: {
     flexDirection: "row",
@@ -756,9 +1012,9 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 12,
     paddingHorizontal: 16,
-    height: 46,
+    height: 48,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   searchInput: {
@@ -770,27 +1026,29 @@ const styles = StyleSheet.create({
   },
   clearSearchBtn: {
     padding: 4,
+    borderRadius: 12,
   },
   filterIconButton: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
     position: "relative",
+    overflow: "hidden",
   },
   filterIconButtonActive: {
-    backgroundColor: ACCENT,
-    borderColor: ACCENT,
+    backgroundColor: ACCENT_FILL,
+    borderColor: ACCENT_FILL,
   },
   filterBadge: {
     position: "absolute",
-    top: -2,
-    right: -2,
+    top: 2,
+    right: 2,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -804,8 +1062,11 @@ const styles = StyleSheet.create({
   filterBadgeText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 12,
     fontWeight: "800",
     color: "#ffffff",
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
   activeChipsRow: {
     marginBottom: 12,
@@ -819,12 +1080,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#fffbeb",
+    backgroundColor: colors.semantic.amber.tint,
     borderWidth: 1,
-    borderColor: "#fde68a",
+    borderColor: colors.semantic.amber.border,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: 12,
+    minHeight: 36,
+    overflow: "hidden",
   },
   activeChipText: {
     fontFamily,
@@ -833,14 +1096,18 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.lostFoundAccentText,
   },
   clearAllBtn: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 10,
+    minHeight: 36,
+    justifyContent: "center",
+    borderRadius: 10,
+    overflow: "hidden",
   },
   clearAllText: {
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
 
   // Compact Modern Stats Bar
@@ -850,7 +1117,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   statsBarHeader: {
@@ -868,7 +1135,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10,
     fontWeight: "800",
-    color: ACCENT,
+    color: ACCENT_TEXT,
     letterSpacing: 0.6,
   },
   statsBarRow: {
@@ -895,13 +1162,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   statTitle: {
     fontFamily,
     fontSize: 10,
     fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
-    marginTop: 1,
+    color: CAMPUS_HUB_COLORS.mutedInk,
+    marginTop: 2,
   },
   statDivider: {
     width: 1,
@@ -918,12 +1187,16 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 12,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+    overflow: "hidden",
     ...CAMPUS_HUB_COLORS.shadow,
   },
   cardResolved: {
     backgroundColor: "#fcfdfd",
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
   },
   cardLeft: {
     flex: 1,
@@ -949,12 +1222,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#fee2e2",
     width: "100%",
-    paddingVertical: 4.5,
+    minHeight: 36,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#fecaca",
     gap: 4,
     marginTop: 6,
+    overflow: "hidden",
   },
   adminDeleteBtnText: {
     fontFamily,
@@ -971,13 +1246,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   cardTitleResolved: {
-    color: "#475569",
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   cardDesc: {
     fontFamily,
     fontSize: 12,
     fontWeight: "500",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
     lineHeight: 17,
   },
   cardFooter: {
@@ -989,27 +1264,30 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
     flex: 1,
   },
   claimBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#f0f9ff",
+    backgroundColor: CAMPUS_HUB_COLORS.skyTint,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     alignSelf: "flex-start",
     marginTop: 4,
     borderWidth: 1,
-    borderColor: "#bae6fd",
+    borderColor: CAMPUS_HUB_COLORS.skyBorder,
   },
   claimBadgeText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "700",
-    color: "#0369a1",
+    color: CAMPUS_HUB_COLORS.skyAccentInk,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
   },
 
   // Right Column: Thumbnail + Time underneath
@@ -1029,7 +1307,6 @@ const styles = StyleSheet.create({
   cardThumb: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
   },
   thumbPlaceholder: {
     width: "100%",
@@ -1058,6 +1335,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 60,
     gap: 12,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   stateTitle: {
     fontFamily,
@@ -1069,7 +1349,7 @@ const styles = StyleSheet.create({
   stateSubtitle: {
     fontFamily,
     fontSize: 13,
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
     textAlign: "center",
     paddingHorizontal: 20,
     lineHeight: 18,
@@ -1081,7 +1361,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
     ...CAMPUS_HUB_COLORS.shadow,
   },
   resetEmptyBtn: {
@@ -1089,10 +1372,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
-    backgroundColor: ACCENT,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    backgroundColor: ACCENT_FILL,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    minHeight: 48,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    overflow: "hidden",
   },
   resetEmptyBtnText: {
     fontFamily,
@@ -1113,12 +1398,16 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   retryBtn: {
     paddingHorizontal: 24,
     paddingVertical: 12,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    overflow: "hidden",
   },
   retryBtnText: {
     fontFamily,
