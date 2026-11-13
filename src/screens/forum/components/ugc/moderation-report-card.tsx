@@ -56,7 +56,8 @@ export const ModerationReportCard = memo(function ModerationReportCard({
   const previewBody = live?.contentPreview || snapshot?.contentPreview || "";
   const isDeleted = report.targetExists === false;
   const resolvedPostId =
-    report.targetType === "LOST_FOUND_POST"
+    report.targetType === "LOST_FOUND_POST" ||
+    report.targetType === "MARKETPLACE_POST"
       ? report.targetId || live?.id || null
       : report.postId || live?.postId || snapshot?.postId || null;
   const canOpenThread = Boolean(resolvedPostId && !isDeleted);
@@ -86,7 +87,11 @@ export const ModerationReportCard = memo(function ModerationReportCard({
                 ? "POST"
                 : report.targetType === "LOST_FOUND_POST"
                   ? "LOST & FOUND"
-                  : "RESPONSE"}
+                  : report.targetType === "MARKETPLACE_POST"
+                    ? "MARKETPLACE"
+                    : report.targetType === "MARKETPLACE_COMMENT"
+                      ? "MP COMMENT"
+                      : "RESPONSE"}
             </Text>
           </View>
           {multiReportCount > 1 && (

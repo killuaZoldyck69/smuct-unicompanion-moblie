@@ -1,16 +1,16 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   TouchableOpacity,
-  Image,
   Linking,
   ScrollView,
   StatusBar,
   BackHandler,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -107,6 +107,11 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
 }: AuthorDetailsModalProps) {
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, 20) + 12;
+  const [failedAvatar, setFailedAvatar] = useState(false);
+
+  useEffect(() => {
+    setFailedAvatar(false);
+  }, [author?.image]);
 
   useEffect(() => {
     if (!renderInline || !visible) return;
@@ -223,7 +228,7 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
       icon: "heart",
       label: "Blood Group",
       value: BLOOD_GROUP_LABELS[author.bloodGroup] || author.bloodGroup,
-      accentColor: "#ef4444",
+      accentColor: CAMPUS_HUB_COLORS.dangerText,
     });
   }
   if (author.email) {
@@ -261,8 +266,14 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
           >
             <View style={styles.heroSection}>
               <View style={styles.avatarContainer}>
-                {author.image ? (
-                  <Image source={{ uri: author.image }} style={styles.avatar} />
+                {author.image && !failedAvatar ? (
+                  <Image
+                    source={{ uri: author.image }}
+                    style={styles.avatar}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    onError={() => setFailedAvatar(true)}
+                  />
                 ) : (
                   <View style={styles.avatarFallback}>
                     <Text style={styles.avatarFallbackText}>{initial}</Text>

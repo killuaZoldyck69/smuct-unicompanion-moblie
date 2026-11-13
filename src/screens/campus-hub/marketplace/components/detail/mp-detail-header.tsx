@@ -6,14 +6,20 @@ import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/desig
 interface MPDetailHeaderProps {
   isSelling: boolean;
   onBack: () => void;
+  onReportPost?: () => void;
 }
 
-export function MPDetailHeader({ isSelling, onBack }: MPDetailHeaderProps) {
+export function MPDetailHeader({
+  isSelling,
+  onBack,
+  onReportPost,
+}: MPDetailHeaderProps) {
   return (
     <View style={styles.header}>
       <TouchableOpacity
         onPress={onBack}
         style={styles.iconBtn}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         accessible
         accessibilityRole="button"
         accessibilityLabel="Go back to marketplace"
@@ -24,8 +30,21 @@ export function MPDetailHeader({ isSelling, onBack }: MPDetailHeaderProps) {
 
       <Text style={styles.title}>{isSelling ? "For Sale" : "Wanted Item"}</Text>
 
-      {/* Spacer keeps title centred */}
-      <View style={styles.spacer} />
+      {onReportPost ? (
+        <TouchableOpacity
+          onPress={onReportPost}
+          style={styles.iconBtn}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel="Report listing"
+          activeOpacity={0.7}
+        >
+          <Feather name="flag" size={17} color={CAMPUS_HUB_COLORS.subtleText} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.spacer} />
+      )}
     </View>
   );
 }

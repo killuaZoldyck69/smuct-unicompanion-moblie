@@ -23,11 +23,17 @@ import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import {
   useMarketplaceFeed,
   flattenFeedPages,
   useDeleteMarketplacePost,
 } from "@/features/campus-hub/useMarketplace";
+import {
+  requireOnline,
+  showApiErrorToast,
+} from "@/features/campus-hub/useLostFoundUpload";
+import { resolveMarketplaceErrorState } from "@/features/campus-hub/marketplace-logic";
 import type {
   MarketplacePost,
   ListingType,
@@ -35,8 +41,10 @@ import type {
   MarketplaceCategory,
   FeedQueryParams,
 } from "@/services/marketplace-service";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
+import { MARKETPLACE_CATEGORY_LABELS } from "./marketplace-constants";
 import { ComposeMarketplaceModal } from "./compose-modal";
 import { MarketplaceHero } from "./components/marketplace-hero";
 import {
@@ -49,24 +57,15 @@ import { ListingCard } from "./components/listing-card";
 import { MarketplaceDeleteModal } from "./components/marketplace-delete-modal";
 import { MarketplaceSkeleton } from "./components/marketplace-skeleton";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
 const SEARCH_DEBOUNCE_MS = 400;
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 interface MarketplaceSectionProps {
   isComposeVisible?: boolean;
   onOpenCompose?: () => void;
   onCloseCompose?: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 export function MarketplaceSection({
   isComposeVisible: externalIsComposeVisible,
   onOpenCompose: externalOnOpenCompose,
@@ -76,6 +75,7 @@ export function MarketplaceSection({
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { user: currentUser } = useCurrentUser();
+  const { isOffline } = useNetworkStatus();
 
   // --- Filter state ---
   const [typeFilter, setTypeFilter] = useState<MarketplaceTypeFilter>("ALL");
@@ -98,7 +98,6 @@ export function MarketplaceSection({
     }, SEARCH_DEBOUNCE_MS);
   }, []);
 
-  // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -124,14 +123,22 @@ export function MarketplaceSection({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback(
-    (id: string, title: string, price?: number | null, image?: string) => {
-      setPostToDelete({ id, title, price, image });
+    (
+      id: string,
+      title: string,
+      price?: number | null,
+      image?: string,
+      type?: ListingType,
+    ) => {
+      setPostToDelete({ id, title, price, image, type });
     },
     [],
   );
 
   const handleConfirmDelete = useCallback(() => {
     if (!postToDelete) return;
+    if (!requireOnline(isOffline, "Reconnect to delete this listing.")) return;
+
     setIsDeleting(true);
     deleteMutation.mutate(postToDelete.id, {
       onSuccess: () => {
@@ -143,23 +150,27 @@ export function MarketplaceSection({
           text2: "Item was removed from Marketplace.",
         });
       },
-      onError: (err: any) => {
+      onError: (err) => {
         setIsDeleting(false);
         setPostToDelete(null);
-        Toast.show({
-          type: "error",
-          text1: "Delete Failed",
-          text2: err?.message || "Failed to delete listing.",
-        });
+        showApiErrorToast(
+          err,
+          "Delete Failed",
+          "Failed to delete listing.",
+        );
       },
     });
-  }, [postToDelete, deleteMutation]);
+  }, [postToDelete, isOffline, deleteMutation]);
 
   // --- Responsive card width ---
   const cardWidth = useMemo(() => {
+    const effectiveWidth = Math.min(
+      windowWidth,
+      CAMPUS_HUB_COLORS.contentMaxWidth,
+    );
     const horizontalPadding = 40;
     const gap = 12;
-    return Math.floor((windowWidth - horizontalPadding - gap) / 2);
+    return Math.floor((effectiveWidth - horizontalPadding - gap) / 2);
   }, [windowWidth]);
 
   // --- Derived query params (server-side filtering) ---
@@ -183,6 +194,7 @@ export function MarketplaceSection({
     data,
     isLoading,
     isError,
+    error,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
@@ -191,25 +203,40 @@ export function MarketplaceSection({
 
   const posts = useMemo(() => flattenFeedPages(data), [data]);
 
-  const totalCount = data?.pages[0]?.total ?? 0;
+  const firstPage = data?.pages[0];
+  const totalCount = firstPage?.total ?? 0;
+  const sellingCount =
+    firstPage?.counts?.selling ??
+    posts.filter((p) => p.type === "SELLING").length;
+  const buyingCount =
+    firstPage?.counts?.buying ??
+    posts.filter((p) => p.type === "BUYING").length;
 
   // --- Pull-to-refresh ---
   const [isRefreshing, setIsRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
+    if (isOffline) {
+      Toast.show({
+        type: "info",
+        text1: "You're offline",
+        text2: "Reconnect to refresh marketplace listings.",
+      });
+      return;
+    }
     setIsRefreshing(true);
     try {
       await refetch();
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetch]);
+  }, [isOffline, refetch]);
 
   // --- Infinite scroll trigger ---
   const onEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
+    if (hasNextPage && !isFetchingNextPage && !isOffline) {
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, isOffline, fetchNextPage]);
 
   // --- Navigation ---
   const navigateToDetail = useCallback(
@@ -243,17 +270,23 @@ export function MarketplaceSection({
   // --- Compose handlers ---
   const handleOpenCompose = useCallback(() => {
     if (!currentUser) {
-      return Toast.show({ type: "error", text1: "Please log in first." });
+      Toast.show({ type: "error", text1: "Please log in first." });
+      return;
     }
-    externalOnOpenCompose
-      ? externalOnOpenCompose()
-      : setInternalComposeVisible(true);
-  }, [currentUser, externalOnOpenCompose]);
+    if (!requireOnline(isOffline, "Reconnect to create a new listing.")) return;
+    if (externalOnOpenCompose) {
+      externalOnOpenCompose();
+    } else {
+      setInternalComposeVisible(true);
+    }
+  }, [currentUser, isOffline, externalOnOpenCompose]);
 
   const handleCloseCompose = useCallback(() => {
-    externalOnCloseCompose
-      ? externalOnCloseCompose()
-      : setInternalComposeVisible(false);
+    if (externalOnCloseCompose) {
+      externalOnCloseCompose();
+    } else {
+      setInternalComposeVisible(false);
+    }
   }, [externalOnCloseCompose]);
 
   // ---------------------------------------------------------------------------
@@ -285,6 +318,61 @@ export function MarketplaceSection({
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return <MarketplaceSkeleton cardWidth={cardWidth} />;
+
+    if (isError) {
+      const errorState = resolveMarketplaceErrorState({ err: error, isOffline });
+      return (
+        <View style={styles.centerState}>
+          <View style={styles.errorIconWrap}>
+            <Feather
+              name={errorState === "offline" ? "wifi-off" : "alert-circle"}
+              size={30}
+              color={CAMPUS_HUB_COLORS.dangerText}
+            />
+          </View>
+          <Text style={styles.stateTitle}>
+            {errorState === "offline"
+              ? "You're offline"
+              : "Could not load listings"}
+          </Text>
+          <Text style={styles.stateSubtitle}>
+            {errorState === "offline"
+              ? "Reconnect to the internet to browse latest marketplace items."
+              : "There was an issue fetching marketplace items. Please try again."}
+          </Text>
+          <View style={styles.errorActionsRow}>
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={() => refetch()}
+              activeOpacity={0.8}
+            >
+              <Feather
+                name="refresh-cw"
+                size={14}
+                color={CAMPUS_HUB_COLORS.white}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.retryBtnText}>Try Again</Text>
+            </TouchableOpacity>
+            {(activeFilterCount > 0 || Boolean(debouncedSearch)) && (
+              <TouchableOpacity
+                style={styles.resetErrorBtn}
+                onPress={() => {
+                  setSearchInput("");
+                  setDebouncedSearch("");
+                  handleResetFilters();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.resetErrorBtnText}>Reset Filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    const hasSearchOrFilter = Boolean(debouncedSearch) || activeFilterCount > 0;
     return (
       <View style={styles.emptyCard}>
         <View style={styles.emptyIconCircle}>
@@ -295,23 +383,26 @@ export function MarketplaceSection({
           />
         </View>
         <Text style={styles.emptyTitle}>
-          {debouncedSearch ? "No matching listings" : "No listings yet"}
+          {hasSearchOrFilter ? "No matching listings" : "No listings yet"}
         </Text>
         <Text style={styles.emptySubtitle}>
           {debouncedSearch
             ? `No items found for "${debouncedSearch}". Try a different keyword.`
-            : "Be the first student to post something on campus."}
+            : activeFilterCount > 0
+              ? "No items match your active filters. Try widening your criteria."
+              : "Be the first student to post something on campus."}
         </Text>
-        {debouncedSearch ? (
+        {hasSearchOrFilter ? (
           <TouchableOpacity
             style={styles.emptyActionBtn}
             onPress={() => {
               setSearchInput("");
               setDebouncedSearch("");
+              handleResetFilters();
             }}
             activeOpacity={0.8}
           >
-            <Text style={styles.emptyActionBtnText}>Clear Search</Text>
+            <Text style={styles.emptyActionBtnText}>Reset Filters</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -322,7 +413,7 @@ export function MarketplaceSection({
             <Feather
               name="plus"
               size={14}
-              color="#ffffff"
+              color={CAMPUS_HUB_COLORS.white}
               style={{ marginRight: 6 }}
             />
             <Text style={styles.emptyActionBtnText}>Post a Listing</Text>
@@ -330,11 +421,35 @@ export function MarketplaceSection({
         )}
       </View>
     );
-  }, [isLoading, debouncedSearch, cardWidth, handleOpenCompose]);
+  }, [
+    isLoading,
+    isError,
+    error,
+    isOffline,
+    cardWidth,
+    debouncedSearch,
+    activeFilterCount,
+    refetch,
+    handleResetFilters,
+    handleOpenCompose,
+  ]);
 
   const ListHeader = useMemo(
     () => (
       <>
+        {isOffline && (
+          <View style={styles.offlineBanner}>
+            <Feather
+              name="wifi-off"
+              size={13}
+              color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
+            />
+            <Text style={styles.offlineBannerText}>
+              You're offline. Showing cached listings.
+            </Text>
+          </View>
+        )}
+
         {/* Search & Filter Bar */}
         <View style={styles.searchBarContainer}>
           <View style={styles.searchInputBox}>
@@ -391,7 +506,9 @@ export function MarketplaceSection({
               name="sliders"
               size={18}
               color={
-                activeFilterCount > 0 ? "#ffffff" : CAMPUS_HUB_COLORS.deepNavy
+                activeFilterCount > 0
+                  ? CAMPUS_HUB_COLORS.white
+                  : CAMPUS_HUB_COLORS.deepNavy
               }
             />
             {activeFilterCount > 0 && (
@@ -413,15 +530,20 @@ export function MarketplaceSection({
             )}
             {statusFilter !== "ALL" && (
               <FilterChip
-                label={statusFilter === "ACTIVE" ? "Available" : "Sold"}
+                label={
+                  statusFilter === "ACTIVE"
+                    ? "Available"
+                    : statusFilter === "SOLD"
+                      ? "Sold"
+                      : "Closed"
+                }
                 onRemove={() => setStatusFilter("ALL")}
               />
             )}
             {categoryFilter !== "ALL" && (
               <FilterChip
                 label={
-                  categoryFilter.charAt(0) +
-                  categoryFilter.slice(1).toLowerCase()
+                  MARKETPLACE_CATEGORY_LABELS[categoryFilter] ?? categoryFilter
                 }
                 onRemove={() => setCategoryFilter("ALL")}
               />
@@ -439,62 +561,32 @@ export function MarketplaceSection({
         <MarketplaceHero
           stats={{
             total: totalCount,
-            selling: posts.filter((p) => p.type === "SELLING").length,
-            buying: posts.filter((p) => p.type === "BUYING").length,
+            selling: sellingCount,
+            buying: buyingCount,
           }}
         />
       </>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
+      isOffline,
       searchInput,
+      handleSearchChange,
       activeFilterCount,
       typeFilter,
       statusFilter,
       categoryFilter,
+      handleResetFilters,
       totalCount,
-      posts,
+      sellingCount,
+      buyingCount,
     ],
   );
-
-  // --- Error state ---
-  if (isError) {
-    return (
-      <View style={styles.centerState}>
-        <View style={styles.errorIconWrap}>
-          <Feather
-            name="alert-circle"
-            size={32}
-            color={CAMPUS_HUB_COLORS.dangerText}
-          />
-        </View>
-        <Text style={styles.stateTitle}>Could not load listings</Text>
-        <Text style={styles.stateSubtitle}>
-          There was an issue fetching marketplace items. Please check your
-          connection.
-        </Text>
-        <TouchableOpacity
-          style={styles.retryBtn}
-          onPress={() => refetch()}
-          activeOpacity={0.8}
-        >
-          <Feather
-            name="refresh-cw"
-            size={14}
-            color="#ffffff"
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.retryBtnText}>Try Again</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.outerWrap}>
       <FlatList<MarketplacePost>
         data={posts}
         keyExtractor={keyExtractor}
@@ -541,7 +633,6 @@ export function MarketplaceSection({
         onReset={handleResetFilters}
       />
 
-      {/* Delete Confirmation Modal for Admin / Owner */}
       {postToDelete && (
         <MarketplaceDeleteModal
           visible={Boolean(postToDelete)}
@@ -558,9 +649,6 @@ export function MarketplaceSection({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 interface FilterChipProps {
   label: string;
   onRemove: () => void;
@@ -572,7 +660,10 @@ function FilterChip({ label, onRemove }: FilterChipProps) {
       <Text style={styles.activeChipText}>{label}</Text>
       <TouchableOpacity
         onPress={onRemove}
-        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={`Remove ${label} filter`}
       >
         <Feather
           name="x"
@@ -584,10 +675,13 @@ function FilterChip({ label, onRemove }: FilterChipProps) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
+  outerWrap: {
+    flex: 1,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+  },
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 4,
@@ -595,6 +689,25 @@ const styles = StyleSheet.create({
   columnWrapper: {
     gap: 12,
     marginBottom: 12,
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
+    borderWidth: 1,
+    borderColor: colors.semantic.amber.border,
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentInk,
   },
   searchBarContainer: {
     flexDirection: "row",
@@ -611,7 +724,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   searchInput: {
@@ -630,7 +743,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
     position: "relative",
   },
@@ -647,7 +760,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: CAMPUS_HUB_COLORS.dangerText,
     borderWidth: 1.5,
-    borderColor: "#ffffff",
+    borderColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
@@ -656,7 +769,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   activeChipsRow: {
     flexDirection: "row",
@@ -669,7 +782,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#ecfdf5",
+    backgroundColor: CAMPUS_HUB_COLORS.resolvedGreenBg,
     borderWidth: 1,
     borderColor: "rgba(16, 185, 129, 0.2)",
     borderRadius: 12,
@@ -698,14 +811,19 @@ const styles = StyleSheet.create({
   },
   centerState: {
     alignItems: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 30,
-    gap: 12,
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    gap: 10,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    ...CAMPUS_HUB_COLORS.shadow,
   },
   errorIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
     alignItems: "center",
     justifyContent: "center",
@@ -713,7 +831,7 @@ const styles = StyleSheet.create({
   },
   stateTitle: {
     fontFamily,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     textAlign: "center",
@@ -725,6 +843,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 19,
   },
+  errorActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+  },
+  resetErrorBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+  },
+  resetErrorBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+  },
   emptyCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: CAMPUS_HUB_COLORS.cardRadius,
@@ -732,7 +870,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   emptyIconCircle: {
@@ -772,21 +910,20 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   retryBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: ACCENT,
-    marginTop: 6,
   },
   retryBtnText: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

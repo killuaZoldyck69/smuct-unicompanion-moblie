@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Image,
   ActivityIndicator,
   Alert,
   Keyboard,
   Platform,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import {
@@ -66,6 +66,7 @@ interface InlineCommentCardProps {
   onStartReply: (targetId: string, authorName: string) => void;
   onStartEdit?: (comment: Comment) => void;
   onDeleteComment: (comment: Comment) => void;
+  onReportComment?: (comment: Comment) => void;
   onViewAuthorProfile?: (author: CommentAuthor) => void;
 }
 
@@ -77,9 +78,11 @@ const InlineCommentCard = memo(function InlineCommentCard({
   onStartReply,
   onStartEdit,
   onDeleteComment,
+  onReportComment,
   onViewAuthorProfile,
 }: InlineCommentCardProps) {
   const [isRepliesExpanded, setIsRepliesExpanded] = useState(false);
+  const [failedAvatarUrls, setFailedAvatarUrls] = useState<Record<string, boolean>>({});
   const replyCount = comment.replies?.length ?? 0;
   const isOwn = comment.author.id === currentUserId;
   const isListingAuthor = Boolean(listingAuthorId && comment.author.id === listingAuthorId);
@@ -95,8 +98,17 @@ const InlineCommentCard = memo(function InlineCommentCard({
         onPress={() => onViewAuthorProfile?.(comment.author)}
         disabled={!onViewAuthorProfile}
       >
-        {comment.author.image ? (
-          <Image source={{ uri: comment.author.image }} style={styles.avatar} />
+        {comment.author.image && !failedAvatarUrls[comment.author.image] ? (
+          <Image
+            source={{ uri: comment.author.image }}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            onError={() => {
+              const uri = comment.author.image;
+              if (uri) setFailedAvatarUrls((prev) => ({ ...prev, [uri]: true }));
+            }}
+          />
         ) : (
           <View style={styles.avatarFallback}>
             <Text style={styles.avatarFallbackText}>{authorInitial}</Text>
@@ -194,7 +206,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
           )}
         </View>
 
-        {isOwn && (
+        {isOwn ? (
           <View style={styles.rightActions}>
             {/* 1. Edit (just icon) */}
             {onStartEdit && (
@@ -205,6 +217,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
                 ]}
                 onPress={() => onStartEdit(comment)}
                 activeOpacity={0.75}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessible={true}
                 accessibilityRole="button"
                 accessibilityLabel="Edit comment"
@@ -218,6 +231,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
               style={[styles.actionIconBtn, styles.actionIconBtnDanger]}
               onPress={() => onDeleteComment(comment)}
               activeOpacity={0.75}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Delete comment"
@@ -225,7 +239,21 @@ const InlineCommentCard = memo(function InlineCommentCard({
               <Feather name="trash-2" size={12.5} color={CAMPUS_HUB_COLORS.dangerText} />
             </TouchableOpacity>
           </View>
-        )}
+        ) : onReportComment ? (
+          <View style={styles.rightActions}>
+            <TouchableOpacity
+              style={[styles.actionIconBtn, styles.actionIconBtnReport]}
+              onPress={() => onReportComment(comment)}
+              activeOpacity={0.75}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Report comment"
+            >
+              <Feather name="flag" size={12} color={CAMPUS_HUB_COLORS.subtleText} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
 
 {/* Collapsable Nested Replies */}
@@ -245,8 +273,17 @@ const InlineCommentCard = memo(function InlineCommentCard({
                   onPress={() => onViewAuthorProfile?.(reply.author)}
                   disabled={!onViewAuthorProfile}
                 >
-                  {reply.author.image ? (
-                    <Image source={{ uri: reply.author.image }} style={styles.replyAvatarSmall} />
+                  {reply.author.image && !failedAvatarUrls[reply.author.image] ? (
+                    <Image
+                      source={{ uri: reply.author.image }}
+                      style={styles.replyAvatarSmall}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      onError={() => {
+                        const uri = reply.author.image;
+                        if (uri) setFailedAvatarUrls((prev) => ({ ...prev, [uri]: true }));
+                      }}
+                    />
                   ) : (
                     <View style={styles.replyAvatarFallbackSmall}>
                       <Text style={styles.replyAvatarTextSmall}>{replyInitial}</Text>
@@ -310,7 +347,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
                       </TouchableOpacity>
                     </View>
 
-                    {isReplyOwn && (
+                    {isReplyOwn ? (
                       <View style={styles.rightActions}>
                         {/* 1. Edit (just icon) */}
                         {onStartEdit && (
@@ -321,6 +358,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
                             ]}
                             onPress={() => onStartEdit(reply)}
                             activeOpacity={0.75}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             accessible={true}
                             accessibilityRole="button"
                             accessibilityLabel="Edit reply"
@@ -334,6 +372,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
                           style={[styles.actionIconBtn, styles.actionIconBtnDanger]}
                           onPress={() => onDeleteComment(reply)}
                           activeOpacity={0.75}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           accessible={true}
                           accessibilityRole="button"
                           accessibilityLabel="Delete reply"
@@ -341,7 +380,21 @@ const InlineCommentCard = memo(function InlineCommentCard({
                           <Feather name="trash-2" size={12} color={CAMPUS_HUB_COLORS.dangerText} />
                         </TouchableOpacity>
                       </View>
-                    )}
+                    ) : onReportComment ? (
+                      <View style={styles.rightActions}>
+                        <TouchableOpacity
+                          style={[styles.actionIconBtn, styles.actionIconBtnReport]}
+                          onPress={() => onReportComment(reply)}
+                          activeOpacity={0.75}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessible={true}
+                          accessibilityRole="button"
+                          accessibilityLabel="Report reply"
+                        >
+                          <Feather name="flag" size={11.5} color={CAMPUS_HUB_COLORS.subtleText} />
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
               </View>
@@ -365,6 +418,7 @@ interface InlineCommentsProps {
   onStartReply: (targetId: string, authorName: string) => void;
   onStartEdit?: (comment: Comment) => void;
   onDeleteComment: (commentId: string) => void;
+  onReportComment?: (comment: Comment) => void;
   onViewAuthorProfile?: (author: CommentAuthor) => void;
 }
 
@@ -376,6 +430,7 @@ export const InlineComments = memo(function InlineComments({
   onStartReply,
   onStartEdit,
   onDeleteComment,
+  onReportComment,
   onViewAuthorProfile,
 }: InlineCommentsProps) {
   const handleDeletePrompt = (comment: Comment) => {
@@ -431,6 +486,7 @@ export const InlineComments = memo(function InlineComments({
               onStartReply={onStartReply}
               onStartEdit={onStartEdit}
               onDeleteComment={handleDeletePrompt}
+              onReportComment={onReportComment}
               onViewAuthorProfile={onViewAuthorProfile}
             />
           ))}
@@ -454,6 +510,8 @@ interface CommentInputBarProps {
   isSubmitting: boolean;
   accent?: string;
   inputRef?: React.RefObject<TextInput | null>;
+  isLocked?: boolean;
+  lockedMessage?: string;
 }
 
 export const CommentInputBar = memo(function CommentInputBar({
@@ -467,6 +525,8 @@ export const CommentInputBar = memo(function CommentInputBar({
   isSubmitting,
   accent = CAMPUS_HUB_COLORS.deepNavy,
   inputRef,
+  isLocked = false,
+  lockedMessage = "Comments are closed for this listing.",
 }: CommentInputBarProps) {
   const insets = useSafeAreaInsets();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -503,6 +563,17 @@ export const CommentInputBar = memo(function CommentInputBar({
     ? `Reply to @${replyTarget.authorName}...`
     : "Write a comment...";
 
+  if (isLocked && !isEditMode) {
+    return (
+      <View style={[styles.inputBarWrapper, { paddingBottom: bottomPadding }]}>
+        <View style={styles.lockedBanner}>
+          <Feather name="lock" size={14} color={CAMPUS_HUB_COLORS.subtleText} />
+          <Text style={styles.lockedBannerText}>{lockedMessage}</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View
       style={[
@@ -517,7 +588,7 @@ export const CommentInputBar = memo(function CommentInputBar({
             <Feather
               name="edit-2"
               size={12}
-              color="#92400e"
+              color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
               style={styles.bannerIcon}
             />
             <Text style={styles.editBannerText}>Editing comment</Text>
@@ -837,6 +908,28 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
     borderColor: 'rgba(190, 18, 60, 0.15)',
   },
+  actionIconBtnReport: {
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+  },
+  lockedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+  },
+  lockedBannerText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    color: CAMPUS_HUB_COLORS.subtleText,
+  },
   toggleRepliesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -918,7 +1011,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fef3c7",
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -938,7 +1031,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 12,
     fontWeight: "600",
-    color: "#92400e",
+    color: CAMPUS_HUB_COLORS.lostFoundAccentInk,
     flex: 1,
   },
   editCancelText: {

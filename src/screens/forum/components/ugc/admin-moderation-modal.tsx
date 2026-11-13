@@ -81,6 +81,13 @@ export const AdminModerationModal = memo(function AdminModerationModal({
         router.push(`/campus-hub/lost-found/${postId}`);
         return;
       }
+      if (
+        targetType === "MARKETPLACE_POST" ||
+        targetType === "MARKETPLACE_COMMENT"
+      ) {
+        router.push(`/campus-hub/marketplace/${postId}`);
+        return;
+      }
       router.push(`/(tabs)/forum/${postId}`);
     },
     [onClose, router],

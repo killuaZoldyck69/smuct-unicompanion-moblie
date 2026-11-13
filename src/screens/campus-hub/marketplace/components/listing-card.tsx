@@ -1,21 +1,37 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
-import type { MarketplacePost } from "@/services/marketplace-service";
+import type { ListingType, MarketplacePost } from "@/services/marketplace-service";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../../shared/design-tokens";
 import { RichTextSnippet } from "../../shared/rich-text-snippet";
 
 const CONDITION_STYLES: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  NEW: { label: "Brand New", bg: "#f0fdf4", text: "#166534", border: "rgba(22, 101, 52, 0.12)" },
-  LIKE_NEW: { label: "Like New", bg: "#ecfdf5", text: "#065f46", border: "rgba(6, 95, 70, 0.12)" },
-  GOOD: { label: "Good", bg: "#eff6ff", text: "#1e40af", border: "rgba(30, 64, 175, 0.12)" },
-  FAIR: { label: "Fair", bg: "#fefce8", text: "#854d0e", border: "rgba(133, 77, 14, 0.12)" },
+  NEW: {
+    label: "Brand New",
+    bg: colors.semantic.emerald.softSurface,
+    text: colors.semantic.emerald.darkText,
+    border: "rgba(6, 95, 70, 0.14)",
+  },
+  LIKE_NEW: {
+    label: "Like New",
+    bg: colors.semantic.emerald.tint,
+    text: colors.semantic.emerald.darker,
+    border: "rgba(4, 120, 87, 0.14)",
+  },
+  GOOD: {
+    label: "Good",
+    bg: colors.semantic.blue.tint,
+    text: colors.semantic.blue.deep,
+    border: "rgba(30, 58, 138, 0.14)",
+  },
+  FAIR: {
+    label: "Fair",
+    bg: colors.semantic.yellow.tint,
+    text: colors.semantic.yellow.darkText,
+    border: "rgba(133, 77, 14, 0.14)",
+  },
 };
 
 interface ListingCardProps {
@@ -23,7 +39,13 @@ interface ListingCardProps {
   cardWidth?: number;
   onPress: () => void;
   isAdmin?: boolean;
-  onDelete?: (id: string, title: string, price?: number | null, image?: string) => void;
+  onDelete?: (
+    id: string,
+    title: string,
+    price?: number | null,
+    image?: string,
+    type?: ListingType,
+  ) => void;
 }
 
 export const ListingCard = React.memo(function ListingCard({
@@ -33,8 +55,25 @@ export const ListingCard = React.memo(function ListingCard({
   isAdmin = false,
   onDelete,
 }: ListingCardProps) {
+  const [failedImage, setFailedImage] = useState(false);
+  const [failedAvatar, setFailedAvatar] = useState(false);
+
+  const coverUri = post.images?.[0];
+  const avatarUri = post.author?.image;
+
+  useEffect(() => {
+    setFailedImage(false);
+  }, [coverUri]);
+
+  useEffect(() => {
+    setFailedAvatar(false);
+  }, [avatarUri]);
+
   const isSelling = post.type === "SELLING";
   const isSold = post.status === "SOLD";
+  const isClosed = post.status === "CLOSED";
+  const isInactive = isSold || isClosed;
+  const statusOverlayLabel = isClosed ? "CLOSED" : isSold ? "SOLD" : null;
 
   const conditionInfo = post.condition ? CONDITION_STYLES[post.condition] : null;
 
@@ -49,7 +88,7 @@ export const ListingCard = React.memo(function ListingCard({
       style={[
         styles.card,
         cardWidth ? { width: cardWidth } : null,
-        isSold && styles.cardSold,
+        isInactive && styles.cardSold,
       ]}
       onPress={onPress}
       activeOpacity={0.88}
@@ -61,8 +100,14 @@ export const ListingCard = React.memo(function ListingCard({
     >
       {/* Visual Anchor: 16:10 Ratio Photo Container */}
       <View style={styles.imageContainer}>
-        {post.images?.[0] ? (
-          <Image source={{ uri: post.images[0] }} style={styles.image} />
+        {coverUri && !failedImage ? (
+          <Image
+            source={{ uri: coverUri }}
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            onError={() => setFailedImage(true)}
+          />
         ) : (
           <View style={styles.imagePlaceholder}>
             <View style={styles.placeholderIconCircle}>
@@ -73,7 +118,7 @@ export const ListingCard = React.memo(function ListingCard({
               />
             </View>
             <Text style={styles.placeholderText}>
-              {isSelling ? "No Photo" : "Wanted Item"}
+              {coverUri ? "Photo Unavailable" : isSelling ? "No Photo" : "Wanted Item"}
             </Text>
           </View>
         )}
@@ -82,7 +127,7 @@ export const ListingCard = React.memo(function ListingCard({
         <View
           style={[
             styles.typeOverlayBadge,
-            isSold
+            isInactive
               ? styles.typeBadgeSold
               : isSelling
               ? styles.typeBadgeSelling
@@ -92,7 +137,7 @@ export const ListingCard = React.memo(function ListingCard({
           <View
             style={[
               styles.typeBadgeDot,
-              isSold
+              isInactive
                 ? styles.typeDotSold
                 : isSelling
                 ? styles.typeDotSelling
@@ -102,21 +147,21 @@ export const ListingCard = React.memo(function ListingCard({
           <Text
             style={[
               styles.typeBadgeText,
-              isSold
+              isInactive
                 ? styles.typeTextSold
                 : isSelling
                 ? styles.typeTextSelling
                 : styles.typeTextWanted,
             ]}
           >
-            {isSold ? "SOLD" : isSelling ? "FOR SALE" : "WANTED"}
+            {statusOverlayLabel ?? (isSelling ? "FOR SALE" : "WANTED")}
           </Text>
         </View>
 
         {/* Bottom-Right Photo Counter (Multiple Photos) */}
         {post.images && post.images.length > 1 && (
           <View style={styles.photoCountBadge}>
-            <Feather name="camera" size={10} color="#ffffff" />
+            <Feather name="camera" size={10} color={CAMPUS_HUB_COLORS.white} />
             <Text style={styles.photoCountText}>{post.images.length}</Text>
           </View>
         )}
@@ -127,23 +172,29 @@ export const ListingCard = React.memo(function ListingCard({
             style={styles.adminDeleteBtn}
             onPress={(e) => {
               e.stopPropagation?.();
-              onDelete?.(post.id, post.title, post.price, post.images?.[0]);
+              onDelete?.(
+                post.id,
+                post.title,
+                post.price,
+                post.images?.[0],
+                post.type,
+              );
             }}
             activeOpacity={0.8}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={`Delete listing: ${post.title}`}
           >
-            <Feather name="trash-2" size={13} color="#ffffff" />
+            <Feather name="trash-2" size={13} color={CAMPUS_HUB_COLORS.white} />
           </TouchableOpacity>
         )}
 
-        {/* Sold Overlay Scrim */}
-        {isSold && (
+        {/* Sold / Closed Overlay Scrim */}
+        {statusOverlayLabel && (
           <View style={styles.soldOverlay}>
             <View style={styles.soldBadge}>
-              <Text style={styles.soldBadgeText}>SOLD</Text>
+              <Text style={styles.soldBadgeText}>{statusOverlayLabel}</Text>
             </View>
           </View>
         )}
@@ -201,10 +252,13 @@ export const ListingCard = React.memo(function ListingCard({
         {/* Card Footer: Seller Peer Identity + Relative Timestamp & Inquiries */}
         <View style={styles.footerRow}>
           <View style={styles.authorPeerCol}>
-            {post.author?.image ? (
+            {avatarUri && !failedAvatar ? (
               <Image
-                source={{ uri: post.author.image }}
+                source={{ uri: avatarUri }}
                 style={styles.authorAvatar}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                onError={() => setFailedAvatar(true)}
               />
             ) : (
               <View style={styles.authorAvatarFallback}>
@@ -257,17 +311,16 @@ const styles = StyleSheet.create({
     position: "relative",
     width: "100%",
     height: 136,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   image: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
   },
   imagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
@@ -276,7 +329,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#ffffff",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -324,7 +377,7 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentText,
   },
   typeDotSold: {
-    backgroundColor: "#94a3b8",
+    backgroundColor: colors.slate400,
   },
   typeBadgeText: {
     fontFamily,
@@ -339,7 +392,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.lostFoundAccentText,
   },
   typeTextSold: {
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   photoCountBadge: {
     position: "absolute",
@@ -360,11 +413,11 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(220, 38, 38, 0.9)",
+    backgroundColor: colors.semantic.red.accent,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3,
@@ -374,7 +427,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 9.5,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   soldOverlay: {
     position: "absolute",
@@ -483,17 +536,17 @@ const styles = StyleSheet.create({
     height: 17,
     borderRadius: 8.5,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   authorAvatarFallback: {
     width: 17,
     height: 17,
     borderRadius: 8.5,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   authorAvatarInitial: {
     fontFamily,

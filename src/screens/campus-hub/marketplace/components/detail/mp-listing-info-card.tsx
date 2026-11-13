@@ -1,8 +1,10 @@
-import React, { useCallback } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-toast-message";
+import { colors } from "@/theme/colors";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
@@ -40,10 +42,13 @@ interface MPListingInfoCardProps {
   authorDept?: string;
   authorSubtitle?: string;
   authorInitial: string;
+  isUpdatingStatus?: boolean;
   onViewAuthor: (author: AuthorProfileModalData) => void;
   onContact: () => void;
   onEdit: () => void;
   onMarkSold: () => void;
+  onCloseListing?: () => void;
+  onReopenListing?: () => void;
   onDelete: () => void;
 }
 
@@ -58,14 +63,25 @@ export function MPListingInfoCard({
   authorDept,
   authorSubtitle,
   authorInitial,
+  isUpdatingStatus = false,
   onViewAuthor,
   onContact,
   onEdit,
   onMarkSold,
+  onCloseListing,
+  onReopenListing,
   onDelete,
 }: MPListingInfoCardProps) {
+  const [failedAvatar, setFailedAvatar] = useState(false);
+
+  useEffect(() => {
+    setFailedAvatar(false);
+  }, [post.author?.image]);
+
   const isSelling = post.type === "SELLING";
   const isSold = post.status === "SOLD";
+  const isClosed = post.status === "CLOSED";
+  const isInactive = isSold || isClosed;
   const sellerSubtitle =
     authorSubtitle || formatCampusUserSubtitle(post.author, "") || authorDept;
 
@@ -94,7 +110,7 @@ export function MPListingInfoCard({
         <View
           style={[
             styles.typeBadge,
-            isSold
+            isInactive
               ? styles.typeBadgeSold
               : isSelling
                 ? styles.typeBadgeSelling
@@ -104,7 +120,7 @@ export function MPListingInfoCard({
           <View
             style={[
               styles.statusDot,
-              isSold
+              isInactive
                 ? styles.statusDotSold
                 : isSelling
                   ? styles.statusDotSelling
@@ -114,14 +130,22 @@ export function MPListingInfoCard({
           <Text
             style={[
               styles.typeBadgeText,
-              isSold
+              isInactive
                 ? styles.typeBadgeTextSold
                 : isSelling
                   ? styles.typeBadgeTextSelling
                   : styles.typeBadgeTextWanted,
             ]}
           >
-            {isSold ? "SOLD" : isSelling ? "SELLING" : "WANTED"}
+            {isClosed
+              ? "CLOSED"
+              : isSold
+                ? isSelling
+                  ? "SOLD"
+                  : "FULFILLED"
+                : isSelling
+                  ? "SELLING"
+                  : "WANTED"}
           </Text>
         </View>
 
@@ -195,10 +219,13 @@ export function MPListingInfoCard({
         accessibilityRole="button"
         accessibilityLabel={`View ${post.author?.name}'s profile`}
       >
-        {post.author?.image ? (
+        {post.author?.image && !failedAvatar ? (
           <Image
             source={{ uri: post.author.image }}
             style={styles.sellerAvatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            onError={() => setFailedAvatar(true)}
           />
         ) : (
           <View style={styles.sellerAvatarFallback}>
@@ -243,7 +270,7 @@ export function MPListingInfoCard({
             accessibilityRole="button"
             accessibilityLabel={`${isSelling ? "Call seller" : "Call contact"} at ${post.contactPhone}`}
           >
-            <Feather name="phone-call" size={16} color="#ffffff" />
+            <Feather name="phone-call" size={16} color={CAMPUS_HUB_COLORS.white} />
             <Text style={styles.contactBtnText} numberOfLines={1}>
               {isSelling ? "Call Seller" : "Call Contact"} ({post.contactPhone})
             </Text>
@@ -297,55 +324,125 @@ export function MPListingInfoCard({
       )}
 
       {/* Owner management actions */}
-      {isAuthor && !isSold && (
-        <View style={styles.ownerActions}>
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={onEdit}
-            activeOpacity={0.8}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Edit listing"
-          >
-            <Feather
-              name="edit-3"
-              size={14}
-              color={CAMPUS_HUB_COLORS.deepNavy}
-            />
-            <Text style={styles.editBtnText}>Edit</Text>
-          </TouchableOpacity>
+      {isAuthor && (
+        <View style={styles.ownerActionsStack}>
+          {!isInactive ? (
+            <>
+              <View style={styles.ownerActions}>
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={onEdit}
+                  disabled={isUpdatingStatus}
+                  activeOpacity={0.8}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit listing"
+                >
+                  <Feather
+                    name="edit-3"
+                    size={14}
+                    color={CAMPUS_HUB_COLORS.deepNavy}
+                  />
+                  <Text style={styles.editBtnText}>Edit</Text>
+                </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.markSoldBtn}
-            onPress={onMarkSold}
-            activeOpacity={0.8}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Mark listing as sold"
-          >
-            <Feather
-              name="check-circle"
-              size={14}
-              color={CAMPUS_HUB_COLORS.marketplaceAccentText}
-            />
-            <Text style={styles.markSoldBtnText}>Mark Sold</Text>
-          </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.markSoldBtn}
+                  onPress={onMarkSold}
+                  disabled={isUpdatingStatus}
+                  activeOpacity={0.8}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={isSelling ? "Mark listing as sold" : "Mark request as fulfilled"}
+                >
+                  <Feather
+                    name="check-circle"
+                    size={14}
+                    color={CAMPUS_HUB_COLORS.marketplaceAccentText}
+                  />
+                  <Text style={styles.markSoldBtnText}>
+                    {isSelling ? "Mark Sold" : "Mark Fulfilled"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={onDelete}
-            activeOpacity={0.8}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Delete listing"
-          >
-            <Feather
-              name="trash-2"
-              size={14}
-              color={CAMPUS_HUB_COLORS.dangerText}
-            />
-            <Text style={styles.deleteBtnText}>Delete</Text>
-          </TouchableOpacity>
+              <View style={styles.ownerActions}>
+                {onCloseListing && (
+                  <TouchableOpacity
+                    style={styles.closeListingBtn}
+                    onPress={onCloseListing}
+                    disabled={isUpdatingStatus}
+                    activeOpacity={0.8}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel="Close listing"
+                  >
+                    <Feather
+                      name="slash"
+                      size={14}
+                      color={CAMPUS_HUB_COLORS.mutedInk}
+                    />
+                    <Text style={styles.closeListingBtnText}>Close Listing</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={onDelete}
+                  disabled={isUpdatingStatus}
+                  activeOpacity={0.8}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete listing"
+                >
+                  <Feather
+                    name="trash-2"
+                    size={14}
+                    color={CAMPUS_HUB_COLORS.dangerText}
+                  />
+                  <Text style={styles.deleteBtnText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={styles.ownerActions}>
+              {onReopenListing && (
+                <TouchableOpacity
+                  style={styles.markSoldBtn}
+                  onPress={onReopenListing}
+                  disabled={isUpdatingStatus}
+                  activeOpacity={0.8}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Reopen listing"
+                >
+                  <Feather
+                    name="refresh-cw"
+                    size={14}
+                    color={CAMPUS_HUB_COLORS.marketplaceAccentText}
+                  />
+                  <Text style={styles.markSoldBtnText}>Reopen Listing</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={onDelete}
+                disabled={isUpdatingStatus}
+                activeOpacity={0.8}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Delete listing"
+              >
+                <Feather
+                  name="trash-2"
+                  size={14}
+                  color={CAMPUS_HUB_COLORS.dangerText}
+                />
+                <Text style={styles.deleteBtnText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
@@ -407,7 +504,7 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
   },
   typeBadgeWanted: { backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight },
-  typeBadgeSold: { backgroundColor: "#f1f5f9" },
+  typeBadgeSold: { backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusDotSelling: {
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentText,
@@ -424,7 +521,7 @@ const styles = StyleSheet.create({
   typeBadgeTextWanted: { color: CAMPUS_HUB_COLORS.lostFoundAccentText },
   typeBadgeTextSold: { color: CAMPUS_HUB_COLORS.subtleText },
   categoryBadge: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
@@ -438,7 +535,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
   },
   conditionBadge: {
-    backgroundColor: "#f0fdf4",
+    backgroundColor: CAMPUS_HUB_COLORS.resolvedGreenBg,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
@@ -449,7 +546,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 10.5,
     fontWeight: "700",
-    color: "#15803d",
+    color: CAMPUS_HUB_COLORS.marketplaceAccentText,
   },
   title: {
     fontFamily,
@@ -474,7 +571,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   metaCard: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 12,
@@ -547,17 +644,17 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     borderWidth: 1.5,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   sellerAvatarFallback: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   sellerAvatarFallbackText: {
     fontFamily,
@@ -616,14 +713,14 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13.5,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   copyPhoneBtn: {
     width: 48,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.06)",
@@ -634,10 +731,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 10,
     paddingHorizontal: 14,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     marginTop: 6,
     marginBottom: 2,
   },
@@ -673,10 +770,10 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   authorCopyBtnText: {
     fontFamily,
@@ -684,10 +781,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
+  ownerActionsStack: {
+    gap: 8,
+    marginTop: 4,
+  },
   ownerActions: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 4,
   },
   editBtn: {
     flex: 1,
@@ -696,7 +796,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 5,
     paddingVertical: 11,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.05)",
@@ -706,6 +806,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+  },
+  closeListingBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 11,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+  },
+  closeListingBtnText: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   markSoldBtn: {
     flex: 1.15,

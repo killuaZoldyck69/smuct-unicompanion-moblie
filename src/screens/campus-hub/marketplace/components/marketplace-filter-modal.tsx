@@ -14,11 +14,12 @@ import type {
   ListingType,
   MarketplaceCategory,
 } from "@/services/marketplace-service";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 import { MARKETPLACE_CATEGORIES } from "../marketplace-constants";
 
 export type MarketplaceTypeFilter = "ALL" | ListingType;
-export type MarketplaceStatusFilter = "ALL" | "ACTIVE" | "SOLD";
+export type MarketplaceStatusFilter = "ALL" | "ACTIVE" | "SOLD" | "CLOSED";
 export type MarketplaceCategoryFilter = "ALL" | MarketplaceCategory;
 
 export interface MarketplaceFilterModalProps {
@@ -45,6 +46,7 @@ const STATUS_OPTIONS: { key: MarketplaceStatusFilter; label: string }[] = [
   { key: "ALL", label: "All Items" },
   { key: "ACTIVE", label: "Available" },
   { key: "SOLD", label: "Sold" },
+  { key: "CLOSED", label: "Closed" },
 ];
 
 const CATEGORY_OPTIONS: { key: MarketplaceCategoryFilter; label: string }[] = [
@@ -109,6 +111,7 @@ export function MarketplaceFilterModal({
       transparent
       animationType="slide"
       statusBarTranslucent={true}
+      navigationBarTranslucent={true}
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
@@ -184,7 +187,11 @@ export function MarketplaceFilterModal({
                         <Feather
                           name={item.icon}
                           size={13}
-                          color={isSelected ? "#ffffff" : CAMPUS_HUB_COLORS.subtleText}
+                          color={
+                            isSelected
+                              ? CAMPUS_HUB_COLORS.white
+                              : CAMPUS_HUB_COLORS.subtleText
+                          }
                           style={{ marginRight: 6 }}
                         />
                       )}
@@ -281,7 +288,7 @@ export function MarketplaceFilterModal({
               <Feather
                 name="check"
                 size={16}
-                color="#ffffff"
+                color={CAMPUS_HUB_COLORS.white}
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.applyBtnText}>
@@ -312,7 +319,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#cbd5e1",
+    backgroundColor: colors.slate300,
     alignSelf: "center",
     marginBottom: 8,
   },
@@ -356,7 +363,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -389,7 +396,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 12,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.05)",
   },
@@ -404,7 +411,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
   },
   choicePillTextSelected: {
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
     fontWeight: "700",
   },
   footer: {
@@ -427,6 +434,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

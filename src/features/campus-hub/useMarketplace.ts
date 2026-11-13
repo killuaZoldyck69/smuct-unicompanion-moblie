@@ -16,8 +16,10 @@ import {
   addMarketplaceComment,
   updateMarketplaceComment,
   deleteMarketplaceComment,
+  reportMarketplaceContent,
   type CreateMarketplaceInput,
   type CreateCommentInput,
+  type CreateMarketplaceReportInput,
   type FeedQueryParams,
   type PaginatedFeedResponse,
   type ListingStatus,
@@ -105,8 +107,8 @@ export const useDeleteMarketplacePost = () => {
       qc.cancelQueries({ queryKey: marketplaceKeys.post(id) });
       qc.removeQueries({ queryKey: marketplaceKeys.post(id) });
 
-      // 2. Invalidate only feed queries so the listing list updates cleanly
-      qc.invalidateQueries({ queryKey: ["marketplace", "feed"] });
+      // 2. Invalidate all feed variants cleanly
+      qc.invalidateQueries({ queryKey: marketplaceKeys.all });
     },
   });
 };
@@ -173,6 +175,21 @@ export const useDeleteMarketplaceComment = (postId: string) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: marketplaceKeys.post(postId) });
       qc.invalidateQueries({ queryKey: marketplaceKeys.all });
+    },
+  });
+};
+
+export const useReportMarketplaceContent = (postId?: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateMarketplaceReportInput) =>
+      reportMarketplaceContent(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: marketplaceKeys.all });
+      if (postId) {
+        qc.invalidateQueries({ queryKey: marketplaceKeys.post(postId) });
+      }
+      qc.invalidateQueries({ queryKey: ["adminForumReports"] });
     },
   });
 };

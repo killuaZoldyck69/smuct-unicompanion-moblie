@@ -1,4 +1,5 @@
 import api from "./api";
+import type { CreateUgcReportResult, UgcReportReason } from "./ugc-service";
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -24,23 +25,34 @@ export type MarketplaceCategory =
 export interface MarketplaceAuthor {
   id: string;
   name: string;
-  email?: string | null;
   image?: string | null;
   role?: string | null;
-  phoneNumber?: string | null;
-  bloodGroup?: string | null;
   studentProfile?: {
-    studentId?: string | null;
     department?: string | null;
+    program?: string | null;
     batch?: string | null;
     currentSemester?: number | string | null;
     section?: string | null;
+    isCR?: boolean;
+    skills?: string[];
+    linkedInUrl?: string | null;
+    personalWebsiteUrl?: string | null;
   } | null;
   teacherProfile?: {
-    department?: string | null;
     designation?: string | null;
+    department?: string | null;
+    faculty?: string | null;
+    administrativeRole?: string | null;
     officeRoom?: string | null;
-    consultationSlots?: Array<{ day: string; startTime: string; endTime: string }> | any | null;
+    advisoryBatch?: string | null;
+    dayOff?: string | null;
+    consultationSlots?:
+      | Array<{ day: string; startTime: string; endTime: string }>
+      | any
+      | null;
+    expertiseFields?: string[];
+    linkedInUrl?: string | null;
+    personalWebsiteUrl?: string | null;
   } | null;
 }
 
@@ -48,7 +60,9 @@ export interface MarketplaceComment {
   id: string;
   content: string;
   parentId?: string | null;
+  isHiddenByModeration?: boolean;
   createdAt: string;
+  updatedAt?: string;
   author: MarketplaceAuthor;
   replies?: MarketplaceComment[];
 }
@@ -66,6 +80,7 @@ export interface MarketplacePost {
   contactPhone: string | null;
   authorId: string;
   author: MarketplaceAuthor;
+  isHiddenByModeration?: boolean;
   createdAt: string;
   updatedAt?: string;
   _count?: { comments: number };
@@ -79,6 +94,10 @@ export interface PaginatedFeedResponse {
   items: MarketplacePost[];
   nextCursor: string | null;
   total: number;
+  counts?: {
+    selling: number;
+    buying: number;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -89,8 +108,16 @@ export interface FeedQueryParams {
   status?: ListingStatus;
   category?: MarketplaceCategory;
   search?: string;
+  myPosts?: boolean;
   limit?: number;
   cursor?: string;
+}
+
+export interface CreateMarketplaceReportInput {
+  targetType: "MARKETPLACE_POST" | "MARKETPLACE_COMMENT";
+  targetId: string;
+  reason: UgcReportReason;
+  details?: string;
 }
 
 export interface CreateMarketplaceInput {
@@ -116,7 +143,14 @@ export const getMarketplaceFeed = async (
   params?: FeedQueryParams
 ): Promise<PaginatedFeedResponse> => {
   const res = await api.get("/marketplace", { params });
-  return res.data?.data ?? { items: [], nextCursor: null, total: 0 };
+  return (
+    res.data?.data ?? {
+      items: [],
+      nextCursor: null,
+      total: 0,
+      counts: { selling: 0, buying: 0 },
+    }
+  );
 };
 
 export const getMarketplacePostById = async (
@@ -184,4 +218,11 @@ export const deleteMarketplaceComment = async (
   commentId: string
 ): Promise<void> => {
   await api.delete(`/marketplace/${postId}/comments/${commentId}`);
+};
+
+export const reportMarketplaceContent = async (
+  input: CreateMarketplaceReportInput
+): Promise<CreateUgcReportResult> => {
+  const res = await api.post("/marketplace/reports", input);
+  return res.data?.data;
 };

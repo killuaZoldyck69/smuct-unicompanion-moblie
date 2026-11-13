@@ -9,7 +9,11 @@ export interface UgcTermsStatus {
 }
 
 export type UgcReportTargetType =
-  "FORUM_POST" | "FORUM_RESPONSE" | "LOST_FOUND_POST";
+  | "FORUM_POST"
+  | "FORUM_RESPONSE"
+  | "LOST_FOUND_POST"
+  | "MARKETPLACE_POST"
+  | "MARKETPLACE_COMMENT";
 
 export type UgcReportReason =
   | "SPAM"
@@ -35,7 +39,12 @@ export type AdminReportStatusFilter =
   "PENDING" | "DISMISSED" | "ACTIONED" | "ALL";
 
 export type AdminReportTargetFilter =
-  "ALL" | "FORUM_POST" | "FORUM_RESPONSE" | "LOST_FOUND_POST";
+  | "ALL"
+  | "FORUM_POST"
+  | "FORUM_RESPONSE"
+  | "LOST_FOUND_POST"
+  | "MARKETPLACE_POST"
+  | "MARKETPLACE_COMMENT";
 
 export type AdminModerationAction =
   "DISMISS" | "HIDE_CONTENT" | "DELETE_CONTENT" | "RESTRICT_USER";

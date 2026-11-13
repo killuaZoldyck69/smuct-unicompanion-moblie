@@ -142,7 +142,11 @@ export const UgcReportModal = memo(function UgcReportModal({
                     ? "Discussion"
                     : targetType === "LOST_FOUND_POST"
                       ? "Lost & Found Post"
-                      : "Response"}
+                      : targetType === "MARKETPLACE_POST"
+                        ? "Marketplace Listing"
+                        : targetType === "MARKETPLACE_COMMENT"
+                          ? "Comment"
+                          : "Response"}
                 </Text>
                 {targetTitle ? (
                   <Text style={styles.targetPreview} numberOfLines={1}>

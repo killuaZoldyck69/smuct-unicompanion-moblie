@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 
 interface MarketplaceSoldModalProps {
@@ -48,6 +49,7 @@ export const MarketplaceSoldModal = React.memo(function MarketplaceSoldModal({
       animationType="fade"
       onRequestClose={isSubmitting ? undefined : onClose}
       statusBarTranslucent
+      navigationBarTranslucent
     >
       <TouchableWithoutFeedback onPress={isSubmitting ? undefined : onClose}>
         <View style={styles.backdrop}>
@@ -117,13 +119,13 @@ export const MarketplaceSoldModal = React.memo(function MarketplaceSoldModal({
                   accessibilityLabel={confirmBtnText}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
+                    <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.white} />
                   ) : (
                     <View style={styles.btnContentRow}>
                       <Feather
                         name="check"
                         size={16}
-                        color="#ffffff"
+                        color={CAMPUS_HUB_COLORS.white}
                         style={{ marginRight: 6 }}
                       />
                       <Text style={styles.confirmBtnText}>{confirmBtnText}</Text>
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: "#ecfdf5",
+    backgroundColor: CAMPUS_HUB_COLORS.resolvedGreenBg,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 14,
@@ -234,13 +236,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cancelBtn: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   cancelBtnText: {
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
-    color: "#475569",
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   confirmBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccent,
@@ -258,6 +260,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14,
     fontWeight: "700",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });

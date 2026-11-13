@@ -1,16 +1,17 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   TouchableWithoutFeedback,
 } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 import type { ListingType } from "@/services/marketplace-service";
 
@@ -37,6 +38,11 @@ export const MarketplaceDeleteModal = React.memo(function MarketplaceDeleteModal
 }: MarketplaceDeleteModalProps) {
   const insets = useSafeAreaInsets();
   const isSelling = postType === "SELLING";
+  const [failedThumb, setFailedThumb] = useState(false);
+
+  useEffect(() => {
+    setFailedThumb(false);
+  }, [postImage]);
 
   if (!visible) return null;
 
@@ -47,6 +53,7 @@ export const MarketplaceDeleteModal = React.memo(function MarketplaceDeleteModal
       animationType="fade"
       onRequestClose={isDeleting ? undefined : onClose}
       statusBarTranslucent
+      navigationBarTranslucent
     >
       <TouchableWithoutFeedback onPress={isDeleting ? undefined : onClose}>
         <View style={styles.backdrop}>
@@ -79,11 +86,13 @@ export const MarketplaceDeleteModal = React.memo(function MarketplaceDeleteModal
               {!!postTitle && (
                 <View style={styles.previewCard}>
                   <View style={styles.previewThumbContainer}>
-                    {postImage ? (
+                    {postImage && !failedThumb ? (
                       <Image
                         source={{ uri: postImage }}
                         style={styles.previewThumb}
-                        resizeMode="cover"
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        onError={() => setFailedThumb(true)}
                       />
                     ) : (
                       <View style={styles.previewPlaceholder}>
@@ -163,10 +172,10 @@ export const MarketplaceDeleteModal = React.memo(function MarketplaceDeleteModal
                   accessibilityLabel="Confirm delete listing"
                 >
                   {isDeleting ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
+                    <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.white} />
                   ) : (
                     <View style={styles.btnContentRow}>
-                      <Feather name="trash-2" size={15} color="#ffffff" />
+                      <Feather name="trash-2" size={15} color={CAMPUS_HUB_COLORS.white} />
                       <Text style={styles.deleteBtnText}>Delete</Text>
                     </View>
                   )}
@@ -204,18 +213,18 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#fff1f2",
+    backgroundColor: colors.semantic.rose.tint,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#fecdd3",
+    borderColor: colors.semantic.rose.border,
   },
   haloInner: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#ffe4e6",
+    backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -239,9 +248,9 @@ const styles = StyleSheet.create({
   previewCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     borderRadius: 14,
     padding: 10,
     gap: 12,
@@ -261,7 +270,7 @@ const styles = StyleSheet.create({
   previewPlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#e2e8f0",
+    backgroundColor: CAMPUS_HUB_COLORS.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -291,8 +300,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(16, 185, 129, 0.25)",
   },
   typeBadgeWanted: {
-    backgroundColor: "#eff6ff",
-    borderColor: "#bfdbfe",
+    backgroundColor: CAMPUS_HUB_COLORS.forumAccentLight,
+    borderColor: colors.semantic.blue.border,
   },
   typeBadgeText: {
     fontFamily,
@@ -304,7 +313,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
   },
   typeBadgeTextWanted: {
-    color: "#2563eb",
+    color: CAMPUS_HUB_COLORS.forumAccent,
   },
   priceText: {
     fontFamily,
@@ -331,7 +340,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cancelBtn: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   cancelBtnText: {
     fontFamily,
@@ -355,6 +364,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
 });
