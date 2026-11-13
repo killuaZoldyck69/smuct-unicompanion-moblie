@@ -1,9 +1,6 @@
 import api from "./api";
 import type { CreateUgcReportResult, UgcReportReason } from "./ugc-service";
 
-// ---------------------------------------------------------------------------
-// Domain types
-// ---------------------------------------------------------------------------
 export type ListingType = "SELLING" | "BUYING";
 export type ListingStatus = "ACTIVE" | "SOLD" | "CLOSED";
 export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
@@ -88,9 +85,6 @@ export interface MarketplacePost {
   comments?: MarketplaceComment[];
 }
 
-// ---------------------------------------------------------------------------
-// Paginated response envelope
-// ---------------------------------------------------------------------------
 export interface PaginatedFeedResponse {
   items: MarketplacePost[];
   nextCursor: string | null;
@@ -101,9 +95,6 @@ export interface PaginatedFeedResponse {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Input types
-// ---------------------------------------------------------------------------
 export interface FeedQueryParams {
   type?: ListingType;
   status?: ListingStatus;
@@ -145,10 +136,17 @@ function unwrapApiData<T>(data: T | undefined, action: string): T {
   return data;
 }
 
+const MARKETPLACE_REQUEST_TIMEOUT_MS = 45000;
+
 export const getMarketplaceFeed = async (
-  params?: FeedQueryParams
+  params?: FeedQueryParams,
+  signal?: AbortSignal,
 ): Promise<PaginatedFeedResponse> => {
-  const res = await api.get("/marketplace", { params });
+  const res = await api.get("/marketplace", {
+    params,
+    signal,
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
   return (
     res.data?.data ?? {
       items: [],
@@ -160,75 +158,99 @@ export const getMarketplaceFeed = async (
 };
 
 export const getMarketplacePostById = async (
-  id: string
+  id: string,
+  signal?: AbortSignal,
 ): Promise<MarketplacePost> => {
-  const res = await api.get(`/marketplace/${id}`);
+  const res = await api.get(`/marketplace/${id}`, {
+    signal,
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
   return unwrapApiData(res.data?.data, "loading listing");
 };
 
 export const createMarketplacePost = async (
-  data: CreateMarketplaceInput
+  data: CreateMarketplaceInput,
 ): Promise<MarketplacePost> => {
-  const res = await api.post("/marketplace", data, { timeout: 45000 });
+  const res = await api.post("/marketplace", data, {
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
   return unwrapApiData(res.data?.data, "creating listing");
 };
 
 export const updateMarketplacePost = async (
   id: string,
-  data: Partial<CreateMarketplaceInput>
+  data: Partial<CreateMarketplaceInput>,
 ): Promise<MarketplacePost> => {
-  const res = await api.patch(`/marketplace/${id}`, data, { timeout: 45000 });
+  const res = await api.patch(`/marketplace/${id}`, data, {
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
   return unwrapApiData(res.data?.data, "updating listing");
 };
 
 export const deleteMarketplacePost = async (id: string): Promise<void> => {
-  await api.delete(`/marketplace/${id}`);
+  await api.delete(`/marketplace/${id}`, {
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
 };
 
 export const markMarketplaceSold = async (
-  id: string
+  id: string,
 ): Promise<MarketplacePost> => {
-  const res = await api.patch(`/marketplace/${id}/sold`);
+  const res = await api.patch(`/marketplace/${id}/sold`, undefined, {
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
   return unwrapApiData(res.data?.data, "marking listing as sold");
 };
 
 export const updateMarketplaceStatus = async (
   id: string,
-  status: ListingStatus
+  status: ListingStatus,
 ): Promise<MarketplacePost> => {
-  const res = await api.patch(`/marketplace/${id}/status`, { status });
+  const res = await api.patch(
+    `/marketplace/${id}/status`,
+    { status },
+    { timeout: MARKETPLACE_REQUEST_TIMEOUT_MS },
+  );
   return unwrapApiData(res.data?.data, "updating listing status");
 };
 
 export const addMarketplaceComment = async (
   postId: string,
-  data: CreateCommentInput
+  data: CreateCommentInput,
 ): Promise<MarketplaceComment> => {
-  const res = await api.post(`/marketplace/${postId}/comments`, data);
+  const res = await api.post(`/marketplace/${postId}/comments`, data, {
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
   return unwrapApiData(res.data?.data, "posting comment");
 };
 
 export const updateMarketplaceComment = async (
   postId: string,
   commentId: string,
-  content: string
+  content: string,
 ): Promise<MarketplaceComment> => {
-  const res = await api.patch(`/marketplace/${postId}/comments/${commentId}`, {
-    content,
-  });
+  const res = await api.patch(
+    `/marketplace/${postId}/comments/${commentId}`,
+    { content },
+    { timeout: MARKETPLACE_REQUEST_TIMEOUT_MS },
+  );
   return unwrapApiData(res.data?.data, "updating comment");
 };
 
 export const deleteMarketplaceComment = async (
   postId: string,
-  commentId: string
+  commentId: string,
 ): Promise<void> => {
-  await api.delete(`/marketplace/${postId}/comments/${commentId}`);
+  await api.delete(`/marketplace/${postId}/comments/${commentId}`, {
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
 };
 
 export const reportMarketplaceContent = async (
-  input: CreateMarketplaceReportInput
+  input: CreateMarketplaceReportInput,
 ): Promise<CreateUgcReportResult> => {
-  const res = await api.post("/marketplace/reports", input);
+  const res = await api.post("/marketplace/reports", input, {
+    timeout: MARKETPLACE_REQUEST_TIMEOUT_MS,
+  });
   return unwrapApiData(res.data?.data, "submitting report");
 };

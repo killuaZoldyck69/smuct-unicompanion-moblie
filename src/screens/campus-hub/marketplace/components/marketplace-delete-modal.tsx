@@ -56,17 +56,11 @@ export const MarketplaceDeleteModal = React.memo(
         navigationBarTranslucent
       >
         <Pressable
-          style={styles.backdrop}
+          style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, 16) }]}
           onPress={isDeleting ? undefined : onClose}
           accessibilityViewIsModal={true}
         >
-          <Pressable
-            style={[
-              styles.modalCard,
-              { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 24 },
-            ]}
-            onPress={() => {}}
-          >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
             {/* Warning Halo Circle */}
             <View style={styles.haloOuter}>
               <View style={styles.haloInner}>
@@ -198,6 +192,7 @@ export const MarketplaceDeleteModal = React.memo(
                     />
                     <Text
                       style={styles.deleteBtnText}
+                      numberOfLines={2}
                       maxFontSizeMultiplier={1.2}
                     >
                       Delete
@@ -228,6 +223,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingTop: 24,
+    paddingBottom: 24,
     alignItems: "center",
     ...CAMPUS_HUB_COLORS.heroShadow,
     borderWidth: 1,
@@ -343,9 +339,11 @@ const styles = StyleSheet.create({
   priceText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
     fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   priceNegotiableText: {
     fontFamily,
@@ -360,7 +358,9 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     alignItems: "center",
     justifyContent: "center",
@@ -386,13 +386,17 @@ const styles = StyleSheet.create({
   btnContentRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
   },
   deleteBtnText: {
     fontFamily,
     fontSize: 13.5,
+    lineHeight: 17,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.white,
     includeFontPadding: false,
+    flexShrink: 1,
+    textAlign: "center",
   },
 });

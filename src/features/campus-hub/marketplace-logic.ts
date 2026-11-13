@@ -24,7 +24,7 @@ export function extractMarketplacePlainText(
   html?: string | null,
 ): string {
   if (!html) return "";
-  return String(html)
+  return html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
@@ -40,20 +40,6 @@ export function extractMarketplacePlainText(
     .trim();
 }
 
-export function formatBangladeshiPhone(input: string): string {
-  const cleaned = (input ?? "").trim();
-  if (!cleaned || cleaned === "+") return "+880";
-
-  let digits = cleaned.replace(/\D/g, "");
-  if (digits.startsWith("880")) digits = digits.slice(3);
-  if (digits.startsWith("0")) digits = digits.slice(1);
-  return `+880${digits.slice(0, 10)}`;
-}
-
-export function isValidBangladeshiPhone(phone: string): boolean {
-  return Boolean(phone && phone.length === 14 && BD_PHONE_REGEX.test(phone));
-}
-
 export function normalizeBangladeshiPhoneInput(raw: string): string {
   const digits = (raw ?? "").replace(/[^\d+]/g, "");
   if (!digits) return "";
@@ -62,6 +48,15 @@ export function normalizeBangladeshiPhoneInput(raw: string): string {
   if (digits.startsWith("0")) return `+88${digits}`.slice(0, 14);
   if (digits.startsWith("1")) return `+880${digits}`.slice(0, 14);
   return digits.slice(0, 14);
+}
+
+export function formatBangladeshiPhone(input: string): string {
+  const normalized = normalizeBangladeshiPhoneInput(input ?? "");
+  return normalized.startsWith("+880") ? normalized : "+880";
+}
+
+export function isValidBangladeshiPhone(phone: string): boolean {
+  return Boolean(phone && BD_PHONE_REGEX.test(phone));
 }
 
 export interface MarketplaceFormInput {
@@ -148,9 +143,12 @@ export function validateMarketplaceForm(
     };
   }
 
-  const images = Array.isArray(input.images)
-    ? input.images.slice(0, MARKETPLACE_LIMITS.MAX_IMAGES)
-    : [];
+  const images = input.images ?? [];
+  if (images.length > MARKETPLACE_LIMITS.MAX_IMAGES) {
+    return {
+      error: `You can attach at most ${MARKETPLACE_LIMITS.MAX_IMAGES} photos.`,
+    };
+  }
 
   return {
     payload: {
@@ -185,6 +183,26 @@ export function validateMarketplaceComment(rawContent: string): {
 export function clampImageIndex(index: number, imageCount: number): number {
   if (imageCount <= 0) return 0;
   return Math.min(Math.max(0, Math.floor(index)), imageCount - 1);
+}
+
+export function getMarketplaceListingFlags(post: {
+  type: ListingType;
+  status: ListingStatus;
+}): {
+  isSelling: boolean;
+  isSold: boolean;
+  isClosed: boolean;
+  isInactive: boolean;
+} {
+  const isSelling = post.type === "SELLING";
+  const isSold = post.status === "SOLD";
+  const isClosed = post.status === "CLOSED";
+  return {
+    isSelling,
+    isSold,
+    isClosed,
+    isInactive: isSold || isClosed,
+  };
 }
 
 export function getMarketplaceStatusBadgeText(

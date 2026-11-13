@@ -36,16 +36,25 @@ export const marketplaceKeys = {
 const FEED_PAGE_LIMIT = 20;
 
 export const useMarketplaceFeed = (
-  filters?: Omit<FeedQueryParams, "cursor" | "limit">
+  filters?: Omit<FeedQueryParams, "cursor" | "limit">,
 ) =>
-  useInfiniteQuery<PaginatedFeedResponse, Error, InfiniteData<PaginatedFeedResponse>, ReturnType<typeof marketplaceKeys.feed>, string | null>({
+  useInfiniteQuery<
+    PaginatedFeedResponse,
+    Error,
+    InfiniteData<PaginatedFeedResponse>,
+    ReturnType<typeof marketplaceKeys.feed>,
+    string | null
+  >({
     queryKey: marketplaceKeys.feed(filters),
-    queryFn: ({ pageParam }) =>
-      getMarketplaceFeed({
-        ...filters,
-        limit: FEED_PAGE_LIMIT,
-        cursor: pageParam ?? undefined,
-      }),
+    queryFn: ({ pageParam, signal }) =>
+      getMarketplaceFeed(
+        {
+          ...filters,
+          limit: FEED_PAGE_LIMIT,
+          cursor: pageParam ?? undefined,
+        },
+        signal,
+      ),
     initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     staleTime: 2 * 60 * 1000,
@@ -55,7 +64,7 @@ export const useMarketplaceFeed = (
 export const useMarketplacePost = (id: string) =>
   useQuery({
     queryKey: marketplaceKeys.post(id),
-    queryFn: () => getMarketplacePostById(id),
+    queryFn: ({ signal }) => getMarketplacePostById(id, signal),
     enabled: !!id,
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
@@ -74,8 +83,13 @@ export const useCreateMarketplacePost = () => {
 export const useUpdateMarketplacePost = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateMarketplaceInput> }) =>
-      updateMarketplacePost(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<CreateMarketplaceInput>;
+    }) => updateMarketplacePost(id, data),
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: marketplaceKeys.all });
       qc.invalidateQueries({ queryKey: marketplaceKeys.post(id) });
@@ -122,8 +136,7 @@ export const useAddMarketplaceComment = (postId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateCommentInput | string) => {
-      const payload =
-        typeof input === "string" ? { content: input } : input;
+      const payload = typeof input === "string" ? { content: input } : input;
       return addMarketplaceComment(postId, payload);
     },
     onSuccess: () => {
@@ -176,11 +189,8 @@ export const useReportMarketplaceContent = (postId?: string) => {
   });
 };
 
-// ---------------------------------------------------------------------------
-// Derived helper — flatten paginated pages into a flat array of posts
-// ---------------------------------------------------------------------------
 export const flattenFeedPages = (
-  data: InfiniteData<PaginatedFeedResponse> | undefined
+  data: InfiniteData<PaginatedFeedResponse> | undefined,
 ): MarketplacePost[] => {
   if (!data) return [];
   return data.pages.flatMap((page) => page.items);

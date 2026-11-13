@@ -158,9 +158,31 @@ export function MarketplaceCategoryPicker({
                 value={search}
                 onChangeText={setSearch}
                 returnKeyType="search"
-                clearButtonMode="while-editing"
                 accessibilityLabel="Search campus categories"
               />
+              {search.length > 0 && (
+                <Pressable
+                  onPress={() => setSearch("")}
+                  style={({ pressed }) => [
+                    styles.clearSearchBtn,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  android_ripple={{
+                    color: CAMPUS_HUB_COLORS.androidRipple,
+                    borderless: true,
+                  }}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear category search"
+                >
+                  <Feather
+                    name="x-circle"
+                    size={16}
+                    color={CAMPUS_HUB_COLORS.subtleText}
+                  />
+                </Pressable>
+              )}
             </View>
 
             {/* Category List */}
@@ -173,7 +195,22 @@ export function MarketplaceCategoryPicker({
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              {filteredCategories.map((cat) => {
+              {filteredCategories.length === 0 ? (
+                <View style={styles.emptySearchState}>
+                  <Feather
+                    name="search"
+                    size={22}
+                    color={CAMPUS_HUB_COLORS.subtleText}
+                  />
+                  <Text style={styles.emptySearchTitle}>
+                    No matching categories
+                  </Text>
+                  <Text style={styles.emptySearchSubtitle}>
+                    Try another keyword or clear your search.
+                  </Text>
+                </View>
+              ) : (
+                filteredCategories.map((cat) => {
                 const isSelected = cat.key === value;
                 return (
                   <Pressable
@@ -230,7 +267,8 @@ export function MarketplaceCategoryPicker({
                     )}
                   </Pressable>
                 );
-              })}
+              })
+              )}
             </ScrollView>
           </View>
         </SafeAreaView>
@@ -349,6 +387,32 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: "center",
   },
+  clearSearchBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 4,
+  },
+  emptySearchState: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    gap: 6,
+  },
+  emptySearchTitle: {
+    fontSize: 15,
+    fontFamily,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.deepNavy,
+    marginTop: 4,
+  },
+  emptySearchSubtitle: {
+    fontSize: 12.5,
+    fontFamily,
+    color: CAMPUS_HUB_COLORS.subtleText,
+    textAlign: "center",
+  },
   listScroll: {
     flex: 1,
   },
@@ -381,7 +445,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   rowIconCircleSelected: {
-    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccent,
+    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentText,
   },
   rowTextCol: {
     flex: 1,

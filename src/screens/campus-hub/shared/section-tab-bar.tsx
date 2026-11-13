@@ -20,7 +20,7 @@ const TABS: Tab[] = [
   {
     key: "MARKETPLACE",
     label: "Buy & Sell",
-    accent: CAMPUS_HUB_COLORS.marketplaceAccent,
+    accent: CAMPUS_HUB_COLORS.marketplaceAccentText,
   },
   {
     key: "MEMES",

@@ -51,17 +51,11 @@ export const MarketplaceSoldModal = React.memo(function MarketplaceSoldModal({
       navigationBarTranslucent
     >
       <Pressable
-        style={styles.backdrop}
+        style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, 16) }]}
         onPress={isSubmitting ? undefined : onClose}
         accessibilityViewIsModal={true}
       >
-        <Pressable
-          style={[
-            styles.modalCard,
-            { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 24 },
-          ]}
-          onPress={() => {}}
-        >
+        <Pressable style={styles.modalCard} onPress={() => {}}>
           {/* Success / Status Icon Circle */}
           <View style={styles.iconCircle}>
             <Feather
@@ -147,6 +141,7 @@ export const MarketplaceSoldModal = React.memo(function MarketplaceSoldModal({
                   />
                   <Text
                     style={styles.confirmBtnText}
+                    numberOfLines={2}
                     maxFontSizeMultiplier={1.2}
                   >
                     {confirmBtnText}
@@ -176,6 +171,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingTop: 24,
+    paddingBottom: 24,
     alignItems: "center",
     ...CAMPUS_HUB_COLORS.heroShadow,
     borderWidth: 1,
@@ -233,9 +229,11 @@ const styles = StyleSheet.create({
   itemPreviewPrice: {
     fontFamily,
     fontSize: 13.5,
+    lineHeight: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
     fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   itemPreviewNegotiable: {
     fontFamily,
@@ -251,7 +249,9 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     alignItems: "center",
     justifyContent: "center",
@@ -263,12 +263,14 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontFamily,
     fontSize: 13.5,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.neutralText,
     includeFontPadding: false,
+    textAlign: "center",
   },
   confirmBtn: {
-    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccent,
+    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentText,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   confirmBtnDisabled: {
@@ -278,12 +280,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
   },
   confirmBtnText: {
     fontFamily,
     fontSize: 13.5,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.white,
     includeFontPadding: false,
+    flexShrink: 1,
+    textAlign: "center",
   },
 });

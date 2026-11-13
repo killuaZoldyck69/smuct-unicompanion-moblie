@@ -14,6 +14,7 @@ import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
 import { formatConsultationSlots } from "@/utils/consultation-formatter";
 
@@ -253,10 +254,11 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={onClose}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Close author details"
-          >
+          hitSlop={4}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Close author details"
+        >
             <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
           </TouchableOpacity>
 
@@ -377,6 +379,9 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
                     style={styles.linkBtn}
                     onPress={() => handleOpenLink(linkedInUrl)}
                     activeOpacity={0.75}
+                    accessible={true}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Open ${author.name}'s LinkedIn profile`}
                   >
                     <Feather
                       name="linkedin"
@@ -391,6 +396,9 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
                     style={styles.linkBtn}
                     onPress={() => handleOpenLink(websiteUrl)}
                     activeOpacity={0.75}
+                    accessible={true}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Open ${author.name}'s website`}
                   >
                     <Feather
                       name="globe"
@@ -522,17 +530,17 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
     alignSelf: "center",
     marginBottom: 10,
   },
   closeBtn: {
     position: "absolute",
-    top: 18,
-    right: 18,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    top: 14,
+    right: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
@@ -554,13 +562,13 @@ const styles = StyleSheet.create({
     height: 82,
     borderRadius: 41,
     borderWidth: 3,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
   },
   avatarFallback: {
     width: 82,
     height: 82,
     borderRadius: 41,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: colors.slate200,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
@@ -580,23 +588,25 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: "#ffffff",
+    borderColor: colors.white,
   },
   roleStudent: {
-    backgroundColor: "#2563eb",
+    backgroundColor: colors.semantic.blue.accent,
   },
   roleTeacher: {
-    backgroundColor: "#059669",
+    backgroundColor: colors.semantic.emerald.darker,
   },
   roleAdmin: {
-    backgroundColor: "#7c3aed",
+    backgroundColor: colors.semantic.violet.accent,
   },
   roleBadgeText: {
     fontFamily,
     fontSize: 9,
+    lineHeight: 12,
     fontWeight: "800",
-    color: "#ffffff",
+    color: colors.white,
     letterSpacing: 0.5,
+    includeFontPadding: false,
   },
   authorName: {
     fontFamily,
@@ -624,12 +634,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
   },
   infoPillText: {
     fontFamily,
@@ -654,13 +664,13 @@ const styles = StyleSheet.create({
   },
   detailsList: {
     width: "100%",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: 16,
     padding: 14,
     gap: 10,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
   },
   detailRow: {
     flexDirection: "row",
@@ -717,15 +727,17 @@ const styles = StyleSheet.create({
   },
   linkBtn: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: "#eff6ff",
+    backgroundColor: colors.semantic.blue.tint,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: colors.semantic.blue.border,
   },
   linkBtnText: {
     fontFamily,
@@ -741,26 +753,28 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 14,
   },
   callBtn: {
-    backgroundColor: "#059669",
+    backgroundColor: colors.semantic.emerald.darker,
   },
   emailBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.slate200,
   },
   actionBtnText: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.white,
   },
   safetyRow: {
     flexDirection: "row",
@@ -768,10 +782,11 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    borderTopColor: colors.slate100,
   },
   safetyBtn: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

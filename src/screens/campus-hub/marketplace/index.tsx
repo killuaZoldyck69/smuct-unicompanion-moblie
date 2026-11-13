@@ -32,13 +32,11 @@ import {
 import {
   requireOnline,
   showApiErrorToast,
-} from "@/features/campus-hub/useLostFoundUpload";
+} from "@/features/campus-hub/campus-hub-upload";
 import { resolveMarketplaceErrorState } from "@/features/campus-hub/marketplace-logic";
 import type {
   MarketplacePost,
   ListingType,
-  ListingStatus,
-  MarketplaceCategory,
   FeedQueryParams,
 } from "@/services/marketplace-service";
 import { colors } from "@/theme/colors";
@@ -57,7 +55,7 @@ import { ListingCard } from "./components/listing-card";
 import { MarketplaceDeleteModal } from "./components/marketplace-delete-modal";
 import { MarketplaceSkeleton } from "./components/marketplace-skeleton";
 
-const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
+const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccentText;
 const SEARCH_DEBOUNCE_MS = 400;
 
 interface MarketplaceSectionProps {
@@ -77,7 +75,6 @@ export function MarketplaceSection({
   const { user: currentUser } = useCurrentUser();
   const { isOffline } = useNetworkStatus();
 
-  // --- Filter state ---
   const [typeFilter, setTypeFilter] = useState<MarketplaceTypeFilter>("ALL");
   const [statusFilter, setStatusFilter] =
     useState<MarketplaceStatusFilter>("ALL");
@@ -85,7 +82,6 @@ export function MarketplaceSection({
     useState<MarketplaceCategoryFilter>("ALL");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // --- Search with debounce ---
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,14 +100,12 @@ export function MarketplaceSection({
     };
   }, []);
 
-  // --- Compose modal state ---
   const [internalComposeVisible, setInternalComposeVisible] = useState(false);
   const isComposeVisible =
     externalIsComposeVisible !== undefined
       ? externalIsComposeVisible
       : internalComposeVisible;
 
-  // --- Admin / Owner delete state ---
   const deleteMutation = useDeleteMarketplacePost();
   const [postToDelete, setPostToDelete] = useState<{
     id: string;
@@ -120,7 +114,7 @@ export function MarketplaceSection({
     type?: ListingType;
     image?: string;
   } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteLockRef = useRef(false);
 
   const handleDelete = useCallback(
     (
@@ -136,13 +130,13 @@ export function MarketplaceSection({
   );
 
   const handleConfirmDelete = useCallback(() => {
-    if (!postToDelete) return;
+    if (!postToDelete || deleteLockRef.current || deleteMutation.isPending)
+      return;
     if (!requireOnline(isOffline, "Reconnect to delete this listing.")) return;
 
-    setIsDeleting(true);
+    deleteLockRef.current = true;
     deleteMutation.mutate(postToDelete.id, {
       onSuccess: () => {
-        setIsDeleting(false);
         setPostToDelete(null);
         Toast.show({
           type: "success",
@@ -151,14 +145,15 @@ export function MarketplaceSection({
         });
       },
       onError: (err) => {
-        setIsDeleting(false);
         setPostToDelete(null);
         showApiErrorToast(err, "Delete Failed", "Failed to delete listing.");
+      },
+      onSettled: () => {
+        deleteLockRef.current = false;
       },
     });
   }, [postToDelete, isOffline, deleteMutation]);
 
-  // --- Responsive card width ---
   const cardWidth = useMemo(() => {
     const effectiveWidth = Math.min(
       windowWidth,
@@ -169,13 +164,11 @@ export function MarketplaceSection({
     return Math.floor((effectiveWidth - horizontalPadding - gap) / 2);
   }, [windowWidth]);
 
-  // --- Derived query params (server-side filtering) ---
   const feedParams = useMemo((): Omit<FeedQueryParams, "cursor" | "limit"> => {
     const params: Omit<FeedQueryParams, "cursor" | "limit"> = {};
-    if (typeFilter !== "ALL") params.type = typeFilter as ListingType;
-    if (statusFilter !== "ALL") params.status = statusFilter as ListingStatus;
-    if (categoryFilter !== "ALL")
-      params.category = categoryFilter as MarketplaceCategory;
+    if (typeFilter !== "ALL") params.type = typeFilter;
+    if (statusFilter !== "ALL") params.status = statusFilter;
+    if (categoryFilter !== "ALL") params.category = categoryFilter;
     if (debouncedSearch) params.search = debouncedSearch;
     return params;
   }, [typeFilter, statusFilter, categoryFilter, debouncedSearch]);
@@ -185,7 +178,6 @@ export function MarketplaceSection({
     (statusFilter !== "ALL" ? 1 : 0) +
     (categoryFilter !== "ALL" ? 1 : 0);
 
-  // --- Infinite query ---
   const {
     data,
     isLoading,
@@ -208,7 +200,6 @@ export function MarketplaceSection({
     firstPage?.counts?.buying ??
     posts.filter((p) => p.type === "BUYING").length;
 
-  // --- Pull-to-refresh ---
   const [isRefreshing, setIsRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     if (isOffline) {
@@ -227,7 +218,6 @@ export function MarketplaceSection({
     }
   }, [isOffline, refetch]);
 
-  // --- Infinite scroll trigger ---
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage && !isOffline) {
       fetchNextPage();
@@ -242,7 +232,6 @@ export function MarketplaceSection({
     [router],
   );
 
-  // --- Filter handlers ---
   const handleResetFilters = useCallback(() => {
     setTypeFilter("ALL");
     setStatusFilter("ALL");
@@ -262,7 +251,6 @@ export function MarketplaceSection({
     [],
   );
 
-  // --- Compose handlers ---
   const handleOpenCompose = useCallback(() => {
     if (!currentUser) {
       Toast.show({ type: "error", text1: "Please log in first." });
@@ -518,34 +506,37 @@ export function MarketplaceSection({
             )}
           </View>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.filterBtn,
-              activeFilterCount > 0 && styles.filterBtnActive,
-              pressed && { opacity: 0.85 },
-            ]}
-            onPress={() => setIsFilterModalOpen(true)}
-            android_ripple={{
-              color:
-                activeFilterCount > 0
-                  ? CAMPUS_HUB_COLORS.androidRippleLight
-                  : CAMPUS_HUB_COLORS.androidRipple,
-            }}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={`Filter marketplace. ${activeFilterCount} active filters`}
-          >
-            <Feather
-              name="sliders"
-              size={18}
-              color={
-                activeFilterCount > 0
-                  ? CAMPUS_HUB_COLORS.white
-                  : CAMPUS_HUB_COLORS.deepNavy
-              }
-            />
+          <View style={styles.filterBtnWrap}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.filterBtn,
+                activeFilterCount > 0 && styles.filterBtnActive,
+                pressed && { opacity: 0.85 },
+              ]}
+              onPress={() => setIsFilterModalOpen(true)}
+              android_ripple={{
+                color:
+                  activeFilterCount > 0
+                    ? CAMPUS_HUB_COLORS.androidRippleLight
+                    : CAMPUS_HUB_COLORS.androidRipple,
+              }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={`Filter marketplace. ${activeFilterCount} active filters`}
+            >
+              <Feather
+                name="sliders"
+                size={18}
+                color={
+                  activeFilterCount > 0
+                    ? CAMPUS_HUB_COLORS.white
+                    : CAMPUS_HUB_COLORS.deepNavy
+                }
+              />
+            </Pressable>
+
             {activeFilterCount > 0 && (
-              <View style={styles.filterBadge}>
+              <View style={styles.filterBadge} pointerEvents="none">
                 <Text
                   style={styles.filterBadgeText}
                   maxFontSizeMultiplier={1.15}
@@ -554,7 +545,7 @@ export function MarketplaceSection({
                 </Text>
               </View>
             )}
-          </Pressable>
+          </View>
         </View>
 
         {/* Active Filter Chips */}
@@ -604,6 +595,7 @@ export function MarketplaceSection({
 
         {/* Hero Stats Card */}
         <MarketplaceHero
+          isLoading={isLoading}
           stats={{
             total: totalCount,
             selling: sellingCount,
@@ -614,6 +606,7 @@ export function MarketplaceSection({
     ),
     [
       isOffline,
+      isLoading,
       searchInput,
       handleSearchChange,
       activeFilterCount,
@@ -682,7 +675,7 @@ export function MarketplaceSection({
       {postToDelete && (
         <MarketplaceDeleteModal
           visible={Boolean(postToDelete)}
-          isDeleting={isDeleting}
+          isDeleting={deleteMutation.isPending}
           postTitle={postToDelete.title}
           postPrice={postToDelete.price}
           postType={postToDelete.type}
@@ -790,6 +783,9 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
     includeFontPadding: false,
   },
+  filterBtnWrap: {
+    position: "relative",
+  },
   filterBtn: {
     width: 48,
     height: 48,
@@ -801,7 +797,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
-    position: "relative",
   },
   filterBtnActive: {
     backgroundColor: ACCENT,
@@ -959,7 +954,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
     textAlign: "center",
     lineHeight: 18,
-    maxWidth: 240,
+    maxWidth: 320,
   },
   emptyActionBtn: {
     flexDirection: "row",

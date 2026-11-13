@@ -61,7 +61,7 @@ const CATEGORY_OPTIONS: { key: MarketplaceCategoryFilter; label: string }[] = [
   })),
 ];
 
-const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
+const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccentText;
 
 export function MarketplaceFilterModal({
   visible,
@@ -376,7 +376,13 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingTop: 10,
-    ...CAMPUS_HUB_COLORS.heroShadow,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    shadowColor: colors.navyDeep,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 2,
   },
   handleBar: {
     width: 38,
@@ -494,7 +500,9 @@ const styles = StyleSheet.create({
   },
   applyBtn: {
     flexDirection: "row",
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: ACCENT,
     borderRadius: 14,
     overflow: "hidden",

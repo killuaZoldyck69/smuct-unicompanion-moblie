@@ -231,8 +231,8 @@ export function LostFoundClaimsSkeleton() {
 export function MarketplaceDetailSkeleton() {
   return (
     <SafeAreaView style={styles.screenContainer} edges={["top"]}>
-      {/* Top Header */}
-      <View style={[styles.topHeader, styles.constrainedBlock]}>
+      {/* Top Header (matches MPDetailHeader translucent background) */}
+      <View style={[styles.mpTopHeader, styles.constrainedBlock]}>
         <SkeletonBox width={38} height={38} borderRadius={19} />
         <SkeletonBox width={120} height={20} borderRadius={6} />
         <SkeletonBox width={38} height={38} borderRadius={19} />
@@ -250,49 +250,50 @@ export function MarketplaceDetailSkeleton() {
           style={styles.heroBox}
         />
 
-        {/* Badges Row */}
-        <View style={styles.rowGap8}>
-          <SkeletonBox
-            width={68}
-            height={24}
-            borderRadius={CAMPUS_HUB_COLORS.pillRadius}
-          />
-          <SkeletonBox
-            width={104}
-            height={24}
-            borderRadius={CAMPUS_HUB_COLORS.pillRadius}
-          />
-          <SkeletonBox
-            width={80}
-            height={24}
-            borderRadius={CAMPUS_HUB_COLORS.pillRadius}
-          />
-        </View>
-
-        {/* Product Title -> Price (matches MPListingInfoCard order) */}
-        <View style={styles.titleBlock}>
-          <SkeletonBox width="92%" height={24} borderRadius={6} />
-          <SkeletonBox width="58%" height={24} borderRadius={6} />
-        </View>
-        <SkeletonBox
-          width={120}
-          height={28}
-          borderRadius={8}
-          style={{ marginBottom: 14 }}
-        />
-
-        {/* Seller Info Card */}
-        <View style={styles.sellerCard}>
-          <SkeletonBox width={42} height={42} borderRadius={21} />
-          <View style={styles.authorMeta}>
-            <SkeletonBox width={140} height={15} borderRadius={4} />
-            <SkeletonBox width={160} height={12} borderRadius={4} />
+        {/* Unified White Info Card (matches MPListingInfoCard) */}
+        <View style={styles.mpInfoCardSkeleton}>
+          {/* Badges Row */}
+          <View style={styles.rowGap8}>
+            <SkeletonBox
+              width={68}
+              height={24}
+              borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+            />
+            <SkeletonBox
+              width={104}
+              height={24}
+              borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+            />
+            <SkeletonBox
+              width={80}
+              height={24}
+              borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+            />
           </View>
-          <SkeletonBox width={24} height={24} borderRadius={12} />
-        </View>
 
-        {/* Description Section */}
-        <View style={styles.descriptionCard}>
+          {/* Product Title -> Price (matches MPListingInfoCard order) */}
+          <View style={styles.titleBlock}>
+            <SkeletonBox width="92%" height={24} borderRadius={6} />
+            <SkeletonBox width="58%" height={24} borderRadius={6} />
+          </View>
+          <SkeletonBox
+            width={120}
+            height={28}
+            borderRadius={8}
+            style={{ marginBottom: 14 }}
+          />
+
+          {/* Seller Info Row */}
+          <View style={styles.mpSellerRowSkeleton}>
+            <SkeletonBox width={42} height={42} borderRadius={21} />
+            <View style={styles.authorMeta}>
+              <SkeletonBox width={140} height={15} borderRadius={4} />
+              <SkeletonBox width={160} height={12} borderRadius={4} />
+            </View>
+            <SkeletonBox width={24} height={24} borderRadius={12} />
+          </View>
+
+          {/* Description Block */}
           <SkeletonBox
             width={110}
             height={16}
@@ -485,6 +486,33 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
+  },
+  mpTopHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: CAMPUS_HUB_COLORS.background,
+  },
+  mpInfoCardSkeleton: {
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    marginBottom: 14,
+    ...CAMPUS_HUB_COLORS.shadow,
+  },
+  mpSellerRowSkeleton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    marginBottom: 16,
   },
   scrollContent: {
     paddingHorizontal: 16,

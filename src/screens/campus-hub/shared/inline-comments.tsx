@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   ActivityIndicator,
   Alert,
@@ -28,14 +28,14 @@ export interface CommentAuthor extends AuthorProfileModalData {
   image?: string | null;
 }
 
-export interface Comment {
+export interface Comment<TAuthor extends CommentAuthor = CommentAuthor> {
   id: string;
   content: string;
   createdAt: string;
   updatedAt?: string;
-  author: CommentAuthor;
+  author: TAuthor;
   parentId?: string | null;
-  replies?: Comment[];
+  replies?: Comment<TAuthor>[];
 }
 
 export interface ReplyTarget {
@@ -56,22 +56,21 @@ function isCommentEdited(createdAt?: string, updatedAt?: string): boolean {
   return !isNaN(created) && !isNaN(updated) && updated - created > 1000;
 }
 
-// ---------------------------------------------------------------------------
-// Single Comment Card Component
-// ---------------------------------------------------------------------------
-interface InlineCommentCardProps {
-  comment: Comment;
+interface InlineCommentCardProps<
+  TAuthor extends CommentAuthor = CommentAuthor,
+> {
+  comment: Comment<TAuthor>;
   currentUserId?: string;
   listingAuthorId?: string;
   accent: string;
   onStartReply: (targetId: string, authorName: string) => void;
-  onStartEdit?: (comment: Comment) => void;
-  onDeleteComment: (comment: Comment) => void;
-  onReportComment?: (comment: Comment) => void;
-  onViewAuthorProfile?: (author: CommentAuthor) => void;
+  onStartEdit?: (comment: Comment<TAuthor>) => void;
+  onDeleteComment: (comment: Comment<TAuthor>) => void;
+  onReportComment?: (comment: Comment<TAuthor>) => void;
+  onViewAuthorProfile?: (author: TAuthor) => void;
 }
 
-const InlineCommentCard = memo(function InlineCommentCard({
+function InlineCommentCardInner<TAuthor extends CommentAuthor = CommentAuthor>({
   comment,
   currentUserId,
   listingAuthorId,
@@ -81,7 +80,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
   onDeleteComment,
   onReportComment,
   onViewAuthorProfile,
-}: InlineCommentCardProps) {
+}: InlineCommentCardProps<TAuthor>) {
   const [isRepliesExpanded, setIsRepliesExpanded] = useState(false);
   const [failedAvatarUrls, setFailedAvatarUrls] = useState<
     Record<string, boolean>
@@ -98,10 +97,18 @@ const InlineCommentCard = memo(function InlineCommentCard({
   return (
     <View style={styles.commentCard}>
       {/* Avatar on the left */}
-      <TouchableOpacity
-        activeOpacity={0.75}
+      <Pressable
         onPress={() => onViewAuthorProfile?.(comment.author)}
         disabled={!onViewAuthorProfile}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={({ pressed }) => [pressed && onViewAuthorProfile && { opacity: 0.75 }]}
+        accessible={Boolean(onViewAuthorProfile)}
+        accessibilityRole={onViewAuthorProfile ? "button" : undefined}
+        accessibilityLabel={
+          onViewAuthorProfile
+            ? `View ${comment.author.name}'s profile`
+            : undefined
+        }
       >
         {comment.author.image && !failedAvatarUrls[comment.author.image] ? (
           <Image
@@ -120,22 +127,30 @@ const InlineCommentCard = memo(function InlineCommentCard({
             <Text style={styles.avatarFallbackText}>{authorInitial}</Text>
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
 
       <View style={styles.commentContent}>
         {/* Card Header */}
         <View style={styles.cardHeader}>
           <View style={styles.authorMetaCol}>
             <View style={styles.nameRow}>
-              <TouchableOpacity
-                activeOpacity={0.75}
+              <Pressable
                 onPress={() => onViewAuthorProfile?.(comment.author)}
                 disabled={!onViewAuthorProfile}
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                style={({ pressed }) => [pressed && onViewAuthorProfile && { opacity: 0.75 }]}
+                accessible={Boolean(onViewAuthorProfile)}
+                accessibilityRole={onViewAuthorProfile ? "button" : undefined}
+                accessibilityLabel={
+                  onViewAuthorProfile
+                    ? `View ${comment.author.name}'s profile`
+                    : undefined
+                }
               >
                 <Text style={styles.authorName} numberOfLines={1}>
                   {comment.author.name}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
               {isListingAuthor && (
                 <View
                   style={[
@@ -172,16 +187,18 @@ const InlineCommentCard = memo(function InlineCommentCard({
         <View style={styles.actionsRow}>
           <View style={styles.leftActions}>
             {/* 3. Reply with icon and text */}
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({ pressed }) => [
                 styles.actionReplyBtn,
                 { backgroundColor: `${accent}10`, borderColor: `${accent}25` },
+                pressed && { opacity: 0.75 },
               ]}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
               onPress={() => {
                 setIsRepliesExpanded(true);
                 onStartReply(comment.id, comment.author.name);
               }}
-              activeOpacity={0.75}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={`Reply to ${comment.author.name}`}
@@ -190,14 +207,18 @@ const InlineCommentCard = memo(function InlineCommentCard({
               <Text style={[styles.actionReplyText, { color: accent }]}>
                 Reply
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
             {/* 4. View replies with icon, text and count number */}
             {replyCount > 0 && (
-              <TouchableOpacity
-                style={styles.toggleRepliesBtn}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.toggleRepliesBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                 onPress={() => setIsRepliesExpanded((v) => !v)}
-                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
                 accessible={true}
                 accessibilityRole="button"
                 accessibilityLabel={
@@ -222,7 +243,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
                     ? `Hide ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
                     : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
 
@@ -230,30 +251,35 @@ const InlineCommentCard = memo(function InlineCommentCard({
             <View style={styles.rightActions}>
               {/* 1. Edit (just icon) */}
               {onStartEdit && (
-                <TouchableOpacity
-                  style={[
+                <Pressable
+                  style={({ pressed }) => [
                     styles.actionIconBtn,
                     {
                       backgroundColor: `${accent}12`,
                       borderColor: `${accent}25`,
                     },
+                    pressed && { opacity: 0.75 },
                   ]}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   onPress={() => onStartEdit(comment)}
-                  activeOpacity={0.75}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Edit comment"
                 >
                   <Feather name="edit-2" size={12.5} color={accent} />
-                </TouchableOpacity>
+                </Pressable>
               )}
 
               {/* 2. Delete (just icon) */}
-              <TouchableOpacity
-                style={[styles.actionIconBtn, styles.actionIconBtnDanger]}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionIconBtn,
+                  styles.actionIconBtnDanger,
+                  pressed && { opacity: 0.75 },
+                ]}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                 onPress={() => onDeleteComment(comment)}
-                activeOpacity={0.75}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessible={true}
                 accessibilityRole="button"
@@ -264,14 +290,18 @@ const InlineCommentCard = memo(function InlineCommentCard({
                   size={12.5}
                   color={CAMPUS_HUB_COLORS.dangerText}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ) : onReportComment ? (
             <View style={styles.rightActions}>
-              <TouchableOpacity
-                style={[styles.actionIconBtn, styles.actionIconBtnReport]}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionIconBtn,
+                  styles.actionIconBtnReport,
+                  pressed && { opacity: 0.75 },
+                ]}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                 onPress={() => onReportComment(comment)}
-                activeOpacity={0.75}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessible={true}
                 accessibilityRole="button"
@@ -280,9 +310,9 @@ const InlineCommentCard = memo(function InlineCommentCard({
                 <Feather
                   name="flag"
                   size={12}
-                  color={CAMPUS_HUB_COLORS.subtleText}
+                  color={CAMPUS_HUB_COLORS.mutedInk}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ) : null}
         </View>
@@ -309,10 +339,20 @@ const InlineCommentCard = memo(function InlineCommentCard({
                   key={reply.id}
                   style={[styles.replyRow, { borderLeftColor: `${accent}25` }]}
                 >
-                  <TouchableOpacity
-                    activeOpacity={0.75}
+                  <Pressable
                     onPress={() => onViewAuthorProfile?.(reply.author)}
                     disabled={!onViewAuthorProfile}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={({ pressed }) => [
+                      pressed && onViewAuthorProfile && { opacity: 0.75 },
+                    ]}
+                    accessible={Boolean(onViewAuthorProfile)}
+                    accessibilityRole={onViewAuthorProfile ? "button" : undefined}
+                    accessibilityLabel={
+                      onViewAuthorProfile
+                        ? `View ${reply.author.name}'s profile`
+                        : undefined
+                    }
                   >
                     {reply.author.image &&
                     !failedAvatarUrls[reply.author.image] ? (
@@ -337,16 +377,29 @@ const InlineCommentCard = memo(function InlineCommentCard({
                         </Text>
                       </View>
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
 
                   <View style={styles.replyContentSmall}>
                     <View style={styles.cardHeader}>
                       <View style={styles.authorMetaCol}>
                         <View style={styles.nameRow}>
-                          <TouchableOpacity
-                            activeOpacity={0.75}
+                          <Pressable
                             onPress={() => onViewAuthorProfile?.(reply.author)}
                             disabled={!onViewAuthorProfile}
+                            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                            style={({ pressed }) => [
+                              pressed &&
+                                onViewAuthorProfile && { opacity: 0.75 },
+                            ]}
+                            accessible={Boolean(onViewAuthorProfile)}
+                            accessibilityRole={
+                              onViewAuthorProfile ? "button" : undefined
+                            }
+                            accessibilityLabel={
+                              onViewAuthorProfile
+                                ? `View ${reply.author.name}'s profile`
+                                : undefined
+                            }
                           >
                             <Text
                               style={styles.replyNameSmall}
@@ -354,7 +407,7 @@ const InlineCommentCard = memo(function InlineCommentCard({
                             >
                               {reply.author.name}
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                           {isReplySeller && (
                             <View
                               style={[
@@ -399,18 +452,22 @@ const InlineCommentCard = memo(function InlineCommentCard({
                     <View style={styles.actionsRow}>
                       <View style={styles.leftActions}>
                         {/* 3. Reply with icon and text */}
-                        <TouchableOpacity
-                          style={[
+                        <Pressable
+                          style={({ pressed }) => [
                             styles.actionReplyBtn,
                             {
                               backgroundColor: `${accent}10`,
                               borderColor: `${accent}25`,
                             },
+                            pressed && { opacity: 0.75 },
                           ]}
+                          android_ripple={{
+                            color: CAMPUS_HUB_COLORS.androidRipple,
+                          }}
                           onPress={() =>
                             onStartReply(comment.id, reply.author.name)
                           }
-                          activeOpacity={0.75}
+                          hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
                           accessible={true}
                           accessibilityRole="button"
                           accessibilityLabel={`Reply to ${reply.author.name}`}
@@ -425,23 +482,26 @@ const InlineCommentCard = memo(function InlineCommentCard({
                           >
                             Reply
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
 
                       {isReplyOwn ? (
                         <View style={styles.rightActions}>
                           {/* 1. Edit (just icon) */}
                           {onStartEdit && (
-                            <TouchableOpacity
-                              style={[
+                            <Pressable
+                              style={({ pressed }) => [
                                 styles.actionIconBtn,
                                 {
                                   backgroundColor: `${accent}12`,
                                   borderColor: `${accent}25`,
                                 },
+                                pressed && { opacity: 0.75 },
                               ]}
+                              android_ripple={{
+                                color: CAMPUS_HUB_COLORS.androidRipple,
+                              }}
                               onPress={() => onStartEdit(reply)}
-                              activeOpacity={0.75}
                               hitSlop={{
                                 top: 10,
                                 bottom: 10,
@@ -453,17 +513,20 @@ const InlineCommentCard = memo(function InlineCommentCard({
                               accessibilityLabel="Edit reply"
                             >
                               <Feather name="edit-2" size={12} color={accent} />
-                            </TouchableOpacity>
+                            </Pressable>
                           )}
 
                           {/* 2. Delete (just icon) */}
-                          <TouchableOpacity
-                            style={[
+                          <Pressable
+                            style={({ pressed }) => [
                               styles.actionIconBtn,
                               styles.actionIconBtnDanger,
+                              pressed && { opacity: 0.75 },
                             ]}
+                            android_ripple={{
+                              color: CAMPUS_HUB_COLORS.androidRipple,
+                            }}
                             onPress={() => onDeleteComment(reply)}
-                            activeOpacity={0.75}
                             hitSlop={{
                               top: 10,
                               bottom: 10,
@@ -479,17 +542,20 @@ const InlineCommentCard = memo(function InlineCommentCard({
                               size={12}
                               color={CAMPUS_HUB_COLORS.dangerText}
                             />
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       ) : onReportComment ? (
                         <View style={styles.rightActions}>
-                          <TouchableOpacity
-                            style={[
+                          <Pressable
+                            style={({ pressed }) => [
                               styles.actionIconBtn,
                               styles.actionIconBtnReport,
+                              pressed && { opacity: 0.75 },
                             ]}
+                            android_ripple={{
+                              color: CAMPUS_HUB_COLORS.androidRipple,
+                            }}
                             onPress={() => onReportComment(reply)}
-                            activeOpacity={0.75}
                             hitSlop={{
                               top: 10,
                               bottom: 10,
@@ -503,9 +569,9 @@ const InlineCommentCard = memo(function InlineCommentCard({
                             <Feather
                               name="flag"
                               size={11.5}
-                              color={CAMPUS_HUB_COLORS.subtleText}
+                              color={CAMPUS_HUB_COLORS.mutedInk}
                             />
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       ) : null}
                     </View>
@@ -518,24 +584,27 @@ const InlineCommentCard = memo(function InlineCommentCard({
       </View>
     </View>
   );
-});
+}
 
-// ---------------------------------------------------------------------------
-// Main Inline Comments Component
-// ---------------------------------------------------------------------------
-interface InlineCommentsProps {
-  comments: Comment[];
+const InlineCommentCard = memo(InlineCommentCardInner) as <
+  TAuthor extends CommentAuthor = CommentAuthor,
+>(
+  props: InlineCommentCardProps<TAuthor>,
+) => React.ReactElement | null;
+
+interface InlineCommentsProps<TAuthor extends CommentAuthor = CommentAuthor> {
+  comments: Comment<TAuthor>[];
   currentUserId?: string;
   listingAuthorId?: string;
   accent?: string;
   onStartReply: (targetId: string, authorName: string) => void;
-  onStartEdit?: (comment: Comment) => void;
+  onStartEdit?: (comment: Comment<TAuthor>) => void;
   onDeleteComment: (commentId: string) => void;
-  onReportComment?: (comment: Comment) => void;
-  onViewAuthorProfile?: (author: CommentAuthor) => void;
+  onReportComment?: (comment: Comment<TAuthor>) => void;
+  onViewAuthorProfile?: (author: TAuthor) => void;
 }
 
-export const InlineComments = memo(function InlineComments({
+function InlineCommentsInner<TAuthor extends CommentAuthor = CommentAuthor>({
   comments,
   currentUserId,
   listingAuthorId,
@@ -545,8 +614,8 @@ export const InlineComments = memo(function InlineComments({
   onDeleteComment,
   onReportComment,
   onViewAuthorProfile,
-}: InlineCommentsProps) {
-  const handleDeletePrompt = (comment: Comment) => {
+}: InlineCommentsProps<TAuthor>) {
+  const handleDeletePrompt = (comment: Comment<TAuthor>) => {
     Alert.alert("Delete Comment", "Remove this comment permanently?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -612,7 +681,13 @@ export const InlineComments = memo(function InlineComments({
       )}
     </View>
   );
-});
+}
+
+export const InlineComments = memo(InlineCommentsInner) as <
+  TAuthor extends CommentAuthor = CommentAuthor,
+>(
+  props: InlineCommentsProps<TAuthor>,
+) => React.ReactElement | null;
 
 // ---------------------------------------------------------------------------
 // Comment Input Bar Component
@@ -705,15 +780,16 @@ export const CommentInputBar = memo(function CommentInputBar({
             />
             <Text style={styles.editBannerText}>Editing comment</Text>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={onCancelEdit}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
+            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Cancel edit"
           >
             <Text style={styles.editCancelText}>Cancel</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 
@@ -739,16 +815,19 @@ export const CommentInputBar = memo(function CommentInputBar({
               </Text>
             </Text>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={onCancelReply}
-            style={styles.cancelReplyBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={({ pressed }) => [
+              styles.cancelReplyBtn,
+              pressed && { opacity: 0.7 },
+            ]}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Cancel reply"
           >
-            <Feather name="x" size={14} color={CAMPUS_HUB_COLORS.subtleText} />
-          </TouchableOpacity>
+            <Feather name="x" size={14} color={CAMPUS_HUB_COLORS.mutedInk} />
+          </Pressable>
         </View>
       )}
 
@@ -767,11 +846,17 @@ export const CommentInputBar = memo(function CommentInputBar({
           accessibilityLabel={placeholderText}
         />
 
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({ pressed }) => [
             styles.sendBtn,
             canSend ? { backgroundColor: accent } : styles.sendBtnDisabled,
+            pressed && canSend && { opacity: 0.85 },
           ]}
+          android_ripple={
+            canSend
+              ? { color: CAMPUS_HUB_COLORS.androidRippleLight }
+              : undefined
+          }
           onPress={onSubmit}
           disabled={!canSend}
           accessible={true}
@@ -787,7 +872,7 @@ export const CommentInputBar = memo(function CommentInputBar({
               color={canSend ? CAMPUS_HUB_COLORS.white : colors.slate400}
             />
           )}
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -832,8 +917,9 @@ const styles = StyleSheet.create({
   counterPillText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
     fontVariant: ["tabular-nums"],
     includeFontPadding: false,
   },
@@ -938,7 +1024,9 @@ const styles = StyleSheet.create({
   sellerBadgeText: {
     fontFamily,
     fontSize: 9,
+    lineHeight: 12,
     fontWeight: "700",
+    includeFontPadding: false,
   },
   academicSubtitle: {
     fontFamily,
@@ -1005,11 +1093,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     borderWidth: 1,
+    overflow: "hidden",
   },
   actionReplyText: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "700",
+    includeFontPadding: false,
   },
   actionIconBtn: {
     width: 28,
@@ -1018,6 +1109,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+    overflow: "hidden",
   },
   actionIconBtnDanger: {
     backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
@@ -1042,8 +1134,9 @@ const styles = StyleSheet.create({
   lockedBannerText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   toggleRepliesBtn: {
     flexDirection: "row",
@@ -1051,6 +1144,8 @@ const styles = StyleSheet.create({
     height: 28,
     paddingHorizontal: 4,
     gap: 4.5,
+    borderRadius: 8,
+    overflow: "hidden",
   },
   toggleRepliesLine: {
     width: 12,
@@ -1060,7 +1155,9 @@ const styles = StyleSheet.create({
   toggleRepliesText: {
     fontFamily,
     fontSize: 11.5,
+    lineHeight: 15,
     fontWeight: "700",
+    includeFontPadding: false,
   },
   repliesBlock: {
     marginTop: 10,
@@ -1113,14 +1210,14 @@ const styles = StyleSheet.create({
   inputBarWrapper: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderTopColor: CAMPUS_HUB_COLORS.cardBorder,
     paddingHorizontal: 16,
     paddingTop: 12,
     shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 3,
   },
   editBanner: {
     flexDirection: "row",

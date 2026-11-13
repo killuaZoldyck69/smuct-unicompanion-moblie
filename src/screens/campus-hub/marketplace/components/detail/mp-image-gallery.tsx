@@ -10,7 +10,7 @@ import {
   fontFamily,
 } from "@/screens/campus-hub/shared/design-tokens";
 
-const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
+const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccentText;
 
 interface MPImageGalleryProps {
   images: string[];
@@ -115,7 +115,10 @@ export function MPImageGallery({
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.thumbScrollView}
-          contentContainerStyle={styles.thumbnailRow}
+          contentContainerStyle={[
+            styles.thumbnailRow,
+            images.length <= 4 && styles.thumbnailRowCentered,
+          ]}
         >
           {images.map((img, idx) => {
             const isBroken = Boolean(failedUrls[img]);
@@ -247,11 +250,14 @@ const styles = StyleSheet.create({
   },
   thumbnailRow: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
     gap: 10,
     paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  thumbnailRowCentered: {
     flexGrow: 1,
+    justifyContent: "center",
   },
   thumbBtn: {
     width: 52,

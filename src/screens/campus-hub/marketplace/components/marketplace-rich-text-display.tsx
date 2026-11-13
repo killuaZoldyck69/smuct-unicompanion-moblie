@@ -15,12 +15,16 @@ type RichBlock =
   | { type: "paragraph"; tokens: InlineToken[] }
   | { type: "spacer" };
 
+const HEADING_MARKER = "\u0001H:";
+const BULLET_MARKER = "\u0001B:";
+
 function parseRichBlocks(text: string): RichBlock[] {
-  if (!text || !text.trim()) return [];
+  if (!text.trim()) return [];
 
   const preprocessed = text
-    .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, "\n###HEADING:$2###\n")
-    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n###BULLET:$1###\n")
+    .replace(/\u0001/g, "")
+    .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, `\n${HEADING_MARKER}$2\n`)
+    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, `\n${BULLET_MARKER}$1\n`)
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(?:p|div|blockquote|tr|table|ul|ol)>/gi, "\n")
     .replace(/<(?:p|div|blockquote|tr|table|ul|ol)[^>]*>/gi, "\n")
@@ -36,9 +40,9 @@ function parseRichBlocks(text: string): RichBlock[] {
       continue;
     }
 
-    if (trimmed.startsWith("###HEADING:") && trimmed.endsWith("###")) {
+    if (trimmed.startsWith(HEADING_MARKER)) {
       const content = stripRemainingHtml(
-        decodeHtml(trimmed.slice("###HEADING:".length, -3).trim()),
+        decodeHtml(trimmed.slice(HEADING_MARKER.length).trim()),
       ).trim();
       if (content) blocks.push({ type: "heading", content });
       continue;
@@ -51,8 +55,7 @@ function parseRichBlocks(text: string): RichBlock[] {
       continue;
     }
 
-    const isHtmlBullet =
-      trimmed.startsWith("###BULLET:") && trimmed.endsWith("###");
+    const isHtmlBullet = trimmed.startsWith(BULLET_MARKER);
     const isTextBullet =
       trimmed.startsWith("• ") ||
       trimmed.startsWith("- ") ||
@@ -68,7 +71,7 @@ function parseRichBlocks(text: string): RichBlock[] {
         blocks.pop();
       }
       const content = isHtmlBullet
-        ? trimmed.slice("###BULLET:".length, -3).trim()
+        ? trimmed.slice(BULLET_MARKER.length).trim()
         : trimmed.replace(/^([•\-*]|\d+\.)\s+/, "");
       const tokens = parseInlineRichTokens(content).filter((t) => t.text);
       if (tokens.length) blocks.push({ type: "bullet", tokens });
@@ -90,7 +93,7 @@ export function MarketplaceRichTextDisplay({
   text: string;
   textColor?: string;
 }) {
-  if (!text || !text.trim()) return null;
+  if (!text) return null;
   const blocks = parseRichBlocks(text);
   if (!blocks.length) return null;
 

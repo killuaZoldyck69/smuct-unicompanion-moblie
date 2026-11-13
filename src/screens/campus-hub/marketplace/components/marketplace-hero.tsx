@@ -13,11 +13,15 @@ interface MarketplaceStats {
 
 interface MarketplaceHeroProps {
   stats: MarketplaceStats;
+  isLoading?: boolean;
 }
 
 export const MarketplaceHero = React.memo(function MarketplaceHero({
   stats,
+  isLoading = false,
 }: MarketplaceHeroProps) {
+  const formatCount = (count: number) => (isLoading ? "—" : count);
+
   return (
     <View style={styles.statsBar}>
       {/* Minimal Header */}
@@ -40,7 +44,7 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
             ]}
           />
           <Text style={styles.statCount} maxFontSizeMultiplier={1.2}>
-            {stats.total}
+            {formatCount(stats.total)}
           </Text>
           <Text style={styles.statTitle} maxFontSizeMultiplier={1.2}>
             Listings
@@ -63,7 +67,7 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
             ]}
             maxFontSizeMultiplier={1.2}
           >
-            {stats.selling}
+            {formatCount(stats.selling)}
           </Text>
           <Text style={styles.statTitle} maxFontSizeMultiplier={1.2}>
             For Sale
@@ -86,7 +90,7 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
             ]}
             maxFontSizeMultiplier={1.2}
           >
-            {stats.buying}
+            {formatCount(stats.buying)}
           </Text>
           <Text style={styles.statTitle} maxFontSizeMultiplier={1.2}>
             Wanted
@@ -160,7 +164,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.subtleText,
+    color: CAMPUS_HUB_COLORS.mutedInk,
     marginTop: 1,
     includeFontPadding: false,
   },

@@ -277,15 +277,23 @@ describe("marketplace mobile audit regressions", () => {
     assert.match(serviceSrc, /reportMarketplaceContent/);
     assert.match(serviceSrc, /contactPhone\?: string \| null;/);
     assert.match(serviceSrc, /idempotencyKey\?: string;/);
-    const timeoutMatches = [...serviceSrc.matchAll(/timeout:\s*45000/g)];
+    assert.match(serviceSrc, /MARKETPLACE_REQUEST_TIMEOUT_MS = 45000/);
+    assert.match(serviceSrc, /signal\?: AbortSignal/);
+    const timeoutMatches = [
+      ...serviceSrc.matchAll(
+        /timeout:\s*(?:45000|MARKETPLACE_REQUEST_TIMEOUT_MS)/g,
+      ),
+    ];
     assert.ok(
-      timeoutMatches.length >= 2,
-      "createMarketplacePost and updateMarketplacePost should use timeout: 45000 for Render cold starts",
+      timeoutMatches.length >= 10,
+      "All marketplace endpoints should configure 45s timeout for Render cold starts",
     );
 
     const hookSrc = readSrc("src/features/campus-hub/useMarketplace.ts");
     assert.match(hookSrc, /useUpdateMarketplaceStatus/);
     assert.match(hookSrc, /useReportMarketplaceContent/);
+    assert.match(hookSrc, /queryFn:\s*\(\{\s*pageParam,\s*signal\s*\}\)/);
+    assert.match(hookSrc, /queryFn:\s*\(\{\s*signal\s*\}\)/);
     const deleteHookMatch = hookSrc.match(
       /export const useDeleteMarketplacePost[\s\S]*?\n\};/,
     );
@@ -424,9 +432,101 @@ describe("marketplace mobile audit regressions", () => {
       );
       assert.match(
         modalSrc,
-        /height:\s*48/,
-        `${modalPath} action buttons must be 48dp tall`,
+        /minHeight:\s*48|height:\s*48/,
+        `${modalPath} action buttons must be >= 48dp tall`,
       );
     }
+  });
+
+  it("enforces synchronous in-flight locks and pre-upload UGC checks across mutations", () => {
+    const uploadHookSrc = readSrc(
+      "src/features/campus-hub/campus-hub-upload.ts",
+    );
+    assert.ok(
+      uploadHookSrc.indexOf("setIsUploading(true)") <
+        uploadHookSrc.indexOf("await validateLocalImageSizes"),
+      "setIsUploading(true) must fire synchronously before awaiting FileSystem checks",
+    );
+
+    const formSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/marketplace-form-modal.tsx",
+    );
+    assert.match(formSrc, /submitLockRef/);
+    assert.match(formSrc, /ugcTermsQuery\.refetch\(\)/);
+
+    const detailSrc = readSrc(
+      "src/screens/campus-hub/marketplace/marketplace-detail-screen.tsx",
+    );
+    assert.match(detailSrc, /statusActionLockRef/);
+    assert.match(detailSrc, /commentSubmitLockRef/);
+    assert.match(detailSrc, /commentDeleteLockRef/);
+
+    const feedSrc = readSrc("src/screens/campus-hub/marketplace/index.tsx");
+    assert.match(feedSrc, /deleteLockRef/);
+  });
+
+  it("enforces WCAG emerald ink, unclipped badges, and Android responsiveness fixes", () => {
+    const feedSrc = readSrc("src/screens/campus-hub/marketplace/index.tsx");
+    assert.match(feedSrc, /styles\.filterBtnWrap/);
+    assert.match(feedSrc, /<MarketplaceHero[\s\S]*isLoading=\{isLoading\}/);
+
+    const heroSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/marketplace-hero.tsx",
+    );
+    assert.match(heroSrc, /isLoading\s*=\s*false/);
+
+    const richEditorSrc = readSrc("src/components/rich-text-editor.tsx");
+    assert.match(richEditorSrc, /flexWrap:\s*"wrap"/);
+
+    const tabBarSrc = readSrc(
+      "src/screens/campus-hub/shared/section-tab-bar.tsx",
+    );
+    assert.match(tabBarSrc, /marketplaceAccentText/);
+
+    const imageViewerSrc = readSrc(
+      "src/screens/campus-hub/shared/image-viewer-modal.tsx",
+    );
+    assert.match(imageViewerSrc, /<ScrollView[\s\S]*horizontal/);
+
+    const commentsSrc = readSrc(
+      "src/screens/campus-hub/shared/inline-comments.tsx",
+    );
+    assert.doesNotMatch(commentsSrc, /\bTouchableOpacity\b/);
+  });
+
+  it("enforces code-quality refactors: 4-photo validation, decoupled upload helper, zero as-any casts, no dead state", () => {
+    const tooManyImages = validateMarketplaceForm({
+      type: "SELLING",
+      title: "Calculus Textbook",
+      description: "<p>Clean copy with all chapters intact.</p>",
+      price: 450,
+      category: "TEXTBOOKS",
+      condition: "GOOD",
+      contactPhone: "01712345678",
+      images: [
+        "file:///1.jpg",
+        "file:///2.jpg",
+        "file:///3.jpg",
+        "file:///4.jpg",
+        "file:///5.jpg",
+      ],
+    });
+    assert.ok(tooManyImages.error);
+    assert.match(tooManyImages.error, /at most 4 photos/);
+
+    const feedSrc = readSrc("src/screens/campus-hub/marketplace/index.tsx");
+    const detailSrc = readSrc(
+      "src/screens/campus-hub/marketplace/marketplace-detail-screen.tsx",
+    );
+    const formSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/marketplace-form-modal.tsx",
+    );
+
+    assert.doesNotMatch(feedSrc, /useLostFoundUpload/);
+    assert.doesNotMatch(detailSrc, /useLostFoundUpload/);
+    assert.doesNotMatch(formSrc, /useLostFoundUpload/);
+    assert.doesNotMatch(detailSrc, /\bas any\b/);
+    assert.doesNotMatch(feedSrc, /setIsDeleting|const \[isDeleting/);
+    assert.doesNotMatch(formSrc, /\bsetUploadedMapVersion\b/);
   });
 });

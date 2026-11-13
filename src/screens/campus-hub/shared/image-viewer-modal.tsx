@@ -5,13 +5,15 @@ import {
   StyleSheet,
   Modal,
   Pressable,
+  ScrollView,
   useWindowDimensions,
   StatusBar,
 } from "react-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { fontFamily } from "./design-tokens";
+import { colors } from "@/theme/colors";
+import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
 
 interface ImageViewerModalProps {
   visible: boolean;
@@ -170,27 +172,33 @@ export const ImageViewerModal = React.memo(function ImageViewerModal({
               { paddingBottom: Math.max(insets.bottom, 20) },
             ]}
           >
-            {images.map((img, idx) => (
-              <Pressable
-                key={img + idx}
-                onPress={() => setCurrentIndex(idx)}
-                style={[
-                  styles.thumbItem,
-                  safeIndex === idx && styles.thumbItemActive,
-                ]}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityState={{ selected: safeIndex === idx }}
-                accessibilityLabel={`Select photo ${idx + 1} of ${images.length}`}
-              >
-                <Image
-                  source={{ uri: img }}
-                  style={styles.thumbImage}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              </Pressable>
-            ))}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.bottomBarScroll}
+            >
+              {images.map((img, idx) => (
+                <Pressable
+                  key={img + idx}
+                  onPress={() => setCurrentIndex(idx)}
+                  style={[
+                    styles.thumbItem,
+                    safeIndex === idx && styles.thumbItemActive,
+                  ]}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: safeIndex === idx }}
+                  accessibilityLabel={`Select photo ${idx + 1} of ${images.length}`}
+                >
+                  <Image
+                    source={{ uri: img }}
+                    style={styles.thumbImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
         )}
       </View>
@@ -201,7 +209,7 @@ export const ImageViewerModal = React.memo(function ImageViewerModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: colors.black,
   },
   header: {
     flexDirection: "row",
@@ -215,12 +223,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.whiteAlpha20,
     alignItems: "center",
     justifyContent: "center",
   },
   counterPill: {
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.whiteAlpha20,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
@@ -230,7 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 16,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.white,
     includeFontPadding: false,
     fontVariant: ["tabular-nums"],
   },
@@ -249,7 +257,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 13,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: colors.slate400,
   },
   navArrow: {
     position: "absolute",
@@ -269,12 +277,15 @@ const styles = StyleSheet.create({
     right: 16,
   },
   bottomBar: {
+    paddingTop: 12,
+  },
+  bottomBarScroll: {
+    flexGrow: 1,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 16,
-    paddingTop: 12,
   },
   thumbItem: {
     width: 50,
@@ -287,7 +298,7 @@ const styles = StyleSheet.create({
   },
   thumbItemActive: {
     opacity: 1,
-    borderColor: "#3b82f6",
+    borderColor: CAMPUS_HUB_COLORS.marketplaceAccent,
   },
   thumbImage: {
     width: "100%",

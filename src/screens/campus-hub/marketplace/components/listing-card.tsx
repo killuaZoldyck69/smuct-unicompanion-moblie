@@ -6,6 +6,7 @@ import type {
   ListingType,
   MarketplacePost,
 } from "@/services/marketplace-service";
+import { getMarketplaceListingFlags } from "@/features/campus-hub/marketplace-logic";
 import { colors } from "@/theme/colors";
 import {
   CAMPUS_HUB_COLORS,
@@ -79,10 +80,8 @@ export const ListingCard = React.memo(function ListingCard({
     setFailedAvatar(false);
   }, [avatarUri]);
 
-  const isSelling = post.type === "SELLING";
-  const isSold = post.status === "SOLD";
-  const isClosed = post.status === "CLOSED";
-  const isInactive = isSold || isClosed;
+  const { isSelling, isSold, isClosed, isInactive } =
+    getMarketplaceListingFlags(post);
   const statusOverlayLabel = isClosed ? "CLOSED" : isSold ? "SOLD" : null;
   const conditionInfo = post.condition
     ? CONDITION_STYLES[post.condition]
@@ -152,6 +151,7 @@ export const ListingCard = React.memo(function ListingCard({
           <View
             style={[
               styles.typeOverlayBadge,
+              isAdmin && styles.typeOverlayBadgeAdminSafe,
               isInactive
                 ? styles.typeBadgeSold
                 : isSelling
@@ -210,16 +210,22 @@ export const ListingCard = React.memo(function ListingCard({
           )}
         </View>
 
-        {/* Card Information Body (dimmed internally so Android elevation never muddies) */}
-        <View style={[styles.cardBody, isInactive && styles.cardBodyInactive]}>
+        {/* Card Information Body (explicit muted ink preserves >= 4.5:1 contrast without opacity washout) */}
+        <View style={styles.cardBody}>
           <View style={styles.priceRow}>
             {post.price != null ? (
               <View style={styles.priceContainer}>
-                <Text style={styles.currencySymbol} maxFontSizeMultiplier={1.2}>
+                <Text
+                  style={[
+                    styles.currencySymbol,
+                    isInactive && styles.textInactive,
+                  ]}
+                  maxFontSizeMultiplier={1.2}
+                >
                   ৳
                 </Text>
                 <Text
-                  style={styles.priceAmount}
+                  style={[styles.priceAmount, isInactive && styles.textInactive]}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   maxFontSizeMultiplier={1.2}
@@ -229,7 +235,10 @@ export const ListingCard = React.memo(function ListingCard({
               </View>
             ) : (
               <Text
-                style={styles.priceNegotiable}
+                style={[
+                  styles.priceNegotiable,
+                  isInactive && styles.textInactive,
+                ]}
                 numberOfLines={1}
                 maxFontSizeMultiplier={1.2}
               >
@@ -261,7 +270,11 @@ export const ListingCard = React.memo(function ListingCard({
             )}
           </View>
 
-          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={[styles.title, isInactive && styles.textInactive]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {post.title}
           </Text>
 
@@ -420,6 +433,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     left: 8,
+    maxWidth: "85%",
     flexDirection: "row",
     alignItems: "center",
     gap: 4.5,
@@ -427,6 +441,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3.5,
     borderRadius: 8,
     borderWidth: 1,
+  },
+  typeOverlayBadgeAdminSafe: {
+    maxWidth: "66%",
   },
   typeBadgeSelling: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
@@ -534,8 +551,8 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 4,
   },
-  cardBodyInactive: {
-    opacity: 0.72,
+  textInactive: {
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
   priceRow: {
     flexDirection: "row",

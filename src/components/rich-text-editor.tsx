@@ -20,6 +20,7 @@ export interface RichTextEditorProps {
   initialValue?: string;
   onChange: (html: string, plainText: string) => void;
   placeholder?: string;
+  maxLength?: number;
   minHeight?: number;
   accentColor?: string;
   editorFontSize?: number;
@@ -755,6 +756,7 @@ export const RichTextEditor = React.memo(function RichTextEditor({
   initialValue = "",
   onChange,
   placeholder = "",
+  maxLength: _maxLength,
   minHeight = 220,
   accentColor = EDITOR_COLORS.deepNavy,
   editorFontSize = 15,
@@ -1029,6 +1031,7 @@ export const RichTextEditor = React.memo(function RichTextEditor({
           ]}
           onPress={handleBold}
           activeOpacity={0.7}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
           accessibilityRole="button"
           accessibilityLabel="Toggle Bold"
         >
@@ -1055,6 +1058,7 @@ export const RichTextEditor = React.memo(function RichTextEditor({
           ]}
           onPress={handleItalic}
           activeOpacity={0.7}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
           accessibilityRole="button"
           accessibilityLabel="Toggle Italic"
         >
@@ -1081,6 +1085,7 @@ export const RichTextEditor = React.memo(function RichTextEditor({
           ]}
           onPress={handleUnderline}
           activeOpacity={0.7}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
           accessibilityRole="button"
           accessibilityLabel="Toggle Underline"
         >
@@ -1109,6 +1114,7 @@ export const RichTextEditor = React.memo(function RichTextEditor({
           ]}
           onPress={handleList}
           activeOpacity={0.7}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
           accessibilityRole="button"
           accessibilityLabel="Toggle Bullet List"
         >
@@ -1141,6 +1147,7 @@ export const RichTextEditor = React.memo(function RichTextEditor({
             ]}
             onPress={handleJustify}
             activeOpacity={0.7}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             accessibilityRole="button"
             accessibilityLabel="Toggle Justified Alignment"
           >
@@ -1165,6 +1172,7 @@ export const RichTextEditor = React.memo(function RichTextEditor({
             style={[styles.toolBtn, { borderColor: accentColor }]}
             onPress={() => executeCommand("insertHTML", templateHtml)}
             activeOpacity={0.7}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             accessibilityRole="button"
             accessibilityLabel={`Insert ${templateLabel.toLowerCase()}`}
           >
@@ -1202,6 +1210,7 @@ const styles = StyleSheet.create({
   },
   toolbarContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     backgroundColor: "#f8fafc",
     borderBottomLeftRadius: 14,
@@ -1219,6 +1228,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    minWidth: 40,
+    minHeight: 40,
     backgroundColor: EDITOR_COLORS.white,
     paddingHorizontal: 11,
     paddingVertical: 7,
@@ -1238,6 +1249,7 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     fontWeight: "900",
     color: EDITOR_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   toolBtnItalicText: {
     fontFamily,
@@ -1245,6 +1257,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontStyle: "italic",
     color: EDITOR_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   toolBtnUnderlineText: {
     fontFamily,
@@ -1252,6 +1265,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textDecorationLine: "underline",
     color: EDITOR_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   toolBtnLabel: {
     fontFamily,
@@ -1259,6 +1273,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: EDITOR_COLORS.deepNavy,
     marginLeft: 4,
+    includeFontPadding: false,
   },
   toolbarDivider: {
     width: 1,

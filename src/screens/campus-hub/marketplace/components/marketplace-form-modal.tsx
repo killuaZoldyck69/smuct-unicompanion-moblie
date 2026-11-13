@@ -38,10 +38,11 @@ import {
   requireOnline,
   scheduleSuccessToast,
   showApiErrorToast,
-  uploadPendingLostFoundImages,
+  uploadPendingImages,
   deleteRemovedCloudinaryUploads,
   useUgcTermsRetry,
-} from "@/features/campus-hub/useLostFoundUpload";
+  type UploadedUrlMapUpdater,
+} from "@/features/campus-hub/campus-hub-upload";
 import {
   MARKETPLACE_LIMITS,
   extractMarketplacePlainText,
@@ -95,7 +96,7 @@ interface FormState {
   localImages: string[];
 }
 
-const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
+const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccentText;
 
 function isRemoteUrl(uri: string): boolean {
   return /^https?:\/\//i.test(uri);
@@ -154,16 +155,12 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
   const [form, setForm] = useState<FormState>(() =>
     buildInitialState(mode, post, initialPhone),
   );
-  const [descriptionLength, setDescriptionLength] = useState(() =>
-    isEdit && post?.description
-      ? extractMarketplacePlainText(post.description).length
-      : 0,
-  );
+  const [descriptionLength, setDescriptionLength] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [, setUploadedMapVersion] = useState(0);
   const uploadedMapRef = useRef<Record<string, string>>({});
   const initializedKeyRef = useRef<string | null>(null);
   const draftIdempotencyKeyRef = useRef<string | null>(null);
+  const submitLockRef = useRef(false);
   const titleInputRef = useRef<TextInput>(null);
   const priceInputRef = useRef<TextInput>(null);
   const phoneInputRef = useRef<TextInput>(null);
@@ -186,22 +183,10 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
     acceptGuidelines,
   } = useUgcTermsRetry<SanitizedMarketplaceForm>(ugcUserId);
 
-  // Sync map helper so discard cleanup always sees synchronously tracked uploads
-  const syncUploadedMap = useCallback(
-    (
-      updater:
-        | Record<string, string>
-        | ((prev: Record<string, string>) => Record<string, string>),
-    ) => {
-      if (typeof updater === "function") {
-        uploadedMapRef.current = updater(uploadedMapRef.current);
-      } else {
-        uploadedMapRef.current = updater;
-      }
-      setUploadedMapVersion((prev) => prev + 1);
-    },
-    [],
-  );
+  const syncUploadedMap = useCallback((updater: UploadedUrlMapUpdater) => {
+    uploadedMapRef.current =
+      typeof updater === "function" ? updater(uploadedMapRef.current) : updater;
+  }, []);
 
   // Initialize form state once per open session / listing ID so background refetches
   // never overwrite active user edits or clear session upload tracking.
@@ -306,7 +291,6 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       deleteFileFromCloudinaryApi(url, "image").catch(() => {});
     });
     uploadedMapRef.current = {};
-    setUploadedMapVersion((prev) => prev + 1);
   }, []);
 
   const closeAfterSave = useCallback(() => {
@@ -316,7 +300,6 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
     uploadedMapRef.current = {};
     draftIdempotencyKeyRef.current = null;
     initializedKeyRef.current = null;
-    setUploadedMapVersion((prev) => prev + 1);
     if (!isEdit) {
       setForm(buildInitialState("create", undefined, initialPhone));
       setDescriptionLength(0);
@@ -435,18 +418,18 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       let currentMap = { ...uploadedMapRef.current };
 
       if (localOnlyUris.length > 0) {
-        const updatedMap = await uploadPendingLostFoundImages({
+        const updatedMap = await uploadPendingImages({
           uris: localOnlyUris,
           uploadedMap: currentMap,
           folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE,
+          maxBytes: MARKETPLACE_LIMITS.MAX_IMAGE_BYTES,
+          logTag: "Marketplace",
           singlePhotoLabel: isEdit ? "A newly added photo" : "A photo",
           uploadErrorTitle: "Photo Upload Failed",
           uploadErrorFallback:
             "Please check your internet connection and try again.",
           setIsUploading,
-          setUploadedMap: (next) => {
-            syncUploadedMap(next);
-          },
+          setUploadedMap: syncUploadedMap,
         });
         if (!updatedMap) return;
         currentMap = updatedMap;
@@ -474,7 +457,7 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
   );
 
   const handleSubmit = useCallback(async () => {
-    if (isSubmitting) return;
+    if (submitLockRef.current || isSubmitting) return;
     if (
       !requireOnline(
         isOffline,
@@ -504,32 +487,43 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       return;
     }
 
-    if (form.localImages.length > MARKETPLACE_LIMITS.MAX_IMAGES) {
-      Toast.show({
-        type: "error",
-        text1: "Photo Limit Exceeded",
-        text2: `Maximum ${MARKETPLACE_LIMITS.MAX_IMAGES} photos allowed for a marketplace listing.`,
-      });
-      return;
-    }
-
     const hasPendingLocalImages = form.localImages.some(
       (uri) => !isRemoteUrl(uri),
     );
-    if (hasPendingLocalImages && ugcTermsQuery.data?.accepted === false) {
-      queuePayload(validation.payload, (queued) => {
-        void runUploadAndSubmit(queued);
-      });
-      setShowGuidelines(true);
-      return;
-    }
+    submitLockRef.current = true;
+    try {
+      if (hasPendingLocalImages) {
+        let ugcAccepted = ugcTermsQuery.data?.accepted;
+        if (ugcAccepted === undefined) {
+          const refreshed = await ugcTermsQuery.refetch();
+          ugcAccepted = refreshed.data?.accepted;
+        }
+        if (ugcTermsQuery.data?.accepted === false || ugcAccepted === false) {
+          queuePayload(validation.payload, (queued) => {
+            void runUploadAndSubmit(queued);
+          });
+          setShowGuidelines(true);
+          return;
+        }
+        if (ugcAccepted !== true) {
+          Toast.show({
+            type: "error",
+            text1: "Unable to Verify Guidelines",
+            text2: "Please check your connection and try again.",
+          });
+          return;
+        }
+      }
 
-    await runUploadAndSubmit(validation.payload);
+      await runUploadAndSubmit(validation.payload);
+    } finally {
+      submitLockRef.current = false;
+    }
   }, [
     isSubmitting,
     isOffline,
     form,
-    ugcTermsQuery.data?.accepted,
+    ugcTermsQuery,
     queuePayload,
     runUploadAndSubmit,
     setShowGuidelines,
@@ -566,47 +560,51 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       >
         {/* Top Header */}
         <View style={styles.topHeader}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>
-              {isEdit ? "Edit Listing" : "New Listing"}
-            </Text>
-            <View style={styles.hubBadge}>
-              <Text style={styles.hubBadgeText} maxFontSizeMultiplier={1.2}>
-                CAMPUS HUB
+          <View style={styles.topHeaderInner}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.headerTitle}>
+                {isEdit ? "Edit Listing" : "New Listing"}
               </Text>
+              <View style={styles.hubBadge}>
+                <Text style={styles.hubBadgeText} maxFontSizeMultiplier={1.2}>
+                  CAMPUS HUB
+                </Text>
+              </View>
             </View>
-          </View>
 
-          <Pressable
-            onPress={handleDiscardOrClose}
-            style={({ pressed }) => [
-              styles.closeBtn,
-              pressed && { opacity: 0.72 },
-            ]}
-            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
-            disabled={isSubmitting}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isEdit ? "Close edit listing" : "Close create listing"
-            }
-            accessibilityState={{ disabled: isSubmitting }}
-            hitSlop={6}
-          >
-            <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
-          </Pressable>
+            <Pressable
+              onPress={handleDiscardOrClose}
+              style={({ pressed }) => [
+                styles.closeBtn,
+                pressed && { opacity: 0.72 },
+              ]}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+              disabled={isSubmitting}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isEdit ? "Close edit listing" : "Close create listing"
+              }
+              accessibilityState={{ disabled: isSubmitting }}
+              hitSlop={6}
+            >
+              <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
+            </Pressable>
+          </View>
         </View>
 
         {isOffline && (
           <View style={styles.offlineBanner}>
-            <Feather
-              name="wifi-off"
-              size={13}
-              color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
-            />
-            <Text style={styles.offlineBannerText}>
-              You're offline. Reconnect before publishing changes.
-            </Text>
+            <View style={styles.offlineBannerInner}>
+              <Feather
+                name="wifi-off"
+                size={13}
+                color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
+              />
+              <Text style={styles.offlineBannerText}>
+                You're offline. Reconnect before publishing changes.
+              </Text>
+            </View>
           </View>
         )}
 
@@ -834,7 +832,12 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                     </Pressable>
                   )}
                   <Text
-                    style={styles.charCountText}
+                    style={[
+                      styles.charCountText,
+                      descriptionLength >
+                        MARKETPLACE_LIMITS.MAX_DESCRIPTION_PLAIN &&
+                        styles.charCountTextOver,
+                    ]}
                     maxFontSizeMultiplier={1.2}
                   >
                     {descriptionLength}/
@@ -1017,14 +1020,19 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   topHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+  },
+  topHeaderInner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
-    backgroundColor: CAMPUS_HUB_COLORS.white,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   headerLeft: {
     flexDirection: "row",
@@ -1062,18 +1070,25 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   offlineBanner: {
+    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.semantic.amber.border,
+  },
+  offlineBannerInner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.semantic.amber.border,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   offlineBannerText: {
+    flex: 1,
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.lostFoundAccentInk,
   },
@@ -1127,9 +1142,11 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     fontSize: 13,
+    lineHeight: 17,
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
+    includeFontPadding: false,
   },
   segmentTextSellingActive: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
@@ -1238,11 +1255,16 @@ const styles = StyleSheet.create({
   },
   charCountText: {
     fontSize: 12,
+    lineHeight: 16,
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
     fontVariant: ["tabular-nums"],
     includeFontPadding: false,
+  },
+  charCountTextOver: {
+    color: CAMPUS_HUB_COLORS.dangerText,
+    fontWeight: "700",
   },
   priceFormattedText: {
     fontSize: 12,
@@ -1275,6 +1297,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    fontVariant: ["tabular-nums"],
   },
   validPhoneRow: {
     flexDirection: "row",
@@ -1283,9 +1306,11 @@ const styles = StyleSheet.create({
   },
   validPhoneText: {
     fontSize: 11,
+    lineHeight: 14,
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
+    includeFontPadding: false,
   },
   phoneInputBox: {
     flexDirection: "row",
@@ -1312,9 +1337,12 @@ const styles = StyleSheet.create({
   },
   prefixText: {
     fontSize: 13,
+    lineHeight: 17,
     fontFamily,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   phoneInput: {
     flex: 1,
@@ -1325,6 +1353,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: 0.5,
+    fontVariant: ["tabular-nums"],
   },
   footerBar: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
@@ -1341,19 +1370,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccent,
+    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentText,
     paddingVertical: 13,
     borderRadius: 12,
-    shadowColor: CAMPUS_HUB_COLORS.marketplaceAccent,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+    elevation: 2,
     overflow: "hidden",
   },
   publishBtnDisabled: {
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentText,
-    opacity: 0.78,
+    opacity: 0.45,
     shadowOpacity: 0,
     elevation: 0,
   },

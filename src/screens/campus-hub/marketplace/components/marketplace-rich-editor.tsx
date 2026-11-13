@@ -18,6 +18,7 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
   value = "",
   onChangeText,
   placeholder = "Describe condition, edition, accessories, campus meetup spot...",
+  maxLength,
   minHeight = 135,
   onLengthChange,
 }: MarketplaceRichEditorProps) {
@@ -26,8 +27,9 @@ export const MarketplaceRichEditor = React.memo(function MarketplaceRichEditor({
       initialValue={value}
       onChange={onChangeText}
       placeholder={placeholder}
+      maxLength={maxLength}
       minHeight={minHeight}
-      accentColor={CAMPUS_HUB_COLORS.marketplaceAccent}
+      accentColor={CAMPUS_HUB_COLORS.marketplaceAccentText}
       editorFontSize={14}
       editorLineHeight="1.6"
       editorPadding="12px 14px"

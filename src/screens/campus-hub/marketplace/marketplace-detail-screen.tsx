@@ -17,7 +17,6 @@ import {
   Platform,
   TextInput,
   StyleSheet,
-  Keyboard,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -41,9 +40,10 @@ import {
   requireOnline,
   showApiErrorToast,
   useUgcTermsRetry,
-} from "@/features/campus-hub/useLostFoundUpload";
+} from "@/features/campus-hub/campus-hub-upload";
 import {
   clampImageIndex,
+  getMarketplaceListingFlags,
   resolveMarketplaceBackDestination,
   resolveMarketplaceErrorState,
   validateMarketplaceComment,
@@ -72,7 +72,7 @@ import { MarketplaceFormModal } from "@/screens/campus-hub/marketplace/component
 import { MarketplaceDetailSkeleton } from "../shared/skeleton-loaders";
 import { setCampusHubActiveSection } from "@/screens/campus-hub";
 import { colors } from "@/theme/colors";
-import type { MarketplaceComment } from "@/services/marketplace-service";
+import type { MarketplaceAuthor } from "@/services/marketplace-service";
 import type { UgcReportReason } from "@/services/ugc-service";
 
 // Detail sub-components
@@ -80,7 +80,7 @@ import { MPDetailHeader } from "./components/detail/mp-detail-header";
 import { MPImageGallery } from "./components/detail/mp-image-gallery";
 import { MPListingInfoCard } from "./components/detail/mp-listing-info-card";
 
-const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
+const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccentText;
 const EDIT_THRESHOLD_MS = 10_000;
 
 type ModalState = {
@@ -129,44 +129,23 @@ export function MarketplaceDetailScreen() {
   const { isOffline } = useNetworkStatus();
   const isAdmin = currentUserRole === "ADMIN";
 
-  // Gallery state
   const [selectedImage, setSelectedImage] = useState(0);
 
-  // Author & Report modal state
   const [selectedAuthor, setSelectedAuthor] =
     useState<AuthorProfileModalData | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
-  // Comment state
   const [commentText, setCommentText] = useState("");
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
-  const [editingComment, setEditingComment] = useState<Comment | null>(null);
+  const [editingComment, setEditingComment] =
+    useState<Comment<MarketplaceAuthor> | null>(null);
   const isEditMode = editingComment !== null;
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Dynamic keyboard avoiding behavior to prevent stale offset on Android dismiss
-  const [keyboardBehavior, setKeyboardBehavior] = useState<
-    "height" | "padding" | undefined
-  >(undefined);
-
   useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      () => {
-        setKeyboardBehavior(Platform.OS === "ios" ? "padding" : "height");
-      },
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => {
-        setKeyboardBehavior(undefined);
-      },
-    );
     return () => {
-      showSub.remove();
-      hideSub.remove();
       if (scrollTimerRef.current) {
         clearTimeout(scrollTimerRef.current);
       }
@@ -183,9 +162,6 @@ export function MarketplaceDetailScreen() {
     [],
   );
 
-  // ---------------------------------------------------------------------------
-  // Queries & Mutations
-  // ---------------------------------------------------------------------------
   const {
     data: post,
     isLoading,
@@ -200,6 +176,9 @@ export function MarketplaceDetailScreen() {
   const updateCommentMutation = useUpdateMarketplaceComment(id);
   const deleteCommentMutation = useDeleteMarketplaceComment(id);
   const reportMutation = useReportMarketplaceContent(id);
+  const statusActionLockRef = useRef(false);
+  const commentSubmitLockRef = useRef(false);
+  const commentDeleteLockRef = useRef(false);
 
   const {
     showGuidelines,
@@ -222,8 +201,9 @@ export function MarketplaceDetailScreen() {
     [currentUser?.id, post?.authorId],
   );
 
-  const isSelling = post?.type === "SELLING";
-  const isSold = post?.status === "SOLD";
+  const { isSelling, isSold } = post
+    ? getMarketplaceListingFlags(post)
+    : { isSelling: false, isSold: false };
   const isCommentsLocked = Boolean(post && post.status !== "ACTIVE");
 
   const isEdited = useMemo(() => {
@@ -247,10 +227,7 @@ export function MarketplaceDetailScreen() {
     [post?.author?.name],
   );
 
-  const comments = useMemo(
-    () => (post?.comments ?? []) as MarketplaceComment[],
-    [post?.comments],
-  );
+  const comments = useMemo(() => post?.comments ?? [], [post?.comments]);
 
   const handleBack = useCallback(() => {
     setCampusHubActiveSection("MARKETPLACE");
@@ -331,7 +308,9 @@ export function MarketplaceDetailScreen() {
   // Handlers
   // ---------------------------------------------------------------------------
   const handleConfirmDelete = useCallback(() => {
+    if (statusActionLockRef.current || deleteMutation.isPending) return;
     if (!requireOnline(isOffline, "Reconnect to delete this listing.")) return;
+    statusActionLockRef.current = true;
     deleteMutation.mutate(id, {
       onSuccess: () => {
         closeModal("delete");
@@ -345,12 +324,17 @@ export function MarketplaceDetailScreen() {
           "Could not delete this listing.",
         );
       },
+      onSettled: () => {
+        statusActionLockRef.current = false;
+      },
     });
   }, [id, isOffline, deleteMutation, handleBack, closeModal]);
 
   const handleConfirmSold = useCallback(() => {
+    if (statusActionLockRef.current || soldMutation.isPending) return;
     if (!requireOnline(isOffline, "Reconnect to update listing status."))
       return;
+    statusActionLockRef.current = true;
     soldMutation.mutate(id, {
       onSuccess: () => {
         closeModal("sold");
@@ -366,10 +350,14 @@ export function MarketplaceDetailScreen() {
           "Failed to update listing status.",
         );
       },
+      onSettled: () => {
+        statusActionLockRef.current = false;
+      },
     });
   }, [id, isOffline, isSelling, soldMutation, closeModal]);
 
   const handleCloseListing = useCallback(() => {
+    if (statusActionLockRef.current || updateStatusMutation.isPending) return;
     if (!requireOnline(isOffline, "Reconnect to close this listing.")) return;
     Alert.alert(
       "Close Listing?",
@@ -380,6 +368,9 @@ export function MarketplaceDetailScreen() {
           text: "Close Listing",
           style: "destructive",
           onPress: () => {
+            if (statusActionLockRef.current || updateStatusMutation.isPending)
+              return;
+            statusActionLockRef.current = true;
             updateStatusMutation.mutate(
               { id, status: "CLOSED" },
               {
@@ -393,6 +384,9 @@ export function MarketplaceDetailScreen() {
                     "Could not close this listing.",
                   );
                 },
+                onSettled: () => {
+                  statusActionLockRef.current = false;
+                },
               },
             );
           },
@@ -402,7 +396,9 @@ export function MarketplaceDetailScreen() {
   }, [id, isOffline, updateStatusMutation]);
 
   const handleReopenListing = useCallback(() => {
+    if (statusActionLockRef.current || updateStatusMutation.isPending) return;
     if (!requireOnline(isOffline, "Reconnect to reopen this listing.")) return;
+    statusActionLockRef.current = true;
     updateStatusMutation.mutate(
       { id, status: "ACTIVE" },
       {
@@ -415,6 +411,9 @@ export function MarketplaceDetailScreen() {
             "Reopen Failed",
             "Could not reopen this listing.",
           );
+        },
+        onSettled: () => {
+          statusActionLockRef.current = false;
         },
       },
     );
@@ -430,6 +429,15 @@ export function MarketplaceDetailScreen() {
 
   const executePendingCommentAction = useCallback(
     (action: PendingCommentAction) => {
+      if (
+        commentSubmitLockRef.current ||
+        addCommentMutation.isPending ||
+        updateCommentMutation.isPending
+      ) {
+        return;
+      }
+      commentSubmitLockRef.current = true;
+
       if (action.type === "edit") {
         updateCommentMutation.mutate(
           { commentId: action.commentId, content: action.content },
@@ -446,6 +454,9 @@ export function MarketplaceDetailScreen() {
                 "Update Failed",
                 "Failed to update comment.",
               );
+            },
+            onSettled: () => {
+              commentSubmitLockRef.current = false;
             },
           },
         );
@@ -467,6 +478,9 @@ export function MarketplaceDetailScreen() {
             if (handleUgcError(err)) return;
             showApiErrorToast(err, "Comment Failed", "Failed to post comment.");
           },
+          onSettled: () => {
+            commentSubmitLockRef.current = false;
+          },
         },
       );
     },
@@ -475,14 +489,20 @@ export function MarketplaceDetailScreen() {
 
   const handleDeleteComment = useCallback(
     (commentId: string) => {
+      if (commentDeleteLockRef.current || deleteCommentMutation.isPending)
+        return;
       if (!requireOnline(isOffline, "Reconnect to delete this comment."))
         return;
+      commentDeleteLockRef.current = true;
       deleteCommentMutation.mutate(commentId, {
         onSuccess: () => {
           Toast.show({ type: "success", text1: "Comment deleted" });
         },
         onError: (err) => {
           showApiErrorToast(err, "Delete Failed", "Failed to delete comment.");
+        },
+        onSettled: () => {
+          commentDeleteLockRef.current = false;
         },
       });
     },
@@ -510,7 +530,7 @@ export function MarketplaceDetailScreen() {
   );
 
   const handleStartEdit = useCallback(
-    (comment: Comment) => {
+    (comment: Comment<MarketplaceAuthor>) => {
       setReplyTarget(null);
       setEditingComment(comment);
       setCommentText(comment.content);
@@ -521,6 +541,13 @@ export function MarketplaceDetailScreen() {
   );
 
   const handleSendComment = useCallback(() => {
+    if (
+      commentSubmitLockRef.current ||
+      addCommentMutation.isPending ||
+      updateCommentMutation.isPending
+    ) {
+      return;
+    }
     if (!requireOnline(isOffline, "Reconnect to post your comment.")) return;
     const validation = validateMarketplaceComment(commentText);
     if (validation.error || !validation.content) {
@@ -551,6 +578,8 @@ export function MarketplaceDetailScreen() {
     queuePayload(action, executePendingCommentAction);
     executePendingCommentAction(action);
   }, [
+    addCommentMutation.isPending,
+    updateCommentMutation.isPending,
     isOffline,
     commentText,
     isEditMode,
@@ -617,9 +646,6 @@ export function MarketplaceDetailScreen() {
     setSelectedAuthor(author);
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Loading / error states
-  // ---------------------------------------------------------------------------
   if (isLoading) {
     return <MarketplaceDetailSkeleton />;
   }
@@ -641,7 +667,7 @@ export function MarketplaceDetailScreen() {
           : "This listing may have been removed or is no longer available.";
 
     return (
-      <SafeAreaView style={styles.center} edges={["top"]}>
+      <SafeAreaView style={styles.center} edges={["top", "bottom"]}>
         <View style={styles.errorIconWrap}>
           <Feather
             name={errorState === "offline" ? "wifi-off" : "alert-circle"}
@@ -710,7 +736,7 @@ export function MarketplaceDetailScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={keyboardBehavior}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={0}
     >
       <SafeAreaView style={styles.flexFill} edges={["top"]}>
@@ -778,7 +804,7 @@ export function MarketplaceDetailScreen() {
             />
 
             <InlineComments
-              comments={comments as any}
+              comments={comments}
               currentUserId={currentUser?.id}
               listingAuthorId={post.authorId}
               accent={ACCENT}
@@ -792,7 +818,7 @@ export function MarketplaceDetailScreen() {
                   targetTitle: comment.content,
                 })
               }
-              onViewAuthorProfile={handleViewAuthor as any}
+              onViewAuthorProfile={handleViewAuthor}
             />
           </ScrollView>
 
@@ -924,7 +950,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingTop: 8,
-    paddingBottom: 84,
+    paddingBottom: 24,
   },
   center: {
     flex: 1,

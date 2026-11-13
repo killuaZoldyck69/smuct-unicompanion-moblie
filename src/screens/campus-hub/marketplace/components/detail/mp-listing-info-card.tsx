@@ -13,6 +13,7 @@ import {
   formatCampusUserSubtitle,
 } from "@/screens/campus-hub/shared/design-tokens";
 import type { MarketplacePost } from "@/services/marketplace-service";
+import { getMarketplaceListingFlags } from "@/features/campus-hub/marketplace-logic";
 import type { AuthorProfileModalData } from "@/screens/campus-hub/shared/author-modal";
 import {
   MARKETPLACE_CATEGORY_LABELS,
@@ -20,7 +21,7 @@ import {
 } from "../../marketplace-constants";
 import { MarketplaceRichTextDisplay } from "../marketplace-rich-editor";
 
-const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
+const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccentText;
 
 interface MPListingInfoCardProps {
   post: MarketplacePost;
@@ -63,10 +64,8 @@ export function MPListingInfoCard({
     setFailedAvatar(false);
   }, [post.author?.image]);
 
-  const isSelling = post.type === "SELLING";
-  const isSold = post.status === "SOLD";
-  const isClosed = post.status === "CLOSED";
-  const isInactive = isSold || isClosed;
+  const { isSelling, isSold, isClosed, isInactive } =
+    getMarketplaceListingFlags(post);
   const sellerSubtitle =
     authorSubtitle || formatCampusUserSubtitle(post.author, "") || authorDept;
 
@@ -121,6 +120,7 @@ export function MPListingInfoCard({
                   ? styles.typeBadgeTextSelling
                   : styles.typeBadgeTextWanted,
             ]}
+            maxFontSizeMultiplier={1.2}
           >
             {isClosed
               ? "CLOSED"
@@ -135,14 +135,14 @@ export function MPListingInfoCard({
         </View>
 
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>
+          <Text style={styles.categoryBadgeText} maxFontSizeMultiplier={1.2}>
             {MARKETPLACE_CATEGORY_LABELS[post.category] ?? post.category}
           </Text>
         </View>
 
         {post.condition && (
           <View style={styles.conditionBadge}>
-            <Text style={styles.conditionBadgeText}>
+            <Text style={styles.conditionBadgeText} maxFontSizeMultiplier={1.2}>
               {MARKETPLACE_CONDITION_LABELS[post.condition] ?? post.condition}
             </Text>
           </View>
@@ -183,7 +183,9 @@ export function MPListingInfoCard({
                 size={9.5}
                 color={CAMPUS_HUB_COLORS.marketplaceAccentText}
               />
-              <Text style={styles.editedPillText}>EDITED</Text>
+              <Text style={styles.editedPillText} maxFontSizeMultiplier={1.2}>
+                EDITED
+              </Text>
             </View>
             <Text style={styles.editedDate}>
               Last edited {formatDateTime(post.updatedAt)} (
@@ -344,7 +346,8 @@ export function MPListingInfoCard({
                 <Pressable
                   style={({ pressed }) => [
                     styles.editBtn,
-                    pressed && { opacity: 0.82 },
+                    isUpdatingStatus && styles.actionBtnDisabled,
+                    pressed && !isUpdatingStatus && { opacity: 0.82 },
                   ]}
                   onPress={onEdit}
                   disabled={isUpdatingStatus}
@@ -367,7 +370,8 @@ export function MPListingInfoCard({
                 <Pressable
                   style={({ pressed }) => [
                     styles.markSoldBtn,
-                    pressed && { opacity: 0.82 },
+                    isUpdatingStatus && styles.actionBtnDisabled,
+                    pressed && !isUpdatingStatus && { opacity: 0.82 },
                   ]}
                   onPress={onMarkSold}
                   disabled={isUpdatingStatus}
@@ -400,14 +404,18 @@ export function MPListingInfoCard({
                   <Pressable
                     style={({ pressed }) => [
                       styles.closeListingBtn,
-                      pressed && { opacity: 0.82 },
+                      isUpdatingStatus && styles.actionBtnDisabled,
+                      pressed && !isUpdatingStatus && { opacity: 0.82 },
                     ]}
                     onPress={onCloseListing}
                     disabled={isUpdatingStatus}
                     android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                     accessible
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: isUpdatingStatus }}
+                    accessibilityState={{
+                      disabled: isUpdatingStatus,
+                      busy: isUpdatingStatus,
+                    }}
                     accessibilityLabel="Close listing"
                   >
                     <Feather
@@ -419,7 +427,7 @@ export function MPListingInfoCard({
                       style={styles.closeListingBtnText}
                       maxFontSizeMultiplier={1.2}
                     >
-                      Close Listing
+                      {isUpdatingStatus ? "Updating..." : "Close Listing"}
                     </Text>
                   </Pressable>
                 )}
@@ -427,7 +435,8 @@ export function MPListingInfoCard({
                 <Pressable
                   style={({ pressed }) => [
                     styles.deleteBtn,
-                    pressed && { opacity: 0.82 },
+                    isUpdatingStatus && styles.actionBtnDisabled,
+                    pressed && !isUpdatingStatus && { opacity: 0.82 },
                   ]}
                   onPress={onDelete}
                   disabled={isUpdatingStatus}
@@ -457,14 +466,18 @@ export function MPListingInfoCard({
                 <Pressable
                   style={({ pressed }) => [
                     styles.markSoldBtn,
-                    pressed && { opacity: 0.82 },
+                    isUpdatingStatus && styles.actionBtnDisabled,
+                    pressed && !isUpdatingStatus && { opacity: 0.82 },
                   ]}
                   onPress={onReopenListing}
                   disabled={isUpdatingStatus}
                   android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   accessible
                   accessibilityRole="button"
-                  accessibilityState={{ disabled: isUpdatingStatus }}
+                  accessibilityState={{
+                    disabled: isUpdatingStatus,
+                    busy: isUpdatingStatus,
+                  }}
                   accessibilityLabel="Reopen listing"
                 >
                   <Feather
@@ -476,7 +489,7 @@ export function MPListingInfoCard({
                     style={styles.markSoldBtnText}
                     maxFontSizeMultiplier={1.2}
                   >
-                    Reopen Listing
+                    {isUpdatingStatus ? "Reopening..." : "Reopen Listing"}
                   </Text>
                 </Pressable>
               )}
@@ -484,7 +497,8 @@ export function MPListingInfoCard({
               <Pressable
                 style={({ pressed }) => [
                   styles.deleteBtn,
-                  pressed && { opacity: 0.82 },
+                  isUpdatingStatus && styles.actionBtnDisabled,
+                  pressed && !isUpdatingStatus && { opacity: 0.82 },
                 ]}
                 onPress={onDelete}
                 disabled={isUpdatingStatus}
@@ -551,7 +565,7 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 12,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   badgeRow: {
@@ -589,7 +603,7 @@ const styles = StyleSheet.create({
   },
   typeBadgeTextSelling: { color: CAMPUS_HUB_COLORS.marketplaceAccentText },
   typeBadgeTextWanted: { color: CAMPUS_HUB_COLORS.lostFoundAccentText },
-  typeBadgeTextSold: { color: CAMPUS_HUB_COLORS.subtleText },
+  typeBadgeTextSold: { color: CAMPUS_HUB_COLORS.mutedInk },
   categoryBadge: {
     backgroundColor: colors.slate50,
     paddingHorizontal: 9,
@@ -654,7 +668,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 6,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   metaRow: {
     flexDirection: "row",
@@ -665,14 +679,18 @@ const styles = StyleSheet.create({
   postedDate: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   relativeTime: {
     fontFamily,
     fontSize: 11.5,
+    lineHeight: 16,
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.subtleText,
+    includeFontPadding: false,
   },
   editedRow: {
     flexDirection: "row",
@@ -681,7 +699,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.04)",
+    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   editedPill: {
     flexDirection: "row",
@@ -695,19 +713,23 @@ const styles = StyleSheet.create({
   editedPillText: {
     fontFamily,
     fontSize: 9.5,
+    lineHeight: 13,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   editedDate: {
     fontFamily,
     fontSize: 11.5,
+    lineHeight: 16,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
+    includeFontPadding: false,
   },
   divider: {
     height: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.04)",
+    backgroundColor: CAMPUS_HUB_COLORS.subtleBorder,
     marginVertical: 2,
   },
   sellerRow: {
@@ -743,23 +765,29 @@ const styles = StyleSheet.create({
   sellerName: {
     fontFamily,
     fontSize: 14,
+    lineHeight: 19,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   sellerMeta: {
     fontFamily,
     fontSize: 11.5,
+    lineHeight: 16,
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.subtleText,
     marginTop: 2,
+    includeFontPadding: false,
   },
   descSection: { gap: 6 },
   sectionLabel: {
     fontFamily,
     fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.subtleText,
     letterSpacing: 0.6,
+    includeFontPadding: false,
   },
   description: {
     fontFamily,
@@ -881,10 +909,15 @@ const styles = StyleSheet.create({
   },
   ownerActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
+  },
+  actionBtnDisabled: {
+    opacity: 0.55,
   },
   editBtn: {
     flex: 1,
+    minWidth: 132,
     minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
@@ -908,6 +941,7 @@ const styles = StyleSheet.create({
   },
   closeListingBtn: {
     flex: 1,
+    minWidth: 132,
     minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
@@ -931,6 +965,7 @@ const styles = StyleSheet.create({
   },
   markSoldBtn: {
     flex: 1.15,
+    minWidth: 132,
     minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
@@ -954,6 +989,7 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     flex: 1,
+    minWidth: 132,
     minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
