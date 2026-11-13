@@ -22,17 +22,30 @@ function readSrc(relPath) {
 
 describe("marketplace-logic domain validation", () => {
   it("extracts plain text cleanly from rich HTML descriptions", () => {
-    const html = "<p><b>Calculus Book</b> &amp; Notes<br/>Good <i>condition</i></p>";
+    const html =
+      "<p><b>Calculus Book</b> &amp; Notes<br/>Good <i>condition</i></p>";
     const plain = extractMarketplacePlainText(html);
     assert.equal(plain, "Calculus Book & Notes\nGood condition");
     assert.equal(extractMarketplacePlainText("<p>   &nbsp; </p>"), "");
   });
 
   it("normalizes Bangladeshi mobile formats to +8801XXXXXXXXX", () => {
-    assert.equal(normalizeBangladeshiPhoneInput("01700000000"), "+8801700000000");
-    assert.equal(normalizeBangladeshiPhoneInput("1700000000"), "+8801700000000");
-    assert.equal(normalizeBangladeshiPhoneInput("8801700000000"), "+8801700000000");
-    assert.equal(normalizeBangladeshiPhoneInput("+8801700000000"), "+8801700000000");
+    assert.equal(
+      normalizeBangladeshiPhoneInput("01700000000"),
+      "+8801700000000",
+    );
+    assert.equal(
+      normalizeBangladeshiPhoneInput("1700000000"),
+      "+8801700000000",
+    );
+    assert.equal(
+      normalizeBangladeshiPhoneInput("8801700000000"),
+      "+8801700000000",
+    );
+    assert.equal(
+      normalizeBangladeshiPhoneInput("+8801700000000"),
+      "+8801700000000",
+    );
   });
 
   it("validates SELLING vs BUYING payloads and clears condition on BUYING", () => {
@@ -99,9 +112,13 @@ describe("marketplace-logic domain validation", () => {
   });
 
   it("validates comment boundaries cleanly", () => {
-    assert.match(validateMarketplaceComment("   ").error || "", /write a comment/);
     assert.match(
-      validateMarketplaceComment("a".repeat(MARKETPLACE_LIMITS.MAX_COMMENT + 1)).error || "",
+      validateMarketplaceComment("   ").error || "",
+      /write a comment/,
+    );
+    assert.match(
+      validateMarketplaceComment("a".repeat(MARKETPLACE_LIMITS.MAX_COMMENT + 1))
+        .error || "",
       /1000/,
     );
     assert.deepEqual(validateMarketplaceComment("  Is it still available? "), {
@@ -114,7 +131,10 @@ describe("marketplace-logic domain validation", () => {
     assert.equal(clampImageIndex(-2, 4), 0);
     assert.equal(clampImageIndex(1, 0), 0);
 
-    assert.equal(getMarketplaceStatusBadgeText("ACTIVE", "SELLING"), "For Sale");
+    assert.equal(
+      getMarketplaceStatusBadgeText("ACTIVE", "SELLING"),
+      "For Sale",
+    );
     assert.equal(getMarketplaceStatusBadgeText("ACTIVE", "BUYING"), "Wanted");
     assert.equal(getMarketplaceStatusBadgeText("SOLD", "SELLING"), "Sold");
     assert.equal(getMarketplaceStatusBadgeText("SOLD", "BUYING"), "Fulfilled");
@@ -127,22 +147,34 @@ describe("marketplace-logic domain validation", () => {
       href: "/(tabs)/admin_campus_hubs",
       params: { section: "MARKETPLACE" },
     });
-    assert.deepEqual(resolveMarketplaceBackDestination({ userRole: "STUDENT" }), {
-      action: "REPLACE",
-      href: "/(tabs)/forum",
-      params: { section: "MARKETPLACE" },
-    });
+    assert.deepEqual(
+      resolveMarketplaceBackDestination({ userRole: "STUDENT" }),
+      {
+        action: "REPLACE",
+        href: "/(tabs)/forum",
+        params: { section: "MARKETPLACE" },
+      },
+    );
 
     assert.equal(
-      resolveMarketplaceErrorState({ err: { response: { status: 404 } }, isOffline: false }),
+      resolveMarketplaceErrorState({
+        err: { response: { status: 404 } },
+        isOffline: false,
+      }),
       "notFound",
     );
     assert.equal(
-      resolveMarketplaceErrorState({ err: { code: "ECONNABORTED" }, isOffline: false }),
+      resolveMarketplaceErrorState({
+        err: { code: "ECONNABORTED" },
+        isOffline: false,
+      }),
       "offline",
     );
     assert.equal(
-      resolveMarketplaceErrorState({ err: { response: { status: 500 } }, isOffline: false }),
+      resolveMarketplaceErrorState({
+        err: { response: { status: 500 } },
+        isOffline: false,
+      }),
       "generic",
     );
   });
@@ -160,16 +192,24 @@ describe("marketplace mobile audit regressions", () => {
       "src/screens/campus-hub/marketplace/edit-modal.tsx",
     );
 
-    assert.match(formSrc, /function closeAfterSave|const closeAfterSave = useCallback/);
+    assert.match(
+      formSrc,
+      /function closeAfterSave|const closeAfterSave = useCallback/,
+    );
     assert.match(formSrc, /useUgcTermsRetry/);
     assert.match(formSrc, /UgcGuidelinesModal[\s\S]*renderInline=\{true\}/);
     assert.match(formSrc, /navigationBarTranslucent=\{true\}/);
     // Ensure onSuccess invokes closeAfterSave, NOT performDiscardAndClose/cleanupSessionUploadsOnly
-    const onSuccessMatches = [...formSrc.matchAll(/onSuccess:\s*\(\)\s*=>\s*\{[\s\S]*?\}/g)];
+    const onSuccessMatches = [
+      ...formSrc.matchAll(/onSuccess:\s*\(\)\s*=>\s*\{[\s\S]*?\}/g),
+    ];
     assert.ok(onSuccessMatches.length >= 2);
     for (const m of onSuccessMatches) {
       assert.match(m[0], /closeAfterSave\(\)/);
-      assert.doesNotMatch(m[0], /cleanupSessionUploadsOnly|deleteFileFromCloudinaryApi/);
+      assert.doesNotMatch(
+        m[0],
+        /cleanupSessionUploadsOnly|deleteFileFromCloudinaryApi/,
+      );
     }
 
     assert.match(composeSrc, /<MarketplaceFormModal[\s\S]*mode="create"/);
@@ -210,7 +250,13 @@ describe("marketplace mobile audit regressions", () => {
       /export interface MarketplaceAuthor \{[\s\S]*?\}/,
     );
     assert.ok(authorBlockMatch, "MarketplaceAuthor interface must exist");
-    for (const piiField of ["studentId", "teacherId", "email", "phoneNumber", "bloodGroup"]) {
+    for (const piiField of [
+      "studentId",
+      "teacherId",
+      "email",
+      "phoneNumber",
+      "bloodGroup",
+    ]) {
       assert.doesNotMatch(
         authorBlockMatch[0],
         new RegExp(`\\b${piiField}\\b`),
@@ -283,5 +329,93 @@ describe("marketplace mobile audit regressions", () => {
       false,
       "dead marketplace-filter-rail.tsx should stay removed",
     );
+  });
+
+  it("enforces Android UI/UX ergonomics, elevation, contrast, tablet width, and accessibility", () => {
+    const listingCardSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/listing-card.tsx",
+    );
+    assert.match(listingCardSrc, /\bPressable\b/);
+    assert.match(listingCardSrc, /cardInactiveFlat/);
+    assert.doesNotMatch(listingCardSrc, /opacity:\s*0\.76/);
+    assert.match(listingCardSrc, /flexWrap:\s*"wrap"/);
+    assert.match(listingCardSrc, /tabular-nums/);
+    assert.match(listingCardSrc, /includeFontPadding:\s*false/);
+
+    const feedSkeletonSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/marketplace-skeleton.tsx",
+    );
+    assert.match(feedSkeletonSrc, /height:\s*136/);
+    assert.match(feedSkeletonSrc, /borderRadius:\s*18/);
+
+    const sharedSkeletonSrc = readSrc(
+      "src/screens/campus-hub/shared/skeleton-loaders.tsx",
+    );
+    const mpDetailSkelMatch = sharedSkeletonSrc.match(
+      /export function MarketplaceDetailSkeleton[\s\S]*?\n\}/,
+    );
+    assert.ok(mpDetailSkelMatch);
+    assert.match(mpDetailSkelMatch[0], /constrainedBlock/);
+    assert.match(mpDetailSkelMatch[0], /height=\{220\}/);
+
+    const formSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/marketplace-form-modal.tsx",
+    );
+    assert.match(
+      formSrc,
+      /publishBtnDisabled:\s*\{[\s\S]*?marketplaceAccentText/,
+      "Disabled submit button must keep readable contrast",
+    );
+    assert.match(
+      formSrc,
+      /conditionRow:\s*\{[\s\S]*?flexWrap:\s*"wrap"/,
+      "Condition selector row must wrap cleanly on 360dp viewports",
+    );
+    assert.match(formSrc, /priceInputRef\.current\?\.focus\(\)/);
+    assert.match(formSrc, /phoneInputRef\.current\?\.focus\(\)/);
+    assert.match(formSrc, /returnKeyType="next"/);
+    assert.match(formSrc, /accessibilityRole="radio"/);
+
+    const detailSrc = readSrc(
+      "src/screens/campus-hub/marketplace/marketplace-detail-screen.tsx",
+    );
+    assert.match(detailSrc, /contentMaxWidth/);
+    assert.match(detailSrc, /minHeight:\s*48/);
+
+    const infoCardSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/detail/mp-listing-info-card.tsx",
+    );
+    assert.match(infoCardSrc, /flexShrink:\s*1/);
+    assert.match(infoCardSrc, /minHeight:\s*48/);
+
+    const filterSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/marketplace-filter-modal.tsx",
+    );
+    assert.match(filterSrc, /contentMaxWidth/);
+    assert.match(filterSrc, /\bPressable\b/);
+
+    const categoryPickerSrc = readSrc(
+      "src/screens/campus-hub/marketplace/components/marketplace-category-picker.tsx",
+    );
+    assert.match(categoryPickerSrc, /navigationBarTranslucent=\{true\}/);
+    assert.match(categoryPickerSrc, /contentMaxWidth/);
+    assert.match(categoryPickerSrc, /\bPressable\b/);
+
+    for (const modalPath of [
+      "src/screens/campus-hub/marketplace/components/marketplace-delete-modal.tsx",
+      "src/screens/campus-hub/marketplace/components/marketplace-sold-modal.tsx",
+    ]) {
+      const modalSrc = readSrc(modalPath);
+      assert.match(
+        modalSrc,
+        /\bPressable\b/,
+        `${modalPath} must use Pressable`,
+      );
+      assert.match(
+        modalSrc,
+        /height:\s*48/,
+        `${modalPath} action buttons must be 48dp tall`,
+      );
+    }
   });
 });

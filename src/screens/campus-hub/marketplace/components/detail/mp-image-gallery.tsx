@@ -1,10 +1,14 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { clampImageIndex } from "@/features/campus-hub/marketplace-logic";
 import type { ListingStatus } from "@/services/marketplace-service";
-import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
+import { colors } from "@/theme/colors";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+} from "@/screens/campus-hub/shared/design-tokens";
 
 const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccent;
 
@@ -45,12 +49,19 @@ export function MPImageGallery({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        activeOpacity={isActiveBroken ? 1 : 0.9}
+      <Pressable
         onPress={() => {
           if (!isActiveBroken) onOpenViewer(safeIndex);
         }}
-        style={styles.mainWrapper}
+        disabled={isActiveBroken}
+        style={({ pressed }) => [
+          styles.mainWrapper,
+          pressed && !isActiveBroken && { opacity: 0.94 },
+        ]}
+        android_ripple={{
+          color: CAMPUS_HUB_COLORS.androidRippleLight,
+          foreground: true,
+        }}
         accessible
         accessibilityRole="imagebutton"
         accessibilityLabel="Product photo in fullscreen"
@@ -61,30 +72,43 @@ export function MPImageGallery({
             style={styles.mainImage}
             contentFit="cover"
             cachePolicy="memory-disk"
+            transition={150}
             onError={() => markBroken(activeUri)}
           />
         ) : (
           <View style={styles.brokenImageFallback}>
-            <Feather name="image" size={28} color={CAMPUS_HUB_COLORS.subtleText} />
+            <Feather
+              name="image"
+              size={28}
+              color={CAMPUS_HUB_COLORS.subtleText}
+            />
             <Text style={styles.brokenImageText}>Photo unavailable</Text>
           </View>
         )}
 
         {!isActiveBroken && (
           <View style={styles.zoomPill}>
-            <Feather name="maximize-2" size={11} color={CAMPUS_HUB_COLORS.white} />
-            <Text style={styles.zoomPillText}>Tap to enlarge</Text>
+            <Feather
+              name="maximize-2"
+              size={11}
+              color={CAMPUS_HUB_COLORS.white}
+            />
+            <Text style={styles.zoomPillText} maxFontSizeMultiplier={1.2}>
+              Tap to enlarge
+            </Text>
           </View>
         )}
 
         {overlayStatusText && (
           <View style={styles.soldOverlay}>
             <View style={styles.soldBanner}>
-              <Text style={styles.soldBannerText}>{overlayStatusText}</Text>
+              <Text style={styles.soldBannerText} maxFontSizeMultiplier={1.2}>
+                {overlayStatusText}
+              </Text>
             </View>
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
 
       {images.length > 1 && (
         <ScrollView
@@ -96,15 +120,21 @@ export function MPImageGallery({
           {images.map((img, idx) => {
             const isBroken = Boolean(failedUrls[img]);
             return (
-              <TouchableOpacity
+              <Pressable
                 key={`${img}-${idx}`}
                 onPress={() => onSelectIndex(idx)}
-                style={[
+                style={({ pressed }) => [
                   styles.thumbBtn,
                   safeIndex === idx && styles.thumbBtnActive,
+                  pressed && { opacity: 0.82 },
                 ]}
+                android_ripple={{
+                  color: CAMPUS_HUB_COLORS.androidRippleLight,
+                  foreground: true,
+                }}
                 accessible
                 accessibilityRole="button"
+                accessibilityState={{ selected: safeIndex === idx }}
                 accessibilityLabel={`Select photo ${idx + 1}`}
               >
                 {!isBroken ? (
@@ -117,10 +147,14 @@ export function MPImageGallery({
                   />
                 ) : (
                   <View style={styles.thumbBrokenFallback}>
-                    <Feather name="image" size={16} color={CAMPUS_HUB_COLORS.subtleText} />
+                    <Feather
+                      name="image"
+                      size={16}
+                      color={CAMPUS_HUB_COLORS.subtleText}
+                    />
                   </View>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </ScrollView>
@@ -141,7 +175,7 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: CAMPUS_HUB_COLORS.cardBorder,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     ...CAMPUS_HUB_COLORS.shadow,
@@ -170,7 +204,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    backgroundColor: colors.scrimDark,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
@@ -178,8 +212,10 @@ const styles = StyleSheet.create({
   zoomPillText: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
   },
   soldOverlay: {
     position: "absolute",
@@ -187,12 +223,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    backgroundColor: colors.scrimDark,
     alignItems: "center",
     justifyContent: "center",
   },
   soldBanner: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
@@ -200,9 +236,11 @@ const styles = StyleSheet.create({
   soldBannerText: {
     fontFamily,
     fontSize: 18,
+    lineHeight: 22,
     fontWeight: "900",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: 1.5,
+    includeFontPadding: false,
   },
   thumbScrollView: {
     width: "100%",

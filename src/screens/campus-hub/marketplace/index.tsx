@@ -10,7 +10,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   RefreshControl,
   ActivityIndicator,
@@ -153,11 +153,7 @@ export function MarketplaceSection({
       onError: (err) => {
         setIsDeleting(false);
         setPostToDelete(null);
-        showApiErrorToast(
-          err,
-          "Delete Failed",
-          "Failed to delete listing.",
-        );
+        showApiErrorToast(err, "Delete Failed", "Failed to delete listing.");
       },
     });
   }, [postToDelete, isOffline, deleteMutation]);
@@ -320,7 +316,10 @@ export function MarketplaceSection({
     if (isLoading) return <MarketplaceSkeleton cardWidth={cardWidth} />;
 
     if (isError) {
-      const errorState = resolveMarketplaceErrorState({ err: error, isOffline });
+      const errorState = resolveMarketplaceErrorState({
+        err: error,
+        isOffline,
+      });
       return (
         <View style={styles.centerState}>
           <View style={styles.errorIconWrap}>
@@ -341,10 +340,16 @@ export function MarketplaceSection({
               : "There was an issue fetching marketplace items. Please try again."}
           </Text>
           <View style={styles.errorActionsRow}>
-            <TouchableOpacity
-              style={styles.retryBtn}
+            <Pressable
+              style={({ pressed }) => [
+                styles.retryBtn,
+                pressed && { opacity: 0.85 },
+              ]}
               onPress={() => refetch()}
-              activeOpacity={0.8}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Try loading listings again"
             >
               <Feather
                 name="refresh-cw"
@@ -353,19 +358,25 @@ export function MarketplaceSection({
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.retryBtnText}>Try Again</Text>
-            </TouchableOpacity>
+            </Pressable>
             {(activeFilterCount > 0 || Boolean(debouncedSearch)) && (
-              <TouchableOpacity
-                style={styles.resetErrorBtn}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.resetErrorBtn,
+                  pressed && { opacity: 0.8 },
+                ]}
                 onPress={() => {
                   setSearchInput("");
                   setDebouncedSearch("");
                   handleResetFilters();
                 }}
-                activeOpacity={0.8}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Reset filters"
               >
                 <Text style={styles.resetErrorBtnText}>Reset Filters</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         </View>
@@ -393,22 +404,34 @@ export function MarketplaceSection({
               : "Be the first student to post something on campus."}
         </Text>
         {hasSearchOrFilter ? (
-          <TouchableOpacity
-            style={styles.emptyActionBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.emptyActionBtn,
+              pressed && { opacity: 0.85 },
+            ]}
             onPress={() => {
               setSearchInput("");
               setDebouncedSearch("");
               handleResetFilters();
             }}
-            activeOpacity={0.8}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Reset filters"
           >
             <Text style={styles.emptyActionBtnText}>Reset Filters</Text>
-          </TouchableOpacity>
+          </Pressable>
         ) : (
-          <TouchableOpacity
-            style={styles.emptyActionBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.emptyActionBtn,
+              pressed && { opacity: 0.85 },
+            ]}
             onPress={handleOpenCompose}
-            activeOpacity={0.8}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Post a listing"
           >
             <Feather
               name="plus"
@@ -417,7 +440,7 @@ export function MarketplaceSection({
               style={{ marginRight: 6 }}
             />
             <Text style={styles.emptyActionBtnText}>Post a Listing</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
     );
@@ -472,32 +495,43 @@ export function MarketplaceSection({
               multiline={false}
             />
             {searchInput.length > 0 && (
-              <TouchableOpacity
+              <Pressable
                 onPress={() => {
                   setSearchInput("");
                   setDebouncedSearch("");
                 }}
+                style={({ pressed }) => pressed && { opacity: 0.7 }}
+                android_ripple={{
+                  color: CAMPUS_HUB_COLORS.androidRipple,
+                  borderless: true,
+                }}
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Clear search"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
                 <Feather
                   name="x-circle"
                   size={16}
                   color={CAMPUS_HUB_COLORS.subtleText}
                 />
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
 
-          <TouchableOpacity
-            style={[
+          <Pressable
+            style={({ pressed }) => [
               styles.filterBtn,
               activeFilterCount > 0 && styles.filterBtnActive,
+              pressed && { opacity: 0.85 },
             ]}
             onPress={() => setIsFilterModalOpen(true)}
-            activeOpacity={0.8}
+            android_ripple={{
+              color:
+                activeFilterCount > 0
+                  ? CAMPUS_HUB_COLORS.androidRippleLight
+                  : CAMPUS_HUB_COLORS.androidRipple,
+            }}
             accessible
             accessibilityRole="button"
             accessibilityLabel={`Filter marketplace. ${activeFilterCount} active filters`}
@@ -513,10 +547,15 @@ export function MarketplaceSection({
             />
             {activeFilterCount > 0 && (
               <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                <Text
+                  style={styles.filterBadgeText}
+                  maxFontSizeMultiplier={1.15}
+                >
+                  {activeFilterCount}
+                </Text>
               </View>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Active Filter Chips */}
@@ -548,12 +587,19 @@ export function MarketplaceSection({
                 onRemove={() => setCategoryFilter("ALL")}
               />
             )}
-            <TouchableOpacity
+            <Pressable
               onPress={handleResetFilters}
-              style={styles.clearAllBtn}
+              style={({ pressed }) => [
+                styles.clearAllBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Clear all filters"
             >
               <Text style={styles.clearAllText}>Clear all</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
 
@@ -657,10 +703,17 @@ interface FilterChipProps {
 function FilterChip({ label, onRemove }: FilterChipProps) {
   return (
     <View style={styles.activeChip}>
-      <Text style={styles.activeChipText}>{label}</Text>
-      <TouchableOpacity
+      <Text style={styles.activeChipText} maxFontSizeMultiplier={1.2}>
+        {label}
+      </Text>
+      <Pressable
         onPress={onRemove}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={({ pressed }) => pressed && { opacity: 0.7 }}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        android_ripple={{
+          color: CAMPUS_HUB_COLORS.androidRipple,
+          borderless: true,
+        }}
         accessible
         accessibilityRole="button"
         accessibilityLabel={`Remove ${label} filter`}
@@ -670,7 +723,7 @@ function FilterChip({ label, onRemove }: FilterChipProps) {
           size={13}
           color={CAMPUS_HUB_COLORS.marketplaceAccentText}
         />
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
@@ -734,11 +787,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.neutralText,
     paddingVertical: 0,
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
   filterBtn: {
     width: 48,
     height: 48,
     borderRadius: 14,
+    overflow: "hidden",
     backgroundColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
     justifyContent: "center",
@@ -768,8 +824,11 @@ const styles = StyleSheet.create({
   filterBadgeText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 12,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.white,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   activeChipsRow: {
     flexDirection: "row",
@@ -784,7 +843,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: CAMPUS_HUB_COLORS.resolvedGreenBg,
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.2)",
+    borderColor: colors.semantic.emerald.mintBorder,
     borderRadius: 12,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -792,8 +851,10 @@ const styles = StyleSheet.create({
   activeChipText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
+    includeFontPadding: false,
   },
   clearAllBtn: {
     paddingVertical: 6,
@@ -850,9 +911,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   resetErrorBtn: {
+    minHeight: 48,
+    justifyContent: "center",
     paddingHorizontal: 18,
     paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    overflow: "hidden",
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
@@ -900,10 +964,12 @@ const styles = StyleSheet.create({
   emptyActionBtn: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 48,
     backgroundColor: ACCENT,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    overflow: "hidden",
     marginTop: 12,
   },
   emptyActionBtnText: {
@@ -915,9 +981,11 @@ const styles = StyleSheet.create({
   retryBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
+    minHeight: 48,
+    paddingHorizontal: 22,
     paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    overflow: "hidden",
     backgroundColor: ACCENT,
   },
   retryBtnText: {

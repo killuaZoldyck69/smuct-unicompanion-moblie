@@ -79,8 +79,16 @@ export function LostFoundDetailSkeleton() {
 
         {/* Badges Row */}
         <View style={styles.rowGap8}>
-          <SkeletonBox width={68} height={24} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
-          <SkeletonBox width={104} height={24} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+          <SkeletonBox
+            width={68}
+            height={24}
+            borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+          />
+          <SkeletonBox
+            width={104}
+            height={24}
+            borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+          />
         </View>
 
         {/* Title */}
@@ -106,7 +114,12 @@ export function LostFoundDetailSkeleton() {
 
         {/* Description Section */}
         <View style={styles.descriptionCard}>
-          <SkeletonBox width={100} height={16} borderRadius={4} style={{ marginBottom: 12 }} />
+          <SkeletonBox
+            width={100}
+            height={16}
+            borderRadius={4}
+            style={{ marginBottom: 12 }}
+          />
           <View style={styles.colGap8}>
             <SkeletonBox width="100%" height={14} borderRadius={4} />
             <SkeletonBox width="96%" height={14} borderRadius={4} />
@@ -136,8 +149,16 @@ export function LostFoundFeedSkeleton() {
         <View key={key} style={styles.lfFeedCard}>
           <View style={styles.lfFeedLeft}>
             <View style={styles.rowGap8}>
-              <SkeletonBox width={56} height={20} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
-              <SkeletonBox width={88} height={20} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+              <SkeletonBox
+                width={56}
+                height={20}
+                borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+              />
+              <SkeletonBox
+                width={88}
+                height={20}
+                borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+              />
             </View>
             <SkeletonBox width="92%" height={17} borderRadius={5} />
             <SkeletonBox width="68%" height={17} borderRadius={5} />
@@ -175,15 +196,27 @@ export function LostFoundClaimsSkeleton() {
                 <SkeletonBox width={86} height={11} borderRadius={4} />
               </View>
             </View>
-            <SkeletonBox width={68} height={22} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+            <SkeletonBox
+              width={68}
+              height={22}
+              borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+            />
           </View>
           <SkeletonBox width="100%" height={13} borderRadius={4} />
           <SkeletonBox width="78%" height={13} borderRadius={4} />
           <View style={styles.rowBetween}>
             <SkeletonBox width={92} height={12} borderRadius={4} />
             <View style={styles.rowGap8}>
-              <SkeletonBox width={74} height={44} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
-              <SkeletonBox width={108} height={44} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+              <SkeletonBox
+                width={74}
+                height={44}
+                borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+              />
+              <SkeletonBox
+                width={108}
+                height={44}
+                borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+              />
             </View>
           </View>
         </View>
@@ -199,49 +232,73 @@ export function MarketplaceDetailSkeleton() {
   return (
     <SafeAreaView style={styles.screenContainer} edges={["top"]}>
       {/* Top Header */}
-      <View style={styles.topHeader}>
-        <SkeletonBox width={40} height={40} borderRadius={20} />
-        <SkeletonBox width={140} height={20} borderRadius={6} />
-        <SkeletonBox width={40} height={40} borderRadius={20} />
+      <View style={[styles.topHeader, styles.constrainedBlock]}>
+        <SkeletonBox width={38} height={38} borderRadius={19} />
+        <SkeletonBox width={120} height={20} borderRadius={6} />
+        <SkeletonBox width={38} height={38} borderRadius={19} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, styles.constrainedBlock]}
       >
-        {/* Product Photo Carousel */}
+        {/* Product Photo Gallery (matches 220dp height & 20dp radius) */}
         <SkeletonBox
           width="100%"
-          height={280}
-          borderRadius={18}
+          height={220}
+          borderRadius={20}
           style={styles.heroBox}
         />
 
-        {/* Price & Condition Badge */}
-        <View style={styles.rowBetween}>
-          <SkeletonBox width={120} height={34} borderRadius={8} />
-          <SkeletonBox width={80} height={26} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+        {/* Badges Row */}
+        <View style={styles.rowGap8}>
+          <SkeletonBox
+            width={68}
+            height={24}
+            borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+          />
+          <SkeletonBox
+            width={104}
+            height={24}
+            borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+          />
+          <SkeletonBox
+            width={80}
+            height={24}
+            borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+          />
         </View>
 
-        {/* Product Title */}
+        {/* Product Title -> Price (matches MPListingInfoCard order) */}
         <View style={styles.titleBlock}>
-          <SkeletonBox width="95%" height={24} borderRadius={6} />
-          <SkeletonBox width="65%" height={24} borderRadius={6} />
+          <SkeletonBox width="92%" height={24} borderRadius={6} />
+          <SkeletonBox width="58%" height={24} borderRadius={6} />
         </View>
+        <SkeletonBox
+          width={120}
+          height={28}
+          borderRadius={8}
+          style={{ marginBottom: 14 }}
+        />
 
         {/* Seller Info Card */}
         <View style={styles.sellerCard}>
-          <SkeletonBox width={48} height={48} borderRadius={24} />
+          <SkeletonBox width={42} height={42} borderRadius={21} />
           <View style={styles.authorMeta}>
             <SkeletonBox width={140} height={15} borderRadius={4} />
             <SkeletonBox width={160} height={12} borderRadius={4} />
           </View>
-          <SkeletonBox width={40} height={40} borderRadius={20} />
+          <SkeletonBox width={24} height={24} borderRadius={12} />
         </View>
 
         {/* Description Section */}
         <View style={styles.descriptionCard}>
-          <SkeletonBox width={110} height={16} borderRadius={4} style={{ marginBottom: 12 }} />
+          <SkeletonBox
+            width={110}
+            height={16}
+            borderRadius={4}
+            style={{ marginBottom: 12 }}
+          />
           <View style={styles.colGap8}>
             <SkeletonBox width="100%" height={14} borderRadius={4} />
             <SkeletonBox width="94%" height={14} borderRadius={4} />
@@ -289,13 +346,31 @@ export function ForumDiscussionDetailSkeleton() {
         {/* Main Question Bento Card */}
         <View style={styles.forumQuestionCard}>
           <View style={styles.rowGap8}>
-            <SkeletonBox width={90} height={24} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
-            <SkeletonBox width={65} height={24} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+            <SkeletonBox
+              width={90}
+              height={24}
+              borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+            />
+            <SkeletonBox
+              width={65}
+              height={24}
+              borderRadius={CAMPUS_HUB_COLORS.pillRadius}
+            />
           </View>
 
           {/* Title */}
-          <SkeletonBox width="95%" height={24} borderRadius={6} style={{ marginVertical: 14 }} />
-          <SkeletonBox width="70%" height={24} borderRadius={6} style={{ marginBottom: 16 }} />
+          <SkeletonBox
+            width="95%"
+            height={24}
+            borderRadius={6}
+            style={{ marginVertical: 14 }}
+          />
+          <SkeletonBox
+            width="70%"
+            height={24}
+            borderRadius={6}
+            style={{ marginBottom: 16 }}
+          />
 
           {/* Author Row */}
           <View style={styles.authorCard}>
@@ -366,10 +441,20 @@ export function MemeFeedSkeleton() {
           </View>
 
           {/* Caption */}
-          <SkeletonBox width="85%" height={16} borderRadius={4} style={{ marginVertical: 12 }} />
+          <SkeletonBox
+            width="85%"
+            height={16}
+            borderRadius={4}
+            style={{ marginVertical: 12 }}
+          />
 
           {/* Full Meme Image (1:1 Square) */}
-          <SkeletonBox width="100%" height={320} borderRadius={16} style={{ marginBottom: 14 }} />
+          <SkeletonBox
+            width="100%"
+            height={320}
+            borderRadius={16}
+            style={{ marginBottom: 14 }}
+          />
 
           {/* Reaction Buttons Bar */}
           <View style={styles.rowGap8}>
@@ -569,4 +654,3 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
-

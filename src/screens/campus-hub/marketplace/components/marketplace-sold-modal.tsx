@@ -3,10 +3,9 @@ import {
   Modal,
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
-  TouchableWithoutFeedback,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -51,92 +50,113 @@ export const MarketplaceSoldModal = React.memo(function MarketplaceSoldModal({
       statusBarTranslucent
       navigationBarTranslucent
     >
-      <TouchableWithoutFeedback onPress={isSubmitting ? undefined : onClose}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <View
-              style={[
-                styles.modalCard,
-                { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 24 },
-              ]}
-            >
-              {/* Success / Status Icon Circle */}
-              <View style={styles.iconCircle}>
-                <Feather
-                  name="check-circle"
-                  size={28}
-                  color={CAMPUS_HUB_COLORS.marketplaceAccentText}
-                />
-              </View>
+      <Pressable
+        style={styles.backdrop}
+        onPress={isSubmitting ? undefined : onClose}
+        accessibilityViewIsModal={true}
+      >
+        <Pressable
+          style={[
+            styles.modalCard,
+            { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 24 },
+          ]}
+          onPress={() => {}}
+        >
+          {/* Success / Status Icon Circle */}
+          <View style={styles.iconCircle}>
+            <Feather
+              name="check-circle"
+              size={28}
+              color={CAMPUS_HUB_COLORS.marketplaceAccentText}
+            />
+          </View>
 
-              {/* Title & Description */}
-              <Text style={styles.title}>{titleText}</Text>
-              <Text style={styles.description}>{descriptionText}</Text>
+          {/* Title & Description */}
+          <Text style={styles.title}>{titleText}</Text>
+          <Text style={styles.description}>{descriptionText}</Text>
 
-              {/* Mini Item Preview Snippet */}
-              {itemTitle ? (
-                <View style={styles.itemPreviewBox}>
-                  <Text style={styles.itemPreviewTitle} numberOfLines={1}>
-                    {itemTitle}
-                  </Text>
-                  {itemPrice != null ? (
-                    <Text style={styles.itemPreviewPrice}>
-                      ৳{itemPrice.toLocaleString()}
-                    </Text>
-                  ) : (
-                    <Text style={styles.itemPreviewNegotiable}>
-                      {isSelling ? "Price negotiable" : "Budget open"}
-                    </Text>
-                  )}
-                </View>
-              ) : null}
-
-              {/* Action Buttons */}
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.btn, styles.cancelBtn]}
-                  onPress={onClose}
-                  disabled={isSubmitting}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel marking as sold"
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.btn,
-                    styles.confirmBtn,
-                    isSubmitting && styles.confirmBtnDisabled,
-                  ]}
-                  onPress={onConfirm}
-                  disabled={isSubmitting}
-                  activeOpacity={0.8}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={confirmBtnText}
-                >
-                  {isSubmitting ? (
-                    <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.white} />
-                  ) : (
-                    <View style={styles.btnContentRow}>
-                      <Feather
-                        name="check"
-                        size={16}
-                        color={CAMPUS_HUB_COLORS.white}
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={styles.confirmBtnText}>{confirmBtnText}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
+          {/* Mini Item Preview Snippet */}
+          {itemTitle ? (
+            <View style={styles.itemPreviewBox}>
+              <Text style={styles.itemPreviewTitle} numberOfLines={1}>
+                {itemTitle}
+              </Text>
+              {itemPrice != null ? (
+                <Text style={styles.itemPreviewPrice}>
+                  ৳{itemPrice.toLocaleString()}
+                </Text>
+              ) : (
+                <Text style={styles.itemPreviewNegotiable}>
+                  {isSelling ? "Price negotiable" : "Budget open"}
+                </Text>
+              )}
             </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+          ) : null}
+
+          {/* Action Buttons */}
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.btn,
+                styles.cancelBtn,
+                pressed && !isSubmitting && { opacity: 0.78 },
+              ]}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+              onPress={onClose}
+              disabled={isSubmitting}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel marking as sold"
+              accessibilityState={{ disabled: isSubmitting }}
+            >
+              <Text style={styles.cancelBtnText} maxFontSizeMultiplier={1.2}>
+                Cancel
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.btn,
+                styles.confirmBtn,
+                isSubmitting && styles.confirmBtnDisabled,
+                pressed && !isSubmitting && { opacity: 0.85 },
+              ]}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+              onPress={onConfirm}
+              disabled={isSubmitting}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={confirmBtnText}
+              accessibilityState={{
+                disabled: isSubmitting,
+                busy: isSubmitting,
+              }}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator
+                  size="small"
+                  color={CAMPUS_HUB_COLORS.white}
+                />
+              ) : (
+                <View style={styles.btnContentRow}>
+                  <Feather
+                    name="check"
+                    size={16}
+                    color={CAMPUS_HUB_COLORS.white}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text
+                    style={styles.confirmBtnText}
+                    maxFontSizeMultiplier={1.2}
+                  >
+                    {confirmBtnText}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 });
@@ -144,7 +164,7 @@ export const MarketplaceSoldModal = React.memo(function MarketplaceSoldModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(10, 15, 29, 0.65)",
+    backgroundColor: colors.scrimDark,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
@@ -159,7 +179,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...CAMPUS_HUB_COLORS.heroShadow,
     borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.06)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   iconCircle: {
     width: 62,
@@ -170,11 +190,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.2)",
+    borderColor: colors.semantic.emerald.mintBorder,
   },
   title: {
     fontFamily,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     marginBottom: 8,
@@ -200,7 +220,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   itemPreviewTitle: {
     fontFamily,
@@ -215,6 +235,7 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
+    fontVariant: ["tabular-nums"],
   },
   itemPreviewNegotiable: {
     fontFamily,
@@ -230,19 +251,21 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 46,
+    height: 48,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   cancelBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   cancelBtnText: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.mutedInk,
+    color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
   },
   confirmBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccent,
@@ -258,8 +281,9 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: {
     fontFamily,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
   },
 });

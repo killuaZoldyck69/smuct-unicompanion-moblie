@@ -24,7 +24,9 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
       <View style={styles.statsBarHeader}>
         <View style={styles.statsBarTag}>
           <Feather name="shopping-bag" size={12} color={ACCENT} />
-          <Text style={styles.statsBarTagText}>CAMPUS HUB BUY & SELL</Text>
+          <Text style={styles.statsBarTagText} maxFontSizeMultiplier={1.2}>
+            CAMPUS HUB BUY & SELL
+          </Text>
         </View>
       </View>
 
@@ -37,8 +39,12 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
               { backgroundColor: CAMPUS_HUB_COLORS.subtleText },
             ]}
           />
-          <Text style={styles.statCount}>{stats.total}</Text>
-          <Text style={styles.statTitle}>Listings</Text>
+          <Text style={styles.statCount} maxFontSizeMultiplier={1.2}>
+            {stats.total}
+          </Text>
+          <Text style={styles.statTitle} maxFontSizeMultiplier={1.2}>
+            Listings
+          </Text>
         </View>
 
         <View style={styles.statDivider} />
@@ -55,10 +61,13 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
               styles.statCount,
               { color: CAMPUS_HUB_COLORS.marketplaceAccentText },
             ]}
+            maxFontSizeMultiplier={1.2}
           >
             {stats.selling}
           </Text>
-          <Text style={styles.statTitle}>For Sale</Text>
+          <Text style={styles.statTitle} maxFontSizeMultiplier={1.2}>
+            For Sale
+          </Text>
         </View>
 
         <View style={styles.statDivider} />
@@ -75,10 +84,13 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
               styles.statCount,
               { color: CAMPUS_HUB_COLORS.lostFoundAccentText },
             ]}
+            maxFontSizeMultiplier={1.2}
           >
             {stats.buying}
           </Text>
-          <Text style={styles.statTitle}>Wanted</Text>
+          <Text style={styles.statTitle} maxFontSizeMultiplier={1.2}>
+            Wanted
+          </Text>
         </View>
       </View>
     </View>
@@ -109,9 +121,11 @@ const styles = StyleSheet.create({
   statsBarTagText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: ACCENT,
     letterSpacing: 0.6,
+    includeFontPadding: false,
   },
   statsBarRow: {
     flexDirection: "row",
@@ -135,15 +149,20 @@ const styles = StyleSheet.create({
   statCount: {
     fontFamily,
     fontSize: 16,
+    lineHeight: 20,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   statTitle: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
     marginTop: 1,
+    includeFontPadding: false,
   },
   statDivider: {
     width: 1,

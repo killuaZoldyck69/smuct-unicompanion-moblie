@@ -1,7 +1,10 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { CAMPUS_HUB_COLORS, fontFamily } from "@/screens/campus-hub/shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+} from "@/screens/campus-hub/shared/design-tokens";
 
 interface MPDetailHeaderProps {
   isSelling: boolean;
@@ -16,32 +19,47 @@ export function MPDetailHeader({
 }: MPDetailHeaderProps) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity
+      <Pressable
         onPress={onBack}
-        style={styles.iconBtn}
-        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.78 }]}
+        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+        android_ripple={{
+          color: CAMPUS_HUB_COLORS.androidRipple,
+          borderless: true,
+        }}
         accessible
         accessibilityRole="button"
         accessibilityLabel="Go back to marketplace"
-        activeOpacity={0.7}
       >
-        <Feather name="arrow-left" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
-      </TouchableOpacity>
+        <Feather
+          name="arrow-left"
+          size={20}
+          color={CAMPUS_HUB_COLORS.deepNavy}
+        />
+      </Pressable>
 
-      <Text style={styles.title}>{isSelling ? "For Sale" : "Wanted Item"}</Text>
+      <Text style={styles.title} maxFontSizeMultiplier={1.2}>
+        {isSelling ? "For Sale" : "Wanted Item"}
+      </Text>
 
       {onReportPost ? (
-        <TouchableOpacity
+        <Pressable
           onPress={onReportPost}
-          style={styles.iconBtn}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            pressed && { opacity: 0.78 },
+          ]}
+          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+          android_ripple={{
+            color: CAMPUS_HUB_COLORS.androidRipple,
+            borderless: true,
+          }}
           accessible
           accessibilityRole="button"
           accessibilityLabel="Report listing"
-          activeOpacity={0.7}
         >
           <Feather name="flag" size={17} color={CAMPUS_HUB_COLORS.subtleText} />
-        </TouchableOpacity>
+        </Pressable>
       ) : (
         <View style={styles.spacer} />
       )}
@@ -62,8 +80,10 @@ const styles = StyleSheet.create({
   title: {
     fontFamily,
     fontSize: 17,
+    lineHeight: 22,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   iconBtn: {
     width: 38,

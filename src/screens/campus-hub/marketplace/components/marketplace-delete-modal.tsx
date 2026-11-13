@@ -3,10 +3,9 @@ import {
   Modal,
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
-  TouchableWithoutFeedback,
 } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
@@ -26,173 +25,198 @@ interface MarketplaceDeleteModalProps {
   onClose: () => void;
 }
 
-export const MarketplaceDeleteModal = React.memo(function MarketplaceDeleteModal({
-  visible,
-  isDeleting,
-  postTitle,
-  postPrice,
-  postType = "SELLING",
-  postImage,
-  onConfirm,
-  onClose,
-}: MarketplaceDeleteModalProps) {
-  const insets = useSafeAreaInsets();
-  const isSelling = postType === "SELLING";
-  const [failedThumb, setFailedThumb] = useState(false);
+export const MarketplaceDeleteModal = React.memo(
+  function MarketplaceDeleteModal({
+    visible,
+    isDeleting,
+    postTitle,
+    postPrice,
+    postType = "SELLING",
+    postImage,
+    onConfirm,
+    onClose,
+  }: MarketplaceDeleteModalProps) {
+    const insets = useSafeAreaInsets();
+    const isSelling = postType === "SELLING";
+    const [failedThumb, setFailedThumb] = useState(false);
 
-  useEffect(() => {
-    setFailedThumb(false);
-  }, [postImage]);
+    useEffect(() => {
+      setFailedThumb(false);
+    }, [postImage]);
 
-  if (!visible) return null;
+    if (!visible) return null;
 
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={isDeleting ? undefined : onClose}
-      statusBarTranslucent
-      navigationBarTranslucent
-    >
-      <TouchableWithoutFeedback onPress={isDeleting ? undefined : onClose}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <View
-              style={[
-                styles.modalCard,
-                { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 24 },
-              ]}
-            >
-              {/* Warning Halo Circle */}
-              <View style={styles.haloOuter}>
-                <View style={styles.haloInner}>
-                  <Feather
-                    name="trash-2"
-                    size={22}
-                    color={CAMPUS_HUB_COLORS.dangerText}
-                  />
-                </View>
-              </View>
-
-              {/* Title & Description */}
-              <Text style={styles.title}>Delete Listing?</Text>
-              <Text style={styles.description}>
-                This listing will be permanently removed from the Campus Marketplace.
-                This action cannot be undone.
-              </Text>
-
-              {/* Optional Post Preview Card */}
-              {!!postTitle && (
-                <View style={styles.previewCard}>
-                  <View style={styles.previewThumbContainer}>
-                    {postImage && !failedThumb ? (
-                      <Image
-                        source={{ uri: postImage }}
-                        style={styles.previewThumb}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                        onError={() => setFailedThumb(true)}
-                      />
-                    ) : (
-                      <View style={styles.previewPlaceholder}>
-                        <Feather
-                          name="shopping-bag"
-                          size={18}
-                          color={CAMPUS_HUB_COLORS.subtleText}
-                        />
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.previewMeta}>
-                    <Text style={styles.previewTitle} numberOfLines={1}>
-                      {postTitle}
-                    </Text>
-                    <View style={styles.previewBadgeRow}>
-                      <View
-                        style={[
-                          styles.typeBadge,
-                          isSelling
-                            ? styles.typeBadgeSelling
-                            : styles.typeBadgeWanted,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.typeBadgeText,
-                            isSelling
-                              ? styles.typeBadgeTextSelling
-                              : styles.typeBadgeTextWanted,
-                          ]}
-                        >
-                          {isSelling ? "SELLING" : "BUYING"}
-                        </Text>
-                      </View>
-
-                      {postPrice != null ? (
-                        <Text style={styles.priceText}>
-                          ৳{postPrice.toLocaleString()}
-                        </Text>
-                      ) : (
-                        <Text style={styles.priceNegotiableText}>
-                          {isSelling ? "Negotiable" : "Open"}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Actions */}
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.btn, styles.cancelBtn]}
-                  onPress={onClose}
-                  disabled={isDeleting}
-                  activeOpacity={0.7}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel listing deletion"
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.btn,
-                    styles.deleteBtn,
-                    isDeleting && styles.deleteBtnDisabled,
-                  ]}
-                  onPress={onConfirm}
-                  disabled={isDeleting}
-                  activeOpacity={0.8}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Confirm delete listing"
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.white} />
-                  ) : (
-                    <View style={styles.btnContentRow}>
-                      <Feather name="trash-2" size={15} color={CAMPUS_HUB_COLORS.white} />
-                      <Text style={styles.deleteBtnText}>Delete</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={isDeleting ? undefined : onClose}
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
+        <Pressable
+          style={styles.backdrop}
+          onPress={isDeleting ? undefined : onClose}
+          accessibilityViewIsModal={true}
+        >
+          <Pressable
+            style={[
+              styles.modalCard,
+              { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 24 },
+            ]}
+            onPress={() => {}}
+          >
+            {/* Warning Halo Circle */}
+            <View style={styles.haloOuter}>
+              <View style={styles.haloInner}>
+                <Feather
+                  name="trash-2"
+                  size={22}
+                  color={CAMPUS_HUB_COLORS.dangerText}
+                />
               </View>
             </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
-});
+
+            {/* Title & Description */}
+            <Text style={styles.title}>Delete Listing?</Text>
+            <Text style={styles.description}>
+              This listing will be permanently removed from the Campus
+              Marketplace. This action cannot be undone.
+            </Text>
+
+            {/* Optional Post Preview Card */}
+            {!!postTitle && (
+              <View style={styles.previewCard}>
+                <View style={styles.previewThumbContainer}>
+                  {postImage && !failedThumb ? (
+                    <Image
+                      source={{ uri: postImage }}
+                      style={styles.previewThumb}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      onError={() => setFailedThumb(true)}
+                    />
+                  ) : (
+                    <View style={styles.previewPlaceholder}>
+                      <Feather
+                        name="shopping-bag"
+                        size={18}
+                        color={CAMPUS_HUB_COLORS.subtleText}
+                      />
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.previewMeta}>
+                  <Text style={styles.previewTitle} numberOfLines={1}>
+                    {postTitle}
+                  </Text>
+                  <View style={styles.previewBadgeRow}>
+                    <View
+                      style={[
+                        styles.typeBadge,
+                        isSelling
+                          ? styles.typeBadgeSelling
+                          : styles.typeBadgeWanted,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.typeBadgeText,
+                          isSelling
+                            ? styles.typeBadgeTextSelling
+                            : styles.typeBadgeTextWanted,
+                        ]}
+                        maxFontSizeMultiplier={1.2}
+                      >
+                        {isSelling ? "SELLING" : "BUYING"}
+                      </Text>
+                    </View>
+
+                    {postPrice != null ? (
+                      <Text style={styles.priceText}>
+                        ৳{postPrice.toLocaleString()}
+                      </Text>
+                    ) : (
+                      <Text style={styles.priceNegotiableText}>
+                        {isSelling ? "Negotiable" : "Open"}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Actions */}
+            <View style={styles.buttonRow}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.cancelBtn,
+                  pressed && !isDeleting && { opacity: 0.78 },
+                ]}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                onPress={onClose}
+                disabled={isDeleting}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel listing deletion"
+                accessibilityState={{ disabled: isDeleting }}
+              >
+                <Text style={styles.cancelBtnText} maxFontSizeMultiplier={1.2}>
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.deleteBtn,
+                  isDeleting && styles.deleteBtnDisabled,
+                  pressed && !isDeleting && { opacity: 0.85 },
+                ]}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+                onPress={onConfirm}
+                disabled={isDeleting}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm delete listing"
+                accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={CAMPUS_HUB_COLORS.white}
+                  />
+                ) : (
+                  <View style={styles.btnContentRow}>
+                    <Feather
+                      name="trash-2"
+                      size={15}
+                      color={CAMPUS_HUB_COLORS.white}
+                    />
+                    <Text
+                      style={styles.deleteBtnText}
+                      maxFontSizeMultiplier={1.2}
+                    >
+                      Delete
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(10, 15, 29, 0.65)",
+    backgroundColor: colors.scrimDark,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 22,
@@ -207,7 +231,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...CAMPUS_HUB_COLORS.heroShadow,
     borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.06)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   haloOuter: {
     width: 60,
@@ -297,7 +321,7 @@ const styles = StyleSheet.create({
   },
   typeBadgeSelling: {
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
-    borderColor: "rgba(16, 185, 129, 0.25)",
+    borderColor: colors.semantic.emerald.mintBorder,
   },
   typeBadgeWanted: {
     backgroundColor: CAMPUS_HUB_COLORS.forumAccentLight,
@@ -308,6 +332,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: "800",
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   typeBadgeTextSelling: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
@@ -320,6 +345,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    fontVariant: ["tabular-nums"],
   },
   priceNegotiableText: {
     fontFamily,
@@ -334,19 +360,21 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 46,
+    height: 48,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   cancelBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   cancelBtnText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
   },
   deleteBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.dangerText,
@@ -362,8 +390,9 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
   },
 });

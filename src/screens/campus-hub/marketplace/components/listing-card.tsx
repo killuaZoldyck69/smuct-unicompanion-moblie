@@ -1,36 +1,46 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
-import type { ListingType, MarketplacePost } from "@/services/marketplace-service";
+import type {
+  ListingType,
+  MarketplacePost,
+} from "@/services/marketplace-service";
 import { colors } from "@/theme/colors";
-import { CAMPUS_HUB_COLORS, fontFamily, timeAgo } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  timeAgo,
+} from "../../shared/design-tokens";
 import { RichTextSnippet } from "../../shared/rich-text-snippet";
 
-const CONDITION_STYLES: Record<string, { label: string; bg: string; text: string; border: string }> = {
+const CONDITION_STYLES: Record<
+  string,
+  { label: string; bg: string; text: string; border: string }
+> = {
   NEW: {
     label: "Brand New",
     bg: colors.semantic.emerald.softSurface,
     text: colors.semantic.emerald.darkText,
-    border: "rgba(6, 95, 70, 0.14)",
+    border: colors.semantic.emerald.mintBorder,
   },
   LIKE_NEW: {
     label: "Like New",
     bg: colors.semantic.emerald.tint,
     text: colors.semantic.emerald.darker,
-    border: "rgba(4, 120, 87, 0.14)",
+    border: colors.semantic.emerald.border,
   },
   GOOD: {
     label: "Good",
     bg: colors.semantic.blue.tint,
     text: colors.semantic.blue.deep,
-    border: "rgba(30, 58, 138, 0.14)",
+    border: colors.semantic.blue.border,
   },
   FAIR: {
     label: "Fair",
     bg: colors.semantic.yellow.tint,
     text: colors.semantic.yellow.darkText,
-    border: "rgba(133, 77, 14, 0.14)",
+    border: colors.semantic.amber.border,
   },
 };
 
@@ -74,224 +84,280 @@ export const ListingCard = React.memo(function ListingCard({
   const isClosed = post.status === "CLOSED";
   const isInactive = isSold || isClosed;
   const statusOverlayLabel = isClosed ? "CLOSED" : isSold ? "SOLD" : null;
+  const conditionInfo = post.condition
+    ? CONDITION_STYLES[post.condition]
+    : null;
+  const commentCount = post._count?.comments ?? 0;
 
-  const conditionInfo = post.condition ? CONDITION_STYLES[post.condition] : null;
-
-  // Author peer identity display
   const authorInitial = (post.author?.name ?? "U").charAt(0).toUpperCase();
   const authorFirstName = post.author?.name
     ? post.author.name.trim().split(" ")[0]
     : "Member";
 
   return (
-    <TouchableOpacity
+    <View
       style={[
         styles.card,
         cardWidth ? { width: cardWidth } : null,
-        isInactive && styles.cardSold,
+        isInactive && styles.cardInactiveFlat,
       ]}
-      onPress={onPress}
-      activeOpacity={0.88}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={`${isSelling ? "For Sale" : "Wanted"}: ${post.title}${
-        post.price != null ? `, ৳${post.price.toLocaleString()}` : ""
-      }. Posted by ${authorFirstName}.`}
     >
-      {/* Visual Anchor: 16:10 Ratio Photo Container */}
-      <View style={styles.imageContainer}>
-        {coverUri && !failedImage ? (
-          <Image
-            source={{ uri: coverUri }}
-            style={styles.image}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            onError={() => setFailedImage(true)}
-          />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <View style={styles.placeholderIconCircle}>
-              <Feather
-                name={isSelling ? "shopping-bag" : "search"}
-                size={20}
-                color={CAMPUS_HUB_COLORS.subtleText}
-              />
+      <Pressable
+        style={({ pressed }) => [
+          styles.cardPressable,
+          pressed && styles.cardPressed,
+        ]}
+        onPress={onPress}
+        android_ripple={{
+          color: CAMPUS_HUB_COLORS.androidRipple,
+          foreground: true,
+        }}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`${isSelling ? "For Sale" : "Wanted"}: ${post.title}${
+          post.price != null ? `, ৳${post.price.toLocaleString()}` : ""
+        }. Posted by ${authorFirstName}.`}
+      >
+        {/* Visual Anchor: 16:10 Photo Container */}
+        <View style={styles.imageContainer}>
+          {coverUri && !failedImage ? (
+            <Image
+              source={{ uri: coverUri }}
+              style={styles.image}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+              onError={() => setFailedImage(true)}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <View style={styles.placeholderIconCircle}>
+                <Feather
+                  name={isSelling ? "shopping-bag" : "search"}
+                  size={20}
+                  color={CAMPUS_HUB_COLORS.subtleText}
+                />
+              </View>
+              <Text style={styles.placeholderText} maxFontSizeMultiplier={1.2}>
+                {coverUri
+                  ? "Photo Unavailable"
+                  : isSelling
+                    ? "No Photo"
+                    : "Wanted Item"}
+              </Text>
             </View>
-            <Text style={styles.placeholderText}>
-              {coverUri ? "Photo Unavailable" : isSelling ? "No Photo" : "Wanted Item"}
-            </Text>
-          </View>
-        )}
+          )}
 
-        {/* Top-Left Floating Status Pill */}
-        <View
-          style={[
-            styles.typeOverlayBadge,
-            isInactive
-              ? styles.typeBadgeSold
-              : isSelling
-              ? styles.typeBadgeSelling
-              : styles.typeBadgeWanted,
-          ]}
-        >
+          {/* Top-Left Floating Status Pill */}
           <View
             style={[
-              styles.typeBadgeDot,
+              styles.typeOverlayBadge,
               isInactive
-                ? styles.typeDotSold
+                ? styles.typeBadgeSold
                 : isSelling
-                ? styles.typeDotSelling
-                : styles.typeDotWanted,
-            ]}
-          />
-          <Text
-            style={[
-              styles.typeBadgeText,
-              isInactive
-                ? styles.typeTextSold
-                : isSelling
-                ? styles.typeTextSelling
-                : styles.typeTextWanted,
+                  ? styles.typeBadgeSelling
+                  : styles.typeBadgeWanted,
             ]}
           >
-            {statusOverlayLabel ?? (isSelling ? "FOR SALE" : "WANTED")}
-          </Text>
-        </View>
-
-        {/* Bottom-Right Photo Counter (Multiple Photos) */}
-        {post.images && post.images.length > 1 && (
-          <View style={styles.photoCountBadge}>
-            <Feather name="camera" size={10} color={CAMPUS_HUB_COLORS.white} />
-            <Text style={styles.photoCountText}>{post.images.length}</Text>
-          </View>
-        )}
-
-        {/* Admin Floating Delete Button */}
-        {isAdmin && (
-          <TouchableOpacity
-            style={styles.adminDeleteBtn}
-            onPress={(e) => {
-              e.stopPropagation?.();
-              onDelete?.(
-                post.id,
-                post.title,
-                post.price,
-                post.images?.[0],
-                post.type,
-              );
-            }}
-            activeOpacity={0.8}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={`Delete listing: ${post.title}`}
-          >
-            <Feather name="trash-2" size={13} color={CAMPUS_HUB_COLORS.white} />
-          </TouchableOpacity>
-        )}
-
-        {/* Sold / Closed Overlay Scrim */}
-        {statusOverlayLabel && (
-          <View style={styles.soldOverlay}>
-            <View style={styles.soldBadge}>
-              <Text style={styles.soldBadgeText}>{statusOverlayLabel}</Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Card Information Body */}
-      <View style={styles.cardBody}>
-        {/* Prominent Price Anchor */}
-        <View style={styles.priceRow}>
-          {post.price != null ? (
-            <View style={styles.priceContainer}>
-              <Text style={styles.currencySymbol}>৳</Text>
-              <Text style={styles.priceAmount}>
-                {post.price.toLocaleString()}
-              </Text>
-            </View>
-          ) : (
-            <Text style={styles.priceNegotiable}>
-              {isSelling ? "Negotiable" : "Budget Open"}
-            </Text>
-          )}
-
-          {/* Condition Micro Pill */}
-          {conditionInfo && (
             <View
               style={[
-                styles.conditionPill,
-                { backgroundColor: conditionInfo.bg, borderColor: conditionInfo.border },
+                styles.typeBadgeDot,
+                isInactive
+                  ? styles.typeDotSold
+                  : isSelling
+                    ? styles.typeDotSelling
+                    : styles.typeDotWanted,
               ]}
+            />
+            <Text
+              style={[
+                styles.typeBadgeText,
+                isInactive
+                  ? styles.typeTextSold
+                  : isSelling
+                    ? styles.typeTextSelling
+                    : styles.typeTextWanted,
+              ]}
+              maxFontSizeMultiplier={1.15}
             >
-              <Text style={[styles.conditionPillText, { color: conditionInfo.text }]}>
-                {conditionInfo.label}
+              {statusOverlayLabel ?? (isSelling ? "FOR SALE" : "WANTED")}
+            </Text>
+          </View>
+
+          {/* Bottom-Right Photo Counter */}
+          {post.images && post.images.length > 1 && (
+            <View style={styles.photoCountBadge}>
+              <Feather
+                name="camera"
+                size={10}
+                color={CAMPUS_HUB_COLORS.white}
+              />
+              <Text style={styles.photoCountText} maxFontSizeMultiplier={1.15}>
+                {post.images.length}
               </Text>
+            </View>
+          )}
+
+          {/* Sold / Closed Overlay Scrim */}
+          {statusOverlayLabel && (
+            <View style={styles.soldOverlay}>
+              <View style={styles.soldBadge}>
+                <Text style={styles.soldBadgeText} maxFontSizeMultiplier={1.2}>
+                  {statusOverlayLabel}
+                </Text>
+              </View>
             </View>
           )}
         </View>
 
-        {/* Listing Title */}
-        <Text style={styles.title} numberOfLines={1}>
-          {post.title}
-        </Text>
-
-        {/* Description Snippet */}
-        {post.description ? (
-          <RichTextSnippet
-            text={post.description}
-            numberOfLines={2}
-            style={styles.description}
-          />
-        ) : null}
-
-        {/* Hairline Divider */}
-        <View style={styles.cardDivider} />
-
-        {/* Card Footer: Seller Peer Identity + Relative Timestamp & Inquiries */}
-        <View style={styles.footerRow}>
-          <View style={styles.authorPeerCol}>
-            {avatarUri && !failedAvatar ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={styles.authorAvatar}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                onError={() => setFailedAvatar(true)}
-              />
+        {/* Card Information Body (dimmed internally so Android elevation never muddies) */}
+        <View style={[styles.cardBody, isInactive && styles.cardBodyInactive]}>
+          <View style={styles.priceRow}>
+            {post.price != null ? (
+              <View style={styles.priceContainer}>
+                <Text style={styles.currencySymbol} maxFontSizeMultiplier={1.2}>
+                  ৳
+                </Text>
+                <Text
+                  style={styles.priceAmount}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  maxFontSizeMultiplier={1.2}
+                >
+                  {post.price.toLocaleString()}
+                </Text>
+              </View>
             ) : (
-              <View style={styles.authorAvatarFallback}>
-                <Text style={styles.authorAvatarInitial}>
-                  {authorInitial}
+              <Text
+                style={styles.priceNegotiable}
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.2}
+              >
+                {isSelling ? "Negotiable" : "Budget Open"}
+              </Text>
+            )}
+
+            {conditionInfo && (
+              <View
+                style={[
+                  styles.conditionPill,
+                  {
+                    backgroundColor: conditionInfo.bg,
+                    borderColor: conditionInfo.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.conditionPillText,
+                    { color: conditionInfo.text },
+                  ]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.15}
+                >
+                  {conditionInfo.label}
                 </Text>
               </View>
             )}
-            <Text style={styles.authorName} numberOfLines={1}>
-              {authorFirstName}
-            </Text>
           </View>
 
-          <View style={styles.footerRightMeta}>
-            {post._count?.comments && post._count.comments > 0 ? (
-              <View style={styles.commentMeta}>
-                <Feather
-                  name="message-circle"
-                  size={10.5}
-                  color={CAMPUS_HUB_COLORS.subtleText}
+          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+            {post.title}
+          </Text>
+
+          {post.description ? (
+            <RichTextSnippet
+              text={post.description}
+              numberOfLines={2}
+              style={styles.description}
+            />
+          ) : null}
+
+          <View style={styles.cardDivider} />
+
+          <View style={styles.footerRow}>
+            <View style={styles.authorPeerCol}>
+              {avatarUri && !failedAvatar ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={styles.authorAvatar}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  onError={() => setFailedAvatar(true)}
                 />
-                <Text style={styles.commentCount}>
-                  {post._count.comments}
-                </Text>
-              </View>
-            ) : null}
-            <Text style={styles.timeText} numberOfLines={1}>
-              {timeAgo(post.createdAt)}
-            </Text>
+              ) : (
+                <View style={styles.authorAvatarFallback}>
+                  <Text
+                    style={styles.authorAvatarInitial}
+                    maxFontSizeMultiplier={1.15}
+                  >
+                    {authorInitial}
+                  </Text>
+                </View>
+              )}
+              <Text
+                style={styles.authorName}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {authorFirstName}
+              </Text>
+            </View>
+
+            <View style={styles.footerRightMeta}>
+              {commentCount > 0 ? (
+                <View style={styles.commentMeta}>
+                  <Feather
+                    name="message-circle"
+                    size={10.5}
+                    color={CAMPUS_HUB_COLORS.subtleText}
+                  />
+                  <Text style={styles.commentCount} maxFontSizeMultiplier={1.2}>
+                    {commentCount}
+                  </Text>
+                </View>
+              ) : null}
+              <Text
+                style={styles.timeText}
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.2}
+              >
+                {timeAgo(post.createdAt)}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </Pressable>
+
+      {/* Sibling overlay button (outside card Pressable for clean TalkBack & touch routing) */}
+      {isAdmin && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.adminDeleteBtn,
+            pressed && { opacity: 0.85 },
+          ]}
+          onPress={() =>
+            onDelete?.(
+              post.id,
+              post.title,
+              post.price,
+              post.images?.[0],
+              post.type,
+            )
+          }
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          android_ripple={{
+            color: CAMPUS_HUB_COLORS.androidRippleLight,
+            borderless: true,
+          }}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete listing: ${post.title}`}
+        >
+          <Feather name="trash-2" size={13} color={CAMPUS_HUB_COLORS.white} />
+        </Pressable>
+      )}
+    </View>
   );
 });
 
@@ -301,11 +367,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(15, 23, 42, 0.06)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
-  cardSold: {
-    opacity: 0.76,
+  cardInactiveFlat: {
+    elevation: 0,
+    shadowOpacity: 0,
+    backgroundColor: colors.slate50,
+  },
+  cardPressable: {
+    width: "100%",
+  },
+  cardPressed: {
+    opacity: 0.94,
   },
   imageContainer: {
     position: "relative",
@@ -333,13 +407,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   placeholderText: {
     fontFamily,
     fontSize: 10.5,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
+    includeFontPadding: false,
   },
   typeOverlayBadge: {
     position: "absolute",
@@ -354,16 +429,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   typeBadgeSelling: {
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderColor: "rgba(22, 163, 74, 0.2)",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderColor: colors.semantic.emerald.mintBorder,
   },
   typeBadgeWanted: {
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderColor: "rgba(217, 119, 6, 0.2)",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderColor: colors.semantic.amber.border,
   },
   typeBadgeSold: {
-    backgroundColor: "rgba(15, 23, 42, 0.88)",
-    borderColor: "transparent",
+    backgroundColor: CAMPUS_HUB_COLORS.deepNavy,
+    borderColor: CAMPUS_HUB_COLORS.deepNavy,
   },
   typeBadgeDot: {
     width: 5,
@@ -382,8 +457,10 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontFamily,
     fontSize: 9,
+    lineHeight: 12,
     fontWeight: "800",
     letterSpacing: 0.5,
+    includeFontPadding: false,
   },
   typeTextSelling: {
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
@@ -401,10 +478,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(15, 23, 42, 0.72)",
+    backgroundColor: colors.scrimDark,
     paddingHorizontal: 6.5,
     paddingVertical: 2.5,
     borderRadius: 6,
+  },
+  photoCountText: {
+    fontFamily,
+    fontSize: 9.5,
+    lineHeight: 12,
+    fontWeight: "700",
+    color: CAMPUS_HUB_COLORS.white,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   adminDeleteBtn: {
     position: "absolute",
@@ -417,17 +503,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
     elevation: 4,
-  },
-  photoCountText: {
-    fontFamily,
-    fontSize: 9.5,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.white,
   },
   soldOverlay: {
     position: "absolute",
@@ -435,12 +511,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    backgroundColor: colors.scrimDark,
     alignItems: "center",
     justifyContent: "center",
   },
   soldBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     paddingHorizontal: 12,
     paddingVertical: 4.5,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
@@ -448,55 +524,73 @@ const styles = StyleSheet.create({
   soldBadgeText: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "900",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: 1,
+    includeFontPadding: false,
   },
   cardBody: {
     padding: 10,
     gap: 4,
   },
+  cardBodyInactive: {
+    opacity: 0.72,
+  },
   priceRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 6,
+    gap: 4,
   },
   priceContainer: {
     flexDirection: "row",
     alignItems: "baseline",
     gap: 1.5,
+    flexShrink: 1,
   },
   currencySymbol: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   priceAmount: {
     fontFamily,
     fontSize: 15.5,
+    lineHeight: 19,
     fontWeight: "900",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: -0.3,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
+    flexShrink: 1,
   },
   priceNegotiable: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.subtleText,
     fontStyle: "italic",
+    flexShrink: 1,
   },
   conditionPill: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
+    flexShrink: 0,
   },
   conditionPillText: {
     fontFamily,
     fontSize: 9.5,
+    lineHeight: 13,
     fontWeight: "700",
+    includeFontPadding: false,
   },
   title: {
     fontFamily,
@@ -514,7 +608,7 @@ const styles = StyleSheet.create({
   },
   cardDivider: {
     height: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.04)",
+    backgroundColor: CAMPUS_HUB_COLORS.subtleBorder,
     marginTop: 2,
     marginBottom: 1,
   },
@@ -551,8 +645,10 @@ const styles = StyleSheet.create({
   authorAvatarInitial: {
     fontFamily,
     fontSize: 9,
+    lineHeight: 11,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   authorName: {
     fontFamily,
@@ -574,13 +670,19 @@ const styles = StyleSheet.create({
   commentCount: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.subtleText,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   timeText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.subtleText,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
 });

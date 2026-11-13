@@ -1,5 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS } from "../../shared/design-tokens";
 
 interface MarketplaceSkeletonProps {
@@ -16,15 +17,18 @@ export const MarketplaceSkeleton = React.memo(function MarketplaceSkeleton({
           key={item}
           style={[styles.card, cardWidth ? { width: cardWidth } : null]}
         >
-          {/* Image Placeholder */}
+          {/* Image Placeholder matching 136dp ListingCard container */}
           <View style={styles.imageSkeleton} />
 
-          {/* Info Body */}
+          {/* Info Body matching price-row -> title -> snippet -> footer */}
           <View style={styles.body}>
-            <View style={styles.badgeSkeleton} />
+            <View style={styles.priceRowSkeleton}>
+              <View style={styles.priceSkeleton} />
+              <View style={styles.badgeSkeleton} />
+            </View>
             <View style={styles.titleSkeleton} />
-            <View style={styles.titleSkeletonShort} />
-            <View style={styles.priceSkeleton} />
+            <View style={styles.descSkeleton} />
+            <View style={styles.descSkeletonShort} />
             <View style={styles.footerSkeleton}>
               <View style={styles.footerItem} />
               <View style={styles.footerItemRight} />
@@ -44,65 +48,77 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 20,
+    borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   imageSkeleton: {
     width: "100%",
-    height: 126,
-    backgroundColor: "#e2e8f0",
+    height: 136,
+    backgroundColor: colors.slate200,
     opacity: 0.6,
   },
   body: {
-    padding: 11,
-    gap: 7,
+    padding: 10,
+    gap: 6,
   },
-  badgeSkeleton: {
-    width: 60,
-    height: 18,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    backgroundColor: "#f1f5f9",
-  },
-  titleSkeleton: {
-    width: "90%",
-    height: 14,
-    borderRadius: 6,
-    backgroundColor: "#f1f5f9",
-  },
-  titleSkeletonShort: {
-    width: "60%",
-    height: 14,
-    borderRadius: 6,
-    backgroundColor: "#f1f5f9",
+  priceRowSkeleton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
   },
   priceSkeleton: {
-    width: 70,
+    width: 64,
+    height: 18,
+    borderRadius: 6,
+    backgroundColor: colors.slate200,
+    opacity: 0.7,
+  },
+  badgeSkeleton: {
+    width: 52,
     height: 16,
     borderRadius: 6,
-    backgroundColor: "#e2e8f0",
-    opacity: 0.7,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+  },
+  titleSkeleton: {
+    width: "88%",
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+  },
+  descSkeleton: {
+    width: "96%",
+    height: 11,
+    borderRadius: 4,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+  },
+  descSkeletonShort: {
+    width: "62%",
+    height: 11,
+    borderRadius: 4,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   footerSkeleton: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.04)",
-    paddingTop: 7,
+    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
+    paddingTop: 6,
     marginTop: 2,
   },
   footerItem: {
-    width: 32,
-    height: 10,
+    width: 48,
+    height: 11,
     borderRadius: 4,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   footerItemRight: {
-    width: 44,
-    height: 10,
+    width: 40,
+    height: 11,
     borderRadius: 4,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
 });

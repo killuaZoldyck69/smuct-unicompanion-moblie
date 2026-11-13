@@ -10,7 +10,7 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Linking,
   BackHandler,
   KeyboardAvoidingView,
@@ -182,7 +182,13 @@ export function MarketplaceDetailScreen() {
   // ---------------------------------------------------------------------------
   // Queries & Mutations
   // ---------------------------------------------------------------------------
-  const { data: post, isLoading, isError, error, refetch } = useMarketplacePost(id);
+  const {
+    data: post,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useMarketplacePost(id);
   const deleteMutation = useDeleteMarketplacePost();
   const soldMutation = useMarkMarketplaceSold();
   const updateStatusMutation = useUpdateMarketplaceStatus();
@@ -220,7 +226,11 @@ export function MarketplaceDetailScreen() {
     if (!post?.updatedAt || !post?.createdAt) return false;
     const created = new Date(post.createdAt).getTime();
     const updated = new Date(post.updatedAt).getTime();
-    return !isNaN(created) && !isNaN(updated) && updated - created > EDIT_THRESHOLD_MS;
+    return (
+      !isNaN(created) &&
+      !isNaN(updated) &&
+      updated - created > EDIT_THRESHOLD_MS
+    );
   }, [post?.createdAt, post?.updatedAt]);
 
   const authorSubtitle = useMemo(
@@ -338,7 +348,8 @@ export function MarketplaceDetailScreen() {
   }, [id, isOffline, deleteMutation, handleBack, closeModal]);
 
   const handleConfirmSold = useCallback(() => {
-    if (!requireOnline(isOffline, "Reconnect to update listing status.")) return;
+    if (!requireOnline(isOffline, "Reconnect to update listing status."))
+      return;
     soldMutation.mutate(id, {
       onSuccess: () => {
         closeModal("sold");
@@ -453,11 +464,7 @@ export function MarketplaceDetailScreen() {
           },
           onError: (err) => {
             if (handleUgcError(err)) return;
-            showApiErrorToast(
-              err,
-              "Comment Failed",
-              "Failed to post comment.",
-            );
+            showApiErrorToast(err, "Comment Failed", "Failed to post comment.");
           },
         },
       );
@@ -467,31 +474,31 @@ export function MarketplaceDetailScreen() {
 
   const handleDeleteComment = useCallback(
     (commentId: string) => {
-      if (!requireOnline(isOffline, "Reconnect to delete this comment.")) return;
+      if (!requireOnline(isOffline, "Reconnect to delete this comment."))
+        return;
       deleteCommentMutation.mutate(commentId, {
         onSuccess: () => {
           Toast.show({ type: "success", text1: "Comment deleted" });
         },
         onError: (err) => {
-          showApiErrorToast(
-            err,
-            "Delete Failed",
-            "Failed to delete comment.",
-          );
+          showApiErrorToast(err, "Delete Failed", "Failed to delete comment.");
         },
       });
     },
     [isOffline, deleteCommentMutation],
   );
 
-  const handleStartReply = useCallback((targetId: string, authorName: string) => {
-    setEditingComment(null);
-    setReplyTarget({ id: targetId, authorName });
-    inputRef.current?.focus();
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 150);
-  }, []);
+  const handleStartReply = useCallback(
+    (targetId: string, authorName: string) => {
+      setEditingComment(null);
+      setReplyTarget({ id: targetId, authorName });
+      inputRef.current?.focus();
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    },
+    [],
+  );
 
   const handleStartEdit = useCallback((comment: Comment) => {
     setReplyTarget(null);
@@ -544,7 +551,9 @@ export function MarketplaceDetailScreen() {
   ]);
 
   const handleAcceptGuidelines = useCallback(() => {
-    if (!requireOnline(isOffline, "Reconnect to accept community guidelines.")) {
+    if (
+      !requireOnline(isOffline, "Reconnect to accept community guidelines.")
+    ) {
       return;
     }
     acceptGuidelines();
@@ -634,10 +643,16 @@ export function MarketplaceDetailScreen() {
         <Text style={styles.errorSubtext}>{errorSubtitle}</Text>
         <View style={styles.errorActionsRow}>
           {isTransient && (
-            <TouchableOpacity
+            <Pressable
               onPress={() => refetch()}
-              style={styles.retryBtn}
-              activeOpacity={0.8}
+              style={({ pressed }) => [
+                styles.retryBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading listing"
             >
               <Feather
                 name="refresh-cw"
@@ -646,12 +661,18 @@ export function MarketplaceDetailScreen() {
                 style={styles.backBtnIcon}
               />
               <Text style={styles.retryBtnText}>Retry</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
-          <TouchableOpacity
+          <Pressable
             onPress={handleBack}
-            style={styles.backBtn}
-            activeOpacity={0.8}
+            style={({ pressed }) => [
+              styles.backBtn,
+              pressed && { opacity: 0.85 },
+            ]}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Go back to Campus Hub"
           >
             <Feather
               name="arrow-left"
@@ -660,7 +681,7 @@ export function MarketplaceDetailScreen() {
               style={styles.backBtnIcon}
             />
             <Text style={styles.backBtnText}>Back to Hub</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -683,102 +704,105 @@ export function MarketplaceDetailScreen() {
       keyboardVerticalOffset={0}
     >
       <SafeAreaView style={styles.flexFill} edges={["top"]}>
-        <MPDetailHeader
-          isSelling={isSelling}
-          onBack={handleBack}
-          onReportPost={
-            !isAuthor
-              ? () =>
-                  setReportTarget({
-                    targetType: "MARKETPLACE_POST",
-                    targetId: post.id,
-                    targetTitle: post.title,
-                  })
-              : undefined
-          }
-        />
-
-        {isOffline && (
-          <View style={styles.offlineBanner}>
-            <Feather
-              name="wifi-off"
-              size={13}
-              color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
-            />
-            <Text style={styles.offlineBannerText}>
-              You're offline. Viewing cached details — actions require a connection.
-            </Text>
-          </View>
-        )}
-
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollFlex}
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <MPImageGallery
-            images={post.images}
-            selectedIndex={selectedImage}
-            status={post.status}
-            isSold={isSold}
-            onSelectIndex={setSelectedImage}
-            onOpenViewer={handleOpenViewer}
-          />
-
-          <MPListingInfoCard
-            post={post}
-            isAuthor={isAuthor}
-            isAdmin={isAdmin}
-            isEdited={isEdited}
-            authorSubtitle={authorSubtitle}
-            authorInitial={authorInitial}
-            isUpdatingStatus={updateStatusMutation.isPending}
-            onViewAuthor={handleViewAuthor}
-            onContact={handleContact}
-            onEdit={() => openModal("edit")}
-            onMarkSold={() => openModal("sold")}
-            onCloseListing={handleCloseListing}
-            onReopenListing={handleReopenListing}
-            onDelete={() => openModal("delete")}
-          />
-
-          <InlineComments
-            comments={comments as any}
-            currentUserId={currentUser?.id}
-            listingAuthorId={post.authorId}
-            accent={ACCENT}
-            onStartReply={handleStartReply}
-            onStartEdit={handleStartEdit}
-            onDeleteComment={handleDeleteComment}
-            onReportComment={(comment) =>
-              setReportTarget({
-                targetType: "MARKETPLACE_COMMENT",
-                targetId: comment.id,
-                targetTitle: comment.content,
-              })
+        <View style={styles.tabletFrame}>
+          <MPDetailHeader
+            isSelling={isSelling}
+            onBack={handleBack}
+            onReportPost={
+              !isAuthor
+                ? () =>
+                    setReportTarget({
+                      targetType: "MARKETPLACE_POST",
+                      targetId: post.id,
+                      targetTitle: post.title,
+                    })
+                : undefined
             }
-            onViewAuthorProfile={handleViewAuthor as any}
           />
-        </ScrollView>
 
-        <CommentInputBar
-          replyTarget={replyTarget}
-          onCancelReply={() => setReplyTarget(null)}
-          isEditMode={isEditMode}
-          onCancelEdit={handleCancelEdit}
-          text={commentText}
-          onChangeText={setCommentText}
-          onSubmit={handleSendComment}
-          isSubmitting={
-            addCommentMutation.isPending || updateCommentMutation.isPending
-          }
-          accent={ACCENT}
-          inputRef={inputRef}
-          isLocked={isCommentsLocked}
-          lockedMessage={lockedNotice}
-        />
+          {isOffline && (
+            <View style={styles.offlineBanner}>
+              <Feather
+                name="wifi-off"
+                size={13}
+                color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
+              />
+              <Text style={styles.offlineBannerText}>
+                You're offline. Viewing cached details — actions require a
+                connection.
+              </Text>
+            </View>
+          )}
+
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollFlex}
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <MPImageGallery
+              images={post.images}
+              selectedIndex={selectedImage}
+              status={post.status}
+              isSold={isSold}
+              onSelectIndex={setSelectedImage}
+              onOpenViewer={handleOpenViewer}
+            />
+
+            <MPListingInfoCard
+              post={post}
+              isAuthor={isAuthor}
+              isAdmin={isAdmin}
+              isEdited={isEdited}
+              authorSubtitle={authorSubtitle}
+              authorInitial={authorInitial}
+              isUpdatingStatus={updateStatusMutation.isPending}
+              onViewAuthor={handleViewAuthor}
+              onContact={handleContact}
+              onEdit={() => openModal("edit")}
+              onMarkSold={() => openModal("sold")}
+              onCloseListing={handleCloseListing}
+              onReopenListing={handleReopenListing}
+              onDelete={() => openModal("delete")}
+            />
+
+            <InlineComments
+              comments={comments as any}
+              currentUserId={currentUser?.id}
+              listingAuthorId={post.authorId}
+              accent={ACCENT}
+              onStartReply={handleStartReply}
+              onStartEdit={handleStartEdit}
+              onDeleteComment={handleDeleteComment}
+              onReportComment={(comment) =>
+                setReportTarget({
+                  targetType: "MARKETPLACE_COMMENT",
+                  targetId: comment.id,
+                  targetTitle: comment.content,
+                })
+              }
+              onViewAuthorProfile={handleViewAuthor as any}
+            />
+          </ScrollView>
+
+          <CommentInputBar
+            replyTarget={replyTarget}
+            onCancelReply={() => setReplyTarget(null)}
+            isEditMode={isEditMode}
+            onCancelEdit={handleCancelEdit}
+            text={commentText}
+            onChangeText={setCommentText}
+            onSubmit={handleSendComment}
+            isSubmitting={
+              addCommentMutation.isPending || updateCommentMutation.isPending
+            }
+            accent={ACCENT}
+            inputRef={inputRef}
+            isLocked={isCommentsLocked}
+            lockedMessage={lockedNotice}
+          />
+        </View>
       </SafeAreaView>
 
       {/* Modals — rendered outside SafeAreaView for full-screen coverage */}
@@ -858,6 +882,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: CAMPUS_HUB_COLORS.background,
   },
+  tabletFrame: {
+    flex: 1,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+  },
   offlineBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -924,12 +954,14 @@ const styles = StyleSheet.create({
   retryBtn: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 48,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
     paddingHorizontal: 18,
     paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    overflow: "hidden",
   },
   retryBtnText: {
     fontFamily,
@@ -940,10 +972,12 @@ const styles = StyleSheet.create({
   backBtn: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 48,
     backgroundColor: CAMPUS_HUB_COLORS.deepNavy,
     paddingHorizontal: 22,
     paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    overflow: "hidden",
   },
   backBtnIcon: {
     marginRight: 6,

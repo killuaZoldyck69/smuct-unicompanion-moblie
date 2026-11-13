@@ -1,18 +1,27 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from "react";
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   ActivityIndicator,
   Keyboard,
   StatusBar,
   Alert,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/components/ui/toast-config";
@@ -157,6 +166,9 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
   const uploadedMapRef = useRef<Record<string, string>>({});
   const initializedKeyRef = useRef<string | null>(null);
   const draftIdempotencyKeyRef = useRef<string | null>(null);
+  const titleInputRef = useRef<TextInput>(null);
+  const priceInputRef = useRef<TextInput>(null);
+  const phoneInputRef = useRef<TextInput>(null);
 
   const ugcUserId = currentUser?.id ?? post?.author?.id;
   const ugcTermsQuery = useUgcTermsStatus(ugcUserId, visible);
@@ -178,7 +190,11 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
 
   // Sync map helper so discard cleanup always sees synchronously tracked uploads
   const syncUploadedMap = useCallback(
-    (updater: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
+    (
+      updater:
+        | Record<string, string>
+        | ((prev: Record<string, string>) => Record<string, string>),
+    ) => {
       if (typeof updater === "function") {
         uploadedMapRef.current = updater(uploadedMapRef.current);
       } else {
@@ -205,7 +221,9 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       if (isEdit && post) {
         const next = buildInitialState("edit", post, initialPhone);
         setForm(next);
-        setDescriptionLength(extractMarketplacePlainText(post.description).length);
+        setDescriptionLength(
+          extractMarketplacePlainText(post.description).length,
+        );
         syncUploadedMap({});
       } else {
         setForm(buildInitialState("create", undefined, initialPhone));
@@ -222,7 +240,14 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
         );
       }
     }
-  }, [visible, isEdit, post, initialPhone, currentUser?.phoneNumber, syncUploadedMap]);
+  }, [
+    visible,
+    isEdit,
+    post,
+    initialPhone,
+    currentUser?.phoneNumber,
+    syncUploadedMap,
+  ]);
 
   const update = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -265,11 +290,11 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
   const hasUnsavedContent = isEdit
     ? Boolean(
         post &&
-          (form.title !== post.title ||
-            form.description !== (post.description || "") ||
-            form.category !== post.category ||
-            form.type !== post.type ||
-            Object.keys(uploadedMapRef.current).length > 0),
+        (form.title !== post.title ||
+          form.description !== (post.description || "") ||
+          form.category !== post.category ||
+          form.type !== post.type ||
+          Object.keys(uploadedMapRef.current).length > 0),
       )
     : form.title.trim().length > 0 ||
       form.description.trim().length > 0 ||
@@ -312,7 +337,13 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       setDescriptionLength(0);
     }
     onClose();
-  }, [clearQueuedPayload, cleanupSessionUploadsOnly, isEdit, initialPhone, onClose]);
+  }, [
+    clearQueuedPayload,
+    cleanupSessionUploadsOnly,
+    isEdit,
+    initialPhone,
+    onClose,
+  ]);
 
   const handleDiscardOrClose = useCallback(() => {
     if (isSubmitting) return;
@@ -389,7 +420,14 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
         },
       );
     },
-    [isEdit, post, updateMutation, createMutation, closeAfterSave, handleUgcError],
+    [
+      isEdit,
+      post,
+      updateMutation,
+      createMutation,
+      closeAfterSave,
+      handleUgcError,
+    ],
   );
 
   const runUploadAndSubmit = useCallback(
@@ -405,7 +443,8 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
           folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE,
           singlePhotoLabel: isEdit ? "A newly added photo" : "A photo",
           uploadErrorTitle: "Photo Upload Failed",
-          uploadErrorFallback: "Please check your internet connection and try again.",
+          uploadErrorFallback:
+            "Please check your internet connection and try again.",
           setIsUploading,
           setUploadedMap: (next) => {
             syncUploadedMap(next);
@@ -427,12 +466,23 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       queuePayload(finalPayload, submitListingPayload);
       submitListingPayload(finalPayload);
     },
-    [form.localImages, isEdit, syncUploadedMap, queuePayload, submitListingPayload],
+    [
+      form.localImages,
+      isEdit,
+      syncUploadedMap,
+      queuePayload,
+      submitListingPayload,
+    ],
   );
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
-    if (!requireOnline(isOffline, "Reconnect to the internet to save your listing.")) {
+    if (
+      !requireOnline(
+        isOffline,
+        "Reconnect to the internet to save your listing.",
+      )
+    ) {
       return;
     }
 
@@ -465,7 +515,9 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       return;
     }
 
-    const hasPendingLocalImages = form.localImages.some((uri) => !isRemoteUrl(uri));
+    const hasPendingLocalImages = form.localImages.some(
+      (uri) => !isRemoteUrl(uri),
+    );
     if (hasPendingLocalImages && ugcTermsQuery.data?.accepted === false) {
       queuePayload(validation.payload, (queued) => {
         void runUploadAndSubmit(queued);
@@ -486,7 +538,9 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
   ]);
 
   const handleAcceptGuidelines = useCallback(() => {
-    if (!requireOnline(isOffline, "Reconnect to accept community guidelines.")) {
+    if (
+      !requireOnline(isOffline, "Reconnect to accept community guidelines.")
+    ) {
       return;
     }
     acceptGuidelines();
@@ -508,7 +562,10 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
         backgroundColor={CAMPUS_HUB_COLORS.white}
         translucent={true}
       />
-      <SafeAreaView style={styles.fullScreenContainer} edges={["top", "bottom"]}>
+      <SafeAreaView
+        style={styles.fullScreenContainer}
+        edges={["top", "bottom"]}
+      >
         {/* Top Header */}
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
@@ -516,34 +573,49 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
               {isEdit ? "Edit Listing" : "New Listing"}
             </Text>
             <View style={styles.hubBadge}>
-              <Text style={styles.hubBadgeText}>CAMPUS HUB</Text>
+              <Text style={styles.hubBadgeText} maxFontSizeMultiplier={1.2}>
+                CAMPUS HUB
+              </Text>
             </View>
           </View>
 
-          <TouchableOpacity
+          <Pressable
             onPress={handleDiscardOrClose}
-            style={styles.closeBtn}
+            style={({ pressed }) => [
+              styles.closeBtn,
+              pressed && { opacity: 0.72 },
+            ]}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
             disabled={isSubmitting}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={isEdit ? "Close edit listing" : "Close create listing"}
-            activeOpacity={0.7}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel={
+              isEdit ? "Close edit listing" : "Close create listing"
+            }
+            accessibilityState={{ disabled: isSubmitting }}
+            hitSlop={6}
           >
             <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {isOffline && (
           <View style={styles.offlineBanner}>
-            <Feather name="wifi-off" size={13} color={CAMPUS_HUB_COLORS.lostFoundAccentInk} />
+            <Feather
+              name="wifi-off"
+              size={13}
+              color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
+            />
             <Text style={styles.offlineBannerText}>
               You're offline. Reconnect before publishing changes.
             </Text>
           </View>
         )}
 
-        <ModalKeyboardAvoidingView enabled={visible} style={styles.keyboardAvoid}>
+        <ModalKeyboardAvoidingView
+          enabled={visible}
+          style={styles.keyboardAvoid}
+        >
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
@@ -552,15 +624,17 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
           >
             {/* Segmented Control */}
             <View style={styles.segmentContainer}>
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({ pressed }) => [
                   styles.segmentBtn,
                   isSelling && styles.segmentBtnSellingActive,
+                  pressed && { opacity: 0.85 },
                 ]}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                 onPress={() => update("type", "SELLING")}
-                activeOpacity={0.8}
                 accessible={true}
                 accessibilityRole="tab"
+                accessibilityLabel="I'm Selling"
                 accessibilityState={{ selected: isSelling }}
               >
                 <Feather
@@ -578,20 +652,23 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                     styles.segmentText,
                     isSelling && styles.segmentTextSellingActive,
                   ]}
+                  maxFontSizeMultiplier={1.2}
                 >
                   I'm Selling
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({ pressed }) => [
                   styles.segmentBtn,
                   !isSelling && styles.segmentBtnWantedActive,
+                  pressed && { opacity: 0.85 },
                 ]}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                 onPress={() => update("type", "BUYING")}
-                activeOpacity={0.8}
                 accessible={true}
                 accessibilityRole="tab"
+                accessibilityLabel="Looking to Buy"
                 accessibilityState={{ selected: !isSelling }}
               >
                 <Feather
@@ -609,10 +686,11 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                     styles.segmentText,
                     !isSelling && styles.segmentTextWantedActive,
                   ]}
+                  maxFontSizeMultiplier={1.2}
                 >
                   Looking to Buy
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {/* Title */}
@@ -621,17 +699,22 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                 <Text style={styles.fieldLabel}>
                   TITLE <Text style={styles.requiredStar}>*</Text>
                 </Text>
-                <Text style={styles.counterText}>
+                <Text style={styles.counterText} maxFontSizeMultiplier={1.2}>
                   {form.title.length}/{MARKETPLACE_LIMITS.MAX_TITLE}
                 </Text>
               </View>
               <TextInput
+                ref={titleInputRef}
                 style={styles.textInput}
                 placeholder="e.g. Calculus 8th Edition, Casio FX-991EX"
                 placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                 value={form.title}
                 onChangeText={(v) => update("title", v)}
                 maxLength={MARKETPLACE_LIMITS.MAX_TITLE}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => priceInputRef.current?.focus()}
+                accessibilityLabel="Listing title"
               />
             </View>
 
@@ -653,24 +736,32 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                   {CONDITIONS.map((cond) => {
                     const isSelected = form.condition === cond.key;
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={cond.key}
-                        style={[
+                        style={({ pressed }) => [
                           styles.conditionChip,
                           isSelected && styles.conditionChipActive,
+                          pressed && { opacity: 0.8 },
                         ]}
+                        android_ripple={{
+                          color: CAMPUS_HUB_COLORS.androidRipple,
+                        }}
                         onPress={() => update("condition", cond.key)}
-                        activeOpacity={0.75}
+                        accessible={true}
+                        accessibilityRole="radio"
+                        accessibilityLabel={cond.label}
+                        accessibilityState={{ selected: isSelected }}
                       >
                         <Text
                           style={[
                             styles.conditionChipText,
                             isSelected && styles.conditionChipTextActive,
                           ]}
+                          maxFontSizeMultiplier={1.2}
                         >
                           {cond.label}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -682,7 +773,10 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
               <View style={styles.labelRow}>
                 <Text style={styles.fieldLabel}>PRICE (BDT)</Text>
                 {Boolean(formattedPricePreview) && (
-                  <Text style={styles.priceFormattedText}>
+                  <Text
+                    style={styles.priceFormattedText}
+                    maxFontSizeMultiplier={1.2}
+                  >
                     {formattedPricePreview}
                   </Text>
                 )}
@@ -691,13 +785,18 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
               <View style={styles.priceInputBox}>
                 <Text style={styles.takaSymbol}>৳</Text>
                 <TextInput
+                  ref={priceInputRef}
                   style={styles.priceInput}
                   placeholder="0.00"
                   placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                   value={form.price}
                   onChangeText={handlePriceChange}
                   keyboardType="decimal-pad"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => phoneInputRef.current?.focus()}
                   maxLength={10}
+                  accessibilityLabel="Price in Bangladeshi Taka"
                 />
               </View>
             </View>
@@ -710,14 +809,19 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                 </Text>
                 <View style={styles.charCountRow}>
                   {Boolean(form.description && form.description.trim()) && (
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => {
                         update("description", "");
                         setDescriptionLength(0);
                       }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      style={styles.clearHeaderBtn}
-                      activeOpacity={0.7}
+                      hitSlop={12}
+                      style={({ pressed }) => [
+                        styles.clearHeaderBtn,
+                        pressed && { opacity: 0.72 },
+                      ]}
+                      android_ripple={{
+                        color: CAMPUS_HUB_COLORS.androidRipple,
+                      }}
                       accessible={true}
                       accessibilityRole="button"
                       accessibilityLabel="Clear description"
@@ -729,10 +833,14 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                         style={{ marginRight: 3 }}
                       />
                       <Text style={styles.clearHeaderBtnText}>Clear</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
-                  <Text style={styles.charCountText}>
-                    {descriptionLength}/{MARKETPLACE_LIMITS.MAX_DESCRIPTION_PLAIN}
+                  <Text
+                    style={styles.charCountText}
+                    maxFontSizeMultiplier={1.2}
+                  >
+                    {descriptionLength}/
+                    {MARKETPLACE_LIMITS.MAX_DESCRIPTION_PLAIN}
                   </Text>
                 </View>
               </View>
@@ -778,6 +886,7 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                   <Text style={styles.prefixText}>+880</Text>
                 </View>
                 <TextInput
+                  ref={phoneInputRef}
                   style={styles.phoneInput}
                   placeholder="1XXXXXXXXX"
                   placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
@@ -788,7 +897,9 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                   }
                   onChangeText={handlePhoneChange}
                   keyboardType="phone-pad"
+                  returnKeyType="done"
                   maxLength={11}
+                  accessibilityLabel="Contact phone number"
                 />
               </View>
             </View>
@@ -825,14 +936,28 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
               },
             ]}
           >
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({ pressed }) => [
                 styles.publishBtn,
                 isSubmitting && styles.publishBtnDisabled,
+                pressed && !isSubmitting && { opacity: 0.9 },
               ]}
+              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
               onPress={handleSubmit}
               disabled={isSubmitting}
-              activeOpacity={0.85}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isEdit
+                  ? "Save Changes"
+                  : isSelling
+                    ? "Publish For Sale"
+                    : "Publish Buying Request"
+              }
+              accessibilityState={{
+                disabled: isSubmitting,
+                busy: isSubmitting,
+              }}
             >
               {isSubmitting ? (
                 <View style={styles.submittingRow}>
@@ -866,7 +991,7 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
                   </Text>
                 </>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </ModalKeyboardAvoidingView>
 
@@ -927,14 +1052,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   offlineBanner: {
     flexDirection: "row",
@@ -960,6 +1087,9 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   scrollContent: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 36,
@@ -973,11 +1103,13 @@ const styles = StyleSheet.create({
   },
   segmentBtn: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 10,
     borderRadius: 10,
+    overflow: "hidden",
   },
   segmentBtnSellingActive: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
@@ -1032,6 +1164,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily,
     color: CAMPUS_HUB_COLORS.subtleText,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   textInput: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
@@ -1040,37 +1174,43 @@ const styles = StyleSheet.create({
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    minHeight: 48,
     fontSize: 14,
     fontFamily,
     color: CAMPUS_HUB_COLORS.neutralText,
   },
   conditionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   conditionChip: {
     flex: 1,
-    minHeight: 46,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    borderRadius: 8,
+    flexGrow: 1,
+    minWidth: "47%",
+    minHeight: 48,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     backgroundColor: colors.slate50,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   conditionChipActive: {
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
     borderColor: CAMPUS_HUB_COLORS.marketplaceAccent,
   },
   conditionChipText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
     textAlign: "center",
     textAlignVertical: "center",
+    includeFontPadding: false,
     lineHeight: 16,
   },
   conditionChipTextActive: {
@@ -1086,27 +1226,33 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.semantic.red.softBorder,
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 6,
+    overflow: "hidden",
   },
   clearHeaderBtnText: {
     fontSize: 11,
     fontFamily,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.dangerText,
+    includeFontPadding: false,
   },
   charCountText: {
     fontSize: 12,
     fontFamily,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   priceFormattedText: {
     fontSize: 12,
     fontFamily,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   priceInputBox: {
     flexDirection: "row",
@@ -1190,6 +1336,10 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   publishBtn: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1201,9 +1351,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 3,
+    overflow: "hidden",
   },
   publishBtnDisabled: {
-    backgroundColor: colors.semantic.emerald.mintBorderStrong,
+    backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentText,
+    opacity: 0.78,
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -1212,6 +1364,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
   },
   submittingRow: {
     flexDirection: "row",

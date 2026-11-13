@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
@@ -211,13 +211,16 @@ export function MPListingInfoCard({
       <View style={styles.divider} />
 
       {/* Seller identity row */}
-      <TouchableOpacity
-        style={styles.sellerRow}
+      <Pressable
+        style={({ pressed }) => [
+          styles.sellerRow,
+          pressed && { opacity: 0.78 },
+        ]}
         onPress={() => onViewAuthor(post.author as AuthorProfileModalData)}
-        activeOpacity={0.7}
+        android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
         accessible
         accessibilityRole="button"
-        accessibilityLabel={`View ${post.author?.name}'s profile`}
+        accessibilityLabel={`View ${post.author?.name ?? "seller"}'s profile`}
       >
         {post.author?.image && !failedAvatar ? (
           <Image
@@ -249,7 +252,7 @@ export function MPListingInfoCard({
           size={18}
           color={CAMPUS_HUB_COLORS.subtleText}
         />
-      </TouchableOpacity>
+      </Pressable>
 
       <View style={styles.divider} />
 
@@ -262,30 +265,45 @@ export function MPListingInfoCard({
       {/* Contact CTA & Copy Button — non-owners */}
       {post.contactPhone && !isAuthor && (
         <View style={styles.contactActionRow}>
-          <TouchableOpacity
-            style={styles.contactBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.contactBtn,
+              pressed && { opacity: 0.88 },
+            ]}
             onPress={onContact}
-            activeOpacity={0.85}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
             accessible
             accessibilityRole="button"
             accessibilityLabel={`${isSelling ? "Call seller" : "Call contact"} at ${post.contactPhone}`}
           >
-            <Feather name="phone-call" size={16} color={CAMPUS_HUB_COLORS.white} />
-            <Text style={styles.contactBtnText} numberOfLines={1}>
+            <Feather
+              name="phone-call"
+              size={16}
+              color={CAMPUS_HUB_COLORS.white}
+            />
+            <Text
+              style={styles.contactBtnText}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              maxFontSizeMultiplier={1.2}
+            >
               {isSelling ? "Call Seller" : "Call Contact"} ({post.contactPhone})
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            style={styles.copyPhoneBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.copyPhoneBtn,
+              pressed && { opacity: 0.82 },
+            ]}
             onPress={handleCopyPhone}
-            activeOpacity={0.8}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
             accessible
             accessibilityRole="button"
             accessibilityLabel={`Copy contact phone number ${post.contactPhone}`}
           >
             <Feather name="copy" size={16} color={CAMPUS_HUB_COLORS.deepNavy} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 
@@ -300,26 +318,35 @@ export function MPListingInfoCard({
                 color={CAMPUS_HUB_COLORS.marketplaceAccentText}
               />
             </View>
-            <View>
-              <Text style={styles.authorContactSubtext}>
+            <View style={{ flexShrink: 1 }}>
+              <Text
+                style={styles.authorContactSubtext}
+                maxFontSizeMultiplier={1.2}
+              >
                 YOUR CONTACT PHONE
               </Text>
-              <Text style={styles.authorContactNumber}>
+              <Text style={styles.authorContactNumber} numberOfLines={1}>
                 {post.contactPhone}
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.authorCopyBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.authorCopyBtn,
+              pressed && { opacity: 0.78 },
+            ]}
             onPress={handleCopyPhone}
-            activeOpacity={0.75}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
             accessible
             accessibilityRole="button"
             accessibilityLabel="Copy contact phone number"
           >
             <Feather name="copy" size={12} color={CAMPUS_HUB_COLORS.deepNavy} />
-            <Text style={styles.authorCopyBtnText}>Copy</Text>
-          </TouchableOpacity>
+            <Text style={styles.authorCopyBtnText} maxFontSizeMultiplier={1.2}>
+              Copy
+            </Text>
+          </Pressable>
         </View>
       )}
 
@@ -329,13 +356,17 @@ export function MPListingInfoCard({
           {!isInactive ? (
             <>
               <View style={styles.ownerActions}>
-                <TouchableOpacity
-                  style={styles.editBtn}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.editBtn,
+                    pressed && { opacity: 0.82 },
+                  ]}
                   onPress={onEdit}
                   disabled={isUpdatingStatus}
-                  activeOpacity={0.8}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   accessible
                   accessibilityRole="button"
+                  accessibilityState={{ disabled: isUpdatingStatus }}
                   accessibilityLabel="Edit listing"
                 >
                   <Feather
@@ -343,38 +374,55 @@ export function MPListingInfoCard({
                     size={14}
                     color={CAMPUS_HUB_COLORS.deepNavy}
                   />
-                  <Text style={styles.editBtnText}>Edit</Text>
-                </TouchableOpacity>
+                  <Text style={styles.editBtnText} maxFontSizeMultiplier={1.2}>
+                    Edit
+                  </Text>
+                </Pressable>
 
-                <TouchableOpacity
-                  style={styles.markSoldBtn}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.markSoldBtn,
+                    pressed && { opacity: 0.82 },
+                  ]}
                   onPress={onMarkSold}
                   disabled={isUpdatingStatus}
-                  activeOpacity={0.8}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   accessible
                   accessibilityRole="button"
-                  accessibilityLabel={isSelling ? "Mark listing as sold" : "Mark request as fulfilled"}
+                  accessibilityState={{ disabled: isUpdatingStatus }}
+                  accessibilityLabel={
+                    isSelling
+                      ? "Mark listing as sold"
+                      : "Mark request as fulfilled"
+                  }
                 >
                   <Feather
                     name="check-circle"
                     size={14}
                     color={CAMPUS_HUB_COLORS.marketplaceAccentText}
                   />
-                  <Text style={styles.markSoldBtnText}>
+                  <Text
+                    style={styles.markSoldBtnText}
+                    maxFontSizeMultiplier={1.2}
+                  >
                     {isSelling ? "Mark Sold" : "Mark Fulfilled"}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               <View style={styles.ownerActions}>
                 {onCloseListing && (
-                  <TouchableOpacity
-                    style={styles.closeListingBtn}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.closeListingBtn,
+                      pressed && { opacity: 0.82 },
+                    ]}
                     onPress={onCloseListing}
                     disabled={isUpdatingStatus}
-                    activeOpacity={0.8}
+                    android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                     accessible
                     accessibilityRole="button"
+                    accessibilityState={{ disabled: isUpdatingStatus }}
                     accessibilityLabel="Close listing"
                   >
                     <Feather
@@ -382,17 +430,26 @@ export function MPListingInfoCard({
                       size={14}
                       color={CAMPUS_HUB_COLORS.mutedInk}
                     />
-                    <Text style={styles.closeListingBtnText}>Close Listing</Text>
-                  </TouchableOpacity>
+                    <Text
+                      style={styles.closeListingBtnText}
+                      maxFontSizeMultiplier={1.2}
+                    >
+                      Close Listing
+                    </Text>
+                  </Pressable>
                 )}
 
-                <TouchableOpacity
-                  style={styles.deleteBtn}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.deleteBtn,
+                    pressed && { opacity: 0.82 },
+                  ]}
                   onPress={onDelete}
                   disabled={isUpdatingStatus}
-                  activeOpacity={0.8}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   accessible
                   accessibilityRole="button"
+                  accessibilityState={{ disabled: isUpdatingStatus }}
                   accessibilityLabel="Delete listing"
                 >
                   <Feather
@@ -400,20 +457,29 @@ export function MPListingInfoCard({
                     size={14}
                     color={CAMPUS_HUB_COLORS.dangerText}
                   />
-                  <Text style={styles.deleteBtnText}>Delete</Text>
-                </TouchableOpacity>
+                  <Text
+                    style={styles.deleteBtnText}
+                    maxFontSizeMultiplier={1.2}
+                  >
+                    Delete
+                  </Text>
+                </Pressable>
               </View>
             </>
           ) : (
             <View style={styles.ownerActions}>
               {onReopenListing && (
-                <TouchableOpacity
-                  style={styles.markSoldBtn}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.markSoldBtn,
+                    pressed && { opacity: 0.82 },
+                  ]}
                   onPress={onReopenListing}
                   disabled={isUpdatingStatus}
-                  activeOpacity={0.8}
+                  android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   accessible
                   accessibilityRole="button"
+                  accessibilityState={{ disabled: isUpdatingStatus }}
                   accessibilityLabel="Reopen listing"
                 >
                   <Feather
@@ -421,17 +487,26 @@ export function MPListingInfoCard({
                     size={14}
                     color={CAMPUS_HUB_COLORS.marketplaceAccentText}
                   />
-                  <Text style={styles.markSoldBtnText}>Reopen Listing</Text>
-                </TouchableOpacity>
+                  <Text
+                    style={styles.markSoldBtnText}
+                    maxFontSizeMultiplier={1.2}
+                  >
+                    Reopen Listing
+                  </Text>
+                </Pressable>
               )}
 
-              <TouchableOpacity
-                style={styles.deleteBtn}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.deleteBtn,
+                  pressed && { opacity: 0.82 },
+                ]}
                 onPress={onDelete}
                 disabled={isUpdatingStatus}
-                activeOpacity={0.8}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                 accessible
                 accessibilityRole="button"
+                accessibilityState={{ disabled: isUpdatingStatus }}
                 accessibilityLabel="Delete listing"
               >
                 <Feather
@@ -439,8 +514,10 @@ export function MPListingInfoCard({
                   size={14}
                   color={CAMPUS_HUB_COLORS.dangerText}
                 />
-                <Text style={styles.deleteBtnText}>Delete</Text>
-              </TouchableOpacity>
+                <Text style={styles.deleteBtnText} maxFontSizeMultiplier={1.2}>
+                  Delete
+                </Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -449,10 +526,14 @@ export function MPListingInfoCard({
       {/* Admin delete action (when not author) */}
       {isAdmin && !isAuthor && (
         <View style={styles.ownerActions}>
-          <TouchableOpacity
-            style={[styles.deleteBtn, { flex: 1 }]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.deleteBtn,
+              { flex: 1 },
+              pressed && { opacity: 0.82 },
+            ]}
             onPress={onDelete}
-            activeOpacity={0.8}
+            android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
             accessible
             accessibilityRole="button"
             accessibilityLabel="Delete listing"
@@ -462,8 +543,10 @@ export function MPListingInfoCard({
               size={14}
               color={CAMPUS_HUB_COLORS.dangerText}
             />
-            <Text style={styles.deleteBtnText}>Delete Listing (Admin)</Text>
-          </TouchableOpacity>
+            <Text style={styles.deleteBtnText} maxFontSizeMultiplier={1.2}>
+              Delete Listing (Admin)
+            </Text>
+          </Pressable>
         </View>
       )}
     </View>
@@ -514,8 +597,10 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   typeBadgeTextSelling: { color: CAMPUS_HUB_COLORS.marketplaceAccentText },
   typeBadgeTextWanted: { color: CAMPUS_HUB_COLORS.lostFoundAccentText },
@@ -526,13 +611,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   categoryBadgeText: {
     fontFamily,
     fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.subtleText,
+    includeFontPadding: false,
   },
   conditionBadge: {
     backgroundColor: CAMPUS_HUB_COLORS.resolvedGreenBg,
@@ -540,13 +627,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.12)",
+    borderColor: colors.semantic.emerald.mintBorder,
   },
   conditionBadgeText: {
     fontFamily,
     fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
+    includeFontPadding: false,
   },
   title: {
     fontFamily,
@@ -559,9 +648,12 @@ const styles = StyleSheet.create({
   price: {
     fontFamily,
     fontSize: 22,
+    lineHeight: 27,
     fontWeight: "800",
     color: ACCENT,
     letterSpacing: -0.4,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   priceNegotiable: {
     fontFamily,
@@ -699,21 +791,26 @@ const styles = StyleSheet.create({
   },
   contactBtn: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 13,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     backgroundColor: ACCENT,
     borderRadius: 14,
+    overflow: "hidden",
     ...CAMPUS_HUB_COLORS.heroShadow,
   },
   contactBtnText: {
     fontFamily,
     fontSize: 13.5,
+    lineHeight: 18,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.white,
+    flexShrink: 1,
+    includeFontPadding: false,
   },
   copyPhoneBtn: {
     width: 48,
@@ -722,8 +819,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 14,
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.06)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   authorContactBox: {
     flexDirection: "row",
@@ -742,6 +840,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
+    marginRight: 8,
   },
   authorPhoneIconWrap: {
     width: 28,
@@ -754,32 +854,41 @@ const styles = StyleSheet.create({
   authorContactSubtext: {
     fontFamily,
     fontSize: 9.5,
+    lineHeight: 13,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.subtleText,
     letterSpacing: 0.5,
+    includeFontPadding: false,
   },
   authorContactNumber: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    fontVariant: ["tabular-nums"],
   },
   authorCopyBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
+    minHeight: 38,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 8,
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   authorCopyBtnText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 15,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   ownerActionsStack: {
     gap: 8,
@@ -791,74 +900,94 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 6,
     paddingVertical: 11,
+    paddingHorizontal: 10,
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 12,
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   editBtnText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
+    includeFontPadding: false,
   },
   closeListingBtn: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 6,
     paddingVertical: 11,
+    paddingHorizontal: 10,
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 12,
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   closeListingBtnText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.mutedInk,
+    includeFontPadding: false,
   },
   markSoldBtn: {
     flex: 1.15,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 6,
     paddingVertical: 11,
+    paddingHorizontal: 10,
     backgroundColor: CAMPUS_HUB_COLORS.marketplaceAccentLight,
     borderRadius: 12,
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.2)",
+    borderColor: colors.semantic.emerald.mintBorder,
   },
   markSoldBtnText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.marketplaceAccentText,
+    includeFontPadding: false,
   },
   deleteBtn: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 6,
     paddingVertical: 11,
+    paddingHorizontal: 10,
     backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
     borderRadius: 12,
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(225, 29, 72, 0.15)",
+    borderColor: colors.semantic.rose.softBorder,
   },
   deleteBtnText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.dangerText,
+    includeFontPadding: false,
   },
 });
