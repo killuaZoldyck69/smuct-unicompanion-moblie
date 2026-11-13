@@ -86,7 +86,7 @@ export interface LostFoundPost {
   resolvedClaimId?: string | null;
   isHiddenByModeration?: boolean;
   authorId: string;
-  author: LostFoundAuthor;
+  author?: LostFoundAuthor | null;
   createdAt: string;
   updatedAt?: string;
   _count?: { claims?: number };
@@ -103,6 +103,7 @@ export interface CreateLostFoundInput {
   images?: string[];
   verificationQuestion?: string | null;
   verificationAnswer?: string | null;
+  idempotencyKey?: string;
 }
 
 export interface CreateClaimInput {
@@ -163,7 +164,7 @@ export const getLostFoundPostById = async (
 export const createLostFoundPost = async (
   data: CreateLostFoundInput,
 ): Promise<LostFoundPost> => {
-  const res = await api.post("/lost-found", data);
+  const res = await api.post("/lost-found", data, { timeout: 45000 });
   return res.data?.data;
 };
 
@@ -171,7 +172,7 @@ export const updateLostFoundPost = async (
   id: string,
   data: Partial<CreateLostFoundInput>,
 ): Promise<LostFoundPost> => {
-  const res = await api.patch(`/lost-found/${id}`, data);
+  const res = await api.patch(`/lost-found/${id}`, data, { timeout: 45000 });
   return res.data?.data;
 };
 
@@ -198,7 +199,9 @@ export const submitLostFoundClaim = async (
   postId: string,
   data: CreateClaimInput,
 ): Promise<LostFoundClaim> => {
-  const res = await api.post(`/lost-found/${postId}/claims`, data);
+  const res = await api.post(`/lost-found/${postId}/claims`, data, {
+    timeout: 45000,
+  });
   return res.data?.data;
 };
 

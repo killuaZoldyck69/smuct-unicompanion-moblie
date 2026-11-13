@@ -84,6 +84,7 @@ export const ClaimModal = React.memo(function ClaimModal({
     Record<string, string>
   >({});
   const claimMessageRef = useRef<TextInput>(null);
+  const submittingRef = useRef(false);
 
   const submitMutation = useSubmitLostFoundClaim(post.id);
   const isSubmitting = isUploading || submitMutation.isPending;
@@ -159,81 +160,96 @@ export const ClaimModal = React.memo(function ClaimModal({
     (!post.verificationQuestion || answer.trim().length > 0);
 
   const handleSubmit = useCallback(async () => {
-    Keyboard.dismiss();
-    if (isOffline) {
-      return Toast.show({
-        type: "error",
-        text1: "You're Offline",
-        text2: "Reconnect to the internet before submitting a claim.",
-      });
-    }
-
-    const validation = validateClaimForm({
-      message,
-      answer,
-      hasVerificationQuestion: Boolean(post.verificationQuestion),
-    });
-    if (validation.error || !validation.payload) {
-      return Toast.show({
-        type: "error",
-        text1: "Check Your Claim",
-        text2: validation.error || "Please complete the required details.",
-      });
-    }
-
-    if (localImages.length > 1) {
-      return Toast.show({
-        type: "error",
-        text1: "Photo Limit Exceeded",
-        text2: "Only 1 proof photo can be attached.",
-      });
-    }
-
-    let proofImageUrl: string | null = null;
-    if (localImages.length > 0 && localImages[0]) {
-      const uri = localImages[0];
-      if (uploadedProofMap[uri]) {
-        proofImageUrl = uploadedProofMap[uri];
-      } else {
-        const sizeError = await validateLocalImageSizes([uri], "Proof photo");
-        if (sizeError) {
-          return Toast.show({
-            type: "error",
-            text1: "Photo Exceeds 5MB",
-            text2: sizeError,
-          });
-        }
-
-        setIsUploading(true);
-        try {
-          const result = await uploadImageToCloudinary(
-            uri,
-            CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS,
-          );
-          proofImageUrl = result.secureUrl;
-          setUploadedProofMap((prev) => ({ ...prev, [uri]: result.secureUrl }));
-        } catch (err) {
-          setIsUploading(false);
-          const info = extractApiErrorInfo(
-            err,
-            "Could not upload proof image. Check connection.",
-          );
-          return Toast.show({
-            type: "error",
-            text1: "Upload Failed",
-            text2: info.message,
-          });
-        }
-        setIsUploading(false);
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
+    try {
+      Keyboard.dismiss();
+      if (isOffline) {
+        Toast.show({
+          type: "error",
+          text1: "You're Offline",
+          text2: "Reconnect to the internet before submitting a claim.",
+        });
+        return;
       }
-    }
 
-    submitClaimPayload({
-      message: validation.payload.message,
-      answer: validation.payload.answer,
-      proofImage: proofImageUrl || null,
-    });
+      const validation = validateClaimForm({
+        message,
+        answer,
+        hasVerificationQuestion: Boolean(post.verificationQuestion),
+      });
+      if (validation.error || !validation.payload) {
+        Toast.show({
+          type: "error",
+          text1: "Check Your Claim",
+          text2: validation.error || "Please complete the required details.",
+        });
+        return;
+      }
+
+      if (localImages.length > 1) {
+        Toast.show({
+          type: "error",
+          text1: "Photo Limit Exceeded",
+          text2: "Only 1 proof photo can be attached.",
+        });
+        return;
+      }
+
+      let proofImageUrl: string | null = null;
+      if (localImages.length > 0 && localImages[0]) {
+        const uri = localImages[0];
+        if (uploadedProofMap[uri]) {
+          proofImageUrl = uploadedProofMap[uri];
+        } else {
+          const sizeError = await validateLocalImageSizes([uri], "Proof photo");
+          if (sizeError) {
+            Toast.show({
+              type: "error",
+              text1: "Photo Exceeds 5MB",
+              text2: sizeError,
+            });
+            return;
+          }
+
+          setIsUploading(true);
+          try {
+            const result = await uploadImageToCloudinary(
+              uri,
+              CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND_CLAIMS,
+            );
+            proofImageUrl = result.secureUrl;
+            setUploadedProofMap((prev) => ({
+              ...prev,
+              [uri]: result.secureUrl,
+            }));
+          } catch (err) {
+            setIsUploading(false);
+            const info = extractApiErrorInfo(
+              err,
+              "Could not upload proof image. Check connection.",
+            );
+            Toast.show({
+              type: "error",
+              text1: "Upload Failed",
+              text2: info.message,
+            });
+            return;
+          }
+          setIsUploading(false);
+        }
+      }
+
+      submitClaimPayload({
+        message: validation.payload.message,
+        answer: validation.payload.answer,
+        proofImage: proofImageUrl || null,
+      });
+    } finally {
+      submittingRef.current = false;
+    }
   }, [
+    isSubmitting,
     isOffline,
     message,
     answer,

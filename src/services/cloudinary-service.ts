@@ -88,7 +88,9 @@ export async function uploadImageToCloudinary(
   const formData = await createSingleImageFormData(localUri, "image");
   formData.append("folder", folder);
 
-  const response = await api.post("/upload/image", formData);
+  const response = await api.post("/upload/image", formData, {
+    timeout: 60000,
+  });
 
   const data = response.data?.data;
   if (!data?.secureUrl) {
@@ -137,7 +139,9 @@ export async function uploadMultipleImages(
 
   formData.append("folder", folder);
 
-  const response = await api.post("/upload/images", formData);
+  const response = await api.post("/upload/images", formData, {
+    timeout: 60000,
+  });
 
   const list = response.data?.data;
   if (!Array.isArray(list)) {

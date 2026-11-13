@@ -362,5 +362,36 @@ describe("lost-found UI & media regression guards", () => {
     );
     assert.match(hubSrc, /prevInitialSectionRef/);
     assert.doesNotMatch(hubSrc, /\[initialSection,\s*activeSection\]/);
+
+    // Reliability & sync guards from security-db-reliability audit fixes
+    const formSrc = fs.readFileSync(
+      path.join(
+        ROOT,
+        "src/screens/campus-hub/lost-found/components/lost-found-form-modal.tsx",
+      ),
+      "utf8",
+    );
+    const claimSrc = fs.readFileSync(
+      path.join(
+        ROOT,
+        "src/screens/campus-hub/lost-found/components/claim-modal.tsx",
+      ),
+      "utf8",
+    );
+    const hooksSrc = fs.readFileSync(
+      path.join(ROOT, "src/features/campus-hub/useLostFound.ts"),
+      "utf8",
+    );
+    const cloudinarySrc = fs.readFileSync(
+      path.join(ROOT, "src/services/cloudinary-service.ts"),
+      "utf8",
+    );
+
+    assert.match(formSrc, /submittingRef\.current/);
+    assert.match(formSrc, /idempotencyKey/);
+    assert.match(claimSrc, /submittingRef\.current/);
+    assert.match(cloudinarySrc, /timeout:\s*60000/);
+    assert.match(hooksSrc, /adminForumReports/);
+    assert.doesNotMatch(detailSrc, /<ClaimModal[\s\S]*onSuccess=\{\(\)\s*=>\s*refetch\(\)\}/);
   });
 });

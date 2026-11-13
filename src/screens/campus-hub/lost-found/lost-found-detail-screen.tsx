@@ -418,6 +418,14 @@ export function LostFoundDetailScreen() {
   }, [closeModal]);
 
   const handleConfirmAcceptClaim = useCallback(() => {
+    if (isOffline) {
+      Toast.show({
+        type: "error",
+        text1: "You're Offline",
+        text2: "Reconnect to the internet before accepting a claim.",
+      });
+      return;
+    }
     if (!claimToAccept || acceptClaimMutation.isPending) return;
     acceptClaimMutation.mutate(claimToAccept.id, {
       onSuccess: () => {
@@ -438,7 +446,7 @@ export function LostFoundDetailScreen() {
         });
       },
     });
-  }, [claimToAccept, acceptClaimMutation, handleCloseAcceptSheet]);
+  }, [isOffline, claimToAccept, acceptClaimMutation, handleCloseAcceptSheet]);
 
   const handleRejectClaim = useCallback((claimId: string) => {
     setPendingConfirm({
@@ -504,6 +512,14 @@ export function LostFoundDetailScreen() {
   );
 
   const handleExecutePendingConfirm = useCallback(() => {
+    if (isOffline) {
+      Toast.show({
+        type: "error",
+        text1: "You're Offline",
+        text2: "Reconnect to the internet before performing this action.",
+      });
+      return;
+    }
     if (!pendingConfirm || isConfirmPending) return;
     if (pendingConfirm.kind === "REJECT_CLAIM") {
       rejectClaimMutation.mutate(pendingConfirm.claimId, {
@@ -569,6 +585,7 @@ export function LostFoundDetailScreen() {
     );
   }, [
     id,
+    isOffline,
     pendingConfirm,
     isConfirmPending,
     rejectClaimMutation,
@@ -599,6 +616,14 @@ export function LostFoundDetailScreen() {
 
   const handleSubmitReport = useCallback(
     (payload: { reason: UgcReportReason; details?: string }) => {
+      if (isOffline) {
+        Toast.show({
+          type: "error",
+          text1: "You're Offline",
+          text2: "Reconnect to the internet before submitting a report.",
+        });
+        return;
+      }
       reportMutation.mutate(payload, {
         onSuccess: () => {
           closeModal("report");
@@ -618,7 +643,7 @@ export function LostFoundDetailScreen() {
         },
       });
     },
-    [reportMutation, closeModal],
+    [isOffline, reportMutation, closeModal],
   );
 
   const handleViewAuthor = useCallback((author: AuthorProfileModalData) => {
@@ -959,7 +984,6 @@ export function LostFoundDetailScreen() {
         visible={modals.claim}
         onClose={() => closeModal("claim")}
         post={post}
-        onSuccess={() => refetch()}
       />
 
       <ImageViewerModal

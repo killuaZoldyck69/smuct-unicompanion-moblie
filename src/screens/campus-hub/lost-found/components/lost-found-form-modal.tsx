@@ -142,6 +142,8 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
 
   const initialFormRef = useRef<FormState>(buildFormFromPost(post));
   const prevVisibleRef = useRef(false);
+  const submittingRef = useRef(false);
+  const idempotencyKeyRef = useRef<string | null>(null);
   const descriptionInputRef = useRef<TextInput>(null);
   const verificationQuestionRef = useRef<TextInput>(null);
   const verificationAnswerRef = useRef<TextInput>(null);
@@ -157,6 +159,9 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
       setForm(initial);
       initialFormRef.current = initial;
       setUploadedImageMap({});
+      idempotencyKeyRef.current = isEdit
+        ? null
+        : `lf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     }
     prevVisibleRef.current = visible;
   }, [visible, isEdit, post]);
@@ -182,6 +187,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
       createMutation.mutate(payload, {
         onSuccess: () => {
           ugcRetry.clearQueuedPayload();
+          idempotencyKeyRef.current = null;
           Keyboard.dismiss();
           setUploadedImageMap({});
           setForm(EMPTY_FORM);
@@ -266,155 +272,171 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
   const canSubmit = form.title.trim().length >= LOST_FOUND_LIMITS.MIN_TITLE;
 
   const handleSubmit = useCallback(async () => {
-    if (isOffline) {
-      return Toast.show({
-        type: "error",
-        text1: "You're Offline",
-        text2: isEdit
-          ? "Reconnect to the internet before saving changes."
-          : "Reconnect to the internet before publishing.",
-      });
-    }
-
-    const validation = validateLostFoundForm({
-      type: form.type,
-      title: form.title,
-      description: form.description,
-      category: form.category,
-      location: form.location,
-      verificationQuestion: form.verificationQuestion,
-      verificationAnswer: form.verificationAnswer,
-      includeVerificationFields: canEditVerification,
-    });
-    if (validation.error || !validation.payload) {
-      return Toast.show({
-        type: "error",
-        text1: "Check Your Input",
-        text2: validation.error || "Please complete the required fields.",
-      });
-    }
-
-    if (form.images.length > LOST_FOUND_LIMITS.MAX_IMAGES) {
-      return Toast.show({
-        type: "error",
-        text1: "Photo Limit Exceeded",
-        text2: `Maximum ${LOST_FOUND_LIMITS.MAX_IMAGES} photos can be attached.`,
-      });
-    }
-
-    const currentMap = { ...uploadedImageMap };
-    const pendingLocalUris = form.images.filter(
-      (uri) =>
-        !uri.startsWith("http://") &&
-        !uri.startsWith("https://") &&
-        !currentMap[uri],
-    );
-
-    if (pendingLocalUris.length > 0) {
-      const sizeError = await validateLocalImageSizes(pendingLocalUris);
-      if (sizeError) {
-        return Toast.show({
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
+    try {
+      if (isOffline) {
+        Toast.show({
           type: "error",
-          text1: "Photo Exceeds 5MB",
-          text2: sizeError,
+          text1: "You're Offline",
+          text2: isEdit
+            ? "Reconnect to the internet before saving changes."
+            : "Reconnect to the internet before publishing.",
         });
+        return;
       }
 
-      setIsUploading(true);
-      try {
-        const results = await uploadMultipleImages(
-          pendingLocalUris,
-          CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
-        );
-        results.forEach((result, idx) => {
-          currentMap[pendingLocalUris[idx]] = result.secureUrl;
-        });
-        setUploadedImageMap(currentMap);
-      } catch (err) {
-        setIsUploading(false);
-        const info = extractApiErrorInfo(
-          err,
-          "Check your connection or try again.",
-        );
-        return Toast.show({
-          type: "error",
-          text1: "Image Upload Failed",
-          text2: info.message,
-        });
-      }
-      setIsUploading(false);
-    }
-
-    const resolvedImages = form.images
-      .map((uri) =>
-        uri.startsWith("http://") || uri.startsWith("https://")
-          ? uri
-          : currentMap[uri],
-      )
-      .filter((uri): uri is string => Boolean(uri));
-
-    if (!isEdit) {
-      executeCreate({
-        type: validation.payload.type,
-        title: validation.payload.title,
-        description: validation.payload.description ?? undefined,
-        category: validation.payload.category,
-        location: validation.payload.location ?? undefined,
-        images: resolvedImages,
-        verificationQuestion: validation.payload.verificationQuestion,
-        verificationAnswer: validation.payload.verificationAnswer,
+      const validation = validateLostFoundForm({
+        type: form.type,
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        location: form.location,
+        verificationQuestion: form.verificationQuestion,
+        verificationAnswer: form.verificationAnswer,
+        includeVerificationFields: canEditVerification,
       });
-      return;
-    }
+      if (validation.error || !validation.payload) {
+        Toast.show({
+          type: "error",
+          text1: "Check Your Input",
+          text2: validation.error || "Please complete the required fields.",
+        });
+        return;
+      }
 
-    if (!post) return;
+      if (form.images.length > LOST_FOUND_LIMITS.MAX_IMAGES) {
+        Toast.show({
+          type: "error",
+          text1: "Photo Limit Exceeded",
+          text2: `Maximum ${LOST_FOUND_LIMITS.MAX_IMAGES} photos can be attached.`,
+        });
+        return;
+      }
 
-    updateMutation.mutate(
-      {
-        id: post.id,
-        data: {
-          type: validation.payload.type,
-          title: validation.payload.title,
-          description: validation.payload.description,
-          category: validation.payload.category,
-          location: validation.payload.location,
-          images: resolvedImages,
-          ...(canEditVerification
-            ? {
-                verificationQuestion: validation.payload.verificationQuestion,
-                verificationAnswer: validation.payload.verificationAnswer,
-              }
-            : {}),
-        },
-      },
-      {
-        onSuccess: (updatedPost) => {
-          Keyboard.dismiss();
-          setUploadedImageMap({});
-          onSuccess?.(updatedPost);
-          onClose();
-          setTimeout(() => {
-            Toast.show({
-              type: "success",
-              text1: "Post Updated",
-              text2: "Your changes have been saved successfully.",
-            });
-          }, 350);
-        },
-        onError: (err) => {
+      const currentMap = { ...uploadedImageMap };
+      const pendingLocalUris = form.images.filter(
+        (uri) =>
+          !uri.startsWith("http://") &&
+          !uri.startsWith("https://") &&
+          !currentMap[uri],
+      );
+
+      if (pendingLocalUris.length > 0) {
+        const sizeError = await validateLocalImageSizes(pendingLocalUris);
+        if (sizeError) {
+          Toast.show({
+            type: "error",
+            text1: "Photo Exceeds 5MB",
+            text2: sizeError,
+          });
+          return;
+        }
+
+        setIsUploading(true);
+        try {
+          const results = await uploadMultipleImages(
+            pendingLocalUris,
+            CLOUDINARY_FOLDERS.CAMPUS_HUB.LOST_FOUND,
+          );
+          results.forEach((result, idx) => {
+            currentMap[pendingLocalUris[idx]] = result.secureUrl;
+          });
+          setUploadedImageMap(currentMap);
+        } catch (err) {
+          setIsUploading(false);
           const info = extractApiErrorInfo(
             err,
-            "Please check your input and try again.",
+            "Check your connection or try again.",
           );
           Toast.show({
             type: "error",
-            text1: "Failed to update",
+            text1: "Image Upload Failed",
             text2: info.message,
           });
+          return;
+        }
+        setIsUploading(false);
+      }
+
+      const resolvedImages = form.images
+        .map((uri) =>
+          uri.startsWith("http://") || uri.startsWith("https://")
+            ? uri
+            : currentMap[uri],
+        )
+        .filter((uri): uri is string => Boolean(uri));
+
+      if (!isEdit) {
+        if (!idempotencyKeyRef.current) {
+          idempotencyKeyRef.current = `lf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        }
+        executeCreate({
+          type: validation.payload.type,
+          title: validation.payload.title,
+          description: validation.payload.description ?? undefined,
+          category: validation.payload.category,
+          location: validation.payload.location ?? undefined,
+          images: resolvedImages,
+          verificationQuestion: validation.payload.verificationQuestion,
+          verificationAnswer: validation.payload.verificationAnswer,
+          idempotencyKey: idempotencyKeyRef.current,
+        });
+        return;
+      }
+
+      if (!post) return;
+
+      updateMutation.mutate(
+        {
+          id: post.id,
+          data: {
+            type: validation.payload.type,
+            title: validation.payload.title,
+            description: validation.payload.description,
+            category: validation.payload.category,
+            location: validation.payload.location,
+            images: resolvedImages,
+            ...(canEditVerification
+              ? {
+                  verificationQuestion: validation.payload.verificationQuestion,
+                  verificationAnswer: validation.payload.verificationAnswer,
+                }
+              : {}),
+          },
         },
-      },
-    );
+        {
+          onSuccess: (updatedPost) => {
+            Keyboard.dismiss();
+            setUploadedImageMap({});
+            onSuccess?.(updatedPost);
+            onClose();
+            setTimeout(() => {
+              Toast.show({
+                type: "success",
+                text1: "Post Updated",
+                text2: "Your changes have been saved successfully.",
+              });
+            }, 350);
+          },
+          onError: (err) => {
+            const info = extractApiErrorInfo(
+              err,
+              "Please check your input and try again.",
+            );
+            Toast.show({
+              type: "error",
+              text1: "Failed to update",
+              text2: info.message,
+            });
+          },
+        },
+      );
+    } finally {
+      submittingRef.current = false;
+    }
   }, [
+    isSubmitting,
     isOffline,
     isEdit,
     form,

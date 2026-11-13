@@ -122,6 +122,7 @@ export const useDeleteLostFoundPost = () => {
       queryClient.invalidateQueries({
         queryKey: lostFoundKeys.infiniteFeedRoot,
       });
+      queryClient.invalidateQueries({ queryKey: ["adminForumReports"] });
     },
   });
 };
