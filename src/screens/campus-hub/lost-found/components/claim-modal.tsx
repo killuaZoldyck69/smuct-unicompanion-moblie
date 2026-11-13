@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -86,6 +86,7 @@ export const ClaimModal = React.memo(function ClaimModal({
     Record<string, string>
   >({});
   const claimMessageRef = useRef<TextInput>(null);
+  const prevVisibleRef = useRef(false);
   const submittingRef = useRef(false);
 
   const submitMutation = useSubmitLostFoundClaim(post.id);
@@ -107,9 +108,23 @@ export const ClaimModal = React.memo(function ClaimModal({
   }, [uploadedProofMap]);
 
   const ugcRetry = useUgcTermsRetry<CreateClaimInput>(currentUser?.id);
+  const { clearQueuedPayload } = ugcRetry;
+
+  useEffect(() => {
+    if (visible && !prevVisibleRef.current) {
+      setMessage("");
+      setAnswer("");
+      setLocalImages([]);
+      setUploadedProofMap({});
+      submittingRef.current = false;
+      clearQueuedPayload();
+    }
+    prevVisibleRef.current = visible;
+  }, [visible, clearQueuedPayload]);
 
   const submitClaimPayload = useCallback(
     (payload: CreateClaimInput) => {
+      submittingRef.current = true;
       ugcRetry.queuePayload(payload, submitClaimPayload);
       submitMutation.mutate(payload, {
         onSuccess: () => {
@@ -129,6 +144,9 @@ export const ClaimModal = React.memo(function ClaimModal({
           if (ugcRetry.handleUgcError(err)) return;
           showApiErrorToast(err, "Submission Failed", "Failed to submit claim.");
         },
+        onSettled: () => {
+          submittingRef.current = false;
+        },
       });
     },
     [ugcRetry, submitMutation, onClose, onSuccess],
@@ -137,12 +155,13 @@ export const ClaimModal = React.memo(function ClaimModal({
   const handleClose = useCallback(() => {
     if (isSubmitting) return;
     cleanupUploadedProof();
-    ugcRetry.clearQueuedPayload();
+    clearQueuedPayload();
+    submittingRef.current = false;
     setMessage("");
     setAnswer("");
     setLocalImages([]);
     onClose();
-  }, [isSubmitting, onClose, cleanupUploadedProof, ugcRetry]);
+  }, [isSubmitting, onClose, cleanupUploadedProof, clearQueuedPayload]);
 
   const canSubmit =
     message.trim().length >= LOST_FOUND_LIMITS.MIN_CLAIM_MESSAGE &&
@@ -151,6 +170,7 @@ export const ClaimModal = React.memo(function ClaimModal({
   const handleSubmit = useCallback(async () => {
     if (submittingRef.current || isSubmitting) return;
     submittingRef.current = true;
+    let startedMutation = false;
     try {
       Keyboard.dismiss();
       if (!requireOnline(isOffline, "Reconnect to the internet before submitting a claim.")) {
@@ -197,13 +217,16 @@ export const ClaimModal = React.memo(function ClaimModal({
         proofImageUrl = uploaded[uri] ?? null;
       }
 
+      startedMutation = true;
       submitClaimPayload({
         message: validation.payload.message,
         answer: validation.payload.answer,
         proofImage: proofImageUrl || null,
       });
     } finally {
-      submittingRef.current = false;
+      if (!startedMutation) {
+        submittingRef.current = false;
+      }
     }
   }, [
     isSubmitting,

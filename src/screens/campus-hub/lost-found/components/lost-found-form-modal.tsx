@@ -188,6 +188,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
 
   const executeCreate = useCallback(
     (payload: CreateLostFoundInput) => {
+      submittingRef.current = true;
       ugcRetry.queuePayload(payload, executeCreate);
       createMutation.mutate(payload, {
         onSuccess: () => {
@@ -209,6 +210,9 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
             "Failed to publish",
             "Please check your input and try again.",
           );
+        },
+        onSettled: () => {
+          submittingRef.current = false;
         },
       });
     },
@@ -266,6 +270,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
   const handleSubmit = useCallback(async () => {
     if (submittingRef.current || isSubmitting) return;
     submittingRef.current = true;
+    let startedMutation = false;
     try {
       if (
         !requireOnline(
@@ -327,6 +332,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
         if (!idempotencyKeyRef.current) {
           idempotencyKeyRef.current = `lf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
         }
+        startedMutation = true;
         executeCreate({
           type: validation.payload.type,
           title: validation.payload.title,
@@ -343,6 +349,7 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
 
       if (!post) return;
 
+      startedMutation = true;
       updateMutation.mutate(
         {
           id: post.id,
@@ -379,10 +386,15 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
               "Please check your input and try again.",
             );
           },
+          onSettled: () => {
+            submittingRef.current = false;
+          },
         },
       );
     } finally {
-      submittingRef.current = false;
+      if (!startedMutation) {
+        submittingRef.current = false;
+      }
     }
   }, [
     isSubmitting,
