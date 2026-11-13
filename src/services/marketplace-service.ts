@@ -77,7 +77,7 @@ export interface MarketplacePost {
   condition: ItemCondition | null;
   status: ListingStatus;
   images: string[];
-  contactPhone: string | null;
+  contactPhone?: string | null;
   authorId: string;
   author: MarketplaceAuthor;
   isHiddenByModeration?: boolean;
@@ -129,6 +129,7 @@ export interface CreateMarketplaceInput {
   condition?: ItemCondition | null;
   images: string[];
   contactPhone?: string | null;
+  idempotencyKey?: string;
 }
 
 export interface CreateCommentInput {
@@ -163,7 +164,7 @@ export const getMarketplacePostById = async (
 export const createMarketplacePost = async (
   data: CreateMarketplaceInput
 ): Promise<MarketplacePost> => {
-  const res = await api.post("/marketplace", data);
+  const res = await api.post("/marketplace", data, { timeout: 45000 });
   return res.data?.data;
 };
 
@@ -171,7 +172,7 @@ export const updateMarketplacePost = async (
   id: string,
   data: Partial<CreateMarketplaceInput>
 ): Promise<MarketplacePost> => {
-  const res = await api.patch(`/marketplace/${id}`, data);
+  const res = await api.patch(`/marketplace/${id}`, data, { timeout: 45000 });
   return res.data?.data;
 };
 

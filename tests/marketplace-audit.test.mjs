@@ -174,6 +174,13 @@ describe("marketplace mobile audit regressions", () => {
 
     assert.match(composeSrc, /<MarketplaceFormModal[\s\S]*mode="create"/);
     assert.match(editSrc, /<MarketplaceFormModal[\s\S]*mode="edit"/);
+    assert.match(formSrc, /initializedKeyRef/);
+    assert.match(formSrc, /draftIdempotencyKeyRef/);
+    assert.match(formSrc, /useUgcTermsStatus/);
+    assert.match(
+      formSrc,
+      /ugcTermsQuery\.data\?\.accepted === false[\s\S]*setShowGuidelines\(true\)/,
+    );
   });
 
   it("uses expo-image with onError fallbacks across marketplace and shared components", () => {
@@ -211,6 +218,13 @@ describe("marketplace mobile audit regressions", () => {
       );
     }
     assert.match(serviceSrc, /reportMarketplaceContent/);
+    assert.match(serviceSrc, /contactPhone\?: string \| null;/);
+    assert.match(serviceSrc, /idempotencyKey\?: string;/);
+    const timeoutMatches = [...serviceSrc.matchAll(/timeout:\s*45000/g)];
+    assert.ok(
+      timeoutMatches.length >= 2,
+      "createMarketplacePost and updateMarketplacePost should use timeout: 45000 for Render cold starts",
+    );
 
     const hookSrc = readSrc("src/features/campus-hub/useMarketplace.ts");
     assert.match(hookSrc, /useUpdateMarketplaceStatus/);

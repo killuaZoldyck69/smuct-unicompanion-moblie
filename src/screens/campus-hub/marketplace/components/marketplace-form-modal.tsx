@@ -50,6 +50,7 @@ import type {
   MarketplacePost,
 } from "@/services/marketplace-service";
 import type { User } from "@/features/auth/types";
+import { useUgcTermsStatus } from "@/features/ugc/useUgcModeration";
 import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guidelines-modal";
 import { colors } from "@/theme/colors";
 import {
@@ -152,8 +153,13 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       : 0,
   );
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadedImageMap, setUploadedImageMap] = useState<Record<string, string>>({});
+  const [, setUploadedMapVersion] = useState(0);
   const uploadedMapRef = useRef<Record<string, string>>({});
+  const initializedKeyRef = useRef<string | null>(null);
+  const draftIdempotencyKeyRef = useRef<string | null>(null);
+
+  const ugcUserId = currentUser?.id ?? post?.author?.id;
+  const ugcTermsQuery = useUgcTermsStatus(ugcUserId, visible);
 
   const createMutation = useCreateMarketplacePost();
   const updateMutation = useUpdateMarketplacePost();
@@ -168,33 +174,44 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
     clearQueuedPayload,
     handleUgcError,
     acceptGuidelines,
-  } = useUgcTermsRetry<SanitizedMarketplaceForm>(
-    currentUser?.id ?? post?.author?.id,
-  );
+  } = useUgcTermsRetry<SanitizedMarketplaceForm>(ugcUserId);
 
   // Sync map helper so discard cleanup always sees synchronously tracked uploads
   const syncUploadedMap = useCallback(
     (updater: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
       if (typeof updater === "function") {
-        const next = updater(uploadedMapRef.current);
-        uploadedMapRef.current = next;
-        setUploadedImageMap(next);
+        uploadedMapRef.current = updater(uploadedMapRef.current);
       } else {
         uploadedMapRef.current = updater;
-        setUploadedImageMap(updater);
       }
+      setUploadedMapVersion((prev) => prev + 1);
     },
     [],
   );
 
-  // Reset form state on open in edit mode (or hydrate default phone on create)
+  // Initialize form state once per open session / listing ID so background refetches
+  // never overwrite active user edits or clear session upload tracking.
   useEffect(() => {
-    if (!visible) return;
-    if (isEdit && post) {
-      const next = buildInitialState("edit", post, initialPhone);
-      setForm(next);
-      setDescriptionLength(extractMarketplacePlainText(post.description).length);
-      syncUploadedMap({});
+    if (!visible) {
+      initializedKeyRef.current = null;
+      draftIdempotencyKeyRef.current = null;
+      return;
+    }
+
+    const targetKey = isEdit && post ? `edit:${post.id}` : "create";
+    if (initializedKeyRef.current !== targetKey) {
+      initializedKeyRef.current = targetKey;
+      draftIdempotencyKeyRef.current = null;
+      if (isEdit && post) {
+        const next = buildInitialState("edit", post, initialPhone);
+        setForm(next);
+        setDescriptionLength(extractMarketplacePlainText(post.description).length);
+        syncUploadedMap({});
+      } else {
+        setForm(buildInitialState("create", undefined, initialPhone));
+        setDescriptionLength(0);
+        syncUploadedMap({});
+      }
     } else if (!isEdit && currentUser?.phoneNumber) {
       const formatted = formatBangladeshiPhone(currentUser.phoneNumber);
       if (isValidBangladeshiPhone(formatted)) {
@@ -266,7 +283,7 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       deleteFileFromCloudinaryApi(url, "image").catch(() => {});
     });
     uploadedMapRef.current = {};
-    setUploadedImageMap({});
+    setUploadedMapVersion((prev) => prev + 1);
   }, []);
 
   const closeAfterSave = useCallback(() => {
@@ -274,7 +291,9 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
     clearQueuedPayload();
     // Clear tracking WITHOUT deleting saved images from Cloudinary
     uploadedMapRef.current = {};
-    setUploadedImageMap({});
+    draftIdempotencyKeyRef.current = null;
+    initializedKeyRef.current = null;
+    setUploadedMapVersion((prev) => prev + 1);
     if (!isEdit) {
       setForm(buildInitialState("create", undefined, initialPhone));
       setDescriptionLength(0);
@@ -286,6 +305,8 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
     Keyboard.dismiss();
     clearQueuedPayload();
     cleanupSessionUploadsOnly();
+    draftIdempotencyKeyRef.current = null;
+    initializedKeyRef.current = null;
     if (!isEdit) {
       setForm(buildInitialState("create", undefined, initialPhone));
       setDescriptionLength(0);
@@ -343,25 +364,70 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
         return;
       }
 
-      createMutation.mutate(payload, {
-        onSuccess: () => {
-          closeAfterSave();
-          scheduleSuccessToast(
-            "Listing Published!",
-            "Your campus listing is now live.",
-          );
+      if (!draftIdempotencyKeyRef.current) {
+        draftIdempotencyKeyRef.current = `mp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      createMutation.mutate(
+        { ...payload, idempotencyKey: draftIdempotencyKeyRef.current },
+        {
+          onSuccess: () => {
+            closeAfterSave();
+            scheduleSuccessToast(
+              "Listing Published!",
+              "Your campus listing is now live.",
+            );
+          },
+          onError: (err: unknown) => {
+            if (handleUgcError(err)) return;
+            showApiErrorToast(
+              err,
+              "Failed to Publish",
+              "Please check your input and try again.",
+            );
+          },
         },
-        onError: (err: unknown) => {
-          if (handleUgcError(err)) return;
-          showApiErrorToast(
-            err,
-            "Failed to Publish",
-            "Please check your input and try again.",
-          );
-        },
-      });
+      );
     },
     [isEdit, post, updateMutation, createMutation, closeAfterSave, handleUgcError],
+  );
+
+  const runUploadAndSubmit = useCallback(
+    async (validatedPayload: SanitizedMarketplaceForm) => {
+      // Upload only newly picked local URIs, keeping existing remote URLs untouched
+      const localOnlyUris = form.localImages.filter((uri) => !isRemoteUrl(uri));
+      let currentMap = { ...uploadedMapRef.current };
+
+      if (localOnlyUris.length > 0) {
+        const updatedMap = await uploadPendingLostFoundImages({
+          uris: localOnlyUris,
+          uploadedMap: currentMap,
+          folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE,
+          singlePhotoLabel: isEdit ? "A newly added photo" : "A photo",
+          uploadErrorTitle: "Photo Upload Failed",
+          uploadErrorFallback: "Please check your internet connection and try again.",
+          setIsUploading,
+          setUploadedMap: (next) => {
+            syncUploadedMap(next);
+          },
+        });
+        if (!updatedMap) return;
+        currentMap = updatedMap;
+      }
+
+      const finalImageUrls = form.localImages
+        .map((uri) => (isRemoteUrl(uri) ? uri : currentMap[uri]))
+        .filter((url): url is string => Boolean(url));
+
+      const finalPayload: SanitizedMarketplaceForm = {
+        ...validatedPayload,
+        images: finalImageUrls,
+      };
+
+      queuePayload(finalPayload, submitListingPayload);
+      submitListingPayload(finalPayload);
+    },
+    [form.localImages, isEdit, syncUploadedMap, queuePayload, submitListingPayload],
   );
 
   const handleSubmit = useCallback(async () => {
@@ -399,47 +465,24 @@ export const MarketplaceFormModal = React.memo(function MarketplaceFormModal({
       return;
     }
 
-    // Upload only newly picked local URIs, keeping existing remote URLs untouched
-    const localOnlyUris = form.localImages.filter((uri) => !isRemoteUrl(uri));
-    let currentMap = { ...uploadedImageMap };
-
-    if (localOnlyUris.length > 0) {
-      const updatedMap = await uploadPendingLostFoundImages({
-        uris: localOnlyUris,
-        uploadedMap: currentMap,
-        folder: CLOUDINARY_FOLDERS.CAMPUS_HUB.MARKETPLACE,
-        singlePhotoLabel: isEdit ? "A newly added photo" : "A photo",
-        uploadErrorTitle: "Photo Upload Failed",
-        uploadErrorFallback: "Please check your internet connection and try again.",
-        setIsUploading,
-        setUploadedMap: (next) => {
-          syncUploadedMap(next);
-        },
+    const hasPendingLocalImages = form.localImages.some((uri) => !isRemoteUrl(uri));
+    if (hasPendingLocalImages && ugcTermsQuery.data?.accepted === false) {
+      queuePayload(validation.payload, (queued) => {
+        void runUploadAndSubmit(queued);
       });
-      if (!updatedMap) return;
-      currentMap = updatedMap;
+      setShowGuidelines(true);
+      return;
     }
 
-    const finalImageUrls = form.localImages
-      .map((uri) => (isRemoteUrl(uri) ? uri : currentMap[uri]))
-      .filter((url): url is string => Boolean(url));
-
-    const finalPayload: SanitizedMarketplaceForm = {
-      ...validation.payload,
-      images: finalImageUrls,
-    };
-
-    queuePayload(finalPayload, submitListingPayload);
-    submitListingPayload(finalPayload);
+    await runUploadAndSubmit(validation.payload);
   }, [
     isSubmitting,
     isOffline,
     form,
-    uploadedImageMap,
-    isEdit,
-    syncUploadedMap,
+    ugcTermsQuery.data?.accepted,
     queuePayload,
-    submitListingPayload,
+    runUploadAndSubmit,
+    setShowGuidelines,
   ]);
 
   const handleAcceptGuidelines = useCallback(() => {
