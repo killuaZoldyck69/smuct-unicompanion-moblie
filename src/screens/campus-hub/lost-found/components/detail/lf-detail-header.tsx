@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, Platform, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import {
   CAMPUS_HUB_COLORS,
@@ -19,10 +19,13 @@ export function LFDetailHeader({
 }: LFDetailHeaderProps) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity
+      <Pressable
         onPress={onBack}
-        style={styles.iconBtn}
-        activeOpacity={0.75}
+        style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.78 }]}
+        android_ripple={{
+          color: CAMPUS_HUB_COLORS.androidRipple,
+          borderless: true,
+        }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessible
         accessibilityRole="button"
@@ -33,24 +36,35 @@ export function LFDetailHeader({
           size={20}
           color={CAMPUS_HUB_COLORS.deepNavy}
         />
-      </TouchableOpacity>
+      </Pressable>
 
-      <Text style={styles.title} numberOfLines={1}>
+      <Text
+        style={styles.title}
+        numberOfLines={1}
+        accessibilityRole="header"
+        maxFontSizeMultiplier={1.25}
+      >
         {isLost ? "Lost Item Listing" : "Found Item Listing"}
       </Text>
 
       {onReport ? (
-        <TouchableOpacity
+        <Pressable
           onPress={onReport}
-          style={styles.iconBtn}
-          activeOpacity={0.75}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            pressed && { opacity: 0.78 },
+          ]}
+          android_ripple={{
+            color: CAMPUS_HUB_COLORS.androidRipple,
+            borderless: true,
+          }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessible
           accessibilityRole="button"
           accessibilityLabel="Report listing"
         >
           <Feather name="flag" size={17} color={CAMPUS_HUB_COLORS.mutedInk} />
-        </TouchableOpacity>
+        </Pressable>
       ) : (
         <View style={styles.iconBtnPlaceholder} />
       )}
@@ -74,6 +88,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: titleFontFamily,
     fontSize: 17,
+    lineHeight: 22,
     fontWeight: "800",
     letterSpacing: -0.2,
     color: CAMPUS_HUB_COLORS.deepNavy,
@@ -81,24 +96,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
     alignItems: "center",
     justifyContent: "center",
-    ...(Platform.OS === "ios"
-      ? {
-          shadowColor: CAMPUS_HUB_COLORS.deepNavy,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 6,
-        }
-      : { elevation: 0 }),
+    overflow: "hidden",
+    ...CAMPUS_HUB_COLORS.shadow,
   },
   iconBtnPlaceholder: {
-    width: 38,
+    width: 40,
   },
 });

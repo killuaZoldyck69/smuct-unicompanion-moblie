@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
 import {
@@ -54,7 +60,11 @@ export function LFInfoCard({
       {/* Resolved or Closed banner */}
       {isResolved && (
         <View style={styles.resolvedBanner}>
-          <Feather name="check-circle" size={16} color="#047857" />
+          <Feather
+            name="check-circle"
+            size={16}
+            color={CAMPUS_HUB_COLORS.resolvedGreenText}
+          />
           <Text style={styles.resolvedBannerText}>
             Item Successfully Handed Over
           </Text>
@@ -88,8 +98,16 @@ export function LFInfoCard({
         {/* Dedicated Single Row for Location without trailing dot */}
         {!!post.location && (
           <View style={styles.locationRow}>
-            <Feather name="map-pin" size={13} color="#dc2626" />
-            <Text style={styles.locationText} numberOfLines={1}>
+            <Feather
+              name="map-pin"
+              size={13}
+              color={colors.semantic.red.accent}
+            />
+            <Text
+              style={styles.locationText}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {post.location}
             </Text>
           </View>
@@ -185,7 +203,11 @@ export function LFInfoCard({
         <View style={styles.managementContainer}>
           {isAdmin && !isAuthor && (
             <View style={styles.adminIndicator}>
-              <Feather name="shield" size={12} color="#4338ca" />
+              <Feather
+                name="shield"
+                size={12}
+                color={colors.semantic.indigo.deep}
+              />
               <Text
                 style={styles.adminIndicatorText}
                 maxFontSizeMultiplier={1.25}
@@ -254,14 +276,24 @@ export function LFInfoCard({
                       android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                       accessible
                       accessibilityRole="button"
-                      accessibilityState={{ disabled: isUpdatingStatus }}
+                      accessibilityState={{
+                        disabled: isUpdatingStatus,
+                        busy: isUpdatingStatus,
+                      }}
                       accessibilityLabel="Mark listing resolved"
                     >
-                      <Feather
-                        name="check-circle"
-                        size={14}
-                        color={CAMPUS_HUB_COLORS.emeraldFill}
-                      />
+                      {isUpdatingStatus ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={CAMPUS_HUB_COLORS.emeraldFill}
+                        />
+                      ) : (
+                        <Feather
+                          name="check-circle"
+                          size={14}
+                          color={CAMPUS_HUB_COLORS.emeraldFill}
+                        />
+                      )}
                       <Text style={styles.resolveActionText}>
                         Mark Resolved
                       </Text>
@@ -279,14 +311,24 @@ export function LFInfoCard({
                     android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                     accessible
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: isUpdatingStatus }}
+                    accessibilityState={{
+                      disabled: isUpdatingStatus,
+                      busy: isUpdatingStatus,
+                    }}
                     accessibilityLabel="Close listing"
                   >
-                    <Feather
-                      name="slash"
-                      size={14}
-                      color={CAMPUS_HUB_COLORS.neutralText}
-                    />
+                    {isUpdatingStatus ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={CAMPUS_HUB_COLORS.neutralText}
+                      />
+                    ) : (
+                      <Feather
+                        name="slash"
+                        size={14}
+                        color={CAMPUS_HUB_COLORS.neutralText}
+                      />
+                    )}
                     <Text style={styles.closeActionText}>Close Listing</Text>
                   </Pressable>
                 </>
@@ -303,14 +345,24 @@ export function LFInfoCard({
                   android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
                   accessible
                   accessibilityRole="button"
-                  accessibilityState={{ disabled: isUpdatingStatus }}
+                  accessibilityState={{
+                    disabled: isUpdatingStatus,
+                    busy: isUpdatingStatus,
+                  }}
                   accessibilityLabel="Reopen listing"
                 >
-                  <Feather
-                    name="refresh-cw"
-                    size={14}
-                    color={CAMPUS_HUB_COLORS.lostFoundAccentText}
-                  />
+                  {isUpdatingStatus ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+                    />
+                  ) : (
+                    <Feather
+                      name="refresh-cw"
+                      size={14}
+                      color={CAMPUS_HUB_COLORS.lostFoundAccentText}
+                    />
+                  )}
                   <Text style={styles.reopenActionText}>Reopen Listing</Text>
                 </Pressable>
               )}
@@ -346,6 +398,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     color: colors.semantic.emerald.darker,
+    flexShrink: 1,
   },
   closedBanner: {
     flexDirection: "row",
@@ -362,6 +415,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.neutralText,
+    flexShrink: 1,
   },
   badgeRow: {
     flexDirection: "row",
@@ -504,7 +558,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   secretAnswerBox: {
-    backgroundColor: "#ffffff",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 10,
     padding: 10,
     marginTop: 4,
@@ -513,10 +567,12 @@ const styles = StyleSheet.create({
   },
   secretAnswerLabel: {
     fontFamily,
-    fontSize: 9,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.mutedInk,
     marginBottom: 2,
+    includeFontPadding: false,
   },
   secretAnswer: {
     fontFamily,
@@ -532,7 +588,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#eef2ff",
+    backgroundColor: colors.semantic.indigo.tint,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -543,7 +599,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     fontWeight: "800",
-    color: "#4338ca",
+    color: colors.semantic.indigo.deep,
     letterSpacing: 0.5,
     includeFontPadding: false,
   },
@@ -557,7 +613,7 @@ const styles = StyleSheet.create({
   editBtn: {
     flex: 1,
     minWidth: 120,
-    minHeight: 46,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -572,6 +628,7 @@ const styles = StyleSheet.create({
   editBtnText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.deepNavy,
     includeFontPadding: false,
@@ -579,7 +636,7 @@ const styles = StyleSheet.create({
   deleteBtn: {
     flex: 1,
     minWidth: 120,
-    minHeight: 46,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -594,6 +651,7 @@ const styles = StyleSheet.create({
   deleteBtnText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.dangerText,
     includeFontPadding: false,
@@ -601,7 +659,7 @@ const styles = StyleSheet.create({
   statusActionBtn: {
     flex: 1,
     minWidth: 130,
-    minHeight: 46,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -621,6 +679,7 @@ const styles = StyleSheet.create({
   resolveActionText: {
     fontFamily,
     fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.emeraldFill,
     includeFontPadding: false,
@@ -632,6 +691,7 @@ const styles = StyleSheet.create({
   closeActionText: {
     fontFamily,
     fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.neutralText,
     includeFontPadding: false,
@@ -643,6 +703,7 @@ const styles = StyleSheet.create({
   reopenActionText: {
     fontFamily,
     fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.lostFoundAccentText,
     includeFontPadding: false,

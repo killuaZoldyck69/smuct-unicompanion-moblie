@@ -141,7 +141,7 @@ export function FilterModal({
       statusBarTranslucent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={onClose}
@@ -151,7 +151,11 @@ export function FilterModal({
         <View
           style={[
             styles.sheetContainer,
-            { maxHeight: Math.min(windowHeight * 0.88, 720) },
+            {
+              maxHeight: Math.min(windowHeight * 0.88, 720),
+              paddingLeft: insets.left,
+              paddingRight: insets.right,
+            },
           ]}
         >
           <View style={styles.handleBar} />
@@ -506,7 +510,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   resetHeaderBtn: {
-    minHeight: 38,
+    minHeight: 40,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -542,12 +546,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
+    lineHeight: 15,
     fontFamily,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.subtleText,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 10,
+    includeFontPadding: false,
   },
   pillsRow: {
     flexDirection: "row",
@@ -591,8 +597,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   categoryPill: {
-    minHeight: 40,
-    paddingVertical: 9,
+    minHeight: 44,
+    paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: colors.slate50,

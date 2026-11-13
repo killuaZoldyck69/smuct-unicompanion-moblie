@@ -331,7 +331,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     flex: 1,
+    minHeight: 48,
     marginRight: 8,
+    borderRadius: 10,
+    overflow: "hidden",
   },
   avatar: {
     width: 38,
@@ -419,9 +422,11 @@ const styles = StyleSheet.create({
   answerLabel: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.skyAccentInk,
     letterSpacing: 0.4,
+    includeFontPadding: false,
   },
   answerText: {
     fontFamily,
@@ -435,9 +440,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.neutralText,
     lineHeight: 19,
-  },
-  proofAttachmentsContainer: {
-    gap: 8,
   },
   proofAttachmentCard: {
     flexDirection: "row",
@@ -456,7 +458,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: CAMPUS_HUB_COLORS.deepNavy,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   proofThumb: {
     width: "100%",
@@ -473,7 +475,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 2,
     right: 2,
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    backgroundColor: colors.scrimDark,
     padding: 3,
     borderRadius: 4,
   },
@@ -489,9 +491,11 @@ const styles = StyleSheet.create({
   proofBadgeTitle: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.skyAccentInk,
     letterSpacing: 0.5,
+    includeFontPadding: false,
   },
   proofInstructionText: {
     fontFamily,
@@ -542,8 +546,10 @@ const styles = StyleSheet.create({
   rejectBtnText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.mutedInk,
+    includeFontPadding: false,
   },
   acceptBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.emeraldFill,
@@ -552,7 +558,9 @@ const styles = StyleSheet.create({
   acceptBtnText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
   },
 });

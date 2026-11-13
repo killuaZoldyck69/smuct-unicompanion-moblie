@@ -182,8 +182,8 @@ export function LostFoundClaimsSkeleton() {
           <View style={styles.rowBetween}>
             <SkeletonBox width={92} height={12} borderRadius={4} />
             <View style={styles.rowGap8}>
-              <SkeletonBox width={74} height={36} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
-              <SkeletonBox width={108} height={36} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+              <SkeletonBox width={74} height={44} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
+              <SkeletonBox width={108} height={44} borderRadius={CAMPUS_HUB_COLORS.pillRadius} />
             </View>
           </View>
         </View>
@@ -473,8 +473,8 @@ const styles = StyleSheet.create({
   },
   lfFeedCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 20,
-    padding: 14,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
+    padding: 16,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,

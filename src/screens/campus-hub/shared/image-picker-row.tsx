@@ -6,6 +6,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as FileSystem from "expo-file-system/legacy";
 import Toast from "react-native-toast-message";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
 
 const DEFAULT_MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -179,7 +180,7 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
               accessibilityRole="button"
               accessibilityLabel={`Remove photo ${index + 1}`}
             >
-              <Feather name="x" size={12} color="#ffffff" />
+              <Feather name="x" size={12} color={CAMPUS_HUB_COLORS.white} />
             </Pressable>
           </View>
         ))}
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "rgba(0,0,0,0.62)",
+    backgroundColor: colors.scrimDark,
     alignItems: "center",
     justifyContent: "center",
   },

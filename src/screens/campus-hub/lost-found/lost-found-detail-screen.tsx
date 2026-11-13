@@ -11,7 +11,6 @@ import {
   ScrollView,
   Pressable,
   Modal,
-  TouchableWithoutFeedback,
   ActivityIndicator,
   RefreshControl,
   StatusBar,
@@ -665,7 +664,10 @@ export function LostFoundDetailScreen() {
 
     return (
       <SafeAreaView style={styles.center} edges={["top", "bottom"]}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={CAMPUS_HUB_COLORS.background}
+        />
         <Feather
           name="alert-circle"
           size={36}
@@ -731,7 +733,10 @@ export function LostFoundDetailScreen() {
       style={styles.container}
       edges={showDockedFooter ? ["top"] : ["top", "bottom"]}
     >
-      <StatusBar barStyle="dark-content" />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={CAMPUS_HUB_COLORS.background}
+      />
       <LFDetailHeader
         isLost={isLost}
         onBack={handleBack}
@@ -857,7 +862,7 @@ export function LostFoundDetailScreen() {
               <Feather
                 name={isLost ? "check-square" : "user-check"}
                 size={18}
-                color="#ffffff"
+                color={CAMPUS_HUB_COLORS.white}
                 style={styles.claimCtaIcon}
               />
               <Text style={styles.claimCtaBtnText}>{claimButtonLabel}</Text>
@@ -890,75 +895,82 @@ export function LostFoundDetailScreen() {
         statusBarTranslucent
         onRequestClose={() => !isConfirmPending && setPendingConfirm(null)}
       >
-        <TouchableWithoutFeedback
-          onPress={() => !isConfirmPending && setPendingConfirm(null)}
-        >
-          <View style={styles.confirmBackdrop}>
-            <TouchableWithoutFeedback>
-              <View style={styles.confirmCard}>
-                <Text style={styles.confirmTitle}>
-                  {pendingConfirm?.title ?? ""}
+        <View style={styles.confirmBackdrop} accessibilityViewIsModal={true}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => !isConfirmPending && setPendingConfirm(null)}
+            accessible={false}
+          />
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle} maxFontSizeMultiplier={1.35}>
+              {pendingConfirm?.title ?? ""}
+            </Text>
+            <Text style={styles.confirmMessage} maxFontSizeMultiplier={1.35}>
+              {pendingConfirm?.message ?? ""}
+            </Text>
+            <View style={styles.confirmActions}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.confirmCancelBtn,
+                  isConfirmPending && { opacity: 0.6 },
+                  pressed && !isConfirmPending && { opacity: 0.85 },
+                ]}
+                disabled={isConfirmPending}
+                onPress={() => setPendingConfirm(null)}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                accessible
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isConfirmPending }}
+                accessibilityLabel="Cancel confirmation"
+              >
+                <Text
+                  style={styles.confirmCancelText}
+                  maxFontSizeMultiplier={1.25}
+                >
+                  Cancel
                 </Text>
-                <Text style={styles.confirmMessage}>
-                  {pendingConfirm?.message ?? ""}
-                </Text>
-                <View style={styles.confirmActions}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.confirmCancelBtn,
-                      isConfirmPending && { opacity: 0.6 },
-                      pressed && !isConfirmPending && { opacity: 0.85 },
-                    ]}
-                    disabled={isConfirmPending}
-                    onPress={() => setPendingConfirm(null)}
-                    android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
-                    accessible
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: isConfirmPending }}
-                    accessibilityLabel="Cancel confirmation"
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.confirmActionBtn,
+                  pendingConfirm?.tone === "danger"
+                    ? styles.confirmDangerBtn
+                    : styles.confirmPrimaryBtn,
+                  isConfirmPending && styles.confirmActionBtnDisabled,
+                  pressed && !isConfirmPending && { opacity: 0.88 },
+                ]}
+                disabled={isConfirmPending}
+                onPress={handleExecutePendingConfirm}
+                android_ripple={{
+                  color: CAMPUS_HUB_COLORS.androidRippleLight,
+                }}
+                accessible
+                accessibilityRole="button"
+                accessibilityState={{
+                  disabled: isConfirmPending,
+                  busy: isConfirmPending,
+                }}
+                accessibilityLabel={
+                  pendingConfirm?.confirmLabel ?? "Confirm action"
+                }
+              >
+                {isConfirmPending ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={CAMPUS_HUB_COLORS.white}
+                  />
+                ) : (
+                  <Text
+                    style={styles.confirmActionText}
+                    maxFontSizeMultiplier={1.25}
                   >
-                    <Text style={styles.confirmCancelText}>Cancel</Text>
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.confirmActionBtn,
-                      pendingConfirm?.tone === "danger"
-                        ? styles.confirmDangerBtn
-                        : styles.confirmPrimaryBtn,
-                      isConfirmPending && styles.confirmActionBtnDisabled,
-                      pressed && !isConfirmPending && { opacity: 0.88 },
-                    ]}
-                    disabled={isConfirmPending}
-                    onPress={handleExecutePendingConfirm}
-                    android_ripple={{
-                      color: CAMPUS_HUB_COLORS.androidRippleLight,
-                    }}
-                    accessible
-                    accessibilityRole="button"
-                    accessibilityState={{
-                      disabled: isConfirmPending,
-                      busy: isConfirmPending,
-                    }}
-                    accessibilityLabel={
-                      pendingConfirm?.confirmLabel ?? "Confirm action"
-                    }
-                  >
-                    {isConfirmPending ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={CAMPUS_HUB_COLORS.white}
-                      />
-                    ) : (
-                      <Text style={styles.confirmActionText}>
-                        {pendingConfirm?.confirmLabel ?? "Confirm"}
-                      </Text>
-                    )}
-                  </Pressable>
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
+                    {pendingConfirm?.confirmLabel ?? "Confirm"}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
           </View>
-        </TouchableWithoutFeedback>
+        </View>
       </Modal>
 
       <LostFoundDeleteModal
@@ -1188,8 +1200,10 @@ const styles = StyleSheet.create({
   confirmCancelText: {
     fontFamily,
     fontSize: 13.5,
+    lineHeight: 18,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
   },
   confirmActionBtn: {
     flex: 1,
@@ -1214,7 +1228,9 @@ const styles = StyleSheet.create({
   confirmActionText: {
     fontFamily,
     fontSize: 13.5,
+    lineHeight: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
   },
 });

@@ -54,7 +54,7 @@ import {
   titleFontFamily,
 } from "../../shared/design-tokens";
 import { ImagePickerRow } from "../../shared/image-picker-row";
-import { LocationBadge } from "./status-badge";
+import { LocationBadge, TypeBadge } from "./status-badge";
 
 interface ClaimModalProps {
   visible: boolean;
@@ -272,7 +272,17 @@ export const ClaimModal = React.memo(function ClaimModal({
         backgroundColor={CAMPUS_HUB_COLORS.white}
         translucent={true}
       />
-      <SafeAreaView style={styles.fullScreenContainer} edges={["top"]}>
+      <SafeAreaView
+        style={[
+          styles.fullScreenContainer,
+          {
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+        edges={["top"]}
+        accessibilityViewIsModal={true}
+      >
         {/* Top Header Navigation Bar */}
         <View style={styles.topHeader}>
           <View style={styles.topHeaderInner}>
@@ -326,30 +336,7 @@ export const ClaimModal = React.memo(function ClaimModal({
             {/* Post Summary Card */}
             <View style={styles.summaryCard}>
               <View style={styles.summaryTop}>
-                <View
-                  style={[
-                    styles.typeBadge,
-                    {
-                      backgroundColor: isLost
-                        ? CAMPUS_HUB_COLORS.dangerBg
-                        : CAMPUS_HUB_COLORS.foundTealBg,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.typeBadgeText,
-                      {
-                        color: isLost
-                          ? CAMPUS_HUB_COLORS.dangerText
-                          : CAMPUS_HUB_COLORS.foundTealText,
-                      },
-                    ]}
-                    maxFontSizeMultiplier={1.25}
-                  >
-                    {isLost ? "LOST ITEM" : "FOUND ITEM"}
-                  </Text>
-                </View>
+                <TypeBadge type={post.type} />
                 {!!post.location && <LocationBadge location={post.location} />}
               </View>
               {/* Show FULL title, no truncation */}
@@ -473,10 +460,24 @@ export const ClaimModal = React.memo(function ClaimModal({
                     <Feather
                       name="send"
                       size={16}
-                      color={CAMPUS_HUB_COLORS.white}
+                      color={
+                        !canSubmit && !isSubmitting
+                          ? CAMPUS_HUB_COLORS.mutedInk
+                          : CAMPUS_HUB_COLORS.white
+                      }
                       style={{ marginRight: 8 }}
                     />
-                    <Text style={styles.submitBtnText}>Submit Claim</Text>
+                    <Text
+                      style={[
+                        styles.submitBtnText,
+                        !canSubmit &&
+                          !isSubmitting &&
+                          styles.submitBtnTextDisabled,
+                      ]}
+                      maxFontSizeMultiplier={1.25}
+                    >
+                      Submit Claim
+                    </Text>
                   </>
                 )}
               </Pressable>
@@ -587,19 +588,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
     gap: 8,
-  },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-  },
-  typeBadgeText: {
-    fontFamily,
-    fontSize: 9,
-    lineHeight: 12,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    includeFontPadding: false,
   },
   summaryTitle: {
     fontFamily,
@@ -720,18 +708,19 @@ const styles = StyleSheet.create({
     ...CAMPUS_HUB_COLORS.shadow,
   },
   submitBtnDisabled: {
-    backgroundColor: colors.slate300,
-    opacity: 0.65,
+    backgroundColor: colors.slate200,
     elevation: 0,
     shadowOpacity: 0,
-  },
-  submitIcon: {
-    marginRight: 8,
   },
   submitBtnText: {
     fontFamily,
     fontSize: 14,
+    lineHeight: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
+  },
+  submitBtnTextDisabled: {
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
 });

@@ -4,8 +4,10 @@ import {
   View,
   Text,
   Pressable,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
@@ -15,7 +17,10 @@ import {
   fontFamily,
   titleFontFamily,
 } from "@/screens/campus-hub/shared/design-tokens";
-import { LocationBadge } from "@/screens/campus-hub/lost-found/components/status-badge";
+import {
+  LocationBadge,
+  TypeBadge,
+} from "@/screens/campus-hub/lost-found/components/status-badge";
 
 interface LostFoundDeleteModalProps {
   visible: boolean;
@@ -38,6 +43,7 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
   onConfirm,
   onClose,
 }: LostFoundDeleteModalProps) {
+  const { height: windowHeight } = useWindowDimensions();
   const isLost = postType === "LOST";
   const [imgError, setImgError] = useState(false);
 
@@ -55,82 +61,81 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
       onRequestClose={isDeleting ? undefined : onClose}
       statusBarTranslucent
     >
-      <View style={styles.backdrop}>
+      <View style={styles.backdrop} accessibilityViewIsModal={true}>
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={isDeleting ? undefined : onClose}
           accessible={false}
         />
-        <View style={styles.modalCard}>
-          {/* Warning Halo Circle */}
-          <View style={styles.haloOuter}>
-            <View style={styles.haloInner}>
-              <Feather
-                name="trash-2"
-                size={22}
-                color={CAMPUS_HUB_COLORS.dangerText}
-              />
-            </View>
-          </View>
-
-          {/* Title & Description */}
-          <Text style={styles.title}>Delete Listing?</Text>
-          <Text style={styles.description}>
-            Are you sure you want to permanently delete this listing? All
-            attached claims and information will be removed. This action cannot
-            be undone.
-          </Text>
-
-          {/* Inset Post Preview Card */}
-          <View style={styles.previewCard}>
-            <View style={styles.previewThumbContainer}>
-              {postImage && !imgError ? (
-                <Image
-                  source={{ uri: postImage }}
-                  style={styles.previewThumb}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  onError={() => setImgError(true)}
+        <View
+          style={[
+            styles.modalCard,
+            { maxHeight: Math.min(windowHeight * 0.88, 600) },
+          ]}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* Warning Halo Circle */}
+            <View style={styles.haloOuter}>
+              <View style={styles.haloInner}>
+                <Feather
+                  name="trash-2"
+                  size={22}
+                  color={CAMPUS_HUB_COLORS.dangerText}
                 />
-              ) : (
-                <View style={styles.previewPlaceholder}>
-                  <Feather
-                    name={isLost ? "search" : "gift"}
-                    size={18}
-                    color={CAMPUS_HUB_COLORS.subtleText}
-                  />
-                </View>
-              )}
-            </View>
-
-            <View style={styles.previewMeta}>
-              <Text style={styles.previewTitle} numberOfLines={1}>
-                {postTitle}
-              </Text>
-              <View style={styles.previewBadgeRow}>
-                <View
-                  style={[
-                    styles.typeBadge,
-                    isLost ? styles.typeBadgeLost : styles.typeBadgeFound,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.typeBadgeText,
-                      isLost
-                        ? styles.typeBadgeTextLost
-                        : styles.typeBadgeTextFound,
-                    ]}
-                    maxFontSizeMultiplier={1.25}
-                  >
-                    {isLost ? "LOST ITEM" : "FOUND ITEM"}
-                  </Text>
-                </View>
-
-                {!!postLocation && <LocationBadge location={postLocation} />}
               </View>
             </View>
-          </View>
+
+            {/* Title & Description */}
+            <Text style={styles.title} maxFontSizeMultiplier={1.35}>
+              Delete Listing?
+            </Text>
+            <Text style={styles.description} maxFontSizeMultiplier={1.35}>
+              Are you sure you want to permanently delete this listing? All
+              attached claims and information will be removed. This action
+              cannot be undone.
+            </Text>
+
+            {/* Inset Post Preview Card */}
+            <View style={styles.previewCard}>
+              <View style={styles.previewThumbContainer}>
+                {postImage && !imgError ? (
+                  <Image
+                    source={{ uri: postImage }}
+                    style={styles.previewThumb}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    onError={() => setImgError(true)}
+                  />
+                ) : (
+                  <View style={styles.previewPlaceholder}>
+                    <Feather
+                      name={isLost ? "search" : "gift"}
+                      size={18}
+                      color={CAMPUS_HUB_COLORS.subtleText}
+                    />
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.previewMeta}>
+                <Text
+                  style={styles.previewTitle}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.35}
+                >
+                  {postTitle}
+                </Text>
+                <View style={styles.previewBadgeRow}>
+                  <TypeBadge type={postType} />
+                  {!!postLocation && <LocationBadge location={postLocation} />}
+                </View>
+              </View>
+            </View>
+          </ScrollView>
 
           {/* Actions Button Row */}
           <View style={styles.buttonRow}>
@@ -148,7 +153,9 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
               accessibilityState={{ disabled: isDeleting }}
               accessibilityLabel="Cancel listing deletion"
             >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={styles.cancelBtnText} maxFontSizeMultiplier={1.25}>
+                Cancel
+              </Text>
             </Pressable>
 
             <Pressable
@@ -167,11 +174,23 @@ export const LostFoundDeleteModal = React.memo(function LostFoundDeleteModal({
               accessibilityLabel="Confirm delete listing"
             >
               {isDeleting ? (
-                <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.white} />
+                <ActivityIndicator
+                  size="small"
+                  color={CAMPUS_HUB_COLORS.white}
+                />
               ) : (
                 <View style={styles.btnContentRow}>
-                  <Feather name="trash-2" size={15} color={CAMPUS_HUB_COLORS.white} />
-                  <Text style={styles.deleteBtnText}>Delete</Text>
+                  <Feather
+                    name="trash-2"
+                    size={15}
+                    color={CAMPUS_HUB_COLORS.white}
+                  />
+                  <Text
+                    style={styles.deleteBtnText}
+                    maxFontSizeMultiplier={1.25}
+                  >
+                    Delete
+                  </Text>
                 </View>
               )}
             </Pressable>
@@ -196,11 +215,14 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 24,
     paddingHorizontal: 22,
-    paddingVertical: 24,
-    alignItems: "center",
+    paddingVertical: 22,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    overflow: "hidden",
     ...CAMPUS_HUB_COLORS.heroShadow,
+  },
+  scrollContent: {
+    alignItems: "center",
   },
   haloOuter: {
     width: 60,
@@ -282,34 +304,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
     gap: 6,
-  },
-  typeBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  typeBadgeLost: {
-    backgroundColor: CAMPUS_HUB_COLORS.lostRoseBg,
-    borderColor: CAMPUS_HUB_COLORS.lostRoseBorder,
-  },
-  typeBadgeFound: {
-    backgroundColor: CAMPUS_HUB_COLORS.foundTealBg,
-    borderColor: CAMPUS_HUB_COLORS.foundTealBorder,
-  },
-  typeBadgeText: {
-    fontFamily,
-    fontSize: 9.5,
-    lineHeight: 12,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    includeFontPadding: false,
-  },
-  typeBadgeTextLost: {
-    color: CAMPUS_HUB_COLORS.lostRoseText,
-  },
-  typeBadgeTextFound: {
-    color: CAMPUS_HUB_COLORS.foundTealText,
   },
   buttonRow: {
     flexDirection: "row",

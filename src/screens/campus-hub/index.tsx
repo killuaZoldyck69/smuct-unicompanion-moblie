@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
@@ -106,14 +106,20 @@ export function CampusHub({ initialSection }: CampusHubProps) {
 
         <View style={styles.topNavRight}>
           {isAdmin && (
-            <TouchableOpacity
-              style={styles.iconBtn}
+            <Pressable
+              style={({ pressed }) => [
+                styles.iconBtn,
+                pressed && { opacity: 0.78 },
+              ]}
               onPress={() => setIsModerationVisible(true)}
-              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              android_ripple={{
+                color: CAMPUS_HUB_COLORS.androidRipple,
+                borderless: true,
+              }}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={`Moderation queue, ${pendingReportsCount} pending reports`}
-              activeOpacity={0.7}
             >
               <Feather
                 name="shield"
@@ -131,13 +137,20 @@ export function CampusHub({ initialSection }: CampusHubProps) {
                   </Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </Pressable>
           )}
 
-          <TouchableOpacity
-            style={styles.iconBtn}
+          <Pressable
+            style={({ pressed }) => [
+              styles.iconBtn,
+              pressed && { opacity: 0.78 },
+            ]}
             onPress={handleComposePress}
-            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            android_ripple={{
+              color: CAMPUS_HUB_COLORS.androidRipple,
+              borderless: true,
+            }}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={
@@ -149,10 +162,9 @@ export function CampusHub({ initialSection }: CampusHubProps) {
                     ? "Create marketplace listing"
                     : "Post a meme"
             }
-            activeOpacity={0.7}
           >
             <Feather name="plus" size={20} color={CAMPUS_HUB_COLORS.deepNavy} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
 
@@ -284,8 +296,8 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     position: "relative",
-    width: 38,
-    height: 38,
+    width: 42,
+    height: 42,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     justifyContent: "center",

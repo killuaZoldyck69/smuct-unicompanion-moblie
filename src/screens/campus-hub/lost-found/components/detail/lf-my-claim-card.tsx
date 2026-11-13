@@ -115,7 +115,9 @@ export function LFMyClaimCard({
 
         {!!claim.answer && (
           <View style={styles.answerBox}>
-            <Text style={styles.answerLabel}>YOUR ANSWER:</Text>
+            <Text style={styles.answerLabel} maxFontSizeMultiplier={1.25}>
+              YOUR ANSWER:
+            </Text>
             <Text style={styles.answerText}>{claim.answer}</Text>
           </View>
         )}
@@ -152,8 +154,20 @@ export function LFMyClaimCard({
               />
             )}
             <View style={styles.proofTextCol}>
-              <Text style={styles.proofTitle}>Attached Proof Photo</Text>
-              <Text style={styles.proofSub}>Tap to view in fullscreen</Text>
+              <Text
+                style={styles.proofTitle}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Attached Proof Photo
+              </Text>
+              <Text
+                style={styles.proofSub}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Tap to view in fullscreen
+              </Text>
             </View>
             <Feather
               name="maximize-2"
@@ -247,14 +261,12 @@ const styles = StyleSheet.create({
     ...CAMPUS_HUB_COLORS.shadow,
     gap: 10,
   },
-  cardAccepted: {
-    borderColor: colors.semantic.emerald.solid,
-    backgroundColor: colors.semantic.emerald.tint,
-  },
   topRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
   statusPill: {
     backgroundColor: colors.semantic.amber.soft,
@@ -274,6 +286,7 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     color: CAMPUS_HUB_COLORS.subtleText,
+    flexShrink: 1,
   },
   answerBox: {
     backgroundColor: CAMPUS_HUB_COLORS.skyTint,
@@ -285,9 +298,11 @@ const styles = StyleSheet.create({
   },
   answerLabel: {
     fontFamily,
-    fontSize: 9,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.skyAccentInk,
+    includeFontPadding: false,
   },
   answerText: {
     fontFamily,
@@ -300,9 +315,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: CAMPUS_HUB_COLORS.neutralText,
     lineHeight: 18,
-  },
-  proofContainer: {
-    gap: 8,
   },
   proofBtn: {
     flexDirection: "row",
@@ -320,7 +332,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: CAMPUS_HUB_COLORS.deepNavy,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   proofTextCol: {
     flex: 1,
@@ -341,7 +353,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    minHeight: 46,
+    minHeight: 48,
     paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
@@ -351,8 +363,10 @@ const styles = StyleSheet.create({
   withdrawBtnText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.dangerText,
+    includeFontPadding: false,
   },
   statusHint: {
     fontFamily,
@@ -371,7 +385,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    minHeight: 46,
+    minHeight: 48,
     paddingVertical: 11,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentFill,
@@ -381,7 +395,9 @@ const styles = StyleSheet.create({
   resubmitBtnText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
   },
 });

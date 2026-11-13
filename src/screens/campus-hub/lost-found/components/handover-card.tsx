@@ -148,7 +148,11 @@ export const HandoverCard = React.memo(function HandoverCard({
                 size={14}
                 color={CAMPUS_HUB_COLORS.skyAccentInk}
               />
-              <Text style={styles.contactBtnText} numberOfLines={1}>
+              <Text
+                style={styles.contactBtnText}
+                numberOfLines={1}
+                ellipsizeMode="middle"
+              >
                 {counterpart.email}
               </Text>
             </Pressable>
@@ -210,7 +214,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.semantic.emerald.tint,
     borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 18,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.semantic.emerald.mintBorder,
     ...CAMPUS_HUB_COLORS.shadow,
     gap: 14,
@@ -264,7 +268,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: 10,
     overflow: "hidden",
   },
@@ -301,8 +305,8 @@ const styles = StyleSheet.create({
   },
   roleBadgeText: {
     fontFamily,
-    fontSize: 9,
-    lineHeight: 12,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: colors.semantic.emerald.darker,
     letterSpacing: 0.4,
@@ -334,8 +338,8 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: colors.slate50,
     paddingHorizontal: 12,
-    paddingVertical: 9,
-    minHeight: 44,
+    paddingVertical: 10,
+    minHeight: 48,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.slate200,
@@ -345,8 +349,11 @@ const styles = StyleSheet.create({
   contactBtnText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.neutralText,
+    flexShrink: 1,
+    includeFontPadding: false,
   },
   safetyBox: {
     backgroundColor: colors.semantic.amber.tint,

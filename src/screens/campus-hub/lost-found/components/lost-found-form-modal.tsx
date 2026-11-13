@@ -462,7 +462,17 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
         backgroundColor={CAMPUS_HUB_COLORS.white}
         translucent={true}
       />
-      <SafeAreaView style={styles.fullScreenContainer} edges={["top"]}>
+      <SafeAreaView
+        style={[
+          styles.fullScreenContainer,
+          {
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+        edges={["top"]}
+        accessibilityViewIsModal={true}
+      >
         <View style={styles.topHeader}>
           <View style={styles.topHeaderInner}>
             <View style={styles.headerTitleGroup}>
@@ -799,10 +809,22 @@ export const LostFoundFormModal = React.memo(function LostFoundFormModal({
                     <Feather
                       name={isEdit ? "check" : "send"}
                       size={16}
-                      color={CAMPUS_HUB_COLORS.white}
+                      color={
+                        !canSubmit && !isSubmitting
+                          ? CAMPUS_HUB_COLORS.mutedInk
+                          : CAMPUS_HUB_COLORS.white
+                      }
                       style={{ marginRight: 8 }}
                     />
-                    <Text style={styles.submitBtnText}>
+                    <Text
+                      style={[
+                        styles.submitBtnText,
+                        !canSubmit &&
+                          !isSubmitting &&
+                          styles.submitBtnTextDisabled,
+                      ]}
+                      maxFontSizeMultiplier={1.25}
+                    >
                       {isEdit ? "Save Changes" : "Publish Post"}
                     </Text>
                   </>
@@ -930,8 +952,10 @@ const styles = StyleSheet.create({
   typeSegmentText: {
     fontFamily,
     fontSize: 13,
+    lineHeight: 17,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.mutedInk,
+    includeFontPadding: false,
   },
   typeSegmentTextLostActive: {
     color: CAMPUS_HUB_COLORS.dangerText,
@@ -987,8 +1011,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 9,
-    minHeight: 38,
+    paddingVertical: 10,
+    minHeight: 44,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderWidth: 1,
@@ -1002,8 +1026,10 @@ const styles = StyleSheet.create({
   chipText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.neutralText,
+    includeFontPadding: false,
   },
   chipTextSelected: {
     color: CAMPUS_HUB_COLORS.white,
@@ -1062,15 +1088,19 @@ const styles = StyleSheet.create({
     ...CAMPUS_HUB_COLORS.shadow,
   },
   submitBtnDisabled: {
-    backgroundColor: colors.slate300,
-    opacity: 0.65,
+    backgroundColor: colors.slate200,
     elevation: 0,
     shadowOpacity: 0,
   },
   submitBtnText: {
     fontFamily,
     fontSize: 14,
+    lineHeight: 18,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.white,
+    includeFontPadding: false,
+  },
+  submitBtnTextDisabled: {
+    color: CAMPUS_HUB_COLORS.mutedInk,
   },
 });

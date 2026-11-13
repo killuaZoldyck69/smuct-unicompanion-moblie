@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   Keyboard,
+  useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -268,6 +269,14 @@ export function LostFoundSection({
   );
 
   const renderHeader = useCallback(() => {
+    const isScopedView = Boolean(
+      !data?.pages?.[0]?.meta?.counts &&
+        (typeFilter !== "ALL" ||
+          statusFilter !== "ALL" ||
+          categoryFilter !== "ALL" ||
+          myPostsOnly ||
+          debouncedSearch.length > 0),
+    );
     return (
       <View style={styles.statsBarContainer}>
         {/* Compact Modern Stats Bar */}
@@ -275,8 +284,10 @@ export function LostFoundSection({
           <View style={styles.statsBarHeader}>
             <View style={styles.statsBarTag}>
               <Feather name="shield" size={12} color={ACCENT_TEXT} />
-              <Text style={styles.statsBarTagText}>
-                CAMPUS HUB LOST & FOUND
+              <Text style={styles.statsBarTagText} maxFontSizeMultiplier={1.25}>
+                {isScopedView
+                  ? "FILTERED RESULTS (LOADED)"
+                  : "CAMPUS HUB LOST & FOUND"}
               </Text>
             </View>
           </View>
@@ -291,7 +302,9 @@ export function LostFoundSection({
               <Text style={styles.statCount} maxFontSizeMultiplier={1.25}>
                 {stats.activeLost}
               </Text>
-              <Text style={styles.statTitle}>Active Lost</Text>
+              <Text style={styles.statTitle} maxFontSizeMultiplier={1.25}>
+                Active Lost
+              </Text>
             </View>
 
             <View style={styles.statDivider} />
@@ -306,7 +319,9 @@ export function LostFoundSection({
               <Text style={styles.statCount} maxFontSizeMultiplier={1.25}>
                 {stats.activeFound}
               </Text>
-              <Text style={styles.statTitle}>Active Found</Text>
+              <Text style={styles.statTitle} maxFontSizeMultiplier={1.25}>
+                Active Found
+              </Text>
             </View>
 
             <View style={styles.statDivider} />
@@ -321,13 +336,23 @@ export function LostFoundSection({
               <Text style={styles.statCount} maxFontSizeMultiplier={1.25}>
                 {stats.resolved}
               </Text>
-              <Text style={styles.statTitle}>Reunited</Text>
+              <Text style={styles.statTitle} maxFontSizeMultiplier={1.25}>
+                Reunited
+              </Text>
             </View>
           </View>
         </View>
       </View>
     );
-  }, [stats]);
+  }, [
+    stats,
+    data?.pages,
+    typeFilter,
+    statusFilter,
+    categoryFilter,
+    myPostsOnly,
+    debouncedSearch,
+  ]);
 
   const renderItem = useCallback(
     ({ item }: { item: LostFoundPost }) => (
@@ -480,7 +505,7 @@ export function LostFoundSection({
             {searchQuery.length > 0 && (
               <Pressable
                 onPress={() => setSearchQuery("")}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 android_ripple={{
                   color: CAMPUS_HUB_COLORS.androidRipple,
                   borderless: true,
@@ -503,34 +528,36 @@ export function LostFoundSection({
           </View>
 
           {/* Filter Modal Trigger Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.filterIconButton,
-              activeFilterCount > 0 && styles.filterIconButtonActive,
-              pressed && { opacity: 0.85 },
-            ]}
-            onPress={() => setIsFilterModalVisible(true)}
-            android_ripple={{
-              color:
-                activeFilterCount > 0
-                  ? CAMPUS_HUB_COLORS.androidRippleLight
-                  : CAMPUS_HUB_COLORS.androidRipple,
-            }}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={`Filter listings. ${activeFilterCount} active filters`}
-          >
-            <Feather
-              name="sliders"
-              size={18}
-              color={
-                activeFilterCount > 0
-                  ? CAMPUS_HUB_COLORS.white
-                  : CAMPUS_HUB_COLORS.neutralText
-              }
-            />
+          <View style={styles.filterBtnWrap}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.filterIconButton,
+                activeFilterCount > 0 && styles.filterIconButtonActive,
+                pressed && { opacity: 0.85 },
+              ]}
+              onPress={() => setIsFilterModalVisible(true)}
+              android_ripple={{
+                color:
+                  activeFilterCount > 0
+                    ? CAMPUS_HUB_COLORS.androidRippleLight
+                    : CAMPUS_HUB_COLORS.androidRipple,
+              }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={`Filter listings. ${activeFilterCount} active filters`}
+            >
+              <Feather
+                name="sliders"
+                size={18}
+                color={
+                  activeFilterCount > 0
+                    ? CAMPUS_HUB_COLORS.white
+                    : CAMPUS_HUB_COLORS.neutralText
+                }
+              />
+            </Pressable>
             {activeFilterCount > 0 && (
-              <View style={styles.filterBadge}>
+              <View style={styles.filterBadge} pointerEvents="none">
                 <Text
                   style={styles.filterBadgeText}
                   maxFontSizeMultiplier={1.25}
@@ -539,7 +566,7 @@ export function LostFoundSection({
                 </Text>
               </View>
             )}
-          </Pressable>
+          </View>
         </View>
 
         {/* Active Filter Chips Strip */}
@@ -688,7 +715,7 @@ export function LostFoundSection({
             </Text>
             <Pressable
               onPress={() => refetch()}
-              hitSlop={8}
+              hitSlop={6}
               android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
               accessible
               accessibilityRole="button"
@@ -698,7 +725,12 @@ export function LostFoundSection({
                 pressed && { opacity: 0.75 },
               ]}
             >
-              <Text style={styles.refreshErrorRetryText}>Retry</Text>
+              <Text
+                style={styles.refreshErrorRetryText}
+                maxFontSizeMultiplier={1.25}
+              >
+                Retry
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -786,6 +818,8 @@ const LostFoundCard = React.memo(function LostFoundCard({
   isAdmin = false,
   onDelete,
 }: LostFoundCardProps) {
+  const { width: windowWidth } = useWindowDimensions();
+  const thumbSize = windowWidth < 380 ? 72 : 84;
   const isOwner = currentUserId === post.authorId;
   const isResolved = post.status === "RESOLVED" || post.status === "CLAIMED";
   const isClosed = post.status === "CLOSED";
@@ -860,9 +894,14 @@ const LostFoundCard = React.memo(function LostFoundCard({
         )}
       </View>
 
-      {/* Right Column: 84x84 Framed Thumbnail + Posted Time + Admin Delete underneath */}
-      <View style={styles.cardRightCol}>
-        <View style={styles.thumbWrapper}>
+      {/* Right Column: Responsive Framed Thumbnail + Posted Time + Admin Delete */}
+      <View style={[styles.cardRightCol, { width: thumbSize }]}>
+        <View
+          style={[
+            styles.thumbWrapper,
+            { width: thumbSize, height: thumbSize },
+          ]}
+        >
           {hasImage ? (
             <Image
               source={{ uri: imageUri }}
@@ -890,7 +929,11 @@ const LostFoundCard = React.memo(function LostFoundCard({
             size={10}
             color={CAMPUS_HUB_COLORS.mutedInk}
           />
-          <Text style={styles.imageTimeText} numberOfLines={1}>
+          <Text
+            style={styles.imageTimeText}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.25}
+          >
             {timeAgo(post.createdAt)}
           </Text>
         </View>
@@ -917,7 +960,12 @@ const LostFoundCard = React.memo(function LostFoundCard({
               size={11}
               color={colors.semantic.red.accent}
             />
-            <Text style={styles.adminDeleteBtnText}>Delete</Text>
+            <Text
+              style={styles.adminDeleteBtnText}
+              maxFontSizeMultiplier={1.25}
+            >
+              Delete
+            </Text>
           </Pressable>
         )}
       </View>
@@ -954,9 +1002,11 @@ const styles = StyleSheet.create({
   offlineBannerText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: ACCENT_TEXT,
     flex: 1,
+    includeFontPadding: false,
   },
   refreshErrorBanner: {
     flexDirection: "row",
@@ -973,23 +1023,30 @@ const styles = StyleSheet.create({
   refreshErrorText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.dangerText,
     flex: 1,
+    includeFontPadding: false,
   },
   refreshErrorRetryBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderWidth: 1,
     borderColor: colors.semantic.rose.border,
+    justifyContent: "center",
+    overflow: "hidden",
   },
   refreshErrorRetryText: {
     fontFamily,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.dangerText,
+    includeFontPadding: false,
   },
   topSearchContainer: {
     paddingHorizontal: 20,
@@ -1030,8 +1087,17 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.neutralText,
   },
   clearSearchBtn: {
-    padding: 4,
-    borderRadius: 12,
+    minWidth: 36,
+    minHeight: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  filterBtnWrap: {
+    position: "relative",
+    width: 48,
+    height: 48,
   },
   filterIconButton: {
     width: 48,
@@ -1043,7 +1109,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
-    position: "relative",
     overflow: "hidden",
   },
   filterIconButtonActive: {
@@ -1052,8 +1117,8 @@ const styles = StyleSheet.create({
   },
   filterBadge: {
     position: "absolute",
-    top: -2,
-    right: -2,
+    top: -4,
+    right: -4,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -1097,8 +1162,10 @@ const styles = StyleSheet.create({
   activeChipText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 15,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.lostFoundAccentText,
+    includeFontPadding: false,
   },
   clearAllBtn: {
     paddingVertical: 8,
@@ -1111,8 +1178,10 @@ const styles = StyleSheet.create({
   clearAllText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 15,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.mutedInk,
+    includeFontPadding: false,
   },
 
   // Compact Modern Stats Bar
@@ -1139,9 +1208,11 @@ const styles = StyleSheet.create({
   statsBarTagText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: ACCENT_TEXT,
     letterSpacing: 0.6,
+    includeFontPadding: false,
   },
   statsBarRow: {
     flexDirection: "row",
@@ -1173,9 +1244,11 @@ const styles = StyleSheet.create({
   statTitle: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.mutedInk,
     marginTop: 2,
+    includeFontPadding: false,
   },
   statDivider: {
     width: 1,
@@ -1239,9 +1312,11 @@ const styles = StyleSheet.create({
   adminDeleteBtnText: {
     fontFamily,
     fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "700",
     color: colors.semantic.red.accent,
     letterSpacing: 0.1,
+    includeFontPadding: false,
   },
   cardTitle: {
     fontFamily: titleFontFamily,
@@ -1265,13 +1340,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginTop: 4,
-  },
-  locationText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.mutedInk,
-    flex: 1,
   },
   claimBadge: {
     flexDirection: "row",
@@ -1331,9 +1399,11 @@ const styles = StyleSheet.create({
   imageTimeText: {
     fontFamily,
     fontSize: 10,
+    lineHeight: 13,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.subtleText,
     textAlign: "center",
+    includeFontPadding: false,
   },
 
   // States & Loaders

@@ -5,7 +5,9 @@ import {
   StyleSheet,
   Modal,
   Pressable,
+  ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
@@ -67,6 +69,7 @@ export function AcceptConfirmationSheet({
   onClose,
 }: AcceptConfirmationSheetProps) {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export function AcceptConfirmationSheet({
       statusBarTranslucent
       onRequestClose={isLoading ? undefined : onClose}
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay} accessibilityViewIsModal={true}>
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={isLoading ? undefined : onClose}
@@ -97,134 +100,179 @@ export function AcceptConfirmationSheet({
         <View
           style={[
             styles.sheet,
-            { paddingBottom: Math.max(insets.bottom + 12, 24) },
+            {
+              maxHeight: Math.min(windowHeight * 0.88, 680),
+              paddingLeft: Math.max(insets.left, 20),
+              paddingRight: Math.max(insets.right, 20),
+            },
           ]}
         >
           {/* Grab handle */}
           <View style={styles.handle} />
 
-          {/* Icon + heading */}
-          <View style={styles.headingSection}>
-            <View style={styles.iconRing}>
-              <View style={styles.iconCircle}>
-                <Feather name="check" size={22} color={ACCENT} />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.scrollBody}
+          >
+            {/* Icon + heading */}
+            <View style={styles.headingSection}>
+              <View style={styles.iconRing}>
+                <View style={styles.iconCircle}>
+                  <Feather name="check" size={22} color={ACCENT} />
+                </View>
               </View>
-            </View>
-            <Text style={styles.title}>Accept & Finalize Handover?</Text>
-            <Text style={styles.subtitle}>
-              Confirming this claim will finalize the return process on campus.
-            </Text>
-          </View>
-
-          {/* Claimant identity card */}
-          <View style={styles.claimantCard}>
-            <View style={styles.avatarWrap}>
-              {claimant?.image && !avatarError ? (
-                <Image
-                  source={{ uri: claimant.image }}
-                  style={styles.avatar}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <Text style={styles.avatarInitial}>{claimantInitial}</Text>
-                </View>
-              )}
-              <View style={styles.verifiedDot} />
-            </View>
-
-            <View style={styles.claimantInfo}>
-              <Text style={styles.claimantName} numberOfLines={1}>
-                {claimant?.name ?? "Claimant"}
+              <Text style={styles.title} maxFontSizeMultiplier={1.35}>
+                Accept & Finalize Handover?
               </Text>
-              <Text style={styles.claimantSub} numberOfLines={1}>
-                {claimantSubtitle}
+              <Text style={styles.subtitle} maxFontSizeMultiplier={1.35}>
+                Confirming this claim will finalize the return process on campus.
               </Text>
             </View>
 
-            <View style={styles.claimantBadge}>
-              <Text
-                style={styles.claimantBadgeText}
-                maxFontSizeMultiplier={1.25}
-              >
-                CLAIMANT
-              </Text>
-            </View>
-          </View>
+            {/* Claimant identity card */}
+            <View style={styles.claimantCard}>
+              <View style={styles.avatarWrap}>
+                {claimant?.image && !avatarError ? (
+                  <Image
+                    source={{ uri: claimant.image }}
+                    style={styles.avatar}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    onError={() => setAvatarError(true)}
+                  />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text
+                      style={styles.avatarInitial}
+                      maxFontSizeMultiplier={1.25}
+                    >
+                      {claimantInitial}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.verifiedDot} />
+              </View>
 
-          {/* Consequences list */}
-          <View style={styles.consequenceList}>
-            {CONSEQUENCES.map((item, idx) => (
-              <View key={idx} style={styles.consequenceItem}>
-                <View
-                  style={[
-                    styles.consequenceIconWrap,
-                    { backgroundColor: item.bgColor },
-                  ]}
+              <View style={styles.claimantInfo}>
+                <Text
+                  style={styles.claimantName}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.35}
                 >
-                  <Feather name={item.icon} size={14} color={item.iconColor} />
-                </View>
-                <Text style={styles.consequenceText}>
-                  {item.text}
-                  {item.bold && (
-                    <Text style={styles.consequenceBold}>{item.bold}</Text>
-                  )}
+                  {claimant?.name ?? "Claimant"}
+                </Text>
+                <Text
+                  style={styles.claimantSub}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.35}
+                >
+                  {claimantSubtitle}
                 </Text>
               </View>
-            ))}
-          </View>
 
-          {/* Divider */}
-          <View style={styles.divider} />
+              <View style={styles.claimantBadge}>
+                <Text
+                  style={styles.claimantBadgeText}
+                  maxFontSizeMultiplier={1.25}
+                >
+                  CLAIMANT
+                </Text>
+              </View>
+            </View>
 
-          {/* Action buttons */}
-          <View style={styles.actionsRow}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.cancelBtn,
-                pressed && !isLoading && { opacity: 0.8 },
-              ]}
-              onPress={onClose}
-              disabled={isLoading}
-              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
-              accessible
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isLoading }}
-              accessibilityLabel="Cancel"
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </Pressable>
+            {/* Consequences list */}
+            <View style={styles.consequenceList}>
+              {CONSEQUENCES.map((item, idx) => (
+                <View key={idx} style={styles.consequenceItem}>
+                  <View
+                    style={[
+                      styles.consequenceIconWrap,
+                      { backgroundColor: item.bgColor },
+                    ]}
+                  >
+                    <Feather name={item.icon} size={14} color={item.iconColor} />
+                  </View>
+                  <Text
+                    style={styles.consequenceText}
+                    maxFontSizeMultiplier={1.35}
+                  >
+                    {item.text}
+                    {item.bold && (
+                      <Text style={styles.consequenceBold}>{item.bold}</Text>
+                    )}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.confirmBtn,
-                isLoading && styles.confirmBtnDisabled,
-                pressed && !isLoading && { opacity: 0.88 },
-              ]}
-              onPress={onConfirm}
-              disabled={isLoading}
-              android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
-              accessible
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isLoading, busy: isLoading }}
-              accessibilityLabel="Accept and resolve claim"
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.white} />
-              ) : (
-                <>
-                  <Feather
-                    name="check"
-                    size={15}
+          {/* Pinned Action Footer */}
+          <View
+            style={[
+              styles.footer,
+              { paddingBottom: Math.max(insets.bottom + 12, 20) },
+            ]}
+          >
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.cancelBtn,
+                  pressed && !isLoading && { opacity: 0.8 },
+                ]}
+                onPress={onClose}
+                disabled={isLoading}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRipple }}
+                accessible
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isLoading }}
+                accessibilityLabel="Cancel"
+              >
+                <Text
+                  style={styles.cancelBtnText}
+                  maxFontSizeMultiplier={1.25}
+                >
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.confirmBtn,
+                  isLoading && styles.confirmBtnDisabled,
+                  pressed && !isLoading && { opacity: 0.88 },
+                ]}
+                onPress={onConfirm}
+                disabled={isLoading}
+                android_ripple={{ color: CAMPUS_HUB_COLORS.androidRippleLight }}
+                accessible
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isLoading, busy: isLoading }}
+                accessibilityLabel="Accept and resolve claim"
+              >
+                {isLoading ? (
+                  <ActivityIndicator
+                    size="small"
                     color={CAMPUS_HUB_COLORS.white}
-                    style={styles.confirmIcon}
                   />
-                  <Text style={styles.confirmBtnText}>Accept & Resolve</Text>
-                </>
-              )}
-            </Pressable>
+                ) : (
+                  <>
+                    <Feather
+                      name="check"
+                      size={15}
+                      color={CAMPUS_HUB_COLORS.white}
+                      style={styles.confirmIcon}
+                    />
+                    <Text
+                      style={styles.confirmBtnText}
+                      maxFontSizeMultiplier={1.25}
+                    >
+                      Accept & Resolve
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
@@ -253,7 +301,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
     paddingTop: 10,
-    paddingHorizontal: 20,
+    overflow: "hidden",
     ...CAMPUS_HUB_COLORS.heroShadow,
   },
   handle: {
@@ -262,7 +310,10 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
     backgroundColor: colors.slate300,
     alignSelf: "center",
-    marginBottom: 20,
+    marginBottom: 14,
+  },
+  scrollBody: {
+    paddingBottom: 14,
   },
 
   // Heading
@@ -292,6 +343,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: titleFontFamily,
     fontSize: 19,
+    lineHeight: 24,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     textAlign: "center",
@@ -305,7 +357,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
     textAlign: "center",
     lineHeight: 19,
-    maxWidth: 280,
+    maxWidth: 300,
   },
 
   // Claimant card
@@ -345,6 +397,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "800",
     color: ACCENT_TEXT,
+    includeFontPadding: false,
   },
   verifiedDot: {
     position: "absolute",
@@ -376,13 +429,13 @@ const styles = StyleSheet.create({
   claimantBadge: {
     backgroundColor: ACCENT_LIGHT,
     paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    paddingVertical: 4,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
   },
   claimantBadgeText: {
     fontFamily,
-    fontSize: 9.5,
-    lineHeight: 12,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800",
     color: ACCENT_TEXT,
     letterSpacing: 0.4,
@@ -392,7 +445,6 @@ const styles = StyleSheet.create({
   // Consequences
   consequenceList: {
     gap: 10,
-    marginBottom: 18,
   },
   consequenceItem: {
     flexDirection: "row",
@@ -414,6 +466,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: CAMPUS_HUB_COLORS.neutralText,
     flex: 1,
+    flexShrink: 1,
     paddingTop: 4,
   },
   consequenceBold: {
@@ -421,11 +474,12 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
 
-  // Divider
-  divider: {
-    height: 1,
-    backgroundColor: CAMPUS_HUB_COLORS.subtleBorder,
-    marginBottom: 16,
+  // Footer
+  footer: {
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
 
   // Actions
@@ -435,7 +489,7 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    height: 50,
+    minHeight: 50,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: colors.slate100,
     alignItems: "center",
@@ -454,7 +508,7 @@ const styles = StyleSheet.create({
   },
   confirmBtn: {
     flex: 1.8,
-    height: 50,
+    minHeight: 50,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: ACCENT,
     flexDirection: "row",
