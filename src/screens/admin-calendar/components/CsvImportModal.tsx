@@ -221,6 +221,17 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     if (!pickedFile?.content || !validationResult?.isValid) return;
 
     if (!calendarId) {
+      if (
+        targetBatch.trim().length > 0 &&
+        (isGlobal || selectedPrograms.length === 0)
+      ) {
+        Alert.alert(
+          "Target Program Required",
+          "A calendar targeting a specific batch must target at least one program.",
+        );
+        return;
+      }
+
       const finalYear = parseInt(academicYear, 10);
       if (
         !finalYear ||
@@ -588,6 +599,26 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     <Text style={styles.successText}>
                       Ready to import {validationResult.validRowsCount} events!
                     </Text>
+                  </View>
+                )}
+
+                {validationResult.warnings.length > 0 && (
+                  <View style={styles.warningBox}>
+                    <Text style={styles.warningBoxTitle}>
+                      Warnings ({validationResult.warnings.length}):
+                    </Text>
+                    {validationResult.warnings.slice(0, 5).map((warn, i) => (
+                      <View key={i} style={styles.errorRow}>
+                        <Feather
+                          name="alert-triangle"
+                          size={13}
+                          color="#d97706"
+                        />
+                        <Text style={styles.warningText}>
+                          Row {warn.rowNumber}: {warn.message}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 )}
 
@@ -961,6 +992,25 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 11,
     color: "#dc2626",
+    flex: 1,
+  },
+  warningBox: {
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+  },
+  warningBoxTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#b45309",
+    marginBottom: 6,
+  },
+  warningText: {
+    fontSize: 11,
+    color: "#92400e",
     flex: 1,
   },
   successRow: {

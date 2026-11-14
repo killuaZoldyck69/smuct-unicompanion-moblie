@@ -18,6 +18,8 @@ import {
   useAcademicCalendars,
   useCurrentAcademicCalendar,
 } from "@/features/schedule/useSchedule";
+import { useNetworkStatus } from "@/hooks/use-network-status";
+import type { AcademicCalendarItem } from "@/services/calendar-service";
 import { BENTO_COLORS, fontFamily, titleFontFamily } from "./constants";
 import {
   resolveCalendarMeta,
@@ -40,7 +42,6 @@ import { ChronologicalDateGroup, WeekHeadingInfo } from "./utils";
 
 export { BENTO_COLORS, CATEGORY_CONFIG } from "./constants";
 export { formatEventDate, getMonthAndDay } from "./utils";
-export { BentoEventCard } from "./components/bento-event-card";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -134,7 +135,6 @@ interface DateGroupHeaderProps {
   isToday: boolean;
   isSelected: boolean;
   eventCount: number;
-  weekNumber?: number | null;
 }
 
 const DateGroupHeader = React.memo(function DateGroupHeader({
@@ -142,7 +142,6 @@ const DateGroupHeader = React.memo(function DateGroupHeader({
   isToday,
   isSelected,
   eventCount,
-  weekNumber,
 }: DateGroupHeaderProps) {
   return (
     <View style={subStyles.dateHeaderRow}>
@@ -354,9 +353,19 @@ const subStyles = StyleSheet.create({
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
-export function AcademicCalendarScreen() {
+export interface AcademicCalendarScreenProps {
+  previewCalendar?: AcademicCalendarItem | null;
+  onClosePreview?: () => void;
+}
+
+export function AcademicCalendarScreen({
+  previewCalendar,
+  onClosePreview,
+}: AcademicCalendarScreenProps = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isOffline } = useNetworkStatus();
+  const isPreviewMode = Boolean(previewCalendar);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedDate, setSelectedDate] = useState<string | null>(() =>
     toISODateString(new Date()),
@@ -372,19 +381,20 @@ export function AcademicCalendarScreen() {
     isLoading: isLoadingCurrent,
     isError: isErrorCurrent,
     refetch: refetchCurrent,
-  } = useCurrentAcademicCalendar();
+  } = useCurrentAcademicCalendar(!isPreviewMode);
 
   const {
     data: calendars,
     isLoading: isLoadingAll,
     isError: isErrorAll,
     refetch: refetchAll,
-  } = useAcademicCalendars();
+  } = useAcademicCalendars(!isPreviewMode);
 
-  const isLoading = isLoadingCurrent || isLoadingAll;
-  const isError = isErrorCurrent && isErrorAll;
+  const isLoading = isPreviewMode ? false : isLoadingCurrent || isLoadingAll;
+  const isError = isPreviewMode ? false : isErrorCurrent && isErrorAll;
 
   const activeCalendar =
+    previewCalendar ||
     currentCalendar ||
     calendars?.find((c) => c.status === "PUBLISHED") ||
     calendars?.[0] ||
@@ -427,14 +437,12 @@ export function AcademicCalendarScreen() {
       { key: "CLASS", label: "Classes", count: categoryCounts.CLASS ?? 0 },
       { key: "EXAM", label: "Exams", count: categoryCounts.EXAM ?? 0 },
       { key: "HOLIDAY", label: "Holidays", count: categoryCounts.HOLIDAY ?? 0 },
-      {
-        key: "DEADLINE",
-        label: "Deadlines",
-        count: (categoryCounts.DEADLINE ?? 0) + (categoryCounts.REGISTRATION ?? 0),
-      },
-      { key: "RESULT", label: "Results", count: categoryCounts.RESULT ?? 0 },
+      { key: "REGISTRATION", label: "Registration", count: categoryCounts.REGISTRATION ?? 0 },
+      { key: "DEADLINE", label: "Deadlines", count: categoryCounts.DEADLINE ?? 0 },
       { key: "MAKEUP_CLASS", label: "Makeup", count: categoryCounts.MAKEUP_CLASS ?? 0 },
+      { key: "RESULT", label: "Results", count: categoryCounts.RESULT ?? 0 },
       { key: "ACADEMIC", label: "Academic", count: categoryCounts.ACADEMIC ?? 0 },
+      { key: "OTHER", label: "Other", count: categoryCounts.OTHER ?? 0 },
     ],
     [categoryCounts],
   );
@@ -491,6 +499,10 @@ export function AcademicCalendarScreen() {
   }, []);
 
   const handleBack = useCallback(() => {
+    if (isPreviewMode && onClosePreview) {
+      onClosePreview();
+      return;
+    }
     const todayStr = toISODateString(new Date());
     if (selectedDate && selectedDate !== todayStr) {
       setSelectedDate(todayStr);
@@ -498,9 +510,12 @@ export function AcademicCalendarScreen() {
       return;
     }
     router.replace("/(tabs)/menu");
-  }, [selectedDate, router, scrollToTargetDate]);
+  }, [isPreviewMode, onClosePreview, selectedDate, router, scrollToTargetDate]);
 
   const onRefresh = useCallback(async () => {
+    if (isPreviewMode || isOffline) {
+      return;
+    }
     setIsRefreshing(true);
     hasAutoScrolled.current = false;
     groupPositions.current = {};
@@ -509,7 +524,7 @@ export function AcademicCalendarScreen() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetchCurrent, refetchAll]);
+  }, [isPreviewMode, isOffline, refetchCurrent, refetchAll]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -540,10 +555,23 @@ export function AcademicCalendarScreen() {
             Academic Calendar
           </Text>
           <Text style={styles.navSubtitle}>
-            {activeCalendar?.semester ?? "University Schedule"}
+            {isPreviewMode
+              ? `Student Preview • ${activeCalendar?.semester ?? "University Schedule"}`
+              : activeCalendar?.semester ?? "University Schedule"}
           </Text>
         </View>
       </View>
+
+      {isOffline && !isPreviewMode && (
+        <View style={styles.offlineBanner}>
+          <Feather name="wifi-off" size={14} color="#92400e" />
+          <Text style={styles.offlineBannerText}>
+            {activeCalendar
+              ? "Offline mode — showing cached schedule"
+              : "Offline mode — connect to load the academic calendar"}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.fixedTop}>
         {isLoading ? (
@@ -580,17 +608,19 @@ export function AcademicCalendarScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={[BENTO_COLORS.deepNavy]}
-            tintColor={BENTO_COLORS.deepNavy}
-          />
+          isPreviewMode ? undefined : (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={[BENTO_COLORS.deepNavy]}
+              tintColor={BENTO_COLORS.deepNavy}
+            />
+          )
         }
       >
         {isLoading ? (
           <CalendarLoadingState />
-        ) : isError ? (
+        ) : isError && !activeCalendar ? (
           <CalendarErrorState onRetry={onRefresh} />
         ) : !activeCalendar || allEvents.length === 0 ? (
           <CalendarEmptyState />
@@ -618,7 +648,6 @@ export function AcademicCalendarScreen() {
                         isToday={group.isToday}
                         isSelected={isSelected}
                         eventCount={group.events.length}
-                        weekNumber={group.weekNumber}
                       />
 
                       {group.events.map((ev, evIdx) => (
@@ -706,6 +735,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 18,
     letterSpacing: -0.1,
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+  },
+  offlineBannerText: {
+    fontFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#92400e",
+    flex: 1,
   },
   fixedTop: {
     backgroundColor: BENTO_COLORS.background,

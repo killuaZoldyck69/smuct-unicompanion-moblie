@@ -52,11 +52,19 @@ export interface AcademicCalendarItem {
   updatedAt: string;
 }
 
+export interface AcademicCalendarStatusCounts {
+  all: number;
+  published: number;
+  draft: number;
+  archived: number;
+}
+
 export interface AcademicCalendarPagination {
   page: number;
   limit: number;
   total: number;
   totalPages: number;
+  counts?: AcademicCalendarStatusCounts;
 }
 
 export interface AcademicCalendarListResponse {
@@ -182,8 +190,12 @@ export const getCurrentAcademicCalendar = async (): Promise<AcademicCalendarItem
 };
 export const getCurrentAcademicCalendarAPI = getCurrentAcademicCalendar;
 
-export const getUpcomingAcademicEvents = async (): Promise<AcademicEventItem[]> => {
-  const res = await api.get("/calendars/events/upcoming");
+export const getUpcomingAcademicEvents = async (
+  limit?: number,
+): Promise<AcademicEventItem[]> => {
+  const res = await api.get("/calendars/events/upcoming", {
+    params: limit ? { limit } : undefined,
+  });
   return res.data?.data || [];
 };
 export const getUpcomingAcademicEventsAPI = getUpcomingAcademicEvents;

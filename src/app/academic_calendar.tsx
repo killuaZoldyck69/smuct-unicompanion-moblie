@@ -5,7 +5,6 @@ export {
   CATEGORY_CONFIG,
   formatEventDate,
   getMonthAndDay,
-  BentoEventCard,
 } from "@/screens/academic-calendar";
 
 export default AcademicCalendarScreen;

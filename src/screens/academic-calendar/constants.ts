@@ -1,4 +1,3 @@
-import { Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { EventCategory } from "@/services/calendar-service";
 

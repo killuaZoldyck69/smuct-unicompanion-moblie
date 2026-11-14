@@ -70,17 +70,19 @@ export const useDeleteBusRoute = () => {
 
 // Student Calendar
 
-export const useAcademicCalendars = () =>
+export const useAcademicCalendars = (enabled = true) =>
   useQuery<AcademicCalendarItem[], Error>({
     queryKey: calendarKeys.all,
     queryFn: () => getAcademicCalendarsAPI(),
+    enabled,
     ...CALENDAR_CACHE,
   });
 
-export const useCurrentAcademicCalendar = () =>
+export const useCurrentAcademicCalendar = (enabled = true) =>
   useQuery<AcademicCalendarItem | null, Error>({
     queryKey: calendarKeys.current,
     queryFn: () => getCurrentAcademicCalendarAPI(),
+    enabled,
     ...CALENDAR_CACHE,
   });
 
@@ -102,10 +104,16 @@ const invalidateCalendarQueries = (qc: ReturnType<typeof useQueryClient>, calend
 
 // Admin Calendar
 
-export const useAdminCalendars = (status?: CalendarStatus, page = 1, limit = 25) =>
+export const useAdminCalendars = (
+  status?: CalendarStatus,
+  page = 1,
+  limit = 25,
+  enabled = true,
+) =>
   useQuery<AcademicCalendarListResponse, Error>({
     queryKey: calendarKeys.admin(status, page, limit),
     queryFn: () => getAdminCalendarsAPI(status, page, limit),
+    enabled,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
   });

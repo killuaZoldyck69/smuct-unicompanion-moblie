@@ -58,6 +58,7 @@ interface CalendarListCardProps {
   onStatusChange: (id: string, status: CalendarStatus) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string, title: string) => void;
+  onExportCsv?: (id: string, semester: string, academicYear?: number) => void;
 }
 
 export const CalendarListCard: React.FC<CalendarListCardProps> = ({
@@ -66,6 +67,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
   onStatusChange,
   onDuplicate,
   onDelete,
+  onExportCsv,
 }) => {
   const insets = useSafeAreaInsets();
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -98,6 +100,10 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
     return 0;
   }, [calendar.events]);
 
+  const isGlobalTarget =
+    (!calendar.targetPrograms || calendar.targetPrograms.length === 0) &&
+    (!calendar.targetFaculties || calendar.targetFaculties.length === 0);
+
   // Targeted Programs resolved with official short names
   const targetedPrograms = React.useMemo(() => {
     // 1. If explicit programs targeted
@@ -125,20 +131,8 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
       }
     }
 
-    // 3. Fallback: core university programs
-    const defaults = [
-      "B.Sc (Hons) in Computer Science and Engineering",
-      "B.Sc (Hons) in Computer Science and Information Technology",
-      "Bachelor of Business Administration (BBA)",
-      "Bachelor of Architecture",
-      "BA (Hons) in Fashion Design and Technology",
-      "BA (Hons) in Graphic Design and Multimedia",
-      "Bachelor of Laws (LLB)",
-    ];
-    return defaults.map((p) => ({
-      fullName: p,
-      shortName: getProgramShortName(p) || p,
-    }));
+    // 3. Global university-wide calendar (no program/faculty restriction)
+    return [];
   }, [calendar.targetPrograms, calendar.targetFaculties]);
 
   // Two-row display limit: show up to 4 programs, then "+ X more"
@@ -154,8 +148,6 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
   // Key Milestones (Commencement, Midterm Window, Finalterm Window, Term End)
   const milestones = React.useMemo(() => {
     const events = calendar.events || [];
-    const year = calendar.academicYear || 2026;
-    const sem = calendar.semester || "Summer";
 
     let commencement = "";
     let midtermWindow = "";
@@ -231,7 +223,7 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
     }
 
     return { commencement, midtermWindow, finaltermWindow, termEnd };
-  }, [calendar.events, calendar.academicYear, calendar.semester]);
+  }, [calendar.events]);
 
   // Exact Semester title (as stored in DB or fallback)
   const displayTitle = React.useMemo(() => {
@@ -448,10 +440,10 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
                 {/* Programs */}
                 <View style={[styles.statBox, styles.statBoxAmber]}>
                   <Text style={[styles.statNumber, { color: "#d97706" }]}>
-                    {targetedPrograms.length}
+                    {isGlobalTarget ? "All" : targetedPrograms.length}
                   </Text>
                   <Text style={[styles.statLabel, { color: "#b45309" }]}>
-                    Programs
+                    {isGlobalTarget ? "Programs (Global)" : "Programs"}
                   </Text>
                 </View>
               </View>
@@ -460,17 +452,27 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
               <View style={styles.programsSection}>
                 <Text style={styles.programsLabel}>Targeted Programs:</Text>
                 <View style={styles.programsWrap}>
-                  {visiblePrograms.map((prog, idx) => (
-                    <View key={idx} style={styles.programChip}>
-                      <Text style={styles.programChipText}>{prog.shortName}</Text>
-                    </View>
-                  ))}
-                  {remainingProgramsCount > 0 && (
-                    <View style={[styles.programChip, styles.moreProgramsChip]}>
-                      <Text style={styles.moreProgramsChipText}>
-                        + {remainingProgramsCount} more
+                  {isGlobalTarget || targetedPrograms.length === 0 ? (
+                    <View style={styles.programChip}>
+                      <Text style={styles.programChipText}>
+                        All University Programs & Faculties
                       </Text>
                     </View>
+                  ) : (
+                    <>
+                      {visiblePrograms.map((prog, idx) => (
+                        <View key={idx} style={styles.programChip}>
+                          <Text style={styles.programChipText}>{prog.shortName}</Text>
+                        </View>
+                      ))}
+                      {remainingProgramsCount > 0 && (
+                        <View style={[styles.programChip, styles.moreProgramsChip]}>
+                          <Text style={styles.moreProgramsChipText}>
+                            + {remainingProgramsCount} more
+                          </Text>
+                        </View>
+                      )}
+                    </>
                   )}
                 </View>
               </View>
@@ -669,6 +671,25 @@ export const CalendarListCard: React.FC<CalendarListCardProps> = ({
               <Feather name="copy" size={16} color="#0f172a" />
               <Text style={styles.menuItemText}>Clone to New Draft</Text>
             </TouchableOpacity>
+
+            {onExportCsv && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setIsMenuVisible(false);
+                  onExportCsv(
+                    calendar.id,
+                    calendar.semester,
+                    calendar.academicYear,
+                  );
+                }}
+              >
+                <Feather name="download" size={16} color="#0284c7" />
+                <Text style={[styles.menuItemText, { color: "#0284c7" }]}>
+                  Export Schedule CSV
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {isDraft && (
               <TouchableOpacity

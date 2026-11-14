@@ -7,25 +7,24 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
-  Alert,
   Platform,
   TextInput,
   BackHandler,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useNavigation } from "expo-router";
+import { Redirect, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import Toast from "react-native-toast-message";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import {
   AcademicEventItem,
   CalendarStatus,
   CreateAcademicCalendarInput,
   CreateEventInput,
-  EventCategory,
   UpdateEventInput,
   exportCalendarCsvAPI,
 } from "@/services/calendar-service";
@@ -65,10 +64,10 @@ import {
 } from "./components/AdminConfirmModal";
 
 export function AdminCalendarScreen() {
-  const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { role, isPending, user } = useCurrentUser();
+  const { role, isPending } = useCurrentUser();
+  const { isOffline } = useNetworkStatus();
 
   // Navigation State: 'LIST' or 'DETAIL' (defaults to LIST overview)
   const [currentView, setCurrentView] = useState<"LIST" | "DETAIL">("LIST");
@@ -117,6 +116,7 @@ export function AdminCalendarScreen() {
   const pageSize = 25;
 
   // Queries & Mutations
+  const isAdmin = !isPending && role === "ADMIN";
   const {
     data: adminPage = { data: [], pagination: { page, limit: pageSize, total: 0, totalPages: 1 } },
     isLoading: isLoadingCalendars,
@@ -125,9 +125,10 @@ export function AdminCalendarScreen() {
     selectedStatusTab === "ALL" ? undefined : selectedStatusTab,
     page,
     pageSize,
+    isAdmin,
   );
 
-  const calendars = adminPage.data ?? [];
+  const calendars = useMemo(() => adminPage.data ?? [], [adminPage.data]);
   const pagination = adminPage.pagination ?? {
     page,
     limit: pageSize,
@@ -139,19 +140,27 @@ export function AdminCalendarScreen() {
     setPage(1);
   }, [selectedStatusTab, searchQuery]);
 
-  // Dynamic status tab counts matching image
-  const allTermsCount = calendars.length;
+  // Dynamic status tab counts (prefer server-wide DB counts when returned)
+  const statusCounts = adminPage.pagination?.counts;
+  const allTermsCount =
+    statusCounts?.all ?? pagination.total ?? calendars.length;
   const activeTermsCount = useMemo(
-    () => calendars.filter((c) => c.status === "PUBLISHED").length,
-    [calendars],
+    () =>
+      statusCounts?.published ??
+      calendars.filter((c) => c.status === "PUBLISHED").length,
+    [statusCounts?.published, calendars],
   );
   const draftTermsCount = useMemo(
-    () => calendars.filter((c) => c.status === "DRAFT").length,
-    [calendars],
+    () =>
+      statusCounts?.draft ??
+      calendars.filter((c) => c.status === "DRAFT").length,
+    [statusCounts?.draft, calendars],
   );
   const archivedTermsCount = useMemo(
-    () => calendars.filter((c) => c.status === "ARCHIVED").length,
-    [calendars],
+    () =>
+      statusCounts?.archived ??
+      calendars.filter((c) => c.status === "ARCHIVED").length,
+    [statusCounts?.archived, calendars],
   );
 
   // Status Filter options: ALL, Active, Draft, Archived with numbers
@@ -271,7 +280,10 @@ export function AdminCalendarScreen() {
   const importCsvMutation = useImportCalendarCsv();
 
   // Category counts and filtered events
-  const allEvents = selectedCalendar?.events || [];
+  const allEvents = useMemo(
+    () => selectedCalendar?.events ?? [],
+    [selectedCalendar?.events],
+  );
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {
@@ -284,6 +296,7 @@ export function AdminCalendarScreen() {
       MAKEUP_CLASS: 0,
       RESULT: 0,
       ACADEMIC: 0,
+      OTHER: 0,
     };
     allEvents.forEach((ev) => {
       if (counts[ev.category] !== undefined) {
@@ -308,14 +321,15 @@ export function AdminCalendarScreen() {
     return groupEventsChronologically(filteredEvents);
   }, [filteredEvents]);
 
-  // Calculate total weeks & active week progress
-  const totalWeeksCount = useMemo(() => {
-    let maxWk = 15;
-    allEvents.forEach((e) => {
-      if (e.weekNumber && e.weekNumber > maxWk) maxWk = e.weekNumber;
+  const guardOnlineMutation = (actionLabel: string): boolean => {
+    if (!isOffline) return true;
+    Toast.show({
+      type: "error",
+      text1: "Offline Mode",
+      text2: `Connect to the internet to ${actionLabel}.`,
     });
-    return maxWk;
-  }, [allEvents]);
+    return false;
+  };
 
   // Open Details Screen
   const handleOpenDetail = (id: string) => {
@@ -328,6 +342,7 @@ export function AdminCalendarScreen() {
     targetCalendarId: string,
     status: CalendarStatus,
   ) => {
+    if (!guardOnlineMutation("update calendar status")) return;
     try {
       await updateStatusMutation.mutateAsync({
         id: targetCalendarId,
@@ -393,6 +408,7 @@ export function AdminCalendarScreen() {
 
   // Duplicate / Clone Handler
   const handleDuplicateCalendar = async (id: string) => {
+    if (!guardOnlineMutation("clone a calendar")) return;
     try {
       const cloned = await duplicateCalendarMutation.mutateAsync(id);
       Toast.show({
@@ -420,6 +436,7 @@ export function AdminCalendarScreen() {
     title?: string,
     requireConfirm = false,
   ) => {
+    if (!guardOnlineMutation("delete a calendar")) return;
     const doDelete = async () => {
       try {
         await deleteCalendarMutation.mutateAsync(id);
@@ -461,15 +478,24 @@ export function AdminCalendarScreen() {
     }
   };
 
-  // Export CSV Handler
-  const handleExportCsv = async () => {
-    if (!selectedCalendarId) return;
+  // Export CSV Handler (shared between Detail Header and CalendarListCard menu)
+  const handleExportCsv = async (
+    targetCalendarId?: string,
+    targetSemester?: string,
+    targetAcademicYear?: number,
+  ) => {
+    if (!guardOnlineMutation("export CSV schedules")) return;
+    const exportId = targetCalendarId || selectedCalendarId;
+    if (!exportId) return;
+
+    const exportSemester = targetSemester || selectedCalendar?.semester || "academic_calendar";
+    const exportYear = targetAcademicYear || selectedCalendar?.academicYear;
 
     try {
-      const csvData = await exportCalendarCsvAPI(selectedCalendarId);
-      const safeName = (
-        selectedCalendar?.semester || "academic_calendar"
-      ).replace(/\s+/g, "_");
+      const csvData = await exportCalendarCsvAPI(exportId);
+      const safeName = `${exportSemester}${exportYear ? `_${exportYear}` : ""}`
+        .trim()
+        .replace(/\s+/g, "_");
 
       if (Platform.OS === "web") {
         const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
@@ -493,7 +519,7 @@ export function AdminCalendarScreen() {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
             mimeType: "text/csv",
-            dialogTitle: `Export ${selectedCalendar?.semester || "Calendar"}`,
+            dialogTitle: `Export ${exportSemester}`,
           });
         } else {
           Toast.show({ type: "success", text1: "CSV Saved Locally" });
@@ -512,6 +538,9 @@ export function AdminCalendarScreen() {
   const handleSaveEvent = async (
     payload: CreateEventInput | UpdateEventInput,
   ) => {
+    if (!guardOnlineMutation("save event changes")) {
+      throw new Error("You are currently offline. Please reconnect to save changes.");
+    }
     if (!selectedCalendarId) return;
 
     try {
@@ -542,6 +571,7 @@ export function AdminCalendarScreen() {
 
   // Delete Single Event
   const handleDeleteEvent = async (eventId: string, title: string) => {
+    if (!guardOnlineMutation("delete an event")) return;
     if (!selectedCalendarId) return;
     try {
       await deleteEventMutation.mutateAsync({
@@ -600,6 +630,7 @@ export function AdminCalendarScreen() {
     semesterDuration: string;
     targetBatch: string;
   }) => {
+    if (!guardOnlineMutation("update calendar audience")) return;
     if (!selectedCalendarId) return;
     try {
       await updateCalendarMutation.mutateAsync({
@@ -632,6 +663,9 @@ export function AdminCalendarScreen() {
       targetBatch?: string;
     },
   ) => {
+    if (!guardOnlineMutation("import a CSV schedule")) {
+      throw new Error("You are currently offline. Please reconnect to import CSV schedules.");
+    }
     try {
       if (selectedCalendarId) {
         await importCsvMutation.mutateAsync({
@@ -681,12 +715,16 @@ export function AdminCalendarScreen() {
   };
 
   // Auth Guard
-  if (isPending || role !== "ADMIN") {
+  if (isPending) {
     return (
       <View style={styles.centerBox}>
         <ActivityIndicator size="large" color={BENTO_COLORS.deepNavy} />
       </View>
     );
+  }
+
+  if (role !== "ADMIN") {
+    return <Redirect href="/(tabs)" />;
   }
 
   // ==========================================
@@ -786,6 +824,15 @@ export function AdminCalendarScreen() {
           )}
         </View>
 
+        {isOffline && (
+          <View style={styles.offlineBanner}>
+            <Feather name="wifi-off" size={14} color="#92400e" />
+            <Text style={styles.offlineBannerText}>
+              Offline mode — editing and syncing require an internet connection
+            </Text>
+          </View>
+        )}
+
         {/* SCROLLABLE CALENDAR CARDS LIST */}
         <ScrollView
           style={styles.cardsScrollView}
@@ -840,6 +887,7 @@ export function AdminCalendarScreen() {
                 onStatusChange={(id, status) => handleStatusChange(id, status)}
                 onDuplicate={handleDuplicateCalendar}
                 onDelete={(id, title) => handleDeleteCalendar(id, title)}
+                onExportCsv={handleExportCsv}
               />
             ))
           )}
@@ -1059,6 +1107,11 @@ export function AdminCalendarScreen() {
           visible={isManualCreateOpen}
           onClose={() => setIsManualCreateOpen(false)}
           onCreate={async (payload: CreateAcademicCalendarInput) => {
+            if (!guardOnlineMutation("create a calendar")) {
+              throw new Error(
+                "You are currently offline. Please reconnect to create a calendar.",
+              );
+            }
             const created = await createCalendarMutation.mutateAsync(payload);
             Toast.show({
               type: "success",
@@ -1099,14 +1152,11 @@ export function AdminCalendarScreen() {
   }
 
   // ==========================================
-  // VIEW: CALENDAR DETAILS SCREEN (MATCHING SCREENSHOT)
+  // VIEW: CALENDAR DETAILS SCREEN
   // ==========================================
-  const isPub = selectedCalendar?.status === "PUBLISHED";
-  const isDraft = selectedCalendar?.status === "DRAFT";
-
   return (
     <View style={styles.container}>
-      {/* 1. TOP HEADER MATCHING SCREENSHOT */}
+      {/* 1. TOP HEADER */}
       <View
         style={[styles.topHeader, { paddingTop: Math.max(insets.top + 8, 48) }]}
       >
@@ -1125,13 +1175,35 @@ export function AdminCalendarScreen() {
           <Text style={styles.headerSemesterText} numberOfLines={1}>
             {selectedCalendar
               ? `${selectedCalendar.semester} ${selectedCalendar.academicYear || ""}`.trim()
-              : "Summer 2026"}
+              : "Academic Calendar"}
           </Text>
           <Text style={styles.headerSubtitleText}>
             Academic Cohort Calendar
           </Text>
         </View>
+
+        <View style={styles.headerRightRow}>
+          <TouchableOpacity
+            onPress={() => handleExportCsv()}
+            style={styles.headerIconBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Export calendar CSV"
+          >
+            <Feather name="download" size={17} color="#0284c7" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <Feather name="wifi-off" size={14} color="#92400e" />
+          <Text style={styles.offlineBannerText}>
+            Offline mode — editing and syncing require an internet connection
+          </Text>
+        </View>
+      )}
 
       {/* Main Content Scroll */}
       <ScrollView
@@ -1340,6 +1412,75 @@ export function AdminCalendarScreen() {
                   Makeup ({categoryCounts.MAKEUP_CLASS || 0})
                 </Text>
               </TouchableOpacity>
+
+              {/* Result */}
+              <TouchableOpacity
+                style={[
+                  styles.catFilterPill,
+                  selectedCategoryFilter === "RESULT" &&
+                    styles.catFilterPillActive,
+                ]}
+                onPress={() => setSelectedCategoryFilter("RESULT")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#6d28d9" }]}
+                />
+                <Text
+                  style={[
+                    styles.catFilterPillText,
+                    selectedCategoryFilter === "RESULT" &&
+                      styles.catFilterPillTextActive,
+                  ]}
+                >
+                  Results ({categoryCounts.RESULT || 0})
+                </Text>
+              </TouchableOpacity>
+
+              {/* Academic */}
+              <TouchableOpacity
+                style={[
+                  styles.catFilterPill,
+                  selectedCategoryFilter === "ACADEMIC" &&
+                    styles.catFilterPillActive,
+                ]}
+                onPress={() => setSelectedCategoryFilter("ACADEMIC")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#475569" }]}
+                />
+                <Text
+                  style={[
+                    styles.catFilterPillText,
+                    selectedCategoryFilter === "ACADEMIC" &&
+                      styles.catFilterPillTextActive,
+                  ]}
+                >
+                  Academic ({categoryCounts.ACADEMIC || 0})
+                </Text>
+              </TouchableOpacity>
+
+              {/* Other */}
+              <TouchableOpacity
+                style={[
+                  styles.catFilterPill,
+                  selectedCategoryFilter === "OTHER" &&
+                    styles.catFilterPillActive,
+                ]}
+                onPress={() => setSelectedCategoryFilter("OTHER")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#64748b" }]}
+                />
+                <Text
+                  style={[
+                    styles.catFilterPillText,
+                    selectedCategoryFilter === "OTHER" &&
+                      styles.catFilterPillTextActive,
+                  ]}
+                >
+                  Other ({categoryCounts.OTHER || 0})
+                </Text>
+              </TouchableOpacity>
             </ScrollView>
 
             {/* 6. WEEK & PHASE BENTO CONTAINERS LIST */}
@@ -1438,7 +1579,10 @@ export function AdminCalendarScreen() {
               <Text style={styles.closePreviewBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
-          <AcademicCalendarScreen />
+          <AcademicCalendarScreen
+            previewCalendar={selectedCalendar}
+            onClosePreview={() => setIsPreviewOpen(false)}
+          />
         </View>
       </Modal>
 
@@ -1466,6 +1610,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#92400e",
   },
   centerBox: {
     paddingVertical: 50,

@@ -129,7 +129,7 @@ function isSamePhaseBlock(
  */
 function determinePhaseTitle(
   events: AcademicEventItem[],
-  previousWeekNumber: number | null,
+  _previousWeekNumber: number | null,
 ): string {
   if (!events || events.length === 0) return "Academic Milestone";
 

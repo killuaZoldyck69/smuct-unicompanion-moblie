@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Switch,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -42,6 +43,7 @@ const CATEGORY_TAGS: Array<{ key: EventCategory; label: string; color: string; b
   { key: "MAKEUP_CLASS", label: "Makeup", color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
   { key: "RESULT", label: "Result", color: "#6d28d9", bg: "#f5f3ff", border: "#ddd6fe" },
   { key: "ACADEMIC", label: "Academic", color: "#475569", bg: "#f8fafc", border: "#e2e8f0" },
+  { key: "OTHER", label: "Other", color: "#64748b", bg: "#f8fafc", border: "#cbd5e1" },
 ];
 
 const MONTH_NAMES = [
@@ -76,7 +78,10 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
   const [startDateStr, setStartDateStr] = useState("");
   const [endDateStr, setEndDateStr] = useState("");
   const [weekNumber, setWeekNumber] = useState("");
+  const [description, setDescription] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [isHoliday, setIsHoliday] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
@@ -86,6 +91,7 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
 
   useEffect(() => {
     if (visible) {
+      setValidationError(null);
       if (editingEvent) {
         setTitle(editingEvent.title || "");
         setCategory(editingEvent.category || "CLASS");
@@ -96,7 +102,9 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
             ? String(editingEvent.weekNumber)
             : "",
         );
-        setRemarks(editingEvent.remarks || editingEvent.description || "");
+        setDescription(editingEvent.description || "");
+        setRemarks(editingEvent.remarks || "");
+        setIsHoliday(Boolean(editingEvent.isHoliday));
       } else {
         setTitle("");
         setCategory("CLASS");
@@ -107,27 +115,46 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
             ? String(defaultWeekNumber)
             : "1",
         );
+        setDescription("");
         setRemarks("");
+        setIsHoliday(false);
       }
     }
   }, [visible, editingEvent, defaultWeekNumber]);
 
   const handleSubmit = async () => {
+    setValidationError(null);
     if (!title.trim() || !startDateStr.trim()) {
-      Alert.alert("Required Fields", "Node title and start date are required.");
+      setValidationError("Node title and start date are required.");
       return;
+    }
+
+    const normalizedStart = cleanDateYmd(startDateStr);
+    const normalizedEnd = endDateStr.trim() ? cleanDateYmd(endDateStr) : null;
+    if (normalizedEnd && normalizedEnd < normalizedStart) {
+      setValidationError("End date cannot be earlier than start date.");
+      return;
+    }
+
+    let parsedWeek: number | null = null;
+    if (weekNumber.trim()) {
+      parsedWeek = Number(weekNumber.trim());
+      if (!Number.isInteger(parsedWeek) || parsedWeek < 1 || parsedWeek > 52) {
+        setValidationError("Week number must be a whole number between 1 and 52.");
+        return;
+      }
     }
 
     const payload: CreateEventInput = {
       title: title.trim(),
       category,
-      startDate: cleanDateYmd(startDateStr),
-      endDate: endDateStr.trim() ? cleanDateYmd(endDateStr) : null,
-      weekNumber: weekNumber.trim() ? parseInt(weekNumber.trim(), 10) : null,
-      isHoliday: category === "HOLIDAY",
+      startDate: normalizedStart,
+      endDate: normalizedEnd,
+      weekNumber: parsedWeek,
+      isHoliday,
       isAllDay: true,
       remarks: remarks.trim() || null,
-      description: remarks.trim() || null,
+      description: description.trim() || null,
     };
 
     try {
@@ -247,7 +274,12 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
                           borderColor: isSel ? tag.border : "#e2e8f0",
                         },
                       ]}
-                      onPress={() => setCategory(tag.key)}
+                      onPress={() => {
+                        setCategory(tag.key);
+                        if (tag.key === "HOLIDAY") {
+                          setIsHoliday(true);
+                        }
+                      }}
                       activeOpacity={0.75}
                     >
                       <Text
@@ -284,16 +316,30 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
               {/* End Date */}
               <View style={{ flex: 1 }}>
                 <Text style={styles.fieldLabel}>END DATE</Text>
-                <TouchableOpacity
-                  style={styles.datePickerInput}
-                  onPress={() => setShowEndPicker(true)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.datePickerText}>
-                    {formatDisplayDate(endDateStr) || "Single Day"}
-                  </Text>
-                  <Feather name="calendar" size={15} color="#9333ea" />
-                </TouchableOpacity>
+                <View style={styles.endDateRow}>
+                  <TouchableOpacity
+                    style={[styles.datePickerInput, { flex: 1 }]}
+                    onPress={() => setShowEndPicker(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.datePickerText}>
+                      {formatDisplayDate(endDateStr) || "Single Day"}
+                    </Text>
+                    <Feather name="calendar" size={15} color="#9333ea" />
+                  </TouchableOpacity>
+                  {Boolean(endDateStr) && (
+                    <TouchableOpacity
+                      style={styles.clearEndBtn}
+                      onPress={() => setEndDateStr("")}
+                      accessible
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear end date"
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="x" size={14} color="#64748b" />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -322,6 +368,42 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
                 />
               </View>
             </View>
+
+            {/* Description */}
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>DESCRIPTION (OPTIONAL)</Text>
+              <TextInput
+                style={[styles.textInput, styles.descriptionInput]}
+                placeholder="Additional details for students & faculty"
+                placeholderTextColor="#94a3b8"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+              />
+            </View>
+
+            {/* Holiday Toggle */}
+            <View style={styles.holidayToggleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.holidayToggleTitle}>Campus Holiday / Off-Day</Text>
+                <Text style={styles.holidayToggleSub}>
+                  Marks regular classes suspended for this event
+                </Text>
+              </View>
+              <Switch
+                value={isHoliday}
+                onValueChange={setIsHoliday}
+                trackColor={{ false: "#cbd5e1", true: "#10b981" }}
+                thumbColor="#ffffff"
+              />
+            </View>
+
+            {validationError && (
+              <View style={styles.validationBanner}>
+                <Feather name="alert-circle" size={15} color="#dc2626" />
+                <Text style={styles.validationText}>{validationError}</Text>
+              </View>
+            )}
 
             {/* Native Pickers */}
             {showStartPicker && (
@@ -538,6 +620,65 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#0f172a",
+  },
+  endDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  clearEndBtn: {
+    width: 34,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  descriptionInput: {
+    minHeight: 70,
+    textAlignVertical: "top",
+  },
+  holidayToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+  holidayToggleTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  holidayToggleSub: {
+    fontSize: 11,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  validationBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff1f2",
+    borderWidth: 1,
+    borderColor: "#fecdd3",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  validationText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#dc2626",
   },
   footer: {
     flexDirection: "row",

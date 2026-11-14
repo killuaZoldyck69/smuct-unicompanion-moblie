@@ -1,3 +1,17 @@
+import type {
+  AcademicCalendarItem,
+  AcademicEventItem,
+  CalendarStatus,
+  EventCategory,
+} from "@/services/calendar-service";
+
+export type {
+  AcademicCalendarItem,
+  AcademicEventItem,
+  CalendarStatus,
+  EventCategory,
+};
+
 export interface BusRouteItem {
   id: string;
   routeName: string;
@@ -8,58 +22,6 @@ export interface BusRouteItem {
   driverName?: string | null;
   driverPhone?: string | null;
   stops: string[];
-}
-
-export type EventCategory =
-  | "CLASS"
-  | "REGISTRATION"
-  | "DEADLINE"
-  | "EXAM"
-  | "HOLIDAY"
-  | "MAKEUP_CLASS"
-  | "RESULT"
-  | "ACADEMIC"
-  | "OTHER";
-
-export type CalendarStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
-
-export interface AcademicEventItem {
-  id: string;
-  calendarId: string;
-  title: string;
-  description?: string | null;
-  category: EventCategory;
-  startDate: string;
-  endDate?: string | null;
-  weekNumber?: number | null;
-  isHoliday: boolean;
-  isAllDay: boolean;
-  remarks?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface AcademicCalendarItem {
-  id: string;
-  title: string;
-  semester: string;
-  academicYear: number;
-  status: CalendarStatus;
-  isActive: boolean;
-  isGlobal?: boolean;
-  targetFaculties: string[];
-  targetPrograms?: string[];
-  semesterDuration?: string | null;
-  targetBatch?: string | null;
-  publishedAt?: string | null;
-  createdBy?: string | null;
-  updatedBy?: string | null;
-  events?: AcademicEventItem[];
-  _count?: {
-    events: number;
-  };
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface TeacherDirectoryItem {
