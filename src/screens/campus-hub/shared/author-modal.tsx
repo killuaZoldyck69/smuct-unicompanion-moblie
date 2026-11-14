@@ -12,22 +12,16 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { colors } from "@/theme/colors";
-import { CAMPUS_HUB_COLORS, fontFamily } from "./design-tokens";
-import { formatConsultationSlots } from "@/utils/consultation-formatter";
-
-const BLOOD_GROUP_LABELS: Record<string, string> = {
-  A_POSITIVE: "A+",
-  A_NEGATIVE: "A-",
-  B_POSITIVE: "B+",
-  B_NEGATIVE: "B-",
-  AB_POSITIVE: "AB+",
-  AB_NEGATIVE: "AB-",
-  O_POSITIVE: "O+",
-  O_NEGATIVE: "O-",
-};
+import { getDepartmentFullName } from "@/data/programs";
+import { parseOrdinalParts } from "@/utils/academic-ordinal";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  titleFontFamily,
+} from "./design-tokens";
 
 export interface AuthorProfileModalData {
   id?: string;
@@ -56,37 +50,17 @@ export interface AuthorProfileModalData {
     faculty?: string | null;
     department?: string | null;
     designation?: string | null;
+    administrativeRole?: string | null;
     officeRoom?: string | null;
     officeDayOff?: string | null;
     consultationSlots?:
       | Array<{ day: string; startTime: string; endTime: string }>
-      | any
+      | unknown
       | null;
     expertiseFields?: string[];
     linkedInUrl?: string | null;
     personalWebsiteUrl?: string | null;
   } | null;
-}
-
-const formatSemester = (
-  sem: number | string | null | undefined,
-): string | null => {
-  if (sem === null || sem === undefined || sem === "") return null;
-  const num = typeof sem === "string" ? parseInt(sem, 10) : sem;
-  if (!isNaN(num) && num > 0) {
-    const s = ["th", "st", "nd", "rd"];
-    const v = num % 100;
-    const suffix = s[(v - 20) % 10] || s[v] || s[0];
-    return `${num}${suffix} Semester`;
-  }
-  return String(sem);
-};
-
-function sanitizeExternalUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const trimmed = url.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return null;
 }
 
 interface AuthorDetailsModalProps {
@@ -96,6 +70,109 @@ interface AuthorDetailsModalProps {
   isOwnProfile?: boolean;
   onReportAuthor?: (author: AuthorProfileModalData) => void;
   renderInline?: boolean;
+}
+
+function parseAcademicOrdinal(
+  value: string | number | null | undefined,
+): { numberPart: string; suffix: string } | null {
+  if (value === null || value === undefined) return null;
+  const cleaned = String(value)
+    .replace(/\b(?:semester|sem|batch)\b\s*[:#-]?\s*/gi, "")
+    .trim();
+  if (!cleaned) return null;
+
+  const parts = parseOrdinalParts(cleaned);
+  if (!parts.numberPart || parts.numberPart === "—") return null;
+  return parts;
+}
+
+function formatShortAcademicRole(role?: string | null): string | null {
+  if (!role) return null;
+  const trimmed = role.trim();
+  if (!trimmed) return null;
+
+  const lower = trimmed.toLowerCase();
+  if (lower === "none") return null;
+  if (
+    lower === "hod" ||
+    lower.includes("(hod)") ||
+    lower.includes("head of department") ||
+    lower.includes("head of the department")
+  ) {
+    return "HoD";
+  }
+  if (lower === "coordinator" || lower.includes("coordinator")) {
+    return "Coord.";
+  }
+  if (lower.includes("assistant dean")) {
+    return "Asst. Dean";
+  }
+  if (lower === "dean") {
+    return "Dean";
+  }
+  return trimmed;
+}
+
+function parseTagList(raw: string | string[] | null | undefined): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+    } catch {
+      return trimmed
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function sanitizeExternalUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return null;
+}
+
+interface OrdinalMetricProps {
+  label: string;
+  ordinal: { numberPart: string; suffix: string } | null;
+  fallbackText?: string;
+}
+
+function OrdinalMetricTile({
+  label,
+  ordinal,
+  fallbackText = "—",
+}: OrdinalMetricProps) {
+  return (
+    <View style={styles.metricTile}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      {ordinal ? (
+        <View style={styles.metricOrdinalRow}>
+          <Text style={styles.metricValue}>{ordinal.numberPart}</Text>
+          {ordinal.suffix ? (
+            <Text style={styles.metricSuperscript}>{ordinal.suffix}</Text>
+          ) : null}
+        </View>
+      ) : (
+        <View style={styles.metricOrdinalRow}>
+          <Text style={styles.metricValue}>{fallbackText}</Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
@@ -125,22 +202,51 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
 
   if (!author) return null;
 
+  const sp = author.studentProfile;
+  const tp = author.teacherProfile;
+  const normalizedRole = (author.role ?? "").toUpperCase();
+  const isAdmin =
+    normalizedRole === "ADMIN" || normalizedRole === "SUPER_ADMIN";
+  const isTeacher = !isAdmin && (normalizedRole === "TEACHER" || Boolean(tp));
+  const isStudent =
+    !isAdmin && !isTeacher && (normalizedRole === "STUDENT" || Boolean(sp));
+
   const initial = (author.name ?? "U").charAt(0).toUpperCase();
+  const shortAcademicRole = isTeacher
+    ? formatShortAcademicRole(tp?.administrativeRole)
+    : null;
+  const teacherDesignation = isTeacher ? tp?.designation?.trim() || null : null;
 
-  const handleCall = () => {
-    if (!author.phoneNumber) return;
-    const phone = author.phoneNumber.replace(/\s+/g, "");
-    Linking.openURL(`tel:${phone}`).catch(() => {
-      Toast.show({ type: "error", text1: "Unable to open phone dialer" });
-    });
-  };
+  const studentDeptRaw = sp?.department?.trim() || "";
+  const studentDepartment = studentDeptRaw
+    ? getDepartmentFullName(studentDeptRaw) || studentDeptRaw
+    : null;
+  const batchOrdinal = parseAcademicOrdinal(sp?.batch);
+  const semesterOrdinal = parseAcademicOrdinal(
+    sp?.currentSemester ?? sp?.semester,
+  );
+  const studentSection = sp?.section?.trim()
+    ? sp.section.trim().toUpperCase()
+    : null;
 
-  const handleEmail = () => {
-    if (!author.email) return;
-    Linking.openURL(`mailto:${author.email}`).catch(() => {
-      Toast.show({ type: "error", text1: "Unable to open email client" });
-    });
-  };
+  const teacherFaculty = tp?.faculty?.trim() || null;
+  const teacherOfficeRoom = tp?.officeRoom?.trim() || null;
+
+  const tags = isStudent
+    ? parseTagList(sp?.skills)
+    : isTeacher
+      ? parseTagList(tp?.expertiseFields)
+      : [];
+
+  const websiteUrl = !isAdmin
+    ? sanitizeExternalUrl(sp?.personalWebsiteUrl || tp?.personalWebsiteUrl)
+    : null;
+  const linkedInUrl = !isAdmin
+    ? sanitizeExternalUrl(sp?.linkedInUrl || tp?.linkedInUrl)
+    : null;
+
+  const showSafetyActions =
+    !isOwnProfile && Boolean(author.id) && Boolean(onReportAuthor);
 
   const handleOpenLink = (url: string) => {
     Linking.openURL(url).catch(() => {
@@ -148,96 +254,11 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
     });
   };
 
-  const sp = author.studentProfile;
-  const tp = author.teacherProfile;
-
-  const department = sp?.department || tp?.department || null;
-  const faculty = sp?.faculty || tp?.faculty || null;
-  const designation =
-    tp?.designation ||
-    (author.role === "ADMIN" ? "System Administrator" : null);
-
-  const studentId = sp?.studentId || null;
-  const program = sp?.program || null;
-  const batch = sp?.batch || null;
-  const semester = formatSemester(sp?.currentSemester ?? sp?.semester);
-  const section = sp?.section || null;
-
-  const teacherId = tp?.teacherId || null;
-  const officeRoom = tp?.officeRoom || null;
-  const officeDayOff = tp?.officeDayOff || null;
-  const consultationSchedule = formatConsultationSlots(
-    tp?.consultationSlots,
-    "",
-  );
-
-  const tags =
-    sp?.skills && sp.skills.length > 0
-      ? sp.skills
-      : tp?.expertiseFields && tp.expertiseFields.length > 0
-        ? tp.expertiseFields
-        : [];
-
-  const linkedInUrl = sanitizeExternalUrl(sp?.linkedInUrl || tp?.linkedInUrl);
-  const websiteUrl = sanitizeExternalUrl(
-    sp?.personalWebsiteUrl || tp?.personalWebsiteUrl,
-  );
-
-  const detailRows: Array<{
-    icon: React.ComponentProps<typeof Feather>["name"];
-    label: string;
-    value: string;
-    accentColor?: string;
-  }> = [];
-
-  if (studentId) {
-    detailRows.push({ icon: "hash", label: "Student ID", value: studentId });
-  }
-  if (teacherId) {
-    detailRows.push({ icon: "hash", label: "Teacher ID", value: teacherId });
-  }
-  if (faculty) {
-    detailRows.push({ icon: "home", label: "Faculty", value: faculty });
-  }
-  if (program) {
-    detailRows.push({ icon: "award", label: "Program", value: program });
-  }
-  if (batch) {
-    detailRows.push({ icon: "layers", label: "Batch", value: batch });
-  }
-  if (semester) {
-    detailRows.push({ icon: "calendar", label: "Semester", value: semester });
-  }
-  if (section) {
-    detailRows.push({ icon: "grid", label: "Section", value: section });
-  }
-  if (officeRoom) {
-    detailRows.push({ icon: "map-pin", label: "Office Room", value: officeRoom });
-  }
-  if (officeDayOff) {
-    detailRows.push({ icon: "coffee", label: "Day Off", value: officeDayOff });
-  }
-  if (consultationSchedule) {
-    detailRows.push({
-      icon: "clock",
-      label: "Consultation",
-      value: consultationSchedule,
-    });
-  }
-  if (author.bloodGroup) {
-    detailRows.push({
-      icon: "heart",
-      label: "Blood Group",
-      value: BLOOD_GROUP_LABELS[author.bloodGroup] || author.bloodGroup,
-      accentColor: CAMPUS_HUB_COLORS.dangerText,
-    });
-  }
-  if (author.email) {
-    detailRows.push({ icon: "mail", label: "Email", value: author.email });
-  }
-
-  const showSafetyActions =
-    !isOwnProfile && Boolean(author.id) && Boolean(onReportAuthor);
+  const rolePillLabel = isAdmin
+    ? "ADMIN"
+    : isTeacher
+      ? "TEACHER"
+      : normalizedRole || "STUDENT";
 
   const modalOverlay = (
     <View style={[styles.overlay, renderInline && styles.inlineOverlay]}>
@@ -254,228 +275,271 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={onClose}
-          hitSlop={4}
+          hitSlop={6}
           accessible={true}
           accessibilityRole="button"
           accessibilityLabel="Close author details"
         >
-            <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.deepNavy} />
-          </TouchableOpacity>
+          <Feather name="x" size={17} color={colors.navyInk} />
+        </TouchableOpacity>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            <View style={styles.heroSection}>
-              <View style={styles.avatarContainer}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Hero: Avatar + Role Badge, Name, Designation & Class/Academic Short Role */}
+          <View style={styles.heroSection}>
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatarRing}>
                 {author.image && !failedAvatar ? (
                   <Image
                     source={{ uri: author.image }}
-                    style={styles.avatar}
+                    style={styles.avatarImage}
                     contentFit="cover"
                     cachePolicy="memory-disk"
                     onError={() => setFailedAvatar(true)}
                   />
+                ) : isTeacher ? (
+                  <View style={styles.teacherAvatarFallback}>
+                    <FontAwesome5
+                      name="graduation-cap"
+                      size={28}
+                      color={colors.semantic.amber.deep}
+                    />
+                  </View>
                 ) : (
                   <View style={styles.avatarFallback}>
                     <Text style={styles.avatarFallbackText}>{initial}</Text>
                   </View>
                 )}
-
-                {author.role && (
-                  <View
-                    style={[
-                      styles.roleBadge,
-                      author.role === "TEACHER"
-                        ? styles.roleTeacher
-                        : author.role === "ADMIN"
-                          ? styles.roleAdmin
-                          : styles.roleStudent,
-                    ]}
-                  >
-                    <Text style={styles.roleBadgeText}>{author.role}</Text>
-                  </View>
-                )}
               </View>
 
-              <Text style={styles.authorName} numberOfLines={2}>
-                {author.name}
-              </Text>
-
-              {designation ? (
-                <Text style={styles.designationText}>{designation}</Text>
-              ) : null}
-
-              <View style={styles.badgesWrap}>
-                {department ? (
-                  <View style={styles.infoPill}>
-                    <Feather
-                      name="book-open"
-                      size={12}
-                      color={CAMPUS_HUB_COLORS.subtleText}
-                    />
-                    <Text style={styles.infoPillText}>{department}</Text>
-                  </View>
-                ) : null}
-
-                {sp?.isCR ? (
-                  <View style={styles.crPill}>
-                    <Feather
-                      name="star"
-                      size={11}
-                      color={CAMPUS_HUB_COLORS.forumAccent}
-                    />
-                    <Text style={styles.crPillText}>Class Representative</Text>
-                  </View>
-                ) : null}
+              <View
+                style={[
+                  styles.roleBadge,
+                  isAdmin
+                    ? styles.roleBadgeAdmin
+                    : isTeacher
+                      ? styles.roleBadgeTeacher
+                      : styles.roleBadgeStudent,
+                ]}
+              >
+                <Text style={styles.roleBadgeText}>{rolePillLabel}</Text>
               </View>
             </View>
 
-            {detailRows.length > 0 && (
-              <View style={styles.detailsList}>
-                {detailRows.map((row) => (
-                  <View key={row.label} style={styles.detailRow}>
-                    <Feather
-                      name={row.icon}
-                      size={14}
-                      color={row.accentColor || CAMPUS_HUB_COLORS.subtleText}
+            <Text style={styles.authorName} numberOfLines={2}>
+              {author.name}
+            </Text>
+
+            {teacherDesignation ? (
+              <Text style={styles.designationText}>{teacherDesignation}</Text>
+            ) : null}
+
+            {((isStudent && Boolean(sp?.isCR)) || Boolean(shortAcademicRole)) && (
+              <View style={styles.badgesRow}>
+                {isStudent && sp?.isCR ? (
+                  <View style={styles.crBadge}>
+                    <Ionicons
+                      name="ribbon"
+                      size={12}
+                      color={colors.semantic.yellow.darkText}
                     />
-                    <Text style={styles.detailLabel}>{row.label}:</Text>
+                    <Text style={styles.crBadgeText}>CR</Text>
+                  </View>
+                ) : null}
+
+                {shortAcademicRole ? (
+                  <View style={styles.academicRoleBadge}>
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={12}
+                      color={colors.semantic.amber.deep}
+                    />
+                    <Text style={styles.academicRoleBadgeText}>
+                      {shortAcademicRole}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+          </View>
+
+          {/* Student Academic Info: Department + 3-Column Batch / Semester / Section */}
+          {isStudent && (
+            <View style={styles.bentoCard}>
+              {studentDepartment ? (
+                <>
+                  <View style={styles.infoRow}>
+                    <View style={[styles.infoIconBox, styles.infoIconBoxBlue]}>
+                      <Feather
+                        name="book-open"
+                        size={15}
+                        color={colors.semantic.blue.accent}
+                      />
+                    </View>
+                    <View style={styles.infoTextCol}>
+                      <Text style={styles.infoLabel}>DEPARTMENT</Text>
+                      <Text style={styles.infoValue}>{studentDepartment}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.cardDivider} />
+                </>
+              ) : null}
+
+              <View style={styles.metricRow}>
+                <OrdinalMetricTile label="BATCH" ordinal={batchOrdinal} />
+                <OrdinalMetricTile label="SEMESTER" ordinal={semesterOrdinal} />
+                <OrdinalMetricTile
+                  label="SECTION"
+                  ordinal={null}
+                  fallbackText={studentSection || "—"}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Teacher Academic Info: Faculty + Office Room */}
+          {isTeacher && (teacherFaculty || teacherOfficeRoom) && (
+            <View style={styles.bentoCard}>
+              {teacherFaculty ? (
+                <View style={styles.infoRow}>
+                  <View style={[styles.infoIconBox, styles.infoIconBoxEmerald]}>
+                    <FontAwesome5
+                      name="university"
+                      size={13}
+                      color={colors.semantic.emerald.darker}
+                    />
+                  </View>
+                  <View style={styles.infoTextCol}>
+                    <Text style={styles.infoLabel}>FACULTY</Text>
+                    <Text style={styles.infoValue}>{teacherFaculty}</Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {teacherFaculty && teacherOfficeRoom ? (
+                <View style={styles.cardDivider} />
+              ) : null}
+
+              {teacherOfficeRoom ? (
+                <View style={styles.infoRow}>
+                  <View style={[styles.infoIconBox, styles.infoIconBoxAmber]}>
+                    <Feather
+                      name="map-pin"
+                      size={14}
+                      color={colors.semantic.amber.deep}
+                    />
+                  </View>
+                  <View style={styles.infoTextCol}>
+                    <Text style={styles.infoLabel}>OFFICE ROOM</Text>
+                    <Text style={styles.infoValue}>{teacherOfficeRoom}</Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          )}
+
+          {/* Student Skills / Teacher Expertise */}
+          {tags.length > 0 && (
+            <View style={styles.tagsSection}>
+              <Text style={styles.sectionHeading}>
+                {isTeacher ? "EXPERTISE" : "SKILLS"}
+              </Text>
+              <View style={styles.tagsWrap}>
+                {tags.slice(0, 12).map((tag, index) => (
+                  <View
+                    key={`${tag}-${index}`}
+                    style={[
+                      styles.tagChip,
+                      isTeacher && styles.tagChipExpertise,
+                    ]}
+                  >
                     <Text
                       style={[
-                        styles.detailValue,
-                        row.accentColor
-                          ? { color: row.accentColor, fontWeight: "700" }
-                          : undefined,
+                        styles.tagChipText,
+                        isTeacher && styles.tagChipTextExpertise,
                       ]}
-                      numberOfLines={2}
                     >
-                      {row.value}
+                      {tag}
                     </Text>
                   </View>
                 ))}
               </View>
-            )}
+            </View>
+          )}
 
-            {tags.length > 0 && (
-              <View style={styles.tagsSection}>
-                <Text style={styles.tagsTitle}>
-                  {tp?.expertiseFields?.length ? "Expertise" : "Skills"}
-                </Text>
-                <View style={styles.tagsWrap}>
-                  {tags.slice(0, 8).map((tag) => (
-                    <View key={tag} style={styles.tagChip}>
-                      <Text style={styles.tagChipText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {(linkedInUrl || websiteUrl) && (
-              <View style={styles.linksRow}>
-                {linkedInUrl && (
-                  <TouchableOpacity
-                    style={styles.linkBtn}
-                    onPress={() => handleOpenLink(linkedInUrl)}
-                    activeOpacity={0.75}
-                    accessible={true}
-                    accessibilityRole="link"
-                    accessibilityLabel={`Open ${author.name}'s LinkedIn profile`}
-                  >
-                    <Feather
-                      name="linkedin"
-                      size={14}
-                      color={CAMPUS_HUB_COLORS.forumAccent}
-                    />
-                    <Text style={styles.linkBtnText}>LinkedIn</Text>
-                  </TouchableOpacity>
-                )}
-                {websiteUrl && (
-                  <TouchableOpacity
-                    style={styles.linkBtn}
-                    onPress={() => handleOpenLink(websiteUrl)}
-                    activeOpacity={0.75}
-                    accessible={true}
-                    accessibilityRole="link"
-                    accessibilityLabel={`Open ${author.name}'s website`}
-                  >
+          {/* Two-Column Links Row: Personal Website & LinkedIn */}
+          {(websiteUrl || linkedInUrl) && (
+            <View style={styles.linksRow}>
+              {websiteUrl ? (
+                <TouchableOpacity
+                  style={[styles.linkBtn, styles.linkBtnWebsite]}
+                  onPress={() => handleOpenLink(websiteUrl)}
+                  activeOpacity={0.75}
+                  accessible={true}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${author.name}'s personal website`}
+                >
+                  <View style={styles.linkIconBadge}>
                     <Feather
                       name="globe"
                       size={14}
-                      color={CAMPUS_HUB_COLORS.forumAccent}
+                      color={colors.semantic.teal.solid}
                     />
-                    <Text style={styles.linkBtnText}>Website</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
+                  </View>
+                  <Text style={styles.linkBtnTextWebsite} numberOfLines={1}>
+                    Website
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
 
-            {(author.phoneNumber || author.email) && (
-              <View style={styles.actionRow}>
-                {author.phoneNumber ? (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.callBtn]}
-                    onPress={handleCall}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Call author"
-                  >
-                    <Feather name="phone" size={16} color="#ffffff" />
-                    <Text style={styles.actionBtnText}>Call</Text>
-                  </TouchableOpacity>
-                ) : null}
-
-                {author.email ? (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.emailBtn]}
-                    onPress={handleEmail}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Email author"
-                  >
+              {linkedInUrl ? (
+                <TouchableOpacity
+                  style={[styles.linkBtn, styles.linkBtnLinkedIn]}
+                  onPress={() => handleOpenLink(linkedInUrl)}
+                  activeOpacity={0.75}
+                  accessible={true}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${author.name}'s LinkedIn profile`}
+                >
+                  <View style={styles.linkIconBadge}>
                     <Feather
-                      name="mail"
-                      size={16}
-                      color={CAMPUS_HUB_COLORS.deepNavy}
-                    />
-                    <Text
-                      style={[
-                        styles.actionBtnText,
-                        { color: CAMPUS_HUB_COLORS.deepNavy },
-                      ]}
-                    >
-                      Send Email
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            )}
-
-            {showSafetyActions && (
-              <View style={styles.safetyRow}>
-                {onReportAuthor && (
-                  <TouchableOpacity
-                    style={styles.safetyBtn}
-                    onPress={() => onReportAuthor(author)}
-                    activeOpacity={0.75}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Report content by this user"
-                  >
-                    <Feather
-                      name="flag"
+                      name="linkedin"
                       size={14}
-                      color={CAMPUS_HUB_COLORS.dangerText}
+                      color={colors.semantic.blue.linkedin}
                     />
-                    <Text style={styles.safetyBtnText}>Report</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </ScrollView>
-        </View>
+                  </View>
+                  <Text style={styles.linkBtnTextLinkedIn} numberOfLines={1}>
+                    LinkedIn
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          )}
+
+          {showSafetyActions && onReportAuthor ? (
+            <View style={styles.safetyRow}>
+              <TouchableOpacity
+                style={styles.safetyBtn}
+                onPress={() => onReportAuthor(author)}
+                activeOpacity={0.75}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Report content by this user"
+              >
+                <Feather
+                  name="flag"
+                  size={14}
+                  color={CAMPUS_HUB_COLORS.dangerText}
+                />
+                <Text style={styles.safetyBtnText}>Report User</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </ScrollView>
       </View>
+    </View>
   );
 
   if (renderInline) {
@@ -503,7 +567,7 @@ export const AuthorDetailsModal = React.memo(function AuthorDetailsModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    backgroundColor: CAMPUS_HUB_COLORS.memeSheetScrim,
     justifyContent: "flex-end",
   },
   inlineOverlay: {
@@ -522,263 +586,356 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
     maxHeight: "88%",
     ...CAMPUS_HUB_COLORS.heroShadow,
   },
   dragHandle: {
-    width: 40,
+    width: 38,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.slate200,
     alignSelf: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   closeBtn: {
     position: "absolute",
     top: 14,
-    right: 14,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.slate100,
+    borderWidth: 1,
+    borderColor: colors.slate200,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2,
   },
   scrollContent: {
-    paddingBottom: 6,
+    paddingBottom: 4,
   },
   heroSection: {
     alignItems: "center",
-    paddingTop: 6,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
   avatarContainer: {
     position: "relative",
-    marginBottom: 12,
+    alignItems: "center",
+    marginBottom: 8,
   },
-  avatar: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    borderWidth: 3,
+  avatarRing: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    padding: 3,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
     borderColor: colors.slate200,
+    ...CAMPUS_HUB_COLORS.shadow,
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 40,
   },
   avatarFallback: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: colors.slate200,
+    width: "100%",
+    height: "100%",
+    borderRadius: 40,
+    backgroundColor: colors.navyInk,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "#cbd5e1",
+  },
+  teacherAvatarFallback: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 40,
+    backgroundColor: colors.semantic.amber.soft,
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarFallbackText: {
-    fontFamily,
-    fontSize: 32,
+    fontFamily: titleFontFamily,
+    fontSize: 30,
     fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.deepNavy,
+    color: colors.white,
   },
   roleBadge: {
     position: "absolute",
-    bottom: -4,
+    bottom: -6,
     alignSelf: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1.5,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 2,
     borderColor: colors.white,
   },
-  roleStudent: {
+  roleBadgeStudent: {
     backgroundColor: colors.semantic.blue.accent,
   },
-  roleTeacher: {
+  roleBadgeTeacher: {
     backgroundColor: colors.semantic.emerald.darker,
   },
-  roleAdmin: {
+  roleBadgeAdmin: {
     backgroundColor: colors.semantic.violet.accent,
   },
   roleBadgeText: {
     fontFamily,
-    fontSize: 9,
+    fontSize: 9.5,
     lineHeight: 12,
     fontWeight: "800",
     color: colors.white,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     includeFontPadding: false,
   },
   authorName: {
-    fontFamily,
-    fontSize: 19,
+    fontFamily: titleFontFamily,
+    fontSize: 21,
+    lineHeight: 27,
     fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.deepNavy,
+    color: colors.navyInk,
     textAlign: "center",
-    marginTop: 4,
+    letterSpacing: -0.3,
+    marginTop: 10,
+    paddingHorizontal: 24,
   },
   designationText: {
     fontFamily,
-    fontSize: 13,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    marginTop: 2,
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: colors.slate500,
+    marginTop: 3,
     textAlign: "center",
   },
-  badgesWrap: {
+  badgesRow: {
     flexDirection: "row",
     flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "center",
     gap: 8,
     marginTop: 8,
   },
-  infoPill: {
+  crBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: colors.slate50,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 12,
+    gap: 4,
+    backgroundColor: colors.semantic.yellow.soft,
     borderWidth: 1,
-    borderColor: colors.slate200,
+    borderColor: colors.semantic.amber.border,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
-  infoPillText: {
+  crBadgeText: {
     fontFamily,
-    fontSize: 12,
-    color: CAMPUS_HUB_COLORS.deepNavy,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.semantic.yellow.darkText,
+    letterSpacing: 0.4,
   },
-  crPill: {
+  academicRoleBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: CAMPUS_HUB_COLORS.forumAccentLight,
-    paddingHorizontal: 10,
+    backgroundColor: colors.semantic.amber.soft,
+    borderWidth: 1,
+    borderColor: colors.semantic.amber.border,
+    paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 12,
+    borderRadius: 999,
   },
-  crPillText: {
+  academicRoleBadgeText: {
     fontFamily,
-    fontSize: 11.5,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.forumAccent,
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.semantic.amber.deep,
+    letterSpacing: 0.4,
   },
-  detailsList: {
+  bentoCard: {
     width: "100%",
     backgroundColor: colors.slate50,
-    borderRadius: 16,
-    padding: 14,
-    gap: 10,
-    marginTop: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.slate200,
+    padding: 14,
+    marginTop: 18,
   },
-  detailRow: {
+  infoRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 11,
+  },
+  infoIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoIconBoxBlue: {
+    backgroundColor: colors.semantic.blue.soft,
+  },
+  infoIconBoxEmerald: {
+    backgroundColor: colors.semantic.emerald.soft,
+  },
+  infoIconBoxAmber: {
+    backgroundColor: colors.semantic.amber.soft,
+  },
+  infoTextCol: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.slate400,
+    letterSpacing: 0.6,
+  },
+  infoValue: {
+    fontFamily,
+    fontSize: 13.5,
+    lineHeight: 19,
+    fontWeight: "700",
+    color: colors.navyInk,
+    marginTop: 2,
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: colors.slate200,
+    marginVertical: 12,
+  },
+  metricRow: {
+    flexDirection: "row",
     gap: 8,
   },
-  detailLabel: {
-    fontFamily,
-    fontSize: 12,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    minWidth: 88,
-  },
-  detailValue: {
-    fontFamily,
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.deepNavy,
+  metricTile: {
     flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.slate200,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  metricLabel: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.slate400,
+    letterSpacing: 0.6,
+  },
+  metricOrdinalRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  metricValue: {
+    fontFamily: titleFontFamily,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "800",
+    color: colors.navyInk,
+  },
+  metricSuperscript: {
+    fontFamily,
+    fontSize: 10.5,
+    lineHeight: 13,
+    fontWeight: "800",
+    color: colors.semantic.blue.accent,
+    marginLeft: 1,
+    marginTop: 1,
   },
   tagsSection: {
     width: "100%",
-    marginTop: 14,
+    marginTop: 16,
   },
-  tagsTitle: {
+  sectionHeading: {
     fontFamily,
-    fontSize: 11.5,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.subtleText,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    fontSize: 10.5,
+    fontWeight: "800",
+    color: colors.slate400,
+    letterSpacing: 0.7,
     marginBottom: 8,
   },
   tagsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 7,
   },
   tagChip: {
-    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: colors.slate100,
+    borderWidth: 1,
+    borderColor: colors.slate200,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: 999,
+  },
+  tagChipExpertise: {
+    backgroundColor: colors.semantic.indigo.tint,
+    borderColor: colors.semantic.indigo.border,
   },
   tagChipText: {
     fontFamily,
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.deepNavy,
+    color: colors.navyInk,
+  },
+  tagChipTextExpertise: {
+    color: colors.semantic.indigo.deep,
   },
   linksRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 14,
-  },
-  linkBtn: {
-    flex: 1,
-    minHeight: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: colors.semantic.blue.tint,
-    borderWidth: 1,
-    borderColor: colors.semantic.blue.border,
-  },
-  linkBtnText: {
-    fontFamily,
-    fontSize: 12.5,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.forumAccent,
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 12,
     marginTop: 16,
     width: "100%",
   },
-  actionBtn: {
+  linkBtn: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 14,
-  },
-  callBtn: {
-    backgroundColor: colors.semantic.emerald.darker,
-  },
-  emailBtn: {
-    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderWidth: 1,
-    borderColor: colors.slate200,
   },
-  actionBtnText: {
+  linkBtnWebsite: {
+    backgroundColor: colors.semantic.teal.tint,
+    borderColor: colors.semantic.emerald.mintBorder,
+  },
+  linkBtnLinkedIn: {
+    backgroundColor: colors.semantic.blue.tint,
+    borderColor: colors.semantic.blue.border,
+  },
+  linkIconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  linkBtnTextWebsite: {
     fontFamily,
     fontSize: 13,
     fontWeight: "700",
-    color: colors.white,
+    color: colors.semantic.teal.darkText,
+  },
+  linkBtnTextLinkedIn: {
+    fontFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.semantic.blue.linkedin,
   },
   safetyRow: {
     flexDirection: "row",
-    gap: 10,
     marginTop: 14,
     paddingTop: 14,
     borderTopWidth: 1,
@@ -786,7 +943,7 @@ const styles = StyleSheet.create({
   },
   safetyBtn: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
