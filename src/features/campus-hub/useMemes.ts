@@ -1,10 +1,11 @@
+import { useRef } from "react";
 import {
   useQuery,
   useMutation,
   useQueryClient,
   useInfiniteQuery,
-  keepPreviousData,
-  InfiniteData,
+  type InfiniteData,
+  type QueryClient,
 } from "@tanstack/react-query";
 import {
   getMemesFeed,
@@ -13,22 +14,75 @@ import {
   updateMeme,
   reactToMeme,
   deleteMeme,
-  type Meme,
+  reportMeme,
   type CreateMemeInput,
   type UpdateMemeInput,
   type MemeReactionType,
   type MemeFilter,
+  type Meme,
   type MemesFeedResponse,
   type ReactMemeResult,
 } from "@/services/meme-service";
+import type { UgcReportReason } from "@/services/ugc-service";
+import {
+  applyOptimisticMemeReaction,
+  patchMemeWithReactionResult,
+} from "./meme-logic";
 
 export const memeKeys = {
   all: ["memes"] as const,
-  feed: (filter?: MemeFilter) => ["memes", "feed", filter] as const,
+  infiniteFeedRoot: ["memes", "infiniteFeed"] as const,
   infiniteFeed: (filter?: MemeFilter) =>
     ["memes", "infiniteFeed", filter] as const,
   detail: (id: string) => ["memes", "detail", id] as const,
 };
+
+export function removeMemeFromFeedCaches(
+  queryClient: QueryClient,
+  memeId: string,
+): void {
+  queryClient.setQueriesData<InfiniteData<MemesFeedResponse>>(
+    { queryKey: memeKeys.infiniteFeedRoot },
+    (old) => {
+      if (!old?.pages) return old;
+      let changed = false;
+      const nextPages = old.pages.map((page) => {
+        if (!page.memes.some((m) => m.id === memeId)) return page;
+        changed = true;
+        return {
+          ...page,
+          memes: page.memes.filter((meme) => meme.id !== memeId),
+        };
+      });
+      return changed ? { ...old, pages: nextPages } : old;
+    },
+  );
+}
+
+function updateMemeAcrossInfiniteFeeds(
+  queryClient: QueryClient,
+  memeId: string,
+  updater: (meme: Meme) => Meme,
+): void {
+  queryClient.setQueriesData<InfiniteData<MemesFeedResponse>>(
+    { queryKey: memeKeys.infiniteFeedRoot },
+    (old) => {
+      if (!old?.pages) return old;
+      let changed = false;
+      const nextPages = old.pages.map((page) => {
+        if (!page.memes.some((m) => m.id === memeId)) return page;
+        changed = true;
+        return {
+          ...page,
+          memes: page.memes.map((meme) =>
+            meme.id === memeId ? updater(meme) : meme,
+          ),
+        };
+      });
+      return changed ? { ...old, pages: nextPages } : old;
+    },
+  );
+}
 
 export const useInfiniteMemesFeed = (filter: MemeFilter = "latest") => {
   return useInfiniteQuery({
@@ -40,8 +94,8 @@ export const useInfiniteMemesFeed = (filter: MemeFilter = "latest") => {
       const { page, totalPages, hasMore } = lastPage.pagination;
       return hasMore || page < totalPages ? page + 1 : undefined;
     },
-    staleTime: 1000 * 60 * 3, // 3 minutes
-    gcTime: 1000 * 60 * 15, // 15 minutes
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 15,
     refetchOnWindowFocus: false,
   });
 };
@@ -79,6 +133,8 @@ export const useUpdateMeme = () => {
 
 export const useReactToMeme = () => {
   const queryClient = useQueryClient();
+  const latestSeqByMemeRef = useRef<Record<string, number>>({});
+  const queueByMemeRef = useRef<Record<string, Promise<unknown>>>({});
 
   return useMutation({
     mutationFn: ({
@@ -87,125 +143,82 @@ export const useReactToMeme = () => {
     }: {
       memeId: string;
       type: MemeReactionType;
-    }) => reactToMeme(memeId, type),
+    }) => {
+      const previous = queueByMemeRef.current[memeId] ?? Promise.resolve();
+      const next = previous
+        .catch(() => undefined)
+        .then(() => reactToMeme(memeId, type));
+      queueByMemeRef.current[memeId] = next;
+      return next.finally(() => {
+        if (queueByMemeRef.current[memeId] === next) {
+          delete queueByMemeRef.current[memeId];
+        }
+      });
+    },
 
     onMutate: async ({ memeId, type }) => {
-      // Cancel outgoing queries for all meme feeds
+      const seq = (latestSeqByMemeRef.current[memeId] ?? 0) + 1;
+      latestSeqByMemeRef.current[memeId] = seq;
+
       await queryClient.cancelQueries({ queryKey: memeKeys.all });
 
-      // Snapshot all cached queries that match memeKeys.all
-      const previousData = queryClient.getQueriesData<
+      const previousFeeds = queryClient.getQueriesData<
         InfiniteData<MemesFeedResponse>
-      >({ queryKey: ["memes", "infiniteFeed"] });
-
-      // Optimistically update all matching infinite query caches
-      queryClient.setQueriesData<InfiniteData<MemesFeedResponse>>(
-        { queryKey: ["memes", "infiniteFeed"] },
-        (old) => {
-          if (!old?.pages) return old;
-
-          let found = false;
-          const nextPages = old.pages.map((page) => {
-            const hasTarget = page.memes.some((m) => m.id === memeId);
-            if (!hasTarget) return page;
-            found = true;
-
-            return {
-              ...page,
-              memes: page.memes.map((meme) => {
-                if (meme.id !== memeId) return meme;
-
-                const currentReaction = meme.userReaction;
-                let nextReaction: MemeReactionType | null = type;
-                let nextLikes = meme.likesCount;
-                let nextDislikes = meme.dislikesCount;
-
-                if (currentReaction === type) {
-                  // Toggle off
-                  nextReaction = null;
-                  if (type === "LIKE") nextLikes = Math.max(0, nextLikes - 1);
-                  if (type === "DISLIKE") nextDislikes = Math.max(0, nextDislikes - 1);
-                } else if (currentReaction === null) {
-                  // Fresh reaction
-                  nextReaction = type;
-                  if (type === "LIKE") nextLikes++;
-                  if (type === "DISLIKE") nextDislikes++;
-                } else {
-                  // Switching reaction
-                  nextReaction = type;
-                  if (type === "LIKE") {
-                    nextLikes++;
-                    nextDislikes = Math.max(0, nextDislikes - 1);
-                  } else {
-                    nextDislikes++;
-                    nextLikes = Math.max(0, nextLikes - 1);
-                  }
-                }
-
-                return {
-                  ...meme,
-                  userReaction: nextReaction,
-                  likesCount: nextLikes,
-                  dislikesCount: nextDislikes,
-                };
-              }),
-            };
-          });
-
-          if (!found) return old;
-          return {
-            ...old,
-            pages: nextPages,
-          };
-        }
+      >({ queryKey: memeKeys.infiniteFeedRoot });
+      const previousDetail = queryClient.getQueryData<Meme>(
+        memeKeys.detail(memeId),
       );
 
-      return { previousData };
+      updateMemeAcrossInfiniteFeeds(queryClient, memeId, (meme) =>
+        applyOptimisticMemeReaction(meme, type),
+      );
+      if (previousDetail) {
+        queryClient.setQueryData<Meme>(
+          memeKeys.detail(memeId),
+          applyOptimisticMemeReaction(previousDetail, type),
+        );
+      }
+
+      return { previousFeeds, previousDetail, memeId, seq };
     },
 
     onError: (_err, _vars, context) => {
-      // Rollback on error
-      if (context?.previousData) {
-        context.previousData.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
+      if (
+        !context ||
+        latestSeqByMemeRef.current[context.memeId] !== context.seq
+      ) {
+        return;
+      }
+      context.previousFeeds.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      if (context.previousDetail) {
+        queryClient.setQueryData(
+          memeKeys.detail(context.memeId),
+          context.previousDetail,
+        );
       }
     },
 
-    onSuccess: (data: ReactMemeResult) => {
-      // Sync actual backend counts
-      queryClient.setQueriesData<InfiniteData<MemesFeedResponse>>(
-        { queryKey: ["memes", "infiniteFeed"] },
-        (old) => {
-          if (!old?.pages) return old;
-
-          let found = false;
-          const nextPages = old.pages.map((page) => {
-            const hasTarget = page.memes.some((m) => m.id === data.memeId);
-            if (!hasTarget) return page;
-            found = true;
-
-            return {
-              ...page,
-              memes: page.memes.map((meme) => {
-                if (meme.id !== data.memeId) return meme;
-                return {
-                  ...meme,
-                  userReaction: data.userReaction,
-                  likesCount: data.likesCount,
-                  dislikesCount: data.dislikesCount,
-                };
-              }),
-            };
-          });
-
-          if (!found) return old;
-          return {
-            ...old,
-            pages: nextPages,
-          };
-        }
+    onSuccess: (data: ReactMemeResult, _vars, context) => {
+      if (
+        !context ||
+        latestSeqByMemeRef.current[context.memeId] !== context.seq
+      ) {
+        return;
+      }
+      updateMemeAcrossInfiniteFeeds(queryClient, data.memeId, (meme) =>
+        patchMemeWithReactionResult(meme, data),
       );
+      const detail = queryClient.getQueryData<Meme>(
+        memeKeys.detail(data.memeId),
+      );
+      if (detail) {
+        queryClient.setQueryData<Meme>(
+          memeKeys.detail(data.memeId),
+          patchMemeWithReactionResult(detail, data),
+        );
+      }
     },
   });
 };
@@ -220,22 +233,9 @@ export const useDeleteMeme = () => {
 
       const previousData = queryClient.getQueriesData<
         InfiniteData<MemesFeedResponse>
-      >({ queryKey: ["memes", "infiniteFeed"] });
+      >({ queryKey: memeKeys.infiniteFeedRoot });
 
-      queryClient.setQueriesData<InfiniteData<MemesFeedResponse>>(
-        { queryKey: ["memes", "infiniteFeed"] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              memes: page.memes.filter((meme) => meme.id !== id),
-            })),
-          };
-        }
-      );
-
+      removeMemeFromFeedCaches(queryClient, id);
       return { previousData };
     },
     onError: (_err, _vars, context) => {
@@ -247,6 +247,27 @@ export const useDeleteMeme = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: memeKeys.all });
+    },
+  });
+};
+
+export const useReportMeme = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      memeId,
+      reason,
+      details,
+    }: {
+      memeId: string;
+      reason: UgcReportReason;
+      details?: string;
+    }) => reportMeme(memeId, { reason, ...(details ? { details } : {}) }),
+    onSuccess: (_result, variables) => {
+      removeMemeFromFeedCaches(queryClient, variables.memeId);
+      queryClient.invalidateQueries({ queryKey: memeKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["adminForumReports"] });
     },
   });
 };

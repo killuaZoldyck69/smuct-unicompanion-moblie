@@ -1,21 +1,15 @@
-import React, { useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
+import type { Meme, MemeAuthor } from "@/services/meme-service";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
-  timeAgo,
   formatMemePosterSubtitle,
+  timeAgo,
 } from "../../shared/design-tokens";
-import type { Meme } from "@/services/meme-service";
 
 interface MemeCardProps {
   meme: Meme;
@@ -25,8 +19,7 @@ interface MemeCardProps {
   onOptions: (meme: Meme) => void;
   onDeleteDirect?: (memeId: string) => void;
   onPreviewImage: (imageUrl: string, caption?: string | null, authorName?: string) => void;
-  onViewProfile?: (author: any) => void;
-  isReacting?: boolean;
+  onViewProfile?: (author: MemeAuthor) => void;
 }
 
 export const MemeCard = React.memo(function MemeCard({
@@ -38,49 +31,48 @@ export const MemeCard = React.memo(function MemeCard({
   onDeleteDirect,
   onPreviewImage,
   onViewProfile,
-  isReacting,
 }: MemeCardProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setImageLoading(true);
+    setImageError(false);
+  }, [meme.imageUrl]);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [meme.author?.image]);
 
   const isAuthor = currentUserId === meme.authorId;
   const isAdmin = userRole === "ADMIN";
-  const canManage = isAuthor || isAdmin;
-
   const isLiked = meme.userReaction === "LIKE";
   const isDisliked = meme.userReaction === "DISLIKE";
-
   const authorName = meme.author?.name || "Campus Peer";
   const authorInitials = authorName
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
 
   const posterSubtitle = formatMemePosterSubtitle(meme.author);
-
   const isEdited =
     Boolean(meme.updatedAt && meme.createdAt) &&
     new Date(meme.updatedAt).getTime() - new Date(meme.createdAt).getTime() > 1000;
 
-  const handleLike = useCallback(() => {
-    onReact(meme.id, "LIKE");
-  }, [meme.id, onReact]);
-
-  const handleDislike = useCallback(() => {
-    onReact(meme.id, "DISLIKE");
-  }, [meme.id, onReact]);
-
+  const handleLike = useCallback(() => onReact(meme.id, "LIKE"), [meme.id, onReact]);
+  const handleDislike = useCallback(() => onReact(meme.id, "DISLIKE"), [meme.id, onReact]);
   const handleProfilePress = useCallback(() => {
-    if (onViewProfile && meme.author) {
-      onViewProfile(meme.author);
-    }
+    if (onViewProfile && meme.author) onViewProfile(meme.author);
   }, [onViewProfile, meme.author]);
+
+  const showAvatarImage = Boolean(meme.author?.image) && !avatarError;
 
   return (
     <View style={styles.card}>
-      {/* 1. Header: Author Info (Clickable for Profile Modal) & Delete Button */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.authorRow}
@@ -90,15 +82,18 @@ export const MemeCard = React.memo(function MemeCard({
           accessibilityRole="button"
           accessibilityLabel={`View profile of ${authorName}`}
         >
-          {meme.author?.image ? (
+          {showAvatarImage ? (
             <Image
-              source={{ uri: meme.author.image }}
+              source={{ uri: meme.author.image! }}
               style={styles.avatar}
-              fadeDuration={200}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+              onError={() => setAvatarError(true)}
             />
           ) : (
             <View style={styles.avatarFallback}>
-              <Text style={styles.avatarInitials}>{authorInitials}</Text>
+              <Text style={styles.avatarInitials}>{authorInitials || "U"}</Text>
             </View>
           )}
 
@@ -117,12 +112,8 @@ export const MemeCard = React.memo(function MemeCard({
               {posterSubtitle.isStudentWithSemester ? (
                 <Text style={styles.authorSubText} numberOfLines={1}>
                   {posterSubtitle.semesterNum}
-                  <Text style={styles.superscript}>
-                    {posterSubtitle.superSuffix}
-                  </Text>
-                  {posterSubtitle.deptShort
-                    ? ` • ${posterSubtitle.deptShort}`
-                    : ""}
+                  <Text style={styles.superscript}>{posterSubtitle.superSuffix}</Text>
+                  {posterSubtitle.deptShort ? ` • ${posterSubtitle.deptShort}` : ""}
                 </Text>
               ) : (
                 <Text style={styles.authorSubText} numberOfLines={1}>
@@ -139,40 +130,40 @@ export const MemeCard = React.memo(function MemeCard({
           </View>
         </TouchableOpacity>
 
-        {isAdmin ? (
-          <TouchableOpacity
-            style={styles.adminDeleteBtn}
-            onPress={() => (onDeleteDirect ? onDeleteDirect(meme.id) : onOptions(meme))}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={`Delete meme by ${authorName}`}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="trash-2" size={13} color="#dc2626" />
-            <Text style={styles.adminDeleteBtnText}>Delete</Text>
-          </TouchableOpacity>
-        ) : canManage ? (
+        <View style={styles.headerActions}>
+          {isAdmin && !isAuthor && (
+            <TouchableOpacity
+              style={styles.adminDeleteBtn}
+              onPress={() => (onDeleteDirect ? onDeleteDirect(meme.id) : onOptions(meme))}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete meme by ${authorName}`}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
+            >
+              <Feather name="trash-2" size={13} color={colors.semantic.red.accent} />
+              <Text style={styles.adminDeleteBtnText}>Delete</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.moreBtn}
             onPress={() => onOptions(meme)}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Meme options"
+            accessibilityLabel={
+              isAuthor ? "Meme options" : `More options for meme by ${authorName}`
+            }
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Feather name="more-vertical" size={18} color="#64748b" />
+            <Feather name="more-vertical" size={18} color={CAMPUS_HUB_COLORS.subtleText} />
           </TouchableOpacity>
-        ) : null}
+        </View>
       </View>
 
-      {/* 2. Caption (Optional) */}
-      {meme.caption ? (
-        <Text style={styles.captionText}>{meme.caption}</Text>
-      ) : null}
+      {meme.caption ? <Text style={styles.captionText}>{meme.caption}</Text> : null}
 
-      {/* 3. Meme Image */}
       <TouchableOpacity
         style={styles.imageContainer}
         onPress={() => onPreviewImage(meme.imageUrl, meme.caption, authorName)}
@@ -181,94 +172,78 @@ export const MemeCard = React.memo(function MemeCard({
         accessibilityRole="imagebutton"
         accessibilityLabel="View full size meme image"
       >
-        {imageLoading && (
+        {imageLoading && !imageError && (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.memeAccent} />
           </View>
         )}
-        <Image
-          source={{ uri: meme.imageUrl }}
-          style={[styles.memeImage, imageError && { display: "none" }]}
-          resizeMode="cover"
-          fadeDuration={250}
-          onLoadStart={() => setImageLoading(true)}
-          onLoadEnd={() => setImageLoading(false)}
-          onError={() => {
-            setImageLoading(false);
-            setImageError(true);
-          }}
-        />
-        {imageError && (
+        {!imageError ? (
+          <Image
+            source={{ uri: meme.imageUrl }}
+            style={styles.memeImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            recyclingKey={meme.id}
+            onLoadStart={() => setImageLoading(true)}
+            onLoad={() => setImageLoading(false)}
+            onLoadEnd={() => setImageLoading(false)}
+            onError={() => {
+              setImageLoading(false);
+              setImageError(true);
+            }}
+          />
+        ) : (
           <View style={styles.errorBox}>
-            <Feather name="alert-circle" size={28} color="#94a3b8" />
+            <Feather name="alert-circle" size={28} color={colors.slate400} />
             <Text style={styles.errorText}>Could not load image</Text>
           </View>
         )}
       </TouchableOpacity>
 
-      {/* 4. Footer Actions (Like, Dislike, Share) */}
       <View style={styles.footer}>
         <View style={styles.reactionGroup}>
-          {/* Like Button */}
           <TouchableOpacity
-            style={[
-              styles.reactionPill,
-              isLiked && styles.reactionPillLiked,
-              isReacting && styles.reactionPillDisabled,
-            ]}
+            style={[styles.reactionPill, isLiked && styles.reactionPillLiked]}
             onPress={handleLike}
-            disabled={isReacting}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessible={true}
             accessibilityRole="button"
+            accessibilityState={{ selected: isLiked }}
             accessibilityLabel={`Like meme. Current count: ${meme.likesCount}`}
             activeOpacity={0.75}
           >
             <Feather
               name="thumbs-up"
               size={15}
-              color={isLiked ? CAMPUS_HUB_COLORS.memeAccent : "#64748b"}
+              color={isLiked ? CAMPUS_HUB_COLORS.memeAccent : CAMPUS_HUB_COLORS.subtleText}
             />
-            <Text
-              style={[
-                styles.reactionCount,
-                isLiked && styles.reactionCountLiked,
-              ]}
-            >
+            <Text style={[styles.reactionCount, isLiked && styles.reactionCountLiked]}>
               {meme.likesCount}
             </Text>
           </TouchableOpacity>
 
-          {/* Dislike Button */}
           <TouchableOpacity
-            style={[
-              styles.reactionPill,
-              isDisliked && styles.reactionPillDisliked,
-              isReacting && styles.reactionPillDisabled,
-            ]}
+            style={[styles.reactionPill, isDisliked && styles.reactionPillDisliked]}
             onPress={handleDislike}
-            disabled={isReacting}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessible={true}
             accessibilityRole="button"
+            accessibilityState={{ selected: isDisliked }}
             accessibilityLabel={`Dislike meme. Current count: ${meme.dislikesCount}`}
             activeOpacity={0.75}
           >
             <Feather
               name="thumbs-down"
               size={15}
-              color={isDisliked ? "#e11d48" : "#64748b"}
+              color={isDisliked ? colors.semantic.rose.solid : CAMPUS_HUB_COLORS.subtleText}
             />
-            <Text
-              style={[
-                styles.reactionCount,
-                isDisliked && styles.reactionCountDisliked,
-              ]}
-            >
+            <Text style={[styles.reactionCount, isDisliked && styles.reactionCountDisliked]}>
               {meme.dislikesCount}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Posted Timeline */}
         <View style={styles.timelineRow}>
           <Feather name="clock" size={12} color={CAMPUS_HUB_COLORS.subtleText} />
           <Text style={styles.timeText}>{timeAgo(meme.createdAt)}</Text>
@@ -288,23 +263,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  authorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
-  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8 },
+  authorRow: { flexDirection: "row", alignItems: "center", flex: 1 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted },
   avatarFallback: {
     width: 38,
     height: 38,
@@ -313,107 +275,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitials: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.memeAccentText,
-  },
-  authorMeta: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  authorName: {
-    fontFamily,
-    fontSize: 14,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.deepNavy,
-  },
-  adminBadge: {
-    backgroundColor: "#ede9fe",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  adminBadgeText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#6d28d9",
-  },
-  subMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-  },
-  authorSubText: {
-    fontFamily,
-    fontSize: 11,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    fontWeight: "500",
-    flexShrink: 1,
-  },
-  superscript: {
-    fontFamily,
-    fontSize: 9,
-    lineHeight: 12,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
-  dotSeparator: {
-    marginHorizontal: 5,
-    fontSize: 11,
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
-  timeText: {
-    fontFamily,
-    fontSize: 11,
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
-  moreBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.slate50,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  avatarInitials: { fontFamily, fontSize: 13, fontWeight: "800", color: CAMPUS_HUB_COLORS.memeAccentText },
+  authorMeta: { marginLeft: 10, flex: 1 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  authorName: { fontFamily, fontSize: 14, fontWeight: "700", color: CAMPUS_HUB_COLORS.deepNavy },
+  adminBadge: { backgroundColor: CAMPUS_HUB_COLORS.complaintAccentLight, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  adminBadgeText: { fontFamily, fontSize: 10, fontWeight: "800", color: colors.semantic.violet.deep },
+  subMetaRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  authorSubText: { fontFamily, fontSize: 11, color: CAMPUS_HUB_COLORS.subtleText, fontWeight: "500", flexShrink: 1 },
+  superscript: { fontFamily, fontSize: 9, lineHeight: 12, fontWeight: "700", color: CAMPUS_HUB_COLORS.subtleText },
+  dotSeparator: { marginHorizontal: 5, fontSize: 11, color: CAMPUS_HUB_COLORS.subtleText },
+  timeText: { fontFamily, fontSize: 11, color: CAMPUS_HUB_COLORS.subtleText, fontVariant: ["tabular-nums"] },
+  moreBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.slate50, alignItems: "center", justifyContent: "center" },
   adminDeleteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fee2e2",
+    backgroundColor: colors.semantic.red.softBorder,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#fecaca",
+    borderColor: colors.semantic.red.border,
     gap: 4,
   },
-  adminDeleteBtnText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#dc2626",
-  },
-  editedText: {
-    fontFamily,
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#b45309",
-  },
-  captionText: {
-    fontFamily,
-    fontSize: 14,
-    fontWeight: "600",
-    color: CAMPUS_HUB_COLORS.neutralText,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
+  adminDeleteBtnText: { fontFamily, fontSize: 11, fontWeight: "700", color: colors.semantic.red.accent },
+  editedText: { fontFamily, fontSize: 10, fontWeight: "600", color: colors.semantic.amber.deep },
+  captionText: { fontFamily, fontSize: 14, fontWeight: "600", color: CAMPUS_HUB_COLORS.neutralText, lineHeight: 20, marginBottom: 12 },
   imageContainer: {
     width: "100%",
     height: 280,
@@ -422,35 +309,10 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     position: "relative",
   },
-  loadingBox: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.slate50,
-  },
-  memeImage: {
-    width: "100%",
-    height: "100%",
-  },
-  errorBox: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  errorText: {
-    fontFamily,
-    fontSize: 12,
-    color: colors.slate400,
-  },
+  loadingBox: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center", backgroundColor: colors.slate50 },
+  memeImage: { width: "100%", height: "100%" },
+  errorBox: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center", gap: 6 },
+  errorText: { fontFamily, fontSize: 12, color: colors.slate400 },
   footer: {
     flexDirection: "row",
     alignItems: "center",
@@ -460,33 +322,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
-  reactionGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  reactionGroup: { flexDirection: "row", alignItems: "center", gap: 8 },
   reactionPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: colors.slate50,
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
-  reactionPillLiked: {
-    backgroundColor: CAMPUS_HUB_COLORS.memeAccentLight,
-    borderColor: "rgba(236, 72, 153, 0.3)",
-  },
-  reactionPillDisliked: {
-    backgroundColor: colors.semantic.rose.tint,
-    borderColor: "rgba(225, 29, 72, 0.3)",
-  },
-  reactionPillDisabled: {
-    opacity: 0.6,
-  },
+  reactionPillLiked: { backgroundColor: CAMPUS_HUB_COLORS.memeAccentLight, borderColor: CAMPUS_HUB_COLORS.memeAccentBorderLiked },
+  reactionPillDisliked: { backgroundColor: colors.semantic.rose.tint, borderColor: CAMPUS_HUB_COLORS.memeDislikeBorder },
   reactionCount: {
     fontFamily,
     fontSize: 12,
@@ -496,17 +346,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     includeFontPadding: false,
   },
-  reactionCountLiked: {
-    color: CAMPUS_HUB_COLORS.memeAccentText,
-  },
-  reactionCountDisliked: {
-    color: "#be123c",
-  },
-  timelineRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4.5,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-  },
+  reactionCountLiked: { color: CAMPUS_HUB_COLORS.memeAccentText },
+  reactionCountDisliked: { color: colors.semantic.rose.deep },
+  timelineRow: { flexDirection: "row", alignItems: "center", gap: 4.5, paddingHorizontal: 4, paddingVertical: 4 },
 });

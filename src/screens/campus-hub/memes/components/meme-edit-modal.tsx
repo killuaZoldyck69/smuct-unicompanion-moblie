@@ -1,25 +1,40 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
-  View,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  StyleSheet,
-  ActivityIndicator,
-  Platform,
-  ScrollView,
-  Keyboard,
-  KeyboardAvoidingView,
-  StatusBar,
+  View,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useNetworkStatus } from "@/hooks/use-network-status";
+import {
+  requireOnline,
+  scheduleSuccessToast,
+  showApiErrorToast,
+  useUgcTermsRetry,
+} from "@/features/campus-hub/campus-hub-upload";
+import { MEME_LIMITS, sanitizeMemeCaption } from "@/features/campus-hub/meme-logic";
 import { useUpdateMeme } from "@/features/campus-hub/useMemes";
+import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guidelines-modal";
 import type { Meme } from "@/services/meme-service";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import { colors } from "@/theme/colors";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  titleFontFamily,
+} from "../../shared/design-tokens";
 
 interface MemeEditModalProps {
   visible: boolean;
@@ -33,52 +48,92 @@ export const MemeEditModal = React.memo(function MemeEditModal({
   onClose,
 }: MemeEditModalProps) {
   const insets = useSafeAreaInsets();
+  const { user } = useCurrentUser();
+  const { isOffline } = useNetworkStatus();
   const [caption, setCaption] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
+  const submitLockRef = useRef(false);
 
   const updateMemeMutation = useUpdateMeme();
+  const {
+    showGuidelines,
+    setShowGuidelines,
+    isAcceptingGuidelines,
+    queuePayload,
+    clearQueuedPayload,
+    handleUgcError,
+    acceptGuidelines,
+  } = useUgcTermsRetry<void>(user?.id);
 
   useEffect(() => {
     if (meme) {
       setCaption(meme.caption ?? "");
     }
-  }, [meme]);
+    if (!visible) {
+      submitLockRef.current = false;
+      clearQueuedPayload();
+    }
+  }, [meme, visible, clearQueuedPayload]);
 
   const handleModalClose = useCallback(() => {
     if (updateMemeMutation.isPending) return;
     Keyboard.dismiss();
+    clearQueuedPayload();
     onClose();
-  }, [updateMemeMutation.isPending, onClose]);
+  }, [updateMemeMutation.isPending, clearQueuedPayload, onClose]);
 
-  const handleSubmit = useCallback(() => {
-    if (!meme) return;
+  const handleSubmit = useCallback(async () => {
+    if (!meme || submitLockRef.current || updateMemeMutation.isPending) return;
+    if (
+      !requireOnline(
+        isOffline,
+        "Reconnect to the internet before saving caption changes.",
+      )
+    ) {
+      return;
+    }
 
-    updateMemeMutation.mutate(
-      {
+    const sanitized = sanitizeMemeCaption(caption);
+    if (sanitized.error) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid Caption",
+        text2: sanitized.error,
+      });
+      return;
+    }
+
+    submitLockRef.current = true;
+    try {
+      await updateMemeMutation.mutateAsync({
         memeId: meme.id,
-        data: {
-          caption: caption.trim() || null,
-        },
-      },
-      {
-        onSuccess: () => {
-          Toast.show({
-            type: "success",
-            text1: "Meme Updated! ✨",
-            text2: "Your changes have been saved.",
-          });
-          handleModalClose();
-        },
-        onError: (err: any) => {
-          Toast.show({
-            type: "error",
-            text1: "Update Failed",
-            text2: err?.message || "Could not update meme.",
-          });
-        },
-      },
-    );
-  }, [meme, caption, updateMemeMutation, handleModalClose]);
+        data: { caption: sanitized.caption },
+      });
+      Keyboard.dismiss();
+      clearQueuedPayload();
+      onClose();
+      scheduleSuccessToast("Meme Updated!", "Your caption changes were saved.");
+    } catch (err) {
+      if (handleUgcError(err)) {
+        queuePayload(undefined, () => {
+          void handleSubmit();
+        });
+        return;
+      }
+      showApiErrorToast(err, "Update Failed", "Could not update meme caption.");
+    } finally {
+      submitLockRef.current = false;
+    }
+  }, [
+    meme,
+    caption,
+    isOffline,
+    updateMemeMutation,
+    clearQueuedPayload,
+    onClose,
+    handleUgcError,
+    queuePayload,
+  ]);
 
   if (!visible || !meme) return null;
 
@@ -89,22 +144,22 @@ export const MemeEditModal = React.memo(function MemeEditModal({
       visible={visible}
       presentationStyle="fullScreen"
       statusBarTranslucent={true}
+      navigationBarTranslucent={true}
       animationType="slide"
       onRequestClose={handleModalClose}
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#ffffff"
+        backgroundColor={CAMPUS_HUB_COLORS.white}
         translucent={true}
       />
       <SafeAreaView
         style={styles.fullScreenContainer}
         edges={["top", "bottom"]}
       >
-        {/* Top Header */}
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Edit Meme</Text>
+            <Text style={styles.headerTitle}>Edit Caption</Text>
             <View style={styles.hubBadge}>
               <Text style={styles.hubBadgeText}>CAMPUS HUB</Text>
             </View>
@@ -124,11 +179,7 @@ export const MemeEditModal = React.memo(function MemeEditModal({
           </TouchableOpacity>
         </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.keyboardAvoid}
-        >
-          {/* Scrollable Form Content */}
+        <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoid}>
           <ScrollView
             ref={scrollViewRef}
             style={styles.scrollView}
@@ -136,23 +187,24 @@ export const MemeEditModal = React.memo(function MemeEditModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Meme Image Thumbnail Preview Card */}
             <View style={styles.formGroup}>
               <Text style={styles.sectionLabel}>MEME IMAGE</Text>
               <View style={styles.previewContainer}>
                 <Image
                   source={{ uri: meme.imageUrl }}
                   style={styles.previewImage}
-                  resizeMode="contain"
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
                 />
               </View>
             </View>
 
-            {/* Caption Input Section */}
             <View style={styles.formGroup}>
               <View style={styles.captionHeaderRow}>
                 <Text style={styles.sectionLabel}>CAPTION (OPTIONAL)</Text>
-                <Text style={styles.charCount}>{caption.length}/280</Text>
+                <Text style={styles.charCount}>
+                  {caption.length}/{MEME_LIMITS.MAX_CAPTION}
+                </Text>
               </View>
 
               <TextInput
@@ -161,7 +213,7 @@ export const MemeEditModal = React.memo(function MemeEditModal({
                 placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                 value={caption}
                 onChangeText={setCaption}
-                maxLength={280}
+                maxLength={MEME_LIMITS.MAX_CAPTION}
                 multiline={true}
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -171,7 +223,6 @@ export const MemeEditModal = React.memo(function MemeEditModal({
               />
             </View>
 
-            {/* University Guidelines hint */}
             <View style={styles.guidelinesBox}>
               <Feather
                 name="info"
@@ -186,7 +237,6 @@ export const MemeEditModal = React.memo(function MemeEditModal({
             </View>
           </ScrollView>
 
-          {/* Pinned Bottom Footer Action Buttons */}
           <View
             style={[
               styles.footer,
@@ -198,27 +248,53 @@ export const MemeEditModal = React.memo(function MemeEditModal({
               onPress={handleModalClose}
               disabled={isSaving}
               activeOpacity={0.7}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel caption edit"
             >
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
-              onPress={handleSubmit}
+              onPress={() => {
+                void handleSubmit();
+              }}
               disabled={isSaving}
               activeOpacity={0.8}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isSaving }}
+              accessibilityLabel="Save caption changes"
             >
               {isSaving ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator
+                  size="small"
+                  color={CAMPUS_HUB_COLORS.memeDisabledText}
+                />
               ) : (
                 <View style={styles.btnContentRow}>
-                  <Feather name="check" size={16} color="#ffffff" />
+                  <Feather name="check" size={16} color={colors.white} />
                   <Text style={styles.saveBtnText}>Save Changes</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+
+        <UgcGuidelinesModal
+          visible={showGuidelines}
+          onClose={() => {
+            clearQueuedPayload();
+            setShowGuidelines(false);
+          }}
+          onAccept={acceptGuidelines}
+          isSubmitting={isAcceptingGuidelines}
+          isOffline={isOffline}
+          renderInline={true}
+        />
+
+        <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
       </SafeAreaView>
     </Modal>
   );
@@ -227,7 +303,7 @@ export const MemeEditModal = React.memo(function MemeEditModal({
 const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   topHeader: {
     flexDirection: "row",
@@ -236,8 +312,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(19, 27, 46, 0.06)",
-    backgroundColor: "#ffffff",
+    borderBottomColor: colors.navyAlpha06,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   headerLeft: {
     flexDirection: "row",
@@ -245,7 +321,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
@@ -264,10 +340,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#f1f5f9",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -276,7 +352,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -299,9 +375,9 @@ const styles = StyleSheet.create({
     height: 240,
     borderRadius: 18,
     overflow: "hidden",
-    backgroundColor: "#0f172a",
+    backgroundColor: colors.navyInk,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.08)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -318,9 +394,10 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 11,
     color: CAMPUS_HUB_COLORS.subtleText,
+    fontVariant: ["tabular-nums"],
   },
   captionInput: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -328,14 +405,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: CAMPUS_HUB_COLORS.neutralText,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     minHeight: 110,
   },
   guidelinesBox: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -355,13 +432,14 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: "rgba(19, 27, 46, 0.06)",
+    borderTopColor: colors.navyAlpha06,
   },
   cancelBtn: {
     flex: 1,
+    minHeight: 48,
     paddingVertical: 13,
     borderRadius: 12,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -373,6 +451,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     flex: 2,
+    minHeight: 48,
     paddingVertical: 13,
     borderRadius: 12,
     backgroundColor: CAMPUS_HUB_COLORS.memeAccent,
@@ -380,7 +459,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveBtnDisabled: {
-    backgroundColor: "#fbcfe8",
+    backgroundColor: CAMPUS_HUB_COLORS.memeDisabledBg,
   },
   btnContentRow: {
     flexDirection: "row",
@@ -391,6 +470,6 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: 14.5,
     fontWeight: "800",
-    color: "#ffffff",
+    color: colors.white,
   },
 });

@@ -26,7 +26,11 @@ interface ModerationReportCardProps {
   isSubmitting: boolean;
   onChangeNote: (reportId: string, note: string) => void;
   onSelectAuthor: (author: ForumAuthor) => void;
-  onOpenPost: (postId: string, targetType: UgcReportTargetType) => void;
+  onOpenPost: (
+    postId: string,
+    targetType: UgcReportTargetType,
+    report?: AdminForumReportItem,
+  ) => void;
   onExecuteAction: (
     report: AdminForumReportItem,
     action: AdminModerationAction,
@@ -55,12 +59,17 @@ export const ModerationReportCard = memo(function ModerationReportCard({
     live?.title || snapshot?.title || live?.postTitle || null;
   const previewBody = live?.contentPreview || snapshot?.contentPreview || "";
   const isDeleted = report.targetExists === false;
+  const memeImageUrl = live?.imageUrl || snapshot?.imageUrl || null;
   const resolvedPostId =
     report.targetType === "LOST_FOUND_POST" ||
-    report.targetType === "MARKETPLACE_POST"
+    report.targetType === "MARKETPLACE_POST" ||
+    report.targetType === "MEME_POST"
       ? report.targetId || live?.id || null
       : report.postId || live?.postId || snapshot?.postId || null;
-  const canOpenThread = Boolean(resolvedPostId && !isDeleted);
+  const canOpenThread =
+    report.targetType === "MEME_POST"
+      ? Boolean(memeImageUrl)
+      : Boolean(resolvedPostId && !isDeleted);
   const canRestrictAuthor = Boolean(
     author &&
     author.role !== "ADMIN" &&
@@ -91,7 +100,9 @@ export const ModerationReportCard = memo(function ModerationReportCard({
                     ? "MARKETPLACE"
                     : report.targetType === "MARKETPLACE_COMMENT"
                       ? "MP COMMENT"
-                      : "RESPONSE"}
+                      : report.targetType === "MEME_POST"
+                        ? "MEME"
+                        : "RESPONSE"}
             </Text>
           </View>
           {multiReportCount > 1 && (
@@ -209,24 +220,34 @@ export const ModerationReportCard = memo(function ModerationReportCard({
               ]}
               android_ripple={{ color: colors.semantic.blue.alpha14 }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              onPress={() => onOpenPost(resolvedPostId, report.targetType)}
+              onPress={() =>
+                onOpenPost(resolvedPostId, report.targetType, report)
+              }
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={
-                report.targetType === "LOST_FOUND_POST"
-                  ? "Open reported listing"
-                  : "Open reported thread"
+                report.targetType === "MEME_POST"
+                  ? "Open reported meme preview"
+                  : report.targetType === "LOST_FOUND_POST" ||
+                      report.targetType === "MARKETPLACE_POST" ||
+                      report.targetType === "MARKETPLACE_COMMENT"
+                    ? "Open reported listing"
+                    : "Open reported thread"
               }
             >
               <Feather
-                name="external-link"
+                name={report.targetType === "MEME_POST" ? "image" : "external-link"}
                 size={12}
                 color={BENTO_COLORS.primaryBlue}
               />
               <Text style={styles.viewThreadText} maxFontSizeMultiplier={1.25}>
-                {report.targetType === "LOST_FOUND_POST"
-                  ? "Open Listing"
-                  : "Open Thread"}
+                {report.targetType === "MEME_POST"
+                  ? "Open Meme"
+                  : report.targetType === "LOST_FOUND_POST" ||
+                      report.targetType === "MARKETPLACE_POST" ||
+                      report.targetType === "MARKETPLACE_COMMENT"
+                    ? "Open Listing"
+                    : "Open Thread"}
               </Text>
             </Pressable>
           )}

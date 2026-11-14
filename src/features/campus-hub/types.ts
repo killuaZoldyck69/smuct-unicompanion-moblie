@@ -30,6 +30,7 @@ export type {
   MemeFilter,
   MemeReactionType,
   CreateMemeInput,
+  UpdateMemeInput,
   ReactMemeResult,
   MemesFeedResponse,
 } from "@/services/meme-service";

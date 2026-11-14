@@ -275,12 +275,13 @@ describe("production readiness regression guards", () => {
     assert.ok(inlineCommentsSrc.includes("insets.bottom +"));
     assert.ok(inlineCommentsSrc.includes("paddingTop: 12"));
 
-    const commentSheetSrc = fs.readFileSync(
-      path.resolve("src/screens/campus-hub/shared/comment-sheet.tsx"),
-      "utf8",
+    assert.equal(
+      fs.existsSync(
+        path.resolve("src/screens/campus-hub/shared/comment-sheet.tsx"),
+      ),
+      false,
+      "unused comment-sheet.tsx should remain deleted (Mobile-27)",
     );
-    assert.ok(commentSheetSrc.includes("insets.bottom +"));
-    assert.ok(commentSheetSrc.includes("isKeyboardVisible"));
 
     const lfDetailSrc = fs.readFileSync(
       path.resolve(

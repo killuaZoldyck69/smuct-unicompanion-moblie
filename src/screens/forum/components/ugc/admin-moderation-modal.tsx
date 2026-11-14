@@ -26,6 +26,10 @@ import {
 } from "@/features/ugc/useUgcModeration";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { extractApiErrorInfo } from "@/features/forum/forum-logic";
+import {
+  resolveMemePreviewFromReport,
+  type ResolvedMemePreview,
+} from "@/features/campus-hub/meme-logic";
 import type { ForumAuthor } from "@/features/forum/types";
 import type {
   AdminForumReportItem,
@@ -34,6 +38,7 @@ import type {
   UgcReportTargetType,
 } from "@/services/ugc-service";
 import { AuthorDetailsModal } from "@/screens/campus-hub/shared/author-modal";
+import { MemeImageModal } from "@/screens/campus-hub/memes/components/meme-image-modal";
 import { colors } from "@/theme/colors";
 import { BENTO_COLORS, fontFamily, titleFontFamily } from "../../constants";
 import { ModerationReportCard } from "./moderation-report-card";
@@ -65,6 +70,9 @@ export const AdminModerationModal = memo(function AdminModerationModal({
   const [selectedAuthor, setSelectedAuthor] = useState<ForumAuthor | null>(
     null,
   );
+  const [previewMeme, setPreviewMeme] = useState<ResolvedMemePreview | null>(
+    null,
+  );
 
   const { data, isLoading, isError, refetch, isRefetching } =
     useAdminForumReports({ status: statusFilter, page, limit: 25 }, visible);
@@ -75,7 +83,18 @@ export const AdminModerationModal = memo(function AdminModerationModal({
   const totalPages = data?.meta?.totalPages ?? 1;
 
   const handleOpenPost = useCallback(
-    (postId: string, targetType: UgcReportTargetType) => {
+    (
+      postId: string,
+      targetType: UgcReportTargetType,
+      report?: AdminForumReportItem,
+    ) => {
+      if (targetType === "MEME_POST") {
+        const preview = resolveMemePreviewFromReport(report);
+        if (preview) {
+          setPreviewMeme(preview);
+        }
+        return;
+      }
       onClose();
       if (targetType === "LOST_FOUND_POST") {
         router.push(`/campus-hub/lost-found/${postId}`);
@@ -367,6 +386,13 @@ export const AdminModerationModal = memo(function AdminModerationModal({
           selectedAuthor && currentUser?.id === selectedAuthor.id,
         )}
         onClose={() => setSelectedAuthor(null)}
+        renderInline={true}
+      />
+
+      <MemeImageModal
+        visible={Boolean(previewMeme)}
+        meme={previewMeme}
+        onClose={() => setPreviewMeme(null)}
         renderInline={true}
       />
     </Modal>

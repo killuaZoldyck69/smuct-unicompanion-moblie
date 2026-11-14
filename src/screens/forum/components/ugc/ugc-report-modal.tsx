@@ -108,6 +108,7 @@ export const UgcReportModal = memo(function UgcReportModal({
       visible={visible}
       transparent={true}
       statusBarTranslucent={true}
+      navigationBarTranslucent={true}
       animationType="slide"
       onRequestClose={() => !isSubmitting && onClose()}
     >
@@ -146,7 +147,9 @@ export const UgcReportModal = memo(function UgcReportModal({
                         ? "Marketplace Listing"
                         : targetType === "MARKETPLACE_COMMENT"
                           ? "Comment"
-                          : "Response"}
+                          : targetType === "MEME_POST"
+                            ? "Meme"
+                            : "Response"}
                 </Text>
                 {targetTitle ? (
                   <Text style={styles.targetPreview} numberOfLines={1}>

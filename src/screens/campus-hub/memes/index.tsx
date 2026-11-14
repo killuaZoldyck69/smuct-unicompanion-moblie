@@ -1,41 +1,49 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
+  FlatList,
   Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Toast from "react-native-toast-message";
 import {
+  requireOnline,
+  scheduleSuccessToast,
+  showApiErrorToast,
+} from "@/features/campus-hub/campus-hub-upload";
+import {
+  useDeleteMeme,
   useInfiniteMemesFeed,
   useReactToMeme,
-  useDeleteMeme,
+  useReportMeme,
 } from "@/features/campus-hub/useMemes";
+import { useAcceptUgcTerms, useUgcTermsStatus } from "@/features/ugc/useUgcModeration";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useNetworkStatus } from "@/hooks/use-network-status";
+import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guidelines-modal";
+import { UgcReportModal } from "@/screens/forum/components/ugc/ugc-report-modal";
+import type { Meme, MemeAuthor, MemeFilter } from "@/services/meme-service";
+import type { UgcReportReason } from "@/services/ugc-service";
+import { colors } from "@/theme/colors";
+import { AuthorDetailsModal, type AuthorProfileModalData } from "../shared/author-modal";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
   getCampusHubTabBottomPadding,
-  titleFontFamily,
 } from "../shared/design-tokens";
-import {
-  AuthorDetailsModal,
-  type AuthorProfileModalData,
-} from "../shared/author-modal";
-import type { MemeFilter, Meme } from "@/services/meme-service";
+import { MemeFeedSkeleton } from "../shared/skeleton-loaders";
 import { MemeCard } from "./components/meme-card";
 import { MemeComposeModal } from "./components/meme-compose-modal";
-import { MemeImageModal } from "./components/meme-image-modal";
 import { MemeDeleteModal } from "./components/meme-delete-modal";
-import { MemeOptionsModal } from "./components/meme-options-modal";
 import { MemeEditModal } from "./components/meme-edit-modal";
-import { MemeFeedSkeleton } from "../shared/skeleton-loaders";
+import { MemeFeedEmptyState } from "./components/meme-empty-state";
+import { MemeImageModal } from "./components/meme-image-modal";
+import { MemeOptionsModal } from "./components/meme-options-modal";
 
 const FILTER_TABS: { label: string; value: MemeFilter; icon: keyof typeof Feather.glyphMap }[] = [
   { label: "Latest", value: "latest", icon: "clock" },
@@ -54,36 +62,45 @@ export const MemesSection = React.memo(function MemesSection({
 }: MemesSectionProps) {
   const insets = useSafeAreaInsets();
   const { user } = useCurrentUser();
+  const { isOffline } = useNetworkStatus();
   const [activeFilter, setActiveFilter] = useState<MemeFilter>("latest");
   const [internalComposeVisible, setInternalComposeVisible] = useState(false);
 
-  // Full-size preview modal state
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewCaption, setPreviewCaption] = useState<string | null>(null);
   const [previewAuthor, setPreviewAuthor] = useState<string | undefined>(undefined);
 
-  // Author Profile modal state
   const [selectedAuthor, setSelectedAuthor] = useState<AuthorProfileModalData | null>(null);
-
-  // 3-Dot Options & Edit modal state
   const [memeForOptions, setMemeForOptions] = useState<Meme | null>(null);
   const [memeToEdit, setMemeToEdit] = useState<Meme | null>(null);
-
-  // Custom Delete Confirmation modal state
+  const [pendingEditAfterTerms, setPendingEditAfterTerms] = useState<Meme | null>(null);
   const [memeToDelete, setMemeToDelete] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [memeToReport, setMemeToReport] = useState<Meme | null>(null);
+  const deleteLockRef = useRef(false);
 
-  const isComposeOpen = externalComposeVisible ?? internalComposeVisible;
+  const { data: ugcTerms } = useUgcTermsStatus(user?.id);
+  const acceptTermsMutation = useAcceptUgcTerms(user?.id);
+  const needsUgcAcceptanceForCompose =
+    Boolean(externalComposeVisible || internalComposeVisible) && ugcTerms?.accepted === false;
+  const showGuidelinesModal = needsUgcAcceptanceForCompose || Boolean(pendingEditAfterTerms);
+  const isComposeModalVisible =
+    Boolean(externalComposeVisible || internalComposeVisible) && !needsUgcAcceptanceForCompose;
+
   const handleCloseCompose = useCallback(() => {
-    if (externalOnCloseCompose) {
-      externalOnCloseCompose();
-    }
+    externalOnCloseCompose?.();
     setInternalComposeVisible(false);
   }, [externalOnCloseCompose]);
+
+  const handleOpenCompose = useCallback(() => {
+    if (!requireOnline(isOffline, "Reconnect to the internet before posting a meme.")) return;
+    setInternalComposeVisible(true);
+  }, [isOffline]);
 
   const {
     data,
     isLoading,
+    isError,
+    error,
     isRefetching,
     refetch,
     hasNextPage,
@@ -91,70 +108,104 @@ export const MemesSection = React.memo(function MemesSection({
     isFetchingNextPage,
   } = useInfiniteMemesFeed(activeFilter);
 
-  const {
-    mutate: reactToMemeMutate,
-    isPending: isReactPending,
-    variables: reactVariables,
-  } = useReactToMeme();
+  const { mutate: reactToMemeMutate } = useReactToMeme();
   const deleteMutation = useDeleteMeme();
+  const reportMutation = useReportMeme();
 
-  const allMemes = useMemo(() => {
-    if (!data?.pages) return [];
-    return data.pages.flatMap((page) => page.memes);
-  }, [data]);
+  const allMemes = useMemo(() => (data?.pages ? data.pages.flatMap((page) => page.memes) : []), [data]);
 
   const handleReact = useCallback(
     (memeId: string, type: "LIKE" | "DISLIKE") => {
-      reactToMemeMutate({ memeId, type });
+      if (!requireOnline(isOffline, "Reconnect to the internet before reacting to memes.")) return;
+      reactToMemeMutate(
+        { memeId, type },
+        { onError: (err) => showApiErrorToast(err, "Reaction Failed", "Could not update your reaction.") },
+      );
     },
-    [reactToMemeMutate]
+    [isOffline, reactToMemeMutate],
   );
 
-  const handleOpenOptions = useCallback((meme: Meme) => {
-    setMemeForOptions(meme);
-  }, []);
+  const handleOpenOptions = useCallback((meme: Meme) => setMemeForOptions(meme), []);
 
   const handleEditFromOptions = useCallback(() => {
-    if (memeForOptions) {
-      setMemeToEdit(memeForOptions);
+    if (!memeForOptions) return;
+    if (!requireOnline(isOffline, "Reconnect to the internet before editing your caption.")) return;
+    if (ugcTerms && !ugcTerms.accepted) {
+      setPendingEditAfterTerms(memeForOptions);
+      return;
     }
-  }, [memeForOptions]);
+    setMemeToEdit(memeForOptions);
+  }, [memeForOptions, isOffline, ugcTerms]);
 
   const handleDeleteFromOptions = useCallback(() => {
-    if (memeForOptions) {
-      setMemeToDelete(memeForOptions.id);
-    }
+    if (memeForOptions) setMemeToDelete(memeForOptions.id);
   }, [memeForOptions]);
 
-  const handleDeleteDirect = useCallback((id: string) => {
-    setMemeToDelete(id);
-  }, []);
+  const handleReportFromOptions = useCallback(() => {
+    if (!memeForOptions) return;
+    if (!requireOnline(isOffline, "Reconnect to the internet before reporting content.")) return;
+    setMemeToReport(memeForOptions);
+  }, [memeForOptions, isOffline]);
+
+  const handleDeleteDirect = useCallback((id: string) => setMemeToDelete(id), []);
 
   const handleConfirmDelete = useCallback(() => {
-    if (!memeToDelete) return;
-    setIsDeleting(true);
-
+    if (!memeToDelete || deleteLockRef.current || deleteMutation.isPending) return;
+    if (!requireOnline(isOffline, "Reconnect to the internet before deleting this meme.")) return;
+    deleteLockRef.current = true;
     deleteMutation.mutate(memeToDelete, {
       onSuccess: () => {
-        setIsDeleting(false);
+        deleteLockRef.current = false;
         setMemeToDelete(null);
-        Toast.show({
-          type: "success",
-          text1: "Meme Deleted",
-          text2: "Your meme was removed from Campus Hub.",
-        });
+        scheduleSuccessToast("Meme Deleted", "The meme was removed from Campus Hub.");
       },
-      onError: (err: any) => {
-        setIsDeleting(false);
+      onError: (err) => {
+        deleteLockRef.current = false;
         setMemeToDelete(null);
-        Toast.show({
-          type: "error",
-          text1: "Delete Failed",
-          text2: err.message || "Could not delete meme.",
-        });
+        showApiErrorToast(err, "Delete Failed", "Could not delete meme.");
       },
     });
-  }, [memeToDelete, deleteMutation]);
+  }, [memeToDelete, isOffline, deleteMutation]);
+
+  const handleSubmitReport = useCallback(
+    ({ reason, details }: { reason: UgcReportReason; details?: string }) => {
+      if (!memeToReport || reportMutation.isPending) return;
+      if (!requireOnline(isOffline, "Reconnect to the internet before submitting a report.")) return;
+      reportMutation.mutate(
+        { memeId: memeToReport.id, reason, details },
+        {
+          onSuccess: () => {
+            setMemeToReport(null);
+            scheduleSuccessToast(
+              "Report Submitted",
+              "Hidden from your feed and queued for moderator review.",
+            );
+          },
+          onError: (err) => showApiErrorToast(err, "Report Failed", "Could not submit your report."),
+        },
+      );
+    },
+    [memeToReport, isOffline, reportMutation],
+  );
+
+  const handleAcceptGuidelines = useCallback(() => {
+    if (!requireOnline(isOffline, "Reconnect to the internet to accept community guidelines.")) return;
+    acceptTermsMutation.mutate(undefined, {
+      onSuccess: () => {
+        if (pendingEditAfterTerms) {
+          const target = pendingEditAfterTerms;
+          setPendingEditAfterTerms(null);
+          setMemeToEdit(target);
+        }
+      },
+      onError: (err) => showApiErrorToast(err, "Agreement Failed", "Could not accept community guidelines."),
+    });
+  }, [isOffline, acceptTermsMutation, pendingEditAfterTerms]);
+
+  const handleDismissGuidelines = useCallback(() => {
+    setPendingEditAfterTerms(null);
+    if (needsUgcAcceptanceForCompose) handleCloseCompose();
+  }, [needsUgcAcceptanceForCompose, handleCloseCompose]);
 
   const handlePreviewImage = useCallback(
     (imageUrl: string, caption?: string | null, authorName?: string) => {
@@ -162,7 +213,7 @@ export const MemesSection = React.memo(function MemesSection({
       setPreviewCaption(caption ?? null);
       setPreviewAuthor(authorName);
     },
-    []
+    [],
   );
 
   const handleClosePreview = useCallback(() => {
@@ -171,9 +222,7 @@ export const MemesSection = React.memo(function MemesSection({
     setPreviewAuthor(undefined);
   }, []);
 
-  const handleViewProfile = useCallback((author: any) => {
-    setSelectedAuthor(author);
-  }, []);
+  const handleViewProfile = useCallback((author: MemeAuthor) => setSelectedAuthor(author), []);
 
   const renderItem = useCallback(
     ({ item }: { item: Meme }) => (
@@ -186,20 +235,9 @@ export const MemesSection = React.memo(function MemesSection({
         onDeleteDirect={handleDeleteDirect}
         onPreviewImage={handlePreviewImage}
         onViewProfile={handleViewProfile}
-        isReacting={isReactPending && reactVariables?.memeId === item.id}
       />
     ),
-    [
-      user?.id,
-      user?.role,
-      handleReact,
-      handleOpenOptions,
-      handleDeleteDirect,
-      handlePreviewImage,
-      handleViewProfile,
-      isReactPending,
-      reactVariables,
-    ]
+    [user?.id, user?.role, handleReact, handleOpenOptions, handleDeleteDirect, handlePreviewImage, handleViewProfile],
   );
 
   const renderListFooter = useCallback(() => {
@@ -211,69 +249,55 @@ export const MemesSection = React.memo(function MemesSection({
     );
   }, [isFetchingNextPage]);
 
-  const renderEmptyState = useCallback(() => {
-    if (isLoading) return null;
-    return (
-      <View style={styles.emptyContainer}>
-        <View style={styles.emptyIconCircle}>
-          <Feather name="smile" size={36} color={CAMPUS_HUB_COLORS.memeAccent} />
-        </View>
-        <Text style={styles.emptyTitle}>
-          {activeFilter === "mine" ? "No Memes Posted Yet" : "No Memes Found"}
-        </Text>
-        <Text style={styles.emptySubtitle}>
-          {activeFilter === "mine"
-            ? "You haven't posted any memes yet. Share one with campus!"
-            : "Be the first to bring some laughter to Campus Hub today."}
-        </Text>
-        <TouchableOpacity
-          style={styles.emptyActionBtn}
-          onPress={() => setInternalComposeVisible(true)}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Post your first meme"
-        >
-          <Feather name="plus" size={16} color="#ffffff" />
-          <Text style={styles.emptyActionText}>Upload a Meme</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }, [isLoading, activeFilter]);
+  const renderEmptyState = useCallback(
+    () => (
+      <MemeFeedEmptyState
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        isOffline={isOffline}
+        activeFilter={activeFilter}
+        onRetry={() => {
+          void refetch();
+        }}
+        onOpenCompose={handleOpenCompose}
+      />
+    ),
+    [isLoading, isError, error, isOffline, activeFilter, refetch, handleOpenCompose],
+  );
 
-  const listBottomPadding = useMemo(() => {
-    return getCampusHubTabBottomPadding(insets.bottom);
-  }, [insets.bottom]);
+  const listBottomPadding = useMemo(() => getCampusHubTabBottomPadding(insets.bottom), [insets.bottom]);
 
   return (
     <View style={styles.container}>
-      {/* Filter Tabs */}
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <Feather name="wifi-off" size={14} color={colors.semantic.amber.darkText} />
+          <Text style={styles.offlineBannerText}>You&apos;re offline. Showing cached memes only.</Text>
+        </View>
+      )}
+
       <View style={styles.filterRow}>
         {FILTER_TABS.map((tab) => {
           const isActive = activeFilter === tab.value;
           return (
             <TouchableOpacity
               key={tab.value}
-              style={[
-                styles.filterPill,
-                isActive && styles.filterPillActive,
-              ]}
+              style={[styles.filterPill, isActive && styles.filterPillActive]}
               onPress={() => setActiveFilter(tab.value)}
+              hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
               accessible={true}
-              accessibilityRole="button"
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
               accessibilityLabel={`Filter by ${tab.label}`}
               activeOpacity={0.75}
             >
               <Feather
                 name={tab.icon}
                 size={13}
-                color={isActive ? "#ffffff" : CAMPUS_HUB_COLORS.subtleText}
+                color={isActive ? colors.white : CAMPUS_HUB_COLORS.subtleText}
               />
-              <Text
-                style={[
-                  styles.filterPillText,
-                  isActive && styles.filterPillTextActive,
-                ]}
-              >
+              <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -281,7 +305,6 @@ export const MemesSection = React.memo(function MemesSection({
         })}
       </View>
 
-      {/* Meme Feed */}
       {isLoading && allMemes.length === 0 ? (
         <MemeFeedSkeleton />
       ) : (
@@ -303,9 +326,7 @@ export const MemesSection = React.memo(function MemesSection({
             />
           }
           onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) {
-              fetchNextPage();
-            }
+            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           }}
           onEndReachedThreshold={0.4}
           ListFooterComponent={renderListFooter}
@@ -317,13 +338,7 @@ export const MemesSection = React.memo(function MemesSection({
         />
       )}
 
-      {/* Compose Modal */}
-      <MemeComposeModal
-        visible={isComposeOpen}
-        onClose={handleCloseCompose}
-      />
-
-      {/* Full-Screen Image Modal */}
+      <MemeComposeModal visible={isComposeModalVisible} onClose={handleCloseCompose} />
       <MemeImageModal
         visible={!!previewImage}
         imageUrl={previewImage}
@@ -331,46 +346,69 @@ export const MemesSection = React.memo(function MemesSection({
         authorName={previewAuthor}
         onClose={handleClosePreview}
       />
-
-      {/* Author Profile View Modal */}
       <AuthorDetailsModal
         visible={!!selectedAuthor}
         author={selectedAuthor}
+        isOwnProfile={Boolean(selectedAuthor && user?.id === selectedAuthor.id)}
         onClose={() => setSelectedAuthor(null)}
       />
-
-      {/* 3-Dot Options Modal */}
       <MemeOptionsModal
         visible={!!memeForOptions}
         isAuthor={user?.id === memeForOptions?.authorId}
+        isAdmin={user?.role === "ADMIN"}
         onClose={() => setMemeForOptions(null)}
         onEdit={handleEditFromOptions}
         onDelete={handleDeleteFromOptions}
+        onReport={handleReportFromOptions}
       />
-
-      {/* Edit Meme Caption Modal */}
-      <MemeEditModal
-        visible={!!memeToEdit}
-        meme={memeToEdit}
-        onClose={() => setMemeToEdit(null)}
-      />
-
-      {/* Custom Delete Confirmation Modal */}
+      <MemeEditModal visible={!!memeToEdit} meme={memeToEdit} onClose={() => setMemeToEdit(null)} />
       <MemeDeleteModal
         visible={!!memeToDelete}
-        isDeleting={isDeleting}
+        isDeleting={deleteMutation.isPending}
         onConfirm={handleConfirmDelete}
         onClose={() => setMemeToDelete(null)}
+      />
+      <UgcReportModal
+        visible={Boolean(memeToReport)}
+        targetType="MEME_POST"
+        targetTitle={
+          memeToReport?.caption ||
+          (memeToReport?.author?.name ? `Meme by ${memeToReport.author.name}` : undefined)
+        }
+        onClose={() => !reportMutation.isPending && setMemeToReport(null)}
+        onSubmit={handleSubmitReport}
+        isSubmitting={reportMutation.isPending}
+      />
+      <UgcGuidelinesModal
+        visible={showGuidelinesModal}
+        onClose={handleDismissGuidelines}
+        onAccept={handleAcceptGuidelines}
+        isSubmitting={acceptTermsMutation.isPending}
+        isOffline={isOffline}
       />
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: CAMPUS_HUB_COLORS.background,
+  container: { flex: 1, backgroundColor: CAMPUS_HUB_COLORS.background },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.semantic.amber.tint,
+    borderWidth: 1,
+    borderColor: colors.semantic.amber.border,
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+    width: "92%",
   },
+  offlineBannerText: { fontFamily, fontSize: 12, fontWeight: "600", color: colors.semantic.amber.darkText, flex: 1 },
   filterRow: {
     flexDirection: "row",
     paddingHorizontal: 20,
@@ -385,7 +423,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    minHeight: 38,
+    minHeight: 40,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
@@ -394,10 +432,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
-  filterPillActive: {
-    backgroundColor: CAMPUS_HUB_COLORS.memeAccent,
-    borderColor: CAMPUS_HUB_COLORS.memeAccent,
-  },
+  filterPillActive: { backgroundColor: CAMPUS_HUB_COLORS.memeAccent, borderColor: CAMPUS_HUB_COLORS.memeAccent },
   filterPillText: {
     fontFamily,
     fontSize: 12,
@@ -406,21 +441,7 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
     includeFontPadding: false,
   },
-  filterPillTextActive: {
-    color: CAMPUS_HUB_COLORS.white,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontFamily,
-    fontSize: 13,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    fontWeight: "600",
-  },
+  filterPillTextActive: { color: CAMPUS_HUB_COLORS.white },
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 2,
@@ -428,58 +449,6 @@ const styles = StyleSheet.create({
     maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
     alignSelf: "center",
   },
-  listEmpty: {
-    flex: 1,
-  },
-  footerLoader: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 60,
-    paddingHorizontal: 30,
-    gap: 12,
-  },
-  emptyIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: CAMPUS_HUB_COLORS.memeAccentLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  emptyTitle: {
-    fontFamily: titleFontFamily,
-    fontSize: 17,
-    fontWeight: "800",
-    color: CAMPUS_HUB_COLORS.deepNavy,
-  },
-  emptySubtitle: {
-    fontFamily,
-    fontSize: 13,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    textAlign: "center",
-    lineHeight: 18,
-  },
-  emptyActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: CAMPUS_HUB_COLORS.memeAccent,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    marginTop: 8,
-    ...CAMPUS_HUB_COLORS.heroShadow,
-  },
-  emptyActionText: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
+  listEmpty: { flex: 1 },
+  footerLoader: { paddingVertical: 20, alignItems: "center" },
 });

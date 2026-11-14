@@ -1,30 +1,30 @@
-import React, { useState, useCallback } from "react";
+import React from "react";
 import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
-  View,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-  Keyboard,
-  StatusBar,
+  View,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toast-config";
+import { MEME_LIMITS } from "@/features/campus-hub/meme-logic";
+import { useMemeCompose } from "@/features/campus-hub/useMemeCompose";
+import { UgcGuidelinesModal } from "@/screens/forum/components/ugc/ugc-guidelines-modal";
+import { colors } from "@/theme/colors";
 import {
-  uploadImageToCloudinary,
-  CLOUDINARY_FOLDERS,
-} from "@/services/cloudinary-service";
-import { useCreateMeme } from "@/features/campus-hub/useMemes";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  titleFontFamily,
+} from "../../shared/design-tokens";
 
 interface MemeComposeModalProps {
   visible: boolean;
@@ -36,109 +36,23 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
   onClose,
 }: MemeComposeModalProps) {
   const insets = useSafeAreaInsets();
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [caption, setCaption] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  const {
+    imageUri,
+    caption,
+    setCaption,
+    isOffline,
+    isBusy,
+    showGuidelines,
+    isAcceptingGuidelines,
+    handlePickImage,
+    handleRemoveImage,
+    handleClose,
+    submitMeme,
+    acceptGuidelines,
+    dismissGuidelines,
+  } = useMemeCompose(visible, onClose);
 
-  const createMemeMutation = useCreateMeme();
-
-  const handlePickImage = useCallback(async () => {
-    try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          "Permission Required",
-          "Photo library access is needed to pick a meme from your device.",
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: false,
-        quality: 0.85,
-      });
-
-      if (!result.canceled && result.assets?.[0]?.uri) {
-        setImageUri(result.assets[0].uri);
-      }
-    } catch (err: any) {
-      Toast.show({
-        type: "error",
-        text1: "Error picking image",
-        text2: err.message || "Failed to open photo picker.",
-      });
-    }
-  }, []);
-
-  const handleClear = useCallback(() => {
-    setImageUri(null);
-    setCaption("");
-    setIsUploading(false);
-  }, []);
-
-  const handleModalClose = useCallback(() => {
-    if (isUploading) return;
-    Keyboard.dismiss();
-    handleClear();
-    onClose();
-  }, [isUploading, handleClear, onClose]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!imageUri) {
-      Toast.show({
-        type: "error",
-        text1: "No Image Selected",
-        text2: "Please choose a meme image to upload.",
-      });
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-
-      // 1. Upload to Cloudinary securely
-      const uploadRes = await uploadImageToCloudinary(
-        imageUri,
-        CLOUDINARY_FOLDERS.CAMPUS_HUB.MEMES,
-      );
-
-      // 2. Create Meme in backend
-      createMemeMutation.mutate(
-        {
-          imageUrl: uploadRes.secureUrl,
-          caption: caption.trim() || null,
-        },
-        {
-          onSuccess: () => {
-            Toast.show({
-              type: "success",
-              text1: "Meme Posted! 🎉",
-              text2: "Your meme is now live on Campus Hub.",
-            });
-            handleClear();
-            onClose();
-          },
-          onError: (err: any) => {
-            setIsUploading(false);
-            Toast.show({
-              type: "error",
-              text1: "Failed to post meme",
-              text2: err.message || "Something went wrong.",
-            });
-          },
-        },
-      );
-    } catch (err: any) {
-      setIsUploading(false);
-      Toast.show({
-        type: "error",
-        text1: "Upload Failed",
-        text2: err.message || "Failed to upload image. Please try again.",
-      });
-    }
-  }, [imageUri, caption, createMemeMutation, handleClear, onClose]);
+  const isSubmitDisabled = !imageUri || isBusy;
 
   return (
     <Modal
@@ -146,18 +60,11 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
       animationType="slide"
       presentationStyle="fullScreen"
       statusBarTranslucent={true}
-      onRequestClose={handleModalClose}
+      navigationBarTranslucent={true}
+      onRequestClose={handleClose}
     >
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#ffffff"
-        translucent={true}
-      />
-      <SafeAreaView
-        style={styles.fullScreenContainer}
-        edges={["top", "bottom"]}
-      >
-        {/* Top Header */}
+      <StatusBar barStyle="dark-content" backgroundColor={CAMPUS_HUB_COLORS.white} translucent={true} />
+      <SafeAreaView style={styles.fullScreenContainer} edges={["top", "bottom"]}>
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>Post a Meme</Text>
@@ -167,8 +74,8 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
           </View>
 
           <TouchableOpacity
-            onPress={handleModalClose}
-            disabled={isUploading}
+            onPress={handleClose}
+            disabled={isBusy}
             style={styles.closeBtn}
             accessible={true}
             accessibilityRole="button"
@@ -180,18 +87,13 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
           </TouchableOpacity>
         </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.keyboardAvoid}
-        >
-          {/* Scrollable Form Content */}
+        <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoid}>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Image Picker Box */}
             <View style={styles.formGroup}>
               <Text style={styles.sectionLabel}>
                 MEME IMAGE <Text style={styles.requiredStar}>*</Text>
@@ -202,25 +104,34 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
                   <Image
                     source={{ uri: imageUri }}
                     style={styles.previewImage}
-                    resizeMode="contain"
+                    contentFit="contain"
+                    cachePolicy="memory-disk"
                   />
                   <View style={styles.previewOverlay}>
                     <TouchableOpacity
                       style={styles.changeImageBtn}
-                      onPress={handlePickImage}
-                      disabled={isUploading}
+                      onPress={() => {
+                        void handlePickImage();
+                      }}
+                      disabled={isBusy}
                       activeOpacity={0.8}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Change meme image"
                     >
-                      <Feather name="refresh-cw" size={13} color="#ffffff" />
+                      <Feather name="refresh-cw" size={13} color={colors.white} />
                       <Text style={styles.previewBtnText}>Change</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.removeImageBtn}
-                      onPress={() => setImageUri(null)}
-                      disabled={isUploading}
+                      onPress={handleRemoveImage}
+                      disabled={isBusy}
                       activeOpacity={0.8}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove meme image"
                     >
-                      <Feather name="trash-2" size={13} color="#ffffff" />
+                      <Feather name="trash-2" size={13} color={colors.white} />
                       <Text style={styles.previewBtnText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
@@ -228,33 +139,30 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
               ) : (
                 <TouchableOpacity
                   style={styles.pickerBox}
-                  onPress={handlePickImage}
-                  disabled={isUploading}
+                  onPress={() => {
+                    void handlePickImage();
+                  }}
+                  disabled={isBusy}
                   activeOpacity={0.8}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel="Pick meme image"
                 >
                   <View style={styles.pickerIconCircle}>
-                    <Feather
-                      name="image"
-                      size={24}
-                      color={CAMPUS_HUB_COLORS.memeAccent}
-                    />
+                    <Feather name="image" size={24} color={CAMPUS_HUB_COLORS.memeAccent} />
                   </View>
                   <Text style={styles.pickerTitle}>Tap to select a meme</Text>
-                  <Text style={styles.pickerSubtitle}>
-                    PNG, JPG, WEBP, or GIF up to 10MB
-                  </Text>
+                  <Text style={styles.pickerSubtitle}>PNG, JPG, WEBP, or GIF up to 5MB</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Caption Input Box */}
             <View style={styles.formGroup}>
               <View style={styles.captionHeaderRow}>
                 <Text style={styles.sectionLabel}>CAPTION (OPTIONAL)</Text>
-                <Text style={styles.charCount}>{caption.length}/280</Text>
+                <Text style={styles.charCount}>
+                  {caption.length}/{MEME_LIMITS.MAX_CAPTION}
+                </Text>
               </View>
 
               <TextInput
@@ -263,74 +171,82 @@ export const MemeComposeModal = React.memo(function MemeComposeModal({
                 placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
                 value={caption}
                 onChangeText={setCaption}
-                maxLength={280}
+                maxLength={MEME_LIMITS.MAX_CAPTION}
                 multiline={true}
                 numberOfLines={3}
                 textAlignVertical="top"
-                editable={!isUploading}
+                editable={!isBusy}
                 accessible={true}
                 accessibilityLabel="Meme caption input"
               />
             </View>
 
-            {/* Community Guidelines Card */}
             <View style={styles.guidelinesBox}>
               <Feather
                 name="info"
                 size={14}
                 color={CAMPUS_HUB_COLORS.subtleText}
-                style={{ marginTop: 2 }}
+                style={styles.guidelinesIcon}
               />
               <Text style={styles.guidelinesText}>
-                Keep memes respectful and university-friendly. Inappropriate
-                content will be removed.
+                Keep memes respectful and university-friendly. Inappropriate content will be removed.
               </Text>
             </View>
           </ScrollView>
 
-          {/* Bottom Docked Action Footer */}
-          <View
-            style={[
-              styles.modalFooter,
-              { paddingBottom: Math.max(insets.bottom, 14) },
-            ]}
-          >
+          <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 14) }]}>
             <TouchableOpacity
-              style={[
-                styles.submitBtn,
-                (!imageUri || isUploading) && styles.submitBtnDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={!imageUri || isUploading}
+              style={[styles.submitBtn, isSubmitDisabled && styles.submitBtnDisabled]}
+              onPress={() => {
+                void submitMeme();
+              }}
+              disabled={isSubmitDisabled}
               accessible={true}
               accessibilityRole="button"
+              accessibilityState={{ disabled: isSubmitDisabled }}
               accessibilityLabel="Publish meme"
               activeOpacity={0.8}
             >
-              {isUploading ? (
+              {isBusy ? (
                 <View style={styles.loadingRow}>
-                  <ActivityIndicator size="small" color="#ffffff" />
-                  <Text style={styles.submitBtnText}>Uploading Meme...</Text>
+                  <ActivityIndicator size="small" color={CAMPUS_HUB_COLORS.memeDisabledText} />
+                  <Text style={[styles.submitBtnText, styles.submitBtnTextDisabled]}>
+                    Publishing Meme...
+                  </Text>
                 </View>
               ) : (
                 <View style={styles.loadingRow}>
-                  <Feather name="send" size={16} color="#ffffff" />
-                  <Text style={styles.submitBtnText}>Publish Meme</Text>
+                  <Feather
+                    name="send"
+                    size={16}
+                    color={isSubmitDisabled ? CAMPUS_HUB_COLORS.memeDisabledText : colors.white}
+                  />
+                  <Text style={[styles.submitBtnText, isSubmitDisabled && styles.submitBtnTextDisabled]}>
+                    Publish Meme
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+
+        <UgcGuidelinesModal
+          visible={showGuidelines}
+          onClose={dismissGuidelines}
+          onAccept={acceptGuidelines}
+          isSubmitting={isAcceptingGuidelines}
+          isOffline={isOffline}
+          renderInline={true}
+        />
+
+        <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 44)} />
       </SafeAreaView>
     </Modal>
   );
 });
 
 const styles = StyleSheet.create({
-  fullScreenContainer: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
+  fullScreenContainer: { flex: 1, backgroundColor: CAMPUS_HUB_COLORS.white },
   topHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -338,20 +254,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(19, 27, 46, 0.06)",
-    backgroundColor: "#ffffff",
+    borderBottomColor: colors.navyAlpha06,
+    backgroundColor: CAMPUS_HUB_COLORS.white,
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  headerLeft: { flexDirection: "row", alignItems: "center" },
   headerTitle: {
     fontSize: 18,
-    fontFamily: Platform.select({
-      web: "'Bricolage Grotesque', sans-serif",
-      android: "BricolageGrotesque_800ExtraBold",
-      default: "BricolageGrotesque_800ExtraBold",
-    }),
+    fontFamily: titleFontFamily,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     letterSpacing: -0.3,
@@ -371,29 +280,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#f1f5f9",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     justifyContent: "center",
     alignItems: "center",
   },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 36,
-    gap: 16,
-  },
-  formGroup: {
-    gap: 6,
-  },
+  keyboardAvoid: { flex: 1 },
+  scrollView: { flex: 1, backgroundColor: CAMPUS_HUB_COLORS.white },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 36, gap: 16 },
+  formGroup: { gap: 6 },
   sectionLabel: {
     fontFamily,
     fontSize: 11,
@@ -401,17 +298,14 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.subtleText,
     letterSpacing: 0.5,
   },
-  requiredStar: {
-    color: CAMPUS_HUB_COLORS.dangerText,
-    fontWeight: "800",
-  },
+  requiredStar: { color: CAMPUS_HUB_COLORS.dangerText, fontWeight: "800" },
   pickerBox: {
     height: 200,
     borderRadius: 18,
     borderWidth: 2,
-    borderColor: "rgba(236, 72, 153, 0.25)",
+    borderColor: CAMPUS_HUB_COLORS.memeAccentBorderSoft,
     borderStyle: "dashed",
-    backgroundColor: "#fdf2f8",
+    backgroundColor: CAMPUS_HUB_COLORS.memeAccentLight,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
@@ -422,77 +316,52 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderWidth: 1,
-    borderColor: "rgba(236, 72, 153, 0.16)",
+    borderColor: CAMPUS_HUB_COLORS.memeAccentBorderSubtle,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
   },
-  pickerTitle: {
-    fontFamily,
-    fontSize: 14,
-    fontWeight: "700",
-    color: CAMPUS_HUB_COLORS.deepNavy,
-  },
-  pickerSubtitle: {
-    fontFamily,
-    fontSize: 11,
-    color: CAMPUS_HUB_COLORS.subtleText,
-  },
+  pickerTitle: { fontFamily, fontSize: 14, fontWeight: "700", color: CAMPUS_HUB_COLORS.deepNavy },
+  pickerSubtitle: { fontFamily, fontSize: 11, color: CAMPUS_HUB_COLORS.subtleText },
   previewBox: {
     height: 240,
     borderRadius: 18,
-    backgroundColor: "#0f172a",
+    backgroundColor: colors.navyInk,
     overflow: "hidden",
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-  },
-  previewOverlay: {
-    position: "absolute",
-    bottom: 12,
-    flexDirection: "row",
-    gap: 10,
-  },
+  previewImage: { width: "100%", height: "100%" },
+  previewOverlay: { position: "absolute", bottom: 12, flexDirection: "row", gap: 10 },
   changeImageBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(19, 27, 46, 0.85)",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    backgroundColor: CAMPUS_HUB_COLORS.memeOverlayDark,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
   },
   removeImageBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(225, 29, 72, 0.9)",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    backgroundColor: CAMPUS_HUB_COLORS.memeOverlayDanger,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
   },
-  previewBtnText: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
-  captionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+  previewBtnText: { fontFamily, fontSize: 11, fontWeight: "700", color: colors.white },
+  captionHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   charCount: {
     fontFamily,
     fontSize: 11,
     color: CAMPUS_HUB_COLORS.subtleText,
+    fontVariant: ["tabular-nums"],
   },
   textInput: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -500,51 +369,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: CAMPUS_HUB_COLORS.neutralText,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     minHeight: 110,
   },
   guidelinesBox: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  guidelinesText: {
-    fontFamily,
-    fontSize: 12,
-    color: CAMPUS_HUB_COLORS.subtleText,
-    flex: 1,
-    lineHeight: 18,
-  },
+  guidelinesIcon: { marginTop: 2 },
+  guidelinesText: { fontFamily, fontSize: 12, color: CAMPUS_HUB_COLORS.subtleText, flex: 1, lineHeight: 18 },
   modalFooter: {
     paddingHorizontal: 16,
     paddingTop: 12,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: "rgba(19, 27, 46, 0.06)",
+    borderTopColor: colors.navyAlpha06,
   },
   submitBtn: {
     backgroundColor: CAMPUS_HUB_COLORS.memeAccent,
     borderRadius: 12,
+    minHeight: 48,
     paddingVertical: 13,
     alignItems: "center",
     justifyContent: "center",
   },
-  submitBtnDisabled: {
-    backgroundColor: "#fbcfe8",
-  },
-  loadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  submitBtnText: {
-    fontFamily,
-    fontSize: 14.5,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
+  submitBtnDisabled: { backgroundColor: CAMPUS_HUB_COLORS.memeDisabledBg },
+  loadingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  submitBtnText: { fontFamily, fontSize: 14.5, fontWeight: "800", color: colors.white },
+  submitBtnTextDisabled: { color: CAMPUS_HUB_COLORS.memeDisabledText },
 });

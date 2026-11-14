@@ -4,6 +4,10 @@ import { forumQueryKeys } from "@/features/forum/useForum";
 import { lostFoundKeys } from "@/features/campus-hub/useLostFound";
 import { marketplaceKeys } from "@/features/campus-hub/useMarketplace";
 import {
+  memeKeys,
+  removeMemeFromFeedCaches,
+} from "@/features/campus-hub/useMemes";
+import {
   acceptUgcTerms,
   createForumReport,
   getAdminForumReports,
@@ -83,11 +87,16 @@ export const useCreateForumReport = () => {
   return useMutation({
     mutationFn: (input: CreateUgcReportInput) => createForumReport(input),
     onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
-      if (variables.targetType === "FORUM_POST") {
-        queryClient.invalidateQueries({
-          queryKey: forumQueryKeys.detail(variables.targetId),
-        });
+      if (variables.targetType === "MEME_POST") {
+        removeMemeFromFeedCaches(queryClient, variables.targetId);
+        queryClient.invalidateQueries({ queryKey: memeKeys.all });
+      } else {
+        queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
+        if (variables.targetType === "FORUM_POST") {
+          queryClient.invalidateQueries({
+            queryKey: forumQueryKeys.detail(variables.targetId),
+          });
+        }
       }
       queryClient.invalidateQueries({ queryKey: ["adminForumReports"] });
     },
@@ -126,6 +135,7 @@ export const useReviewAdminForumReport = () => {
       queryClient.invalidateQueries({ queryKey: forumQueryKeys.all });
       queryClient.invalidateQueries({ queryKey: lostFoundKeys.all });
       queryClient.invalidateQueries({ queryKey: marketplaceKeys.all });
+      queryClient.invalidateQueries({ queryKey: memeKeys.all });
     },
   });
 };

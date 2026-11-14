@@ -13,7 +13,8 @@ export type UgcReportTargetType =
   | "FORUM_RESPONSE"
   | "LOST_FOUND_POST"
   | "MARKETPLACE_POST"
-  | "MARKETPLACE_COMMENT";
+  | "MARKETPLACE_COMMENT"
+  | "MEME_POST";
 
 export type UgcReportReason =
   | "SPAM"
@@ -44,7 +45,8 @@ export type AdminReportTargetFilter =
   | "FORUM_RESPONSE"
   | "LOST_FOUND_POST"
   | "MARKETPLACE_POST"
-  | "MARKETPLACE_COMMENT";
+  | "MARKETPLACE_COMMENT"
+  | "MEME_POST";
 
 export type AdminModerationAction =
   "DISMISS" | "HIDE_CONTENT" | "DELETE_CONTENT" | "RESTRICT_USER";
@@ -55,6 +57,7 @@ export interface AdminForumReportTargetLive {
   title?: string | null;
   postTitle?: string | null;
   contentPreview?: string | null;
+  imageUrl?: string | null;
   isResolved?: boolean | null;
   isHiddenByModeration?: boolean;
   createdAt?: string;
@@ -65,6 +68,7 @@ export interface AdminForumReportTargetSnapshot {
   responseId?: string | null;
   title?: string | null;
   contentPreview?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface AdminForumReportItem {
@@ -170,10 +174,25 @@ export const acceptUgcTerms = async (): Promise<UgcTermsStatus> => {
   };
 };
 
+const CAMPUS_HUB_COLD_START_TIMEOUT_MS = 45000;
+
 export const createForumReport = async (
   input: CreateUgcReportInput,
 ): Promise<CreateUgcReportResult> => {
-  const res = await api.post("/forum/reports", input);
+  if (input.targetType === "MEME_POST") {
+    const res = await api.post(
+      `/memes/${input.targetId}/reports`,
+      {
+        reason: input.reason,
+        ...(input.details ? { details: input.details } : {}),
+      },
+      { timeout: CAMPUS_HUB_COLD_START_TIMEOUT_MS },
+    );
+    return res.data?.data;
+  }
+  const res = await api.post("/forum/reports", input, {
+    timeout: CAMPUS_HUB_COLD_START_TIMEOUT_MS,
+  });
   return res.data?.data;
 };
 

@@ -1,46 +1,54 @@
 import React from "react";
 import {
-  View,
-  Text,
   Modal,
-  TouchableOpacity,
-  StyleSheet,
   Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
 
 interface MemeOptionsModalProps {
   visible: boolean;
   isAuthor?: boolean;
+  isAdmin?: boolean;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onReport?: () => void;
 }
 
 export const MemeOptionsModal = React.memo(function MemeOptionsModal({
   visible,
-  isAuthor = true,
+  isAuthor = false,
+  isAdmin = false,
   onClose,
   onEdit,
   onDelete,
+  onReport,
 }: MemeOptionsModalProps) {
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom, 20) + (Platform.OS === "android" ? 12 : 8);
+  const bottomPadding =
+    Math.max(insets.bottom, 20) + (Platform.OS === "android" ? 12 : 8);
 
   if (!visible) return null;
+
+  const canDelete = isAuthor || isAdmin;
 
   return (
     <Modal
       visible={visible}
       transparent
-      statusBarTranslucent
+      statusBarTranslucent={true}
+      navigationBarTranslucent={true}
       animationType="slide"
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        {/* Backdrop dismiss */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -49,29 +57,30 @@ export const MemeOptionsModal = React.memo(function MemeOptionsModal({
         />
 
         <View style={[styles.sheetContainer, { paddingBottom: bottomPadding }]}>
-          {/* Drag Handle */}
           <View style={styles.dragHandleContainer}>
             <View style={styles.dragHandle} />
           </View>
 
-          {/* Header */}
           <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>Meme Options</Text>
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               activeOpacity={0.7}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Close meme options"
             >
-              <Feather name="x" size={18} color={CAMPUS_HUB_COLORS.subtleText} />
+              <Feather
+                name="x"
+                size={18}
+                color={CAMPUS_HUB_COLORS.subtleText}
+              />
             </TouchableOpacity>
           </View>
 
-          {/* Action List */}
           <View style={styles.actionGroup}>
-            {/* Edit Option — visible to author only */}
             {isAuthor && (
               <TouchableOpacity
                 style={styles.actionRow}
@@ -82,40 +91,96 @@ export const MemeOptionsModal = React.memo(function MemeOptionsModal({
                 activeOpacity={0.7}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Edit Meme"
+                accessibilityLabel="Edit caption"
               >
                 <View style={[styles.iconBox, styles.iconBoxAccent]}>
-                  <Feather name="edit-2" size={16} color={CAMPUS_HUB_COLORS.memeAccent} />
+                  <Feather
+                    name="edit-2"
+                    size={16}
+                    color={CAMPUS_HUB_COLORS.memeAccent}
+                  />
                 </View>
                 <View style={styles.actionTextCol}>
                   <Text style={styles.actionTitle}>Edit Caption</Text>
-                  <Text style={styles.actionSubtitle}>Update the caption of your meme</Text>
+                  <Text style={styles.actionSubtitle}>
+                    Update the caption of your meme
+                  </Text>
                 </View>
-                <Feather name="chevron-right" size={16} color="#cbd5e1" />
+                <Feather
+                  name="chevron-right"
+                  size={16}
+                  color={colors.slate300}
+                />
               </TouchableOpacity>
             )}
 
-            {/* Delete Option */}
-            <TouchableOpacity
-              style={[styles.actionRow, styles.actionRowDanger]}
-              onPress={() => {
-                onClose();
-                onDelete();
-              }}
-              activeOpacity={0.7}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Delete Meme"
-            >
-              <View style={[styles.iconBox, styles.iconBoxDanger]}>
-                <Feather name="trash-2" size={16} color={CAMPUS_HUB_COLORS.dangerText} />
-              </View>
-              <View style={styles.actionTextCol}>
-                <Text style={[styles.actionTitle, styles.actionTitleDanger]}>Delete Meme</Text>
-                <Text style={styles.actionSubtitle}>Permanently remove this meme from feed</Text>
-              </View>
-              <Feather name="chevron-right" size={16} color="#fca5a5" />
-            </TouchableOpacity>
+            {!isAuthor && onReport && (
+              <TouchableOpacity
+                style={[styles.actionRow, styles.actionRowReport]}
+                onPress={() => {
+                  onClose();
+                  onReport();
+                }}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Report Meme"
+              >
+                <View style={[styles.iconBox, styles.iconBoxReport]}>
+                  <Feather
+                    name="flag"
+                    size={16}
+                    color={colors.semantic.amber.deep}
+                  />
+                </View>
+                <View style={styles.actionTextCol}>
+                  <Text style={styles.actionTitle}>Report Meme</Text>
+                  <Text style={styles.actionSubtitle}>
+                    Flag inappropriate or offensive content
+                  </Text>
+                </View>
+                <Feather
+                  name="chevron-right"
+                  size={16}
+                  color={colors.semantic.amber.border}
+                />
+              </TouchableOpacity>
+            )}
+
+            {canDelete && (
+              <TouchableOpacity
+                style={[styles.actionRow, styles.actionRowDanger]}
+                onPress={() => {
+                  onClose();
+                  onDelete();
+                }}
+                activeOpacity={0.7}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Delete Meme"
+              >
+                <View style={[styles.iconBox, styles.iconBoxDanger]}>
+                  <Feather
+                    name="trash-2"
+                    size={16}
+                    color={CAMPUS_HUB_COLORS.dangerText}
+                  />
+                </View>
+                <View style={styles.actionTextCol}>
+                  <Text style={[styles.actionTitle, styles.actionTitleDanger]}>
+                    Delete Meme
+                  </Text>
+                  <Text style={styles.actionSubtitle}>
+                    Permanently remove this meme from feed
+                  </Text>
+                </View>
+                <Feather
+                  name="chevron-right"
+                  size={16}
+                  color={colors.semantic.red.borderStrong}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -126,7 +191,7 @@ export const MemeOptionsModal = React.memo(function MemeOptionsModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    backgroundColor: CAMPUS_HUB_COLORS.memeSheetScrim,
     justifyContent: "flex-end",
   },
   sheetContainer: {
@@ -145,7 +210,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#cbd5e1",
+    backgroundColor: colors.slate300,
   },
   headerRow: {
     flexDirection: "row",
@@ -153,7 +218,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.05)",
+    borderBottomColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   headerTitle: {
     fontFamily,
@@ -162,10 +227,10 @@ const styles = StyleSheet.create({
     color: CAMPUS_HUB_COLORS.deepNavy,
   },
   closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#f1f5f9",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -176,15 +241,20 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 58,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+  },
+  actionRowReport: {
+    backgroundColor: colors.semantic.amber.tint,
+    borderColor: colors.semantic.amber.border,
   },
   actionRowDanger: {
     backgroundColor: CAMPUS_HUB_COLORS.dangerBg,
-    borderColor: "rgba(190, 18, 60, 0.12)",
+    borderColor: CAMPUS_HUB_COLORS.memeDangerActionBorder,
   },
   iconBox: {
     width: 36,
@@ -197,8 +267,11 @@ const styles = StyleSheet.create({
   iconBoxAccent: {
     backgroundColor: CAMPUS_HUB_COLORS.memeAccentLight,
   },
+  iconBoxReport: {
+    backgroundColor: colors.semantic.amber.soft,
+  },
   iconBoxDanger: {
-    backgroundColor: "#fee2e2",
+    backgroundColor: colors.semantic.red.softBorder,
   },
   actionTextCol: {
     flex: 1,
@@ -214,7 +287,7 @@ const styles = StyleSheet.create({
   },
   actionSubtitle: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.subtleText,
     marginTop: 2,
