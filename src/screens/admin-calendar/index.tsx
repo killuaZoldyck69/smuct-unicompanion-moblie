@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import {
   CreateEventInput,
   UpdateEventInput,
   exportCalendarCsvAPI,
+  getCalendarApiErrorMessage,
 } from "@/services/calendar-service";
 import {
   useAdminCalendars,
@@ -278,6 +279,7 @@ export function AdminCalendarScreen() {
   const updateEventMutation = useUpdateCalendarEvent();
   const deleteEventMutation = useDeleteCalendarEvent();
   const importCsvMutation = useImportCalendarCsv();
+  const isExportingRef = useRef(false);
 
   // Category counts and filtered events
   const allEvents = useMemo(
@@ -342,6 +344,7 @@ export function AdminCalendarScreen() {
     targetCalendarId: string,
     status: CalendarStatus,
   ) => {
+    if (updateStatusMutation.isPending) return;
     if (!guardOnlineMutation("update calendar status")) return;
     try {
       await updateStatusMutation.mutateAsync({
@@ -357,11 +360,11 @@ export function AdminCalendarScreen() {
       if (selectedCalendarId === targetCalendarId) {
         refetchCalendarDetail();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       Toast.show({
         type: "error",
         text1: "Status Update Failed",
-        text2: err.message || "Could not update calendar status.",
+        text2: getCalendarApiErrorMessage(err, "Could not update calendar status."),
       });
     }
   };
@@ -408,6 +411,7 @@ export function AdminCalendarScreen() {
 
   // Duplicate / Clone Handler
   const handleDuplicateCalendar = async (id: string) => {
+    if (duplicateCalendarMutation.isPending) return;
     if (!guardOnlineMutation("clone a calendar")) return;
     try {
       const cloned = await duplicateCalendarMutation.mutateAsync(id);
@@ -421,11 +425,11 @@ export function AdminCalendarScreen() {
       if (cloned?.id) {
         handleOpenDetail(cloned.id);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       Toast.show({
         type: "error",
         text1: "Clone Failed",
-        text2: err.message || "Failed to clone academic calendar.",
+        text2: getCalendarApiErrorMessage(err, "Failed to clone academic calendar."),
       });
     }
   };
@@ -436,6 +440,7 @@ export function AdminCalendarScreen() {
     title?: string,
     requireConfirm = false,
   ) => {
+    if (deleteCalendarMutation.isPending) return;
     if (!guardOnlineMutation("delete a calendar")) return;
     const doDelete = async () => {
       try {
@@ -450,11 +455,11 @@ export function AdminCalendarScreen() {
           setCurrentView("LIST");
           setSelectedCalendarId(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         Toast.show({
           type: "error",
           text1: "Delete Failed",
-          text2: err.message || "Failed to delete calendar.",
+          text2: getCalendarApiErrorMessage(err, "Failed to delete calendar."),
         });
       }
     };
@@ -484,6 +489,7 @@ export function AdminCalendarScreen() {
     targetSemester?: string,
     targetAcademicYear?: number,
   ) => {
+    if (isExportingRef.current) return;
     if (!guardOnlineMutation("export CSV schedules")) return;
     const exportId = targetCalendarId || selectedCalendarId;
     if (!exportId) return;
@@ -491,6 +497,7 @@ export function AdminCalendarScreen() {
     const exportSemester = targetSemester || selectedCalendar?.semester || "academic_calendar";
     const exportYear = targetAcademicYear || selectedCalendar?.academicYear;
 
+    isExportingRef.current = true;
     try {
       const csvData = await exportCalendarCsvAPI(exportId);
       const safeName = `${exportSemester}${exportYear ? `_${exportYear}` : ""}`
@@ -525,12 +532,14 @@ export function AdminCalendarScreen() {
           Toast.show({ type: "success", text1: "CSV Saved Locally" });
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       Toast.show({
         type: "error",
         text1: "Export Failed",
-        text2: err.message,
+        text2: getCalendarApiErrorMessage(err, "Failed to export schedule CSV."),
       });
+    } finally {
+      isExportingRef.current = false;
     }
   };
 
@@ -560,17 +569,20 @@ export function AdminCalendarScreen() {
       }
       refetchCalendarDetail();
       setIsNodeInspectorOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = getCalendarApiErrorMessage(err, "Failed to save event node.");
       Toast.show({
         type: "error",
         text1: "Save Failed",
-        text2: err?.message || "Failed to save event node.",
+        text2: msg,
       });
+      throw new Error(msg);
     }
   };
 
   // Delete Single Event
   const handleDeleteEvent = async (eventId: string, title: string) => {
+    if (deleteEventMutation.isPending) return;
     if (!guardOnlineMutation("delete an event")) return;
     if (!selectedCalendarId) return;
     try {
@@ -580,11 +592,11 @@ export function AdminCalendarScreen() {
       });
       Toast.show({ type: "info", text1: `"${title}" removed` });
       refetchCalendarDetail();
-    } catch (err: any) {
+    } catch (err: unknown) {
       Toast.show({
         type: "error",
         text1: "Delete Failed",
-        text2: err?.message || "Failed to delete event.",
+        text2: getCalendarApiErrorMessage(err, "Failed to delete event."),
       });
     }
   };
@@ -630,7 +642,9 @@ export function AdminCalendarScreen() {
     semesterDuration: string;
     targetBatch: string;
   }) => {
-    if (!guardOnlineMutation("update calendar audience")) return;
+    if (!guardOnlineMutation("update calendar audience")) {
+      throw new Error("You are currently offline. Please reconnect to update audience.");
+    }
     if (!selectedCalendarId) return;
     try {
       await updateCalendarMutation.mutateAsync({
@@ -641,12 +655,14 @@ export function AdminCalendarScreen() {
       setIsEditAudienceOpen(false);
       refetchCalendarDetail();
       refetchCalendars();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = getCalendarApiErrorMessage(err, "Failed to update calendar audience.");
       Toast.show({
         type: "error",
         text1: "Update Failed",
-        text2: err?.message || "Failed to update calendar audience.",
+        text2: msg,
       });
+      throw new Error(msg);
     }
   };
 
@@ -666,6 +682,7 @@ export function AdminCalendarScreen() {
     if (!guardOnlineMutation("import a CSV schedule")) {
       throw new Error("You are currently offline. Please reconnect to import CSV schedules.");
     }
+    let createdCalendarId: string | null = null;
     try {
       if (selectedCalendarId) {
         await importCsvMutation.mutateAsync({
@@ -693,6 +710,8 @@ export function AdminCalendarScreen() {
           targetBatch: meta?.targetBatch || undefined,
           status: "DRAFT",
         });
+        createdCalendarId = newCal.id;
+
         await importCsvMutation.mutateAsync({
           calendarId: newCal.id,
           csvContent,
@@ -705,12 +724,17 @@ export function AdminCalendarScreen() {
         refetchCalendars();
         handleOpenDetail(newCal.id);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      if (createdCalendarId) {
+        await deleteCalendarMutation.mutateAsync(createdCalendarId).catch(() => {});
+      }
+      const msg = getCalendarApiErrorMessage(err, "Failed to import schedule from CSV.");
       Toast.show({
         type: "error",
         text1: "Import Failed",
-        text2: err?.message || "Failed to import schedule from CSV.",
+        text2: msg,
       });
+      throw new Error(msg);
     }
   };
 
@@ -1080,8 +1104,12 @@ export function AdminCalendarScreen() {
                 {calendars.map((cal) => (
                   <TouchableOpacity
                     key={cal.id}
-                    style={styles.cloneRow}
+                    style={[
+                      styles.cloneRow,
+                      duplicateCalendarMutation.isPending && { opacity: 0.6 },
+                    ]}
                     onPress={() => handleDuplicateCalendar(cal.id)}
+                    disabled={duplicateCalendarMutation.isPending}
                     activeOpacity={0.8}
                   >
                     <View style={{ flex: 1 }}>

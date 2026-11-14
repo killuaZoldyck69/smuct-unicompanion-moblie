@@ -18,6 +18,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import {
   CsvValidationResult,
+  getCalendarApiErrorMessage,
   getCalendarTemplateCsvAPI,
   validateCalendarCsvAPI,
 } from "@/services/calendar-service";
@@ -134,10 +135,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           Alert.alert("Template Saved", "Template saved to local app storage.");
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       Alert.alert(
         "Download Failed",
-        err.message || "Could not download template.",
+        getCalendarApiErrorMessage(err, "Could not download template."),
       );
     }
   };
@@ -160,7 +161,17 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         return;
       }
 
+      const MAX_CSV_BYTES = 500_000;
       const asset = result.assets[0];
+
+      if (typeof asset.size === "number" && asset.size > MAX_CSV_BYTES) {
+        Alert.alert(
+          "File Too Large",
+          "The selected CSV file exceeds the 500KB maximum size limit.",
+        );
+        return;
+      }
+
       let content = "";
 
       if (Platform.OS === "web" && asset.file) {
@@ -193,6 +204,14 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         return;
       }
 
+      if (content.length > MAX_CSV_BYTES) {
+        Alert.alert(
+          "File Too Large",
+          "The CSV content exceeds the 500KB maximum limit.",
+        );
+        return;
+      }
+
       setPickedFile({ name: asset.name, content });
 
       // Run dry-run validation
@@ -203,16 +222,19 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           calendarId || undefined,
         );
         setValidationResult(validRes);
-      } catch (err: any) {
+      } catch (err: unknown) {
         Alert.alert(
           "Validation Error",
-          err.message || "Failed to validate CSV.",
+          getCalendarApiErrorMessage(err, "Failed to validate CSV."),
         );
       } finally {
         setIsValidating(false);
       }
-    } catch (err: any) {
-      Alert.alert("File Selection Failed", err.message);
+    } catch (err: unknown) {
+      Alert.alert(
+        "File Selection Failed",
+        getCalendarApiErrorMessage(err, "Could not read selected CSV file."),
+      );
     }
   };
 
@@ -264,10 +286,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         onClose();
         setPickedFile(null);
         setValidationResult(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         Alert.alert(
           "Creation Failed",
-          err.message || "Failed to create calendar from CSV.",
+          getCalendarApiErrorMessage(err, "Failed to create calendar from CSV."),
         );
       } finally {
         setIsCommitting(false);
@@ -279,10 +301,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         onClose();
         setPickedFile(null);
         setValidationResult(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         Alert.alert(
           "Import Failed",
-          err.message || "Failed to import schedule.",
+          getCalendarApiErrorMessage(err, "Failed to import schedule."),
         );
       } finally {
         setIsCommitting(false);

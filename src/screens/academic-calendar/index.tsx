@@ -383,14 +383,19 @@ export function AcademicCalendarScreen({
     refetch: refetchCurrent,
   } = useCurrentAcademicCalendar(!isPreviewMode);
 
+  const shouldFetchFallbackList =
+    !isPreviewMode && !isLoadingCurrent && !currentCalendar;
+
   const {
     data: calendars,
     isLoading: isLoadingAll,
     isError: isErrorAll,
     refetch: refetchAll,
-  } = useAcademicCalendars(!isPreviewMode);
+  } = useAcademicCalendars(shouldFetchFallbackList);
 
-  const isLoading = isPreviewMode ? false : isLoadingCurrent || isLoadingAll;
+  const isLoading = isPreviewMode
+    ? false
+    : isLoadingCurrent || (shouldFetchFallbackList && isLoadingAll);
   const isError = isPreviewMode ? false : isErrorCurrent && isErrorAll;
 
   const activeCalendar =
@@ -520,7 +525,10 @@ export function AcademicCalendarScreen({
     hasAutoScrolled.current = false;
     groupPositions.current = {};
     try {
-      await Promise.all([refetchCurrent(), refetchAll()]);
+      const currentRes = await refetchCurrent();
+      if (!currentRes.data) {
+        await refetchAll();
+      }
     } finally {
       setIsRefreshing(false);
     }

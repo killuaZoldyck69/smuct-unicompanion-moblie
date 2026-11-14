@@ -12,7 +12,10 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CreateAcademicCalendarInput } from "@/services/calendar-service";
+import {
+  CreateAcademicCalendarInput,
+  getCalendarApiErrorMessage,
+} from "@/services/calendar-service";
 import { FacultyProgramSelector } from "./FacultyProgramSelector";
 import { BENTO_COLORS, SMUCT_SEMESTERS, SmuctSemester } from "../constants";
 
@@ -106,8 +109,11 @@ export const CreateCalendarModal: React.FC<CreateCalendarModalProps> = ({
       setSelectedFaculties([]);
       setSelectedPrograms([]);
       setTargetBatch("");
-    } catch (err: any) {
-      Alert.alert("Creation Failed", err.message || "Could not create calendar.");
+    } catch (err: unknown) {
+      Alert.alert(
+        "Creation Failed",
+        getCalendarApiErrorMessage(err, "Could not create calendar."),
+      );
     } finally {
       setIsCreating(false);
     }

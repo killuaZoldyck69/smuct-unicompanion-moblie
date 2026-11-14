@@ -20,6 +20,7 @@ import {
   CreateEventInput,
   EventCategory,
   UpdateEventInput,
+  getCalendarApiErrorMessage,
 } from "@/services/calendar-service";
 import { cleanDateYmd } from "../utils/date-helpers";
 import { BENTO_COLORS } from "../constants";
@@ -161,8 +162,11 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
       setIsSubmitting(true);
       await onSave(payload);
       onClose();
-    } catch (err: any) {
-      Alert.alert("Save Failed", err.message || "Failed to update node.");
+    } catch (err: unknown) {
+      Alert.alert(
+        "Save Failed",
+        getCalendarApiErrorMessage(err, "Failed to update node."),
+      );
     } finally {
       setIsSubmitting(false);
     }

@@ -339,6 +339,24 @@ export const exportCalendarCsv = async (calendarId: string): Promise<string> => 
 };
 export const exportCalendarCsvAPI = exportCalendarCsv;
 
+export const getCalendarApiErrorMessage = (
+  err: unknown,
+  fallback: string,
+): string => {
+  const anyErr = err as {
+    response?: { data?: { message?: string } };
+    message?: string;
+  };
+  const apiMsg = anyErr?.response?.data?.message;
+  if (typeof apiMsg === "string" && apiMsg.trim().length > 0) {
+    return apiMsg.trim();
+  }
+  if (typeof anyErr?.message === "string" && anyErr.message.trim().length > 0) {
+    return anyErr.message.trim();
+  }
+  return fallback;
+};
+
 export const getCalendarTemplateCsv = async (): Promise<string> => {
   const res = await api.get("/calendars/template/csv", {
     responseType: "text",

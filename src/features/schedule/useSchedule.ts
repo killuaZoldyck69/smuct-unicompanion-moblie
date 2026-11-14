@@ -97,6 +97,7 @@ const invalidateCalendarQueries = (qc: ReturnType<typeof useQueryClient>, calend
   qc.invalidateQueries({ queryKey: ["academicCalendars"] });
   qc.invalidateQueries({ queryKey: ["academicCalendar"] });
   qc.invalidateQueries({ queryKey: ["adminCalendars"] });
+  qc.invalidateQueries({ queryKey: calendarKeys.upcoming });
   if (calendarId) {
     qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
   }

@@ -12,7 +12,10 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AcademicCalendarItem } from "@/services/calendar-service";
+import {
+  AcademicCalendarItem,
+  getCalendarApiErrorMessage,
+} from "@/services/calendar-service";
 import { FacultyProgramSelector } from "./FacultyProgramSelector";
 import { BENTO_COLORS, SMUCT_SEMESTERS, SmuctSemester } from "../constants";
 
@@ -92,11 +95,14 @@ export const EditAudienceModal: React.FC<EditAudienceModalProps> = ({
         targetFaculties: isGlobal ? [] : selectedFaculties,
         targetPrograms: isGlobal ? [] : selectedPrograms,
         semesterDuration,
-        targetBatch: targetBatch.trim(),
+        targetBatch: isGlobal ? "" : targetBatch.trim(),
       });
       onClose();
-    } catch (err: any) {
-      Alert.alert("Save Failed", err.message || "Failed to update target scope.");
+    } catch (err: unknown) {
+      Alert.alert(
+        "Save Failed",
+        getCalendarApiErrorMessage(err, "Failed to update target scope."),
+      );
     } finally {
       setIsSaving(false);
     }
