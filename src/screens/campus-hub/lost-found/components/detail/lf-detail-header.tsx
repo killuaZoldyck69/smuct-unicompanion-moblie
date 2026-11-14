@@ -24,7 +24,6 @@ export function LFDetailHeader({
         style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.78 }]}
         android_ripple={{
           color: CAMPUS_HUB_COLORS.androidRipple,
-          borderless: true,
         }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessible
@@ -56,7 +55,6 @@ export function LFDetailHeader({
           ]}
           android_ripple={{
             color: CAMPUS_HUB_COLORS.androidRipple,
-            borderless: true,
           }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessible
@@ -105,7 +103,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    ...CAMPUS_HUB_COLORS.shadow,
   },
   iconBtnPlaceholder: {
     width: 40,

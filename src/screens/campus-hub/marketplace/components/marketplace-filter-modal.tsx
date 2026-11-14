@@ -170,7 +170,6 @@ export function MarketplaceFilterModal({
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 android_ripple={{
                   color: CAMPUS_HUB_COLORS.androidRipple,
-                  borderless: true,
                 }}
                 accessible
                 accessibilityRole="button"
@@ -441,6 +440,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    overflow: "hidden",
   },
   scrollContent: {
     paddingHorizontal: 22,

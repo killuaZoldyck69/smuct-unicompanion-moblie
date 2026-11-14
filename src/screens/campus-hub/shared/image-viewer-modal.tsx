@@ -78,7 +78,6 @@ export const ImageViewerModal = React.memo(function ImageViewerModal({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             android_ripple={{
               color: "rgba(255,255,255,0.28)",
-              borderless: true,
             }}
             accessible={true}
             accessibilityRole="button"
@@ -133,7 +132,6 @@ export const ImageViewerModal = React.memo(function ImageViewerModal({
               onPress={handlePrev}
               android_ripple={{
                 color: "rgba(255,255,255,0.28)",
-                borderless: true,
               }}
               accessible={true}
               accessibilityRole="button"
@@ -153,7 +151,6 @@ export const ImageViewerModal = React.memo(function ImageViewerModal({
               onPress={handleNext}
               android_ripple={{
                 color: "rgba(255,255,255,0.28)",
-                borderless: true,
               }}
               accessible={true}
               accessibilityRole="button"
@@ -226,6 +223,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.whiteAlpha20,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   counterPill: {
     backgroundColor: colors.whiteAlpha20,
@@ -269,6 +267,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   leftArrow: {
     left: 16,

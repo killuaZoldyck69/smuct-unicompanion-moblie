@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "@/theme/colors";
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
@@ -282,10 +283,10 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 16,
-    marginBottom: 14,
+    marginBottom: 12,
     ...CAMPUS_HUB_COLORS.shadow,
     borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   header: {
     flexDirection: "row",
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
   },
   avatarFallback: {
     width: 38,
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     position: "relative",
   },
   loadingBox: {
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
   },
   memeImage: {
     width: "100%",
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily,
     fontSize: 12,
-    color: "#94a3b8",
+    color: colors.slate400,
   },
   footer: {
     flexDirection: "row",
@@ -457,7 +458,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(19, 27, 46, 0.04)",
+    borderTopColor: CAMPUS_HUB_COLORS.subtleBorder,
   },
   reactionGroup: {
     flexDirection: "row",
@@ -471,16 +472,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.slate50,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   reactionPillLiked: {
     backgroundColor: CAMPUS_HUB_COLORS.memeAccentLight,
     borderColor: "rgba(236, 72, 153, 0.3)",
   },
   reactionPillDisliked: {
-    backgroundColor: "#fff1f2",
+    backgroundColor: colors.semantic.rose.tint,
     borderColor: "rgba(225, 29, 72, 0.3)",
   },
   reactionPillDisabled: {
@@ -489,8 +490,11 @@ const styles = StyleSheet.create({
   reactionCount: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
-    color: "#64748b",
+    color: CAMPUS_HUB_COLORS.mutedInk,
+    fontVariant: ["tabular-nums"],
+    includeFontPadding: false,
   },
   reactionCountLiked: {
     color: CAMPUS_HUB_COLORS.memeAccentText,

@@ -421,10 +421,11 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderWidth: 1,
+    borderColor: "rgba(236, 72, 153, 0.16)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
-    ...CAMPUS_HUB_COLORS.shadow,
   },
   pickerTitle: {
     fontFamily,

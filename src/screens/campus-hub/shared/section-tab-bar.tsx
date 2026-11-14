@@ -39,58 +39,67 @@ export const SectionTabBar = React.memo(function SectionTabBar({
   onSelect,
 }: SectionTabBarProps) {
   return (
-    <View style={styles.container}>
-      {TABS.map((tab) => {
-        const isActive = activeSection === tab.key;
-        return (
-          <TouchableOpacity
-            key={tab.key}
-            style={[
-              styles.tab,
-              isActive && { backgroundColor: tab.accent },
-            ]}
-            onPress={() => onSelect(tab.key)}
-            activeOpacity={0.8}
-            accessible={true}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={`${tab.label} section`}
-          >
-            <Text
+    <View style={styles.outerWrap}>
+      <View style={styles.container}>
+        {TABS.map((tab) => {
+          const isActive = activeSection === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
               style={[
-                styles.tabText,
-                isActive && styles.tabTextActive,
+                styles.tab,
+                isActive && { backgroundColor: tab.accent },
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
+              onPress={() => onSelect(tab.key)}
+              activeOpacity={0.8}
+              accessible={true}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={`${tab.label} section`}
             >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+              <Text
+                style={[
+                  styles.tabText,
+                  isActive && styles.tabTextActive,
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
+  outerWrap: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
   container: {
     flexDirection: "row",
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    marginHorizontal: 16,
-    marginBottom: 14,
     borderRadius: 14,
     padding: 4,
     gap: 4,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   tab: {
     flex: 1,
     minHeight: 40,
-    paddingVertical: 9,
+    paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 10,
     alignItems: "center",
@@ -99,6 +108,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.subtleText,
     textAlign: "center",

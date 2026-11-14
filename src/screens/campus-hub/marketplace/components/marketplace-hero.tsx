@@ -1,7 +1,11 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  titleFontFamily,
+} from "../../shared/design-tokens";
 
 const ACCENT = CAMPUS_HUB_COLORS.marketplaceAccentText;
 
@@ -104,11 +108,11 @@ export const MarketplaceHero = React.memo(function MarketplaceHero({
 const styles = StyleSheet.create({
   statsBar: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 20,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   statsBarHeader: {
@@ -136,7 +140,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
   },
   statCell: {
@@ -151,7 +155,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statCount: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 16,
     lineHeight: 20,
     fontWeight: "800",
@@ -161,11 +165,11 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontFamily,
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.mutedInk,
-    marginTop: 1,
+    marginTop: 2,
     includeFontPadding: false,
   },
   statDivider: {

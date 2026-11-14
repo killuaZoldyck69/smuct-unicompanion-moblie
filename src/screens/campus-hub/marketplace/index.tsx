@@ -40,7 +40,12 @@ import type {
   FeedQueryParams,
 } from "@/services/marketplace-service";
 import { colors } from "@/theme/colors";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  getCampusHubTabBottomPadding,
+  titleFontFamily,
+} from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
 import { MARKETPLACE_CATEGORY_LABELS } from "./marketplace-constants";
 import { MarketplaceFormModal } from "./components/marketplace-form-modal";
@@ -446,21 +451,25 @@ export function MarketplaceSection({
 
   const ListHeader = useMemo(
     () => (
-      <>
-        {isOffline && (
-          <View style={styles.offlineBanner}>
-            <Feather
-              name="wifi-off"
-              size={13}
-              color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
-            />
-            <Text style={styles.offlineBannerText}>
-              You're offline. Showing cached listings.
-            </Text>
-          </View>
-        )}
+      <MarketplaceHero
+        isLoading={isLoading}
+        stats={{
+          total: totalCount,
+          selling: sellingCount,
+          buying: buyingCount,
+        }}
+      />
+    ),
+    [isLoading, totalCount, sellingCount, buyingCount],
+  );
 
-        {/* Search & Filter Bar */}
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+  return (
+    <View style={styles.outerWrap}>
+      {/* Fixed Search Bar + Filter Row (Placed outside FlatList so keyboard stays open while typing) */}
+      <View style={styles.topSearchContainer}>
         <View style={styles.searchBarContainer}>
           <View style={styles.searchInputBox}>
             <Feather
@@ -548,7 +557,6 @@ export function MarketplaceSection({
           </View>
         </View>
 
-        {/* Active Filter Chips */}
         {activeFilterCount > 0 && (
           <View style={styles.activeChipsRow}>
             {typeFilter !== "ALL" && (
@@ -592,39 +600,23 @@ export function MarketplaceSection({
             </Pressable>
           </View>
         )}
+      </View>
 
-        {/* Hero Stats Card */}
-        <MarketplaceHero
-          isLoading={isLoading}
-          stats={{
-            total: totalCount,
-            selling: sellingCount,
-            buying: buyingCount,
-          }}
-        />
-      </>
-    ),
-    [
-      isOffline,
-      isLoading,
-      searchInput,
-      handleSearchChange,
-      activeFilterCount,
-      typeFilter,
-      statusFilter,
-      categoryFilter,
-      handleResetFilters,
-      totalCount,
-      sellingCount,
-      buyingCount,
-    ],
-  );
+      {isOffline && (
+        <View style={styles.bannerOuter}>
+          <View style={styles.offlineBanner}>
+            <Feather
+              name="wifi-off"
+              size={13}
+              color={CAMPUS_HUB_COLORS.lostFoundAccentInk}
+            />
+            <Text style={styles.offlineBannerText}>
+              You're offline. Showing cached listings.
+            </Text>
+          </View>
+        </View>
+      )}
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-  return (
-    <View style={styles.outerWrap}>
       <FlatList<MarketplacePost>
         data={posts}
         keyExtractor={keyExtractor}
@@ -634,9 +626,11 @@ export function MarketplaceSection({
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom + 80 },
+          { paddingBottom: getCampusHubTabBottomPadding(insets.bottom) },
         ]}
         showsVerticalScrollIndicator={false}
         onEndReached={onEndReached}
@@ -730,11 +724,17 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 2,
   },
   columnWrapper: {
     gap: 12,
     marginBottom: 12,
+  },
+  bannerOuter: {
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+    paddingHorizontal: 20,
   },
   offlineBanner: {
     flexDirection: "row",
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 8,
     backgroundColor: CAMPUS_HUB_COLORS.lostFoundAccentLight,
     borderWidth: 1,
     borderColor: colors.semantic.amber.border,
@@ -755,11 +755,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.lostFoundAccentInk,
   },
+  topSearchContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 2,
+    paddingBottom: 10,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
+  },
   searchBarContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 0,
   },
   searchInputBox: {
     flex: 1,
@@ -767,10 +775,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     height: 48,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   searchInput: {
@@ -785,6 +793,8 @@ const styles = StyleSheet.create({
   },
   filterBtnWrap: {
     position: "relative",
+    width: 48,
+    height: 48,
   },
   filterBtn: {
     width: 48,
@@ -795,7 +805,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   filterBtnActive: {
@@ -804,8 +814,8 @@ const styles = StyleSheet.create({
   },
   filterBadge: {
     position: "absolute",
-    top: -3,
-    right: -3,
+    top: -4,
+    right: -4,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -829,7 +839,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 14,
+    marginTop: 10,
+    marginBottom: 0,
     alignItems: "center",
   },
   activeChip: {
@@ -839,9 +850,11 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.resolvedGreenBg,
     borderWidth: 1,
     borderColor: colors.semantic.emerald.mintBorder,
-    borderRadius: 12,
+    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     paddingVertical: 6,
     paddingHorizontal: 12,
+    minHeight: 36,
+    overflow: "hidden",
   },
   activeChipText: {
     fontFamily,
@@ -873,7 +886,7 @@ const styles = StyleSheet.create({
     backgroundColor: CAMPUS_HUB_COLORS.white,
     borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   errorIconWrap: {
@@ -886,8 +899,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   stateTitle: {
-    fontFamily,
-    fontSize: 16,
+    fontFamily: titleFontFamily,
+    fontSize: 17,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     textAlign: "center",

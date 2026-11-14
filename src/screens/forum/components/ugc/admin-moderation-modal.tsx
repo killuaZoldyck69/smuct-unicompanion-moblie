@@ -194,7 +194,7 @@ export const AdminModerationModal = memo(function AdminModerationModal({
               styles.closeBtn,
               pressed && Platform.OS === "ios" && { opacity: 0.7 },
             ]}
-            android_ripple={{ color: colors.navyAlpha08, borderless: true }}
+            android_ripple={{ color: colors.navyAlpha08 }}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessible={true}
             accessibilityRole="button"
@@ -440,6 +440,7 @@ const styles = StyleSheet.create({
     borderColor: BENTO_COLORS.subtleBorder,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   tabsRow: {
     flexDirection: "row",

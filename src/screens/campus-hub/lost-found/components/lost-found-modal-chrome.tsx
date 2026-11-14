@@ -49,7 +49,6 @@ export function LostFoundModalHeader({
           ]}
           android_ripple={{
             color: CAMPUS_HUB_COLORS.androidRipple,
-            borderless: true,
           }}
           accessible
           accessibilityRole="button"

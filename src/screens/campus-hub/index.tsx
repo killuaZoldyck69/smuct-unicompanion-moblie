@@ -106,38 +106,39 @@ export function CampusHub({ initialSection }: CampusHubProps) {
 
         <View style={styles.topNavRight}>
           {isAdmin && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.iconBtn,
-                pressed && { opacity: 0.78 },
-              ]}
-              onPress={() => setIsModerationVisible(true)}
-              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-              android_ripple={{
-                color: CAMPUS_HUB_COLORS.androidRipple,
-                borderless: true,
-              }}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={`Moderation queue, ${pendingReportsCount} pending reports`}
-            >
-              <Feather
-                name="shield"
-                size={18}
-                color={
-                  pendingReportsCount > 0
-                    ? colors.semantic.violet.accent
-                    : CAMPUS_HUB_COLORS.deepNavy
-                }
-              />
+            <View style={styles.iconBtnWrap}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.iconBtn,
+                  pressed && { opacity: 0.78 },
+                ]}
+                onPress={() => setIsModerationVisible(true)}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                android_ripple={{
+                  color: CAMPUS_HUB_COLORS.androidRipple,
+                }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Moderation queue, ${pendingReportsCount} pending reports`}
+              >
+                <Feather
+                  name="shield"
+                  size={18}
+                  color={
+                    pendingReportsCount > 0
+                      ? colors.semantic.violet.accent
+                      : CAMPUS_HUB_COLORS.deepNavy
+                  }
+                />
+              </Pressable>
               {pendingReportsCount > 0 && (
-                <View style={styles.pendingDot}>
+                <View style={styles.pendingDot} pointerEvents="none">
                   <Text style={styles.pendingDotText}>
                     {pendingReportsCount > 9 ? "9+" : pendingReportsCount}
                   </Text>
                 </View>
               )}
-            </Pressable>
+            </View>
           )}
 
           <Pressable
@@ -149,7 +150,6 @@ export function CampusHub({ initialSection }: CampusHubProps) {
             hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             android_ripple={{
               color: CAMPUS_HUB_COLORS.androidRipple,
-              borderless: true,
             }}
             accessible={true}
             accessibilityRole="button"
@@ -286,6 +286,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 18,
     letterSpacing: -0.1,
+    includeFontPadding: false,
   },
   navSubtitle: {
     fontFamily,
@@ -296,15 +297,21 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     letterSpacing: -0.1,
   },
-  iconBtn: {
+  iconBtnWrap: {
     position: "relative",
-    width: 42,
-    height: 42,
-    borderRadius: CAMPUS_HUB_COLORS.pillRadius,
+    width: 40,
+    height: 40,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: CAMPUS_HUB_COLORS.white,
+    borderWidth: 1,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     justifyContent: "center",
     alignItems: "center",
-    ...CAMPUS_HUB_COLORS.shadow,
+    overflow: "hidden",
   },
   pendingDot: {
     position: "absolute",

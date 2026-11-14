@@ -75,12 +75,11 @@ const styles = StyleSheet.create({
   headerIconButton: {
     width: 38,
     height: 38,
-    borderRadius: BENTO_COLORS.pillRadius,
+    borderRadius: 19,
     backgroundColor: BENTO_COLORS.white,
     borderWidth: 1,
     borderColor: BENTO_COLORS.cardBorder,
     justifyContent: "center",
     alignItems: "center",
-    ...BENTO_COLORS.shadow,
   },
 });

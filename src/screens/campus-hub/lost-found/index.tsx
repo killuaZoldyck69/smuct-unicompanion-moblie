@@ -36,6 +36,7 @@ import type {
 import {
   CAMPUS_HUB_COLORS,
   fontFamily,
+  getCampusHubTabBottomPadding,
   titleFontFamily,
 } from "../shared/design-tokens";
 import { setCampusHubActiveSection } from "../shared/hub-state";
@@ -523,12 +524,12 @@ export function LostFoundSection({
               name="search"
               size={16}
               color={CAMPUS_HUB_COLORS.subtleText}
-              style={{ marginRight: 8 }}
+              style={{ marginRight: 10 }}
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search lost & found by title or location..."
-              placeholderTextColor={CAMPUS_HUB_COLORS.mutedInk}
+              placeholder="Search lost & found items..."
+              placeholderTextColor={CAMPUS_HUB_COLORS.subtleText}
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={() => Keyboard.dismiss()}
@@ -713,7 +714,7 @@ export function LostFoundSection({
         ItemSeparatorComponent={renderSeparator}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: insets.bottom + 110 },
+          { paddingBottom: getCampusHubTabBottomPadding(insets.bottom) },
         ]}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={Platform.OS === "android"}
@@ -768,7 +769,7 @@ export function LostFoundSection({
 const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 0,
+    paddingTop: 2,
   },
   separator: {
     height: 12,
@@ -842,7 +843,8 @@ const styles = StyleSheet.create({
   },
   topSearchContainer: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 2,
+    paddingBottom: 10,
     width: "100%",
     maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
     alignSelf: "center",
@@ -857,14 +859,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 0,
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 16,
     height: 48,
     borderWidth: 1,
@@ -877,6 +879,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     color: CAMPUS_HUB_COLORS.neutralText,
+    paddingVertical: 0,
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
   clearSearchBtn: {
     minWidth: 36,
@@ -894,7 +899,7 @@ const styles = StyleSheet.create({
   filterIconButton: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
     justifyContent: "center",
@@ -931,7 +936,8 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   activeChipsRow: {
-    marginBottom: 12,
+    marginTop: 10,
+    marginBottom: 0,
   },
   activeChipsContent: {
     flexDirection: "row",
@@ -1011,7 +1017,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: CAMPUS_HUB_COLORS.surfaceMuted,
     borderRadius: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
   },
   statCell: {
@@ -1026,8 +1032,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statCount: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 16,
+    lineHeight: 20,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     fontVariant: ["tabular-nums"],
@@ -1035,8 +1042,8 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontFamily,
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: "600",
     color: CAMPUS_HUB_COLORS.mutedInk,
     marginTop: 2,

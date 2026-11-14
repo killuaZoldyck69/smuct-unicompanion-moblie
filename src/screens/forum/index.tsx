@@ -204,7 +204,7 @@ export function Forum({
     [],
   );
 
-  const bottomPadding = insets.bottom > 0 ? insets.bottom + 110 : 124;
+  const bottomPadding = insets.bottom > 0 ? insets.bottom + 116 : 128;
   const activeFilterCount = activeFilter !== "ALL" ? 1 : 0;
 
   const content = (
@@ -354,15 +354,15 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingTop: 6,
+    paddingTop: 2,
     width: "100%",
     maxWidth: BENTO_COLORS.contentMaxWidth,
     alignSelf: "center",
   },
   headerContainer: {
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 2,
+    paddingTop: 2,
+    paddingBottom: 10,
     width: "100%",
     maxWidth: BENTO_COLORS.contentMaxWidth,
     alignSelf: "center",
@@ -371,7 +371,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 0,
     paddingHorizontal: 2,
   },
   activeChip: {

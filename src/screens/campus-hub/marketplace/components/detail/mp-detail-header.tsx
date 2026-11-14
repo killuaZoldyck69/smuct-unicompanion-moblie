@@ -22,10 +22,9 @@ export function MPDetailHeader({
       <Pressable
         onPress={onBack}
         style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.78 }]}
-        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         android_ripple={{
           color: CAMPUS_HUB_COLORS.androidRipple,
-          borderless: true,
         }}
         accessible
         accessibilityRole="button"
@@ -49,16 +48,15 @@ export function MPDetailHeader({
             styles.iconBtn,
             pressed && { opacity: 0.78 },
           ]}
-          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
           android_ripple={{
             color: CAMPUS_HUB_COLORS.androidRipple,
-            borderless: true,
           }}
           accessible
           accessibilityRole="button"
           accessibilityLabel="Report listing"
         >
-          <Feather name="flag" size={17} color={CAMPUS_HUB_COLORS.subtleText} />
+          <Feather name="flag" size={17} color={CAMPUS_HUB_COLORS.mutedInk} />
         </Pressable>
       ) : (
         <View style={styles.spacer} />
@@ -86,17 +84,17 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: CAMPUS_HUB_COLORS.subtleBorder,
-    ...CAMPUS_HUB_COLORS.shadow,
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
+    overflow: "hidden",
   },
   spacer: {
-    width: 38,
+    width: 40,
   },
 });

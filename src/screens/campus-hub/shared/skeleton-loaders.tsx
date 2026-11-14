@@ -617,16 +617,19 @@ const styles = StyleSheet.create({
     ...CAMPUS_HUB_COLORS.shadow,
   },
   feedContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 2,
+    gap: 12,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   feedCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 20,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
   feedCardTop: {
@@ -656,10 +659,10 @@ const styles = StyleSheet.create({
   // Meme Cards
   memeCard: {
     backgroundColor: CAMPUS_HUB_COLORS.white,
-    borderRadius: 20,
+    borderRadius: CAMPUS_HUB_COLORS.cardRadius,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
     ...CAMPUS_HUB_COLORS.shadow,
   },
 

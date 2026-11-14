@@ -18,7 +18,12 @@ import {
   useDeleteMeme,
 } from "@/features/campus-hub/useMemes";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { CAMPUS_HUB_COLORS, fontFamily } from "../shared/design-tokens";
+import {
+  CAMPUS_HUB_COLORS,
+  fontFamily,
+  getCampusHubTabBottomPadding,
+  titleFontFamily,
+} from "../shared/design-tokens";
 import {
   AuthorDetailsModal,
   type AuthorProfileModalData,
@@ -236,7 +241,7 @@ export const MemesSection = React.memo(function MemesSection({
   }, [isLoading, activeFilter]);
 
   const listBottomPadding = useMemo(() => {
-    return insets.bottom > 0 ? insets.bottom + 110 : 120;
+    return getCampusHubTabBottomPadding(insets.bottom);
   }, [insets.bottom]);
 
   return (
@@ -369,20 +374,25 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    marginBottom: 12,
+    paddingTop: 2,
+    paddingBottom: 10,
     gap: 8,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   filterPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    minHeight: 38,
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: CAMPUS_HUB_COLORS.pillRadius,
     backgroundColor: CAMPUS_HUB_COLORS.white,
     ...CAMPUS_HUB_COLORS.shadow,
     borderWidth: 1,
-    borderColor: "rgba(19, 27, 46, 0.04)",
+    borderColor: CAMPUS_HUB_COLORS.cardBorder,
   },
   filterPillActive: {
     backgroundColor: CAMPUS_HUB_COLORS.memeAccent,
@@ -391,11 +401,13 @@ const styles = StyleSheet.create({
   filterPillText: {
     fontFamily,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     color: CAMPUS_HUB_COLORS.subtleText,
+    includeFontPadding: false,
   },
   filterPillTextActive: {
-    color: "#ffffff",
+    color: CAMPUS_HUB_COLORS.white,
   },
   loadingContainer: {
     flex: 1,
@@ -411,6 +423,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
+    paddingTop: 2,
+    width: "100%",
+    maxWidth: CAMPUS_HUB_COLORS.contentMaxWidth,
+    alignSelf: "center",
   },
   listEmpty: {
     flex: 1,
@@ -437,7 +453,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   emptyTitle: {
-    fontFamily,
+    fontFamily: titleFontFamily,
     fontSize: 17,
     fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,

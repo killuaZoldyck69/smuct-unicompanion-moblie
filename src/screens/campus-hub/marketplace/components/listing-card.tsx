@@ -12,6 +12,7 @@ import {
   CAMPUS_HUB_COLORS,
   fontFamily,
   timeAgo,
+  titleFontFamily,
 } from "../../shared/design-tokens";
 import { RichTextSnippet } from "../../shared/rich-text-snippet";
 
@@ -361,7 +362,6 @@ export const ListingCard = React.memo(function ListingCard({
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           android_ripple={{
             color: CAMPUS_HUB_COLORS.androidRippleLight,
-            borderless: true,
           }}
           accessible={true}
           accessibilityRole="button"
@@ -517,10 +517,12 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     backgroundColor: colors.semantic.red.accent,
+    borderWidth: 1.5,
+    borderColor: CAMPUS_HUB_COLORS.white,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
     zIndex: 10,
-    elevation: 4,
   },
   soldOverlay: {
     position: "absolute",
@@ -548,8 +550,8 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   cardBody: {
-    padding: 10,
-    gap: 4,
+    padding: 12,
+    gap: 5,
   },
   textInactive: {
     color: CAMPUS_HUB_COLORS.mutedInk,
@@ -610,18 +612,19 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   title: {
-    fontFamily,
-    fontSize: 13,
-    fontWeight: "700",
+    fontFamily: titleFontFamily,
+    fontSize: 13.5,
+    fontWeight: "800",
     color: CAMPUS_HUB_COLORS.deepNavy,
     lineHeight: 18,
+    letterSpacing: -0.15,
   },
   description: {
     fontFamily,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "400",
-    color: CAMPUS_HUB_COLORS.subtleText,
-    lineHeight: 15,
+    color: CAMPUS_HUB_COLORS.mutedInk,
+    lineHeight: 16,
   },
   cardDivider: {
     height: 1,

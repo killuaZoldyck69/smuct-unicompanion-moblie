@@ -174,7 +174,6 @@ export const ImagePickerRow = React.memo(function ImagePickerRow({
               hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
               android_ripple={{
                 color: CAMPUS_HUB_COLORS.androidRippleLight,
-                borderless: true,
               }}
               accessible={true}
               accessibilityRole="button"
@@ -276,6 +275,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.scrimDark,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   addSlot: {
     width: SLOT_SIZE,

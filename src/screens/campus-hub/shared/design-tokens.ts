@@ -376,3 +376,11 @@ export function formatMemePosterSubtitle(
     text: "Campus Peer",
   };
 }
+
+/**
+ * Ensures scrollable Campus Hub feeds clear the floating bottom dock
+ * (68dp height + 16dp..24dp bottom offset) with consistent breathing room.
+ */
+export function getCampusHubTabBottomPadding(insetBottom: number): number {
+  return insetBottom > 0 ? insetBottom + 116 : 128;
+}
