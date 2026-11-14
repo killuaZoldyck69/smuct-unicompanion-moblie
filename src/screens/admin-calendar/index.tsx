@@ -113,12 +113,31 @@ export function AdminCalendarScreen() {
   // Student Preview Modal
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+
   // Queries & Mutations
   const {
-    data: calendars = [],
+    data: adminPage = { data: [], pagination: { page, limit: pageSize, total: 0, totalPages: 1 } },
     isLoading: isLoadingCalendars,
     refetch: refetchCalendars,
-  } = useAdminCalendars();
+  } = useAdminCalendars(
+    selectedStatusTab === "ALL" ? undefined : selectedStatusTab,
+    page,
+    pageSize,
+  );
+
+  const calendars = adminPage.data ?? [];
+  const pagination = adminPage.pagination ?? {
+    page,
+    limit: pageSize,
+    total: calendars.length,
+    totalPages: 1,
+  };
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [selectedStatusTab, searchQuery]);
 
   // Dynamic status tab counts matching image
   const allTermsCount = calendars.length;
@@ -825,6 +844,33 @@ export function AdminCalendarScreen() {
             ))
           )}
         </ScrollView>
+
+        {!isLoadingCalendars && calendars.length > 0 && (
+          <View style={styles.paginationBar}>
+            <TouchableOpacity
+              style={[styles.paginationButton, page <= 1 && styles.paginationButtonDisabled]}
+              disabled={page <= 1}
+              onPress={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              <Text style={styles.paginationButtonText}>Previous</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.paginationText}>
+              Page {pagination.page} / {Math.max(1, pagination.totalPages)}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.paginationButton,
+                page >= Math.max(1, pagination.totalPages) && styles.paginationButtonDisabled,
+              ]}
+              disabled={page >= Math.max(1, pagination.totalPages)}
+              onPress={() => setPage((current) => Math.min(Math.max(1, pagination.totalPages), current + 1))}
+            >
+              <Text style={styles.paginationButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Creation Method Choice Modal */}
         <Modal
@@ -1646,6 +1692,38 @@ const styles = StyleSheet.create({
   filterTabPillActiveText: {
     color: "#ffffff",
     fontWeight: "700",
+  },
+  paginationBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+  },
+  paginationButton: {
+    minWidth: 80,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  paginationButtonDisabled: {
+    opacity: 0.45,
+  },
+  paginationButtonText: {
+    color: "#0f172a",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  paginationText: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "600",
   },
 
   headerTitle: {

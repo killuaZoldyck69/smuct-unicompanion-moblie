@@ -23,6 +23,9 @@ import {
   CreateEventInput,
   UpdateEventInput,
   CalendarStatus,
+  AcademicCalendarItem,
+  AcademicCalendarListResponse,
+  AcademicEventItem,
 } from "@/services/schedule-service";
 import { CreateBusRouteInput } from "./types";
 
@@ -30,13 +33,14 @@ const calendarKeys = {
   all: ["academicCalendars"] as const,
   current: ["academicCalendar", "current"] as const,
   detail: (id: string) => ["academicCalendar", id] as const,
-  admin: (status?: CalendarStatus) => ["adminCalendars", status] as const,
+  admin: (status?: CalendarStatus, page = 1, limit = 25) =>
+    ["adminCalendars", status ?? "all", page, limit] as const,
   upcoming: ["academicEvents", "upcoming"] as const,
 };
 
 const CALENDAR_CACHE = {
-  staleTime: 1000 * 60 * 60 * 24,
-  gcTime: 1000 * 60 * 60 * 48,
+  staleTime: 1000 * 60 * 5,
+  gcTime: 1000 * 60 * 30,
 } as const;
 
 const busKeys = {
@@ -67,20 +71,43 @@ export const useDeleteBusRoute = () => {
 // Student Calendar
 
 export const useAcademicCalendars = () =>
-  useQuery({ queryKey: calendarKeys.all, queryFn: getAcademicCalendarsAPI, ...CALENDAR_CACHE });
+  useQuery<AcademicCalendarItem[], Error>({
+    queryKey: calendarKeys.all,
+    queryFn: () => getAcademicCalendarsAPI(),
+    ...CALENDAR_CACHE,
+  });
 
 export const useCurrentAcademicCalendar = () =>
-  useQuery({ queryKey: calendarKeys.current, queryFn: getCurrentAcademicCalendarAPI, ...CALENDAR_CACHE });
+  useQuery<AcademicCalendarItem | null, Error>({
+    queryKey: calendarKeys.current,
+    queryFn: () => getCurrentAcademicCalendarAPI(),
+    ...CALENDAR_CACHE,
+  });
 
 export const useUpcomingAcademicEvents = () =>
-  useQuery({ queryKey: calendarKeys.upcoming, queryFn: getUpcomingAcademicEventsAPI, ...CALENDAR_CACHE });
+  useQuery<AcademicEventItem[], Error>({
+    queryKey: calendarKeys.upcoming,
+    queryFn: () => getUpcomingAcademicEventsAPI(),
+    ...CALENDAR_CACHE,
+  });
+
+const invalidateCalendarQueries = (qc: ReturnType<typeof useQueryClient>, calendarId?: string) => {
+  qc.invalidateQueries({ queryKey: ["academicCalendars"] });
+  qc.invalidateQueries({ queryKey: ["academicCalendar"] });
+  qc.invalidateQueries({ queryKey: ["adminCalendars"] });
+  if (calendarId) {
+    qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
+  }
+};
 
 // Admin Calendar
 
-export const useAdminCalendars = (status?: CalendarStatus) =>
-  useQuery({
-    queryKey: calendarKeys.admin(status),
-    queryFn: () => getAdminCalendarsAPI(status),
+export const useAdminCalendars = (status?: CalendarStatus, page = 1, limit = 25) =>
+  useQuery<AcademicCalendarListResponse, Error>({
+    queryKey: calendarKeys.admin(status, page, limit),
+    queryFn: () => getAdminCalendarsAPI(status, page, limit),
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 
 export const useCalendarDetails = (id?: string) =>
@@ -95,8 +122,7 @@ export const useCreateCalendar = () => {
   return useMutation({
     mutationFn: (data: CreateAcademicCalendarInput) => createAcademicCalendarAPI(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc);
     },
   });
 };
@@ -107,9 +133,7 @@ export const useUpdateCalendar = () => {
     mutationFn: ({ id, data }: { id: string; data: UpdateAcademicCalendarInput }) =>
       updateAcademicCalendarAPI(id, data),
     onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.detail(id) });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc, id);
     },
   });
 };
@@ -120,9 +144,7 @@ export const useUpdateCalendarStatus = () => {
     mutationFn: ({ id, status }: { id: string; status: CalendarStatus }) =>
       updateCalendarStatusAPI(id, status),
     onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.detail(id) });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc, id);
       qc.invalidateQueries({ queryKey: calendarKeys.current });
     },
   });
@@ -133,8 +155,7 @@ export const useDuplicateCalendar = () => {
   return useMutation({
     mutationFn: (id: string) => duplicateAcademicCalendarAPI(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc);
     },
   });
 };
@@ -144,8 +165,7 @@ export const useDeleteCalendar = () => {
   return useMutation({
     mutationFn: (id: string) => deleteAcademicCalendarAPI(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc);
       qc.invalidateQueries({ queryKey: calendarKeys.current });
     },
   });
@@ -157,9 +177,7 @@ export const useCreateCalendarEvent = () => {
     mutationFn: ({ calendarId, data }: { calendarId: string; data: CreateEventInput }) =>
       createCalendarEventAPI(calendarId, data),
     onSuccess: (_, { calendarId }) => {
-      qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc, calendarId);
     },
   });
 };
@@ -177,9 +195,7 @@ export const useUpdateCalendarEvent = () => {
       data: UpdateEventInput;
     }) => updateCalendarEventAPI(calendarId, eventId, data),
     onSuccess: (_, { calendarId }) => {
-      qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc, calendarId);
     },
   });
 };
@@ -190,9 +206,7 @@ export const useDeleteCalendarEvent = () => {
     mutationFn: ({ calendarId, eventId }: { calendarId: string; eventId: string }) =>
       deleteCalendarEventAPI(calendarId, eventId),
     onSuccess: (_, { calendarId }) => {
-      qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc, calendarId);
     },
   });
 };
@@ -203,9 +217,7 @@ export const useImportCalendarCsv = () => {
     mutationFn: ({ calendarId, csvContent }: { calendarId: string; csvContent: string }) =>
       importCalendarCsvAPI(calendarId, csvContent),
     onSuccess: (_, { calendarId }) => {
-      qc.invalidateQueries({ queryKey: calendarKeys.detail(calendarId) });
-      qc.invalidateQueries({ queryKey: calendarKeys.admin() });
-      qc.invalidateQueries({ queryKey: calendarKeys.all });
+      invalidateCalendarQueries(qc, calendarId);
     },
   });
 };

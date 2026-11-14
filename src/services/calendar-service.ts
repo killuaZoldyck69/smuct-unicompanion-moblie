@@ -52,6 +52,18 @@ export interface AcademicCalendarItem {
   updatedAt: string;
 }
 
+export interface AcademicCalendarPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface AcademicCalendarListResponse {
+  data: AcademicCalendarItem[];
+  pagination?: AcademicCalendarPagination;
+}
+
 export interface CreateAcademicCalendarInput {
   title: string;
   semester: string;
@@ -153,8 +165,13 @@ export interface CsvValidationResult {
 // STUDENT & COMMON API
 // ==========================================
 
-export const getAcademicCalendars = async (): Promise<AcademicCalendarItem[]> => {
-  const res = await api.get("/calendars");
+export const getAcademicCalendars = async (
+  page = 1,
+  limit = 25,
+): Promise<AcademicCalendarItem[]> => {
+  const res = await api.get("/calendars", {
+    params: { page, limit },
+  });
   return res.data?.data || [];
 };
 export const getAcademicCalendarsAPI = getAcademicCalendars;
@@ -183,11 +200,29 @@ export const getCalendarByIdAPI = getCalendarById;
 
 export const getAdminCalendars = async (
   status?: CalendarStatus,
-): Promise<AcademicCalendarItem[]> => {
+  page = 1,
+  limit = 25,
+): Promise<AcademicCalendarListResponse> => {
   const res = await api.get("/calendars/admin/all", {
-    params: status ? { status } : undefined,
+    params: {
+      ...(status ? { status } : {}),
+      page,
+      limit,
+    },
   });
-  return res.data?.data || [];
+
+  const payload = res.data ?? {};
+  const items = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload) ? payload : [];
+
+  return {
+    data: items,
+    pagination: payload?.pagination ?? {
+      page,
+      limit,
+      total: items.length,
+      totalPages: Math.max(1, Math.ceil(items.length / Math.max(1, limit))),
+    },
+  };
 };
 export const getAdminCalendarsAPI = getAdminCalendars;
 
