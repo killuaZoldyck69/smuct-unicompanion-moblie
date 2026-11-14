@@ -227,11 +227,27 @@ describe("memes mobile audit & contract checks", () => {
     assert.ok(useMemesSource.includes("latestSeqByMemeRef"));
     assert.ok(useMemesSource.includes("removeMemeFromFeedCaches"));
     assert.ok(useMemesSource.includes("useReportMeme"));
+    assert.ok(useMemesSource.includes("previousMemeSnapshot"));
+    assert.equal(useMemesSource.includes("previousFeeds.forEach"), false);
+    assert.ok(useMemesSource.includes("updateMemeAcrossInfiniteFeeds"));
+    assert.ok(useMemesSource.includes('queryKey: ["adminForumReports"]'));
+
+    const composeHookSource = readProjectFile("src/features/campus-hub/useMemeCompose.ts");
+    assert.ok(composeHookSource.includes("useUgcTermsStatus"));
+    assert.ok(composeHookSource.includes("refetchUgcTerms"));
+    assert.ok(composeHookSource.includes("!visible && !submitLockRef.current"));
+    assert.ok(composeHookSource.includes("pickLockRef"));
+
+    const editModalSource = readProjectFile(
+      "src/screens/campus-hub/memes/components/meme-edit-modal.tsx",
+    );
+    assert.ok(editModalSource.includes("initializedMemeIdRef"));
 
     const memesScreen = readProjectFile("src/screens/campus-hub/memes/index.tsx");
     assert.ok(memesScreen.includes("UgcGuidelinesModal"));
     assert.ok(memesScreen.includes('targetType="MEME_POST"'));
     assert.ok(memesScreen.includes("offlineBanner"));
+    assert.ok(memesScreen.includes("reportLockRef"));
 
     const memeCard = readProjectFile("src/screens/campus-hub/memes/components/meme-card.tsx");
     assert.ok(memeCard.includes('from "expo-image"'));

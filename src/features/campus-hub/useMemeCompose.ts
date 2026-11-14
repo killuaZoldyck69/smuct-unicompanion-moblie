@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useNetworkStatus } from "@/hooks/use-network-status";
+import { useUgcTermsStatus } from "@/features/ugc/useUgcModeration";
 import {
   requireOnline,
   scheduleSuccessToast,
@@ -37,10 +38,17 @@ export function useMemeCompose(visible: boolean, onClose: () => void) {
   const [caption, setCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
+  const pickLockRef = useRef(false);
   const submitLockRef = useRef(false);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
   const idempotencyKeyRef = useRef<string | null>(null);
   const uploadedAssetRef = useRef<UploadedDraftAsset | null>(null);
   const createMemeMutation = useCreateMeme();
+  const { data: ugcTermsData, refetch: refetchUgcTerms } = useUgcTermsStatus(
+    user?.id,
+    visible,
+  );
 
   const {
     showGuidelines,
@@ -72,13 +80,30 @@ export function useMemeCompose(visible: boolean, onClose: () => void) {
   }, [clearQueuedPayload]);
 
   useEffect(() => {
-    if (!visible) {
+    if (!visible && !submitLockRef.current) {
       cleanupOrphanDraftUpload();
       resetDraftState();
     }
   }, [visible, cleanupOrphanDraftUpload, resetDraftState]);
 
+  useEffect(() => {
+    return () => {
+      if (!submitLockRef.current) {
+        cleanupOrphanDraftUpload();
+      }
+    };
+  }, [cleanupOrphanDraftUpload]);
+
   const handlePickImage = useCallback(async () => {
+    if (
+      pickLockRef.current ||
+      submitLockRef.current ||
+      isUploading ||
+      createMemeMutation.isPending
+    ) {
+      return;
+    }
+    pickLockRef.current = true;
     try {
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -134,6 +159,8 @@ export function useMemeCompose(visible: boolean, onClose: () => void) {
         return;
       }
 
+      if (!visibleRef.current) return;
+
       cleanupOrphanDraftUpload();
       idempotencyKeyRef.current = createMemeIdempotencyKey();
       setImageUri(candidateUri);
@@ -143,8 +170,14 @@ export function useMemeCompose(visible: boolean, onClose: () => void) {
         "Error Picking Image",
         "Failed to open photo picker.",
       );
+    } finally {
+      pickLockRef.current = false;
     }
-  }, [cleanupOrphanDraftUpload]);
+  }, [
+    isUploading,
+    createMemeMutation.isPending,
+    cleanupOrphanDraftUpload,
+  ]);
 
   const handleRemoveImage = useCallback(() => {
     cleanupOrphanDraftUpload();
@@ -198,24 +231,23 @@ export function useMemeCompose(visible: boolean, onClose: () => void) {
     }
 
     submitLockRef.current = true;
-    setIsUploading(true);
     try {
+      let termsAccepted = ugcTermsData?.accepted;
+      if (termsAccepted === undefined && user?.id) {
+        const refreshed = await refetchUgcTerms();
+        termsAccepted = refreshed.data?.accepted;
+      }
+      if (termsAccepted === false) {
+        setShowGuidelines(true);
+        queuePayload(undefined, () => {
+          void submitMeme();
+        });
+        return;
+      }
+
+      setIsUploading(true);
       let cached = uploadedAssetRef.current;
       if (!cached || cached.localUri !== imageUri) {
-        const sizeError = await validateLocalImageSizes(
-          [imageUri],
-          "Meme image",
-          { maxBytes: MEME_LIMITS.MAX_IMAGE_BYTES, logTag: "Memes" },
-        );
-        if (sizeError) {
-          Toast.show({
-            type: "error",
-            text1: "Photo Exceeds 5MB",
-            text2: sizeError,
-          });
-          return;
-        }
-
         const uploadRes = await uploadImageToCloudinary(
           imageUri,
           CLOUDINARY_FOLDERS.CAMPUS_HUB.MEMES,
@@ -228,9 +260,7 @@ export function useMemeCompose(visible: boolean, onClose: () => void) {
         uploadedAssetRef.current = cached;
       }
 
-      if (!idempotencyKeyRef.current) {
-        idempotencyKeyRef.current = createMemeIdempotencyKey();
-      }
+      idempotencyKeyRef.current ??= createMemeIdempotencyKey();
 
       await createMemeMutation.mutateAsync({
         imageUrl: cached.secureUrl,
@@ -260,6 +290,10 @@ export function useMemeCompose(visible: boolean, onClose: () => void) {
     } finally {
       submitLockRef.current = false;
       setIsUploading(false);
+      if (!visibleRef.current) {
+        cleanupOrphanDraftUpload();
+        resetDraftState();
+      }
     }
   }, [
     imageUri,
@@ -267,10 +301,15 @@ export function useMemeCompose(visible: boolean, onClose: () => void) {
     isOffline,
     isUploading,
     createMemeMutation,
+    ugcTermsData?.accepted,
+    user?.id,
+    refetchUgcTerms,
+    setShowGuidelines,
     resetDraftState,
     onClose,
     handleUgcError,
     queuePayload,
+    cleanupOrphanDraftUpload,
   ]);
 
   const dismissGuidelines = useCallback(() => {

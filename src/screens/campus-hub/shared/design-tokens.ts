@@ -170,6 +170,28 @@ export function formatSemesterOrdinal(
   return str ? `${str} Semester` : "";
 }
 
+function formatTeacherSubtitle(
+  teacherProfile: {
+    department?: string | null;
+    designation?: string | null;
+  },
+): { deptShort: string; text: string } {
+  const designation = teacherProfile.designation?.trim();
+  const rawDept = teacherProfile.department?.trim();
+  const deptShort = rawDept ? getDepartmentShortName(rawDept) : "";
+
+  if (designation && deptShort) {
+    return { deptShort, text: `${designation} • ${deptShort}` };
+  }
+  if (designation) {
+    return { deptShort, text: designation };
+  }
+  if (deptShort) {
+    return { deptShort, text: `Faculty • ${deptShort}` };
+  }
+  return { deptShort, text: "Faculty" };
+}
+
 /**
  * Standard user subtitle formatter for Campus Hub (author, claimer, counterpart).
  * - If student: "{N}ᵗʰ Semester • {DeptShort}" (e.g. "10ᵗʰ Semester • CSE")
@@ -194,24 +216,15 @@ export function formatCampusUserSubtitle(
 ): string {
   if (!user) return fallback;
 
-  // 1. Teacher (check if explicitly TEACHER or only teacherProfile has data)
   const isTeacher =
     user.role === "TEACHER" ||
     (Boolean(user.teacherProfile?.designation || user.teacherProfile?.department) &&
       !user.studentProfile?.currentSemester);
 
   if (isTeacher && user.teacherProfile) {
-    const designation = user.teacherProfile.designation?.trim() || "Faculty";
-    const rawDept = user.teacherProfile.department?.trim();
-    const dept = rawDept ? getDepartmentShortName(rawDept) : "";
-
-    if (designation && dept) return `${designation} • ${dept}`;
-    if (designation) return designation;
-    if (dept) return dept;
-    return "Faculty";
+    return formatTeacherSubtitle(user.teacherProfile).text;
   }
 
-  // 2. Student
   if (user.studentProfile || user.role === "STUDENT") {
     const sem = formatSemesterOrdinal(
       user.studentProfile?.currentSemester ?? user.studentProfile?.semester
@@ -225,19 +238,10 @@ export function formatCampusUserSubtitle(
     return "Student";
   }
 
-  // 3. Fallback Teacher if teacherProfile exists
   if (user.teacherProfile) {
-    const designation = user.teacherProfile.designation?.trim() || "Faculty";
-    const rawDept = user.teacherProfile.department?.trim();
-    const dept = rawDept ? getDepartmentShortName(rawDept) : "";
-
-    if (designation && dept) return `${designation} • ${dept}`;
-    if (designation) return designation;
-    if (dept) return dept;
-    return "Faculty";
+    return formatTeacherSubtitle(user.teacherProfile).text;
   }
 
-  // 4. Admin / Fallback
   if (user.role === "ADMIN") return "System Administrator";
   if (user.role === "TEACHER") return "Faculty";
   if (user.role === "STUDENT") return "Student";
@@ -289,7 +293,6 @@ export function formatMemePosterSubtitle(
     return { isStudentWithSemester: false, text: "Campus Peer" };
   }
 
-  // 1. Admin: Show role only "Admin"
   if (author.role === "ADMIN") {
     return {
       isStudentWithSemester: false,
@@ -297,7 +300,6 @@ export function formatMemePosterSubtitle(
     };
   }
 
-  // 2. Teacher: Show designation and department shortname
   const isTeacher =
     author.role === "TEACHER" ||
     (Boolean(author.teacherProfile?.designation || author.teacherProfile?.department) &&
@@ -305,19 +307,7 @@ export function formatMemePosterSubtitle(
       !author.studentProfile?.semester);
 
   if (isTeacher && author.teacherProfile) {
-    const designation = author.teacherProfile.designation?.trim();
-    const rawDept = author.teacherProfile.department?.trim();
-    const deptShort = rawDept ? getDepartmentShortName(rawDept) : "";
-
-    let text = "Faculty";
-    if (designation && deptShort) {
-      text = `${designation} • ${deptShort}`;
-    } else if (designation) {
-      text = designation;
-    } else if (deptShort) {
-      text = `Faculty • ${deptShort}`;
-    }
-
+    const { deptShort, text } = formatTeacherSubtitle(author.teacherProfile);
     return {
       isStudentWithSemester: false,
       deptShort,
@@ -325,7 +315,6 @@ export function formatMemePosterSubtitle(
     };
   }
 
-  // 3. Student: Show semester like 10th (with superscript) • DeptShort
   const rawSem =
     author.studentProfile?.currentSemester ??
     author.studentProfile?.semester;
@@ -365,22 +354,13 @@ export function formatMemePosterSubtitle(
     };
   }
 
-  // Fallback Teacher if teacherProfile exists
   if (author.teacherProfile) {
-    const designation = author.teacherProfile.designation?.trim();
-    const rawDept = author.teacherProfile.department?.trim();
-    const deptShort = rawDept ? getDepartmentShortName(rawDept) : "";
-    let text = "Faculty";
-    if (designation && deptShort) {
-      text = `${designation} • ${deptShort}`;
-    } else if (designation) {
-      text = designation;
-    } else if (deptShort) {
-      text = `Faculty • ${deptShort}`;
-    }
+    const { deptShort: teacherDeptShort, text } = formatTeacherSubtitle(
+      author.teacherProfile,
+    );
     return {
       isStudentWithSemester: false,
-      deptShort,
+      deptShort: teacherDeptShort,
       text,
     };
   }

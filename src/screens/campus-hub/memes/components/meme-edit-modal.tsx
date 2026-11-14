@@ -51,7 +51,6 @@ export const MemeEditModal = React.memo(function MemeEditModal({
   const { user } = useCurrentUser();
   const { isOffline } = useNetworkStatus();
   const [caption, setCaption] = useState("");
-  const scrollViewRef = useRef<ScrollView>(null);
   const submitLockRef = useRef(false);
 
   const updateMemeMutation = useUpdateMeme();
@@ -65,13 +64,18 @@ export const MemeEditModal = React.memo(function MemeEditModal({
     acceptGuidelines,
   } = useUgcTermsRetry<void>(user?.id);
 
+  const initializedMemeIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (meme) {
-      setCaption(meme.caption ?? "");
-    }
-    if (!visible) {
+    if (!visible || !meme) {
+      initializedMemeIdRef.current = null;
       submitLockRef.current = false;
       clearQueuedPayload();
+      return;
+    }
+    if (initializedMemeIdRef.current !== meme.id) {
+      initializedMemeIdRef.current = meme.id;
+      setCaption(meme.caption ?? "");
     }
   }, [meme, visible, clearQueuedPayload]);
 
@@ -181,7 +185,6 @@ export const MemeEditModal = React.memo(function MemeEditModal({
 
         <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoid}>
           <ScrollView
-            ref={scrollViewRef}
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
@@ -228,7 +231,7 @@ export const MemeEditModal = React.memo(function MemeEditModal({
                 name="info"
                 size={14}
                 color={CAMPUS_HUB_COLORS.subtleText}
-                style={{ marginTop: 2 }}
+                style={styles.guidelinesIcon}
               />
               <Text style={styles.guidelinesText}>
                 Keep memes respectful and university-friendly. Inappropriate
@@ -416,6 +419,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  guidelinesIcon: {
+    marginTop: 2,
   },
   guidelinesText: {
     fontFamily,

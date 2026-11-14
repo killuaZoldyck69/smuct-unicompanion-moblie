@@ -66,9 +66,11 @@ export const MemesSection = React.memo(function MemesSection({
   const [activeFilter, setActiveFilter] = useState<MemeFilter>("latest");
   const [internalComposeVisible, setInternalComposeVisible] = useState(false);
 
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [previewCaption, setPreviewCaption] = useState<string | null>(null);
-  const [previewAuthor, setPreviewAuthor] = useState<string | undefined>(undefined);
+  const [previewMeme, setPreviewMeme] = useState<{
+    imageUrl: string;
+    caption: string | null;
+    authorName?: string;
+  } | null>(null);
 
   const [selectedAuthor, setSelectedAuthor] = useState<AuthorProfileModalData | null>(null);
   const [memeForOptions, setMemeForOptions] = useState<Meme | null>(null);
@@ -77,6 +79,7 @@ export const MemesSection = React.memo(function MemesSection({
   const [memeToDelete, setMemeToDelete] = useState<string | null>(null);
   const [memeToReport, setMemeToReport] = useState<Meme | null>(null);
   const deleteLockRef = useRef(false);
+  const reportLockRef = useRef(false);
 
   const { data: ugcTerms } = useUgcTermsStatus(user?.id);
   const acceptTermsMutation = useAcceptUgcTerms(user?.id);
@@ -108,7 +111,9 @@ export const MemesSection = React.memo(function MemesSection({
     isFetchingNextPage,
   } = useInfiniteMemesFeed(activeFilter);
 
-  const { mutate: reactToMemeMutate } = useReactToMeme();
+  const { mutate: reactToMemeMutate } = useReactToMeme({
+    onError: (err) => showApiErrorToast(err, "Reaction Failed", "Could not update your reaction."),
+  });
   const deleteMutation = useDeleteMeme();
   const reportMutation = useReportMeme();
 
@@ -117,10 +122,7 @@ export const MemesSection = React.memo(function MemesSection({
   const handleReact = useCallback(
     (memeId: string, type: "LIKE" | "DISLIKE") => {
       if (!requireOnline(isOffline, "Reconnect to the internet before reacting to memes.")) return;
-      reactToMemeMutate(
-        { memeId, type },
-        { onError: (err) => showApiErrorToast(err, "Reaction Failed", "Could not update your reaction.") },
-      );
+      reactToMemeMutate({ memeId, type });
     },
     [isOffline, reactToMemeMutate],
   );
@@ -169,8 +171,9 @@ export const MemesSection = React.memo(function MemesSection({
 
   const handleSubmitReport = useCallback(
     ({ reason, details }: { reason: UgcReportReason; details?: string }) => {
-      if (!memeToReport || reportMutation.isPending) return;
+      if (!memeToReport || reportLockRef.current || reportMutation.isPending) return;
       if (!requireOnline(isOffline, "Reconnect to the internet before submitting a report.")) return;
+      reportLockRef.current = true;
       reportMutation.mutate(
         { memeId: memeToReport.id, reason, details },
         {
@@ -182,6 +185,9 @@ export const MemesSection = React.memo(function MemesSection({
             );
           },
           onError: (err) => showApiErrorToast(err, "Report Failed", "Could not submit your report."),
+          onSettled: () => {
+            reportLockRef.current = false;
+          },
         },
       );
     },
@@ -209,17 +215,17 @@ export const MemesSection = React.memo(function MemesSection({
 
   const handlePreviewImage = useCallback(
     (imageUrl: string, caption?: string | null, authorName?: string) => {
-      setPreviewImage(imageUrl);
-      setPreviewCaption(caption ?? null);
-      setPreviewAuthor(authorName);
+      setPreviewMeme({
+        imageUrl,
+        caption: caption ?? null,
+        authorName,
+      });
     },
     [],
   );
 
   const handleClosePreview = useCallback(() => {
-    setPreviewImage(null);
-    setPreviewCaption(null);
-    setPreviewAuthor(undefined);
+    setPreviewMeme(null);
   }, []);
 
   const handleViewProfile = useCallback((author: MemeAuthor) => setSelectedAuthor(author), []);
@@ -340,10 +346,8 @@ export const MemesSection = React.memo(function MemesSection({
 
       <MemeComposeModal visible={isComposeModalVisible} onClose={handleCloseCompose} />
       <MemeImageModal
-        visible={!!previewImage}
-        imageUrl={previewImage}
-        caption={previewCaption}
-        authorName={previewAuthor}
+        visible={!!previewMeme}
+        meme={previewMeme}
         onClose={handleClosePreview}
       />
       <AuthorDetailsModal

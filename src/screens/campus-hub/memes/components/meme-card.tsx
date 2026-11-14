@@ -69,7 +69,7 @@ export const MemeCard = React.memo(function MemeCard({
     if (onViewProfile && meme.author) onViewProfile(meme.author);
   }, [onViewProfile, meme.author]);
 
-  const showAvatarImage = Boolean(meme.author?.image) && !avatarError;
+  const avatarUri = !avatarError ? meme.author?.image : null;
 
   return (
     <View style={styles.card}>
@@ -82,9 +82,9 @@ export const MemeCard = React.memo(function MemeCard({
           accessibilityRole="button"
           accessibilityLabel={`View profile of ${authorName}`}
         >
-          {showAvatarImage ? (
+          {avatarUri ? (
             <Image
-              source={{ uri: meme.author.image! }}
+              source={{ uri: avatarUri }}
               style={styles.avatar}
               contentFit="cover"
               cachePolicy="memory-disk"
@@ -186,7 +186,6 @@ export const MemeCard = React.memo(function MemeCard({
             transition={200}
             recyclingKey={meme.id}
             onLoadStart={() => setImageLoading(true)}
-            onLoad={() => setImageLoading(false)}
             onLoadEnd={() => setImageLoading(false)}
             onError={() => {
               setImageLoading(false);
